@@ -1,7 +1,7 @@
 #ifndef CATALOG_H
 #define CATALOG_H
 
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include "inttypes.h"
 #include "mystdbool.h"
 

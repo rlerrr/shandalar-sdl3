@@ -1,6 +1,7 @@
-#include <windows.h>
+#include "platform/gdi_compat.h"
+#include "platform/legacy_io.h"
 #include <stdio.h>
-#include <io.h>
+#include <stdlib.h>
 #include <string.h>
 #include "cardartlib/src/assert.h"
 #include "drawcardlib/src/pic.h"
@@ -16,16 +17,11 @@ extern void RpBits_ReadTables(unsigned short *palette);
 extern void RpBits_DecodeImage(void *dst, int count);
 extern char g_file_read_mode[];
 extern PALETTEENTRY g_palette_entries[256];
-extern DIBSurface *g_graphics_pages[10];
 
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 
 typedef void(__cdecl *EncodeRpBitsImage_Callback)(unsigned int *scanline, int page_number, int x, int y,
                                                   unsigned int width);
-
-#pragma intrinsic(memset)
-#pragma intrinsic(memcpy)
-#pragma optimize("gy", on)
 
 // GLOBAL: FACEMAKER 0x0040d29c
 char s_D__NewMagic__sources__sidlib__Fileio_c_0040d29c[] = "D:\\NewMagic\\sources\\sidlib\\Fileio.c";
@@ -116,31 +112,22 @@ void RpBitsWriteBits(int bit_count, unsigned int bits);
 // FUNCTION: FACEMAKER 0x00407a00
 void WriteRpBitsPalette(int file_handle)
 {
-  unsigned char palette_bytes[0x320];
-  unsigned char *palette_byte_ptr;
-  unsigned int *palette_entry_word_ptr;
-  unsigned int *next_palette_entry_word_ptr;
+  RpBitsPalettePacket palette;
+  int palette_index;
 
-  memcpy(palette_bytes, g_rpbits_palette_magic, 5);
-  memset(&palette_bytes[13], 0, 0x31b);
-  palette_bytes[12] = 0;
-  palette_bytes[13] = 0xff;
-
-  palette_byte_ptr = &palette_bytes[14];
-  palette_entry_word_ptr = (unsigned int *)&g_palette_entries;
-  do
+  memset(&palette, 0, sizeof(palette));
+  palette.signature = (unsigned short)('M' | ('1' << 8));
+  palette.block_size = 0x302;
+  palette.first_index = 0;
+  palette.last_index = 0xff;
+  for (palette_index = 0; palette_index < 256; ++palette_index)
   {
-    *palette_byte_ptr = *(unsigned char *)palette_entry_word_ptr;
-    palette_byte_ptr++;
-    palette_byte_ptr++;
-    next_palette_entry_word_ptr = palette_entry_word_ptr + 1;
-    *(palette_byte_ptr - 1) = *(unsigned char *)((int)next_palette_entry_word_ptr - 3);
-    *palette_byte_ptr = *(unsigned char *)((int)next_palette_entry_word_ptr - 2);
-    palette_byte_ptr = palette_byte_ptr + 1;
-    palette_entry_word_ptr = next_palette_entry_word_ptr;
-  } while (next_palette_entry_word_ptr < (unsigned int *)&g_graphics_pages);
+    palette.entry_data[palette_index * 3] = g_palette_entries[palette_index].peRed;
+    palette.entry_data[palette_index * 3 + 1] = g_palette_entries[palette_index].peGreen;
+    palette.entry_data[palette_index * 3 + 2] = g_palette_entries[palette_index].peBlue;
+  }
 
-  _write(file_handle, &palette_bytes, 0x306);
+  _write(file_handle, &palette, 0x306);
 }
 
 // FUNCTION: SHANDALAR 0x0057de20
@@ -287,7 +274,7 @@ int EncodeRpBitsImage(int file_handle, EncodeRpBitsImage_Callback read_scanline,
         _lseek(g_rpbits_output_fd, seek_offset, 0);
         _write(g_rpbits_output_fd, &g_rpbits_header, 8);
         free((void *)g_rpbits_dict_table);
-        return _close(g_rpbits_output_fd);
+        return 0;
       }
 
       next_row_index = y + 1;
@@ -659,6 +646,7 @@ int ExportEncodedImage(int page_number, int x, int y, int width, int height, int
 #endif
     return result;
   }
+  return -1;
 }
 
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);

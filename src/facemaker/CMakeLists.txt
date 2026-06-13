@@ -1,43 +1,57 @@
-file(GLOB facemaker_c_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
-
-set(cardartlib_c_sources 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cardartlib/src/assert.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cardartlib/src/catalog.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cardartlib/src/palette.c"
+add_library(facemaker_core STATIC
+  src/core.c
+  src/editor.c
+  src/face_assets.c
+  src/fileio.c
+  src/lib.c
 )
 
-set(drawcardlib_c_sources 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../drawcardlib/src/pic.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../drawcardlib/src/pcxw.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../drawcardlib/src/drawing.c" 
+target_compile_definitions(facemaker_core PRIVATE FACEMAKER MODERN_FIXES)
+target_include_directories(facemaker_core PUBLIC
+  "${SHANDALAR_SRC_ROOT}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(facemaker_core PUBLIC
+  drawcard_facemaker
+  cardart_facemaker
+  rpbits
+  shandalar_platform
 )
 
-set(facemaker_sources 
-  ${facemaker_c_sources}
-  ${drawcardlib_c_sources}
-  ${cardartlib_c_sources}
+add_executable(facemaker src/sdl_main.c)
+target_link_libraries(facemaker PRIVATE
+  facemaker_core
+  SDL3::SDL3
+  SDL3_ttf::SDL3_ttf
 )
 
-add_executable(facemaker ${facemaker_sources})
-
-target_include_directories(facemaker PRIVATE
-  "${PROJECT_SOURCE_DIR}/src"
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
-target_link_libraries(facemaker PRIVATE comdlg32 gdi32 user32)
-
-if (TARGET rpbits)
-  target_link_libraries(facemaker PRIVATE rpbits)
+if(EMSCRIPTEN)
+  set_target_properties(facemaker PROPERTIES SUFFIX ".html")
+  target_link_options(facemaker PRIVATE
+    "-sALLOW_MEMORY_GROWTH=1"
+    "-sFORCE_FILESYSTEM=1"
+    "-sMAXIMUM_MEMORY=1GB"
+  )
+  if(SHANDALAR_ASSET_DIR)
+    target_link_options(facemaker PRIVATE
+      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceArt@/assets/FaceArt"
+      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceData.txt@/assets/FaceData.txt"
+      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceMostRecent.txt@/assets/FaceMostRecent.txt"
+      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0530M_.TTF@/assets/TT0530M_.TTF"
+    )
+  endif()
 endif()
 
-if (MSVC)
-  target_link_options(facemaker PRIVATE "/SUBSYSTEM:WINDOWS")
-  target_compile_options(facemaker PRIVATE /Od /Ob1 /Zi /DFACEMAKER)
-endif()
+install(TARGETS facemaker facemaker_core
+  RUNTIME DESTINATION .
+  ARCHIVE DESTINATION lib
+)
 
-if (MSVC_FOR_DECOMP)
-  set_property(TARGET facemaker PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+if(SHANDALAR_BUILD_TESTS AND NOT EMSCRIPTEN)
+  add_executable(facemaker_core_smoke tests/core_smoke.c)
+  target_link_libraries(facemaker_core_smoke PRIVATE facemaker_core)
+  add_test(
+    NAME facemaker_core_smoke
+    COMMAND facemaker_core_smoke "${SHANDALAR_ASSET_DIR}"
+  )
 endif()
-
-reccmp_add_target(facemaker ID FACEMAKER)

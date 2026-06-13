@@ -1,16 +1,16 @@
 #include <process.h>
-#include <windows.h>
-#include <direct.h>
+#include "platform/gdi_compat.h"
+#include "platform/legacy_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
-#include <io.h>
 #include <string.h>
-#include <commdlg.h>
 #include <ctype.h>
 #include "cardartlib/src/assert.h"
 #include "drawcardlib/src/pic.h"
 #include "defs.h"
+#include "face_assets.h"
+#include "face_controls.h"
 #include "facemaker_types.h"
 
 #ifdef _fileno
@@ -209,28 +209,13 @@ int g_face_set_total = 1000;
 int g_selected_face_set_index = 0;
 
 // GLOBAL: FACEMAKER 0x0040c1e8
+#define LEGACY_FACE_CONTROL(x, y, width, height, callback, value_index, value_delta) \
+  {x, y, width, height, DrawFaceControl, (FaceControlCallback)callback, \
+   value_index, value_delta, 0, {0, 0, 0, 0}},
 FaceControl g_face_controls[0x15] = {
-    {0, 0, 0x40, 0x20, DrawFaceControl, (FaceControlCallback)0, 0, 0, 0, {0, 0, 0, 0}},
-    {0xce, 0x24, 0x56, 0x21, DrawFaceControl, ComposeSelectedFaceImage, 0, 0, 0, {0, 0, 0, 0}},
-    {0xce, 0x56, 0x56, 0x21, DrawFaceControl, AcceptFaceSelection, 0, 0, 0, {0, 0, 0, 0}},
-    {0xe0, 0x8a, 0x30, 0x21, DrawFaceControl, (FaceControlCallback)0, 0, 0, 0, {0, 0, 0, 0}},
-    {0xd8, 0xbc, 0x40, 0x21, DrawFaceControl, (FaceControlCallback)0, 0, 0, 0, {0, 0, 0, 0}},
-    {0xb9, 0x8a, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)CycleFaceSet, -1, 0, 0, {0, 0, 0, 0}},
-    {0x111, 0x8a, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)CycleFaceSet, 1, 0, 0, {0, 0, 0, 0}},
-    {0xb1, 0xbc, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)ScrollFaceSetList, -1, 0, 0, {0, 0, 0, 0}},
-    {0x119, 0xbc, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)ScrollFaceSetList, 1, 0, 0, {0, 0, 0, 0}},
-    {0x167, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 0, -1, 0, {0, 0, 0, 0}},
-    {0x194, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 0, 1, 0, {0, 0, 0, 0}},
-    {0x206, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 1, -1, 0, {0, 0, 0, 0}},
-    {0x233, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 1, 1, 0, {0, 0, 0, 0}},
-    {0x29, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 2, -1, 0, {0, 0, 0, 0}},
-    {0x56, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 2, 1, 0, {0, 0, 0, 0}},
-    {0xc8, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 3, -1, 0, {0, 0, 0, 0}},
-    {0xf5, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 3, 1, 0, {0, 0, 0, 0}},
-    {0x167, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 4, -1, 0, {0, 0, 0, 0}},
-    {0x194, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 4, 1, 0, {0, 0, 0, 0}},
-    {0x206, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 5, -1, 0, {0, 0, 0, 0}},
-    {0x233, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 5, 1, 0, {0, 0, 0, 0}}};
+    FACEMAKER_FACE_CONTROL_LIST(LEGACY_FACE_CONTROL)
+};
+#undef LEGACY_FACE_CONTROL
 
 // GLOBAL: FACEMAKER 0x0041afb4
 HDC global_main_hdc;
@@ -602,7 +587,7 @@ int InitializeFaceMakerAssets(void)
   g_face_scroll_divider_sprite =
       EncodeSpriteFromPage(2, local.face_slot_x, local.style_values[5], 3, 0x1d);
 
-  LoadPcxIntoPageNoPalette(2, "FaceArt/facfrsh2New.pcx");
+  LoadPcxIntoPageNoPalette(2, "FaceArt/Facfrsh2New.pcx");
   g_face_slot_background_sprite = EncodeSpriteFromPage(2, 0, 0, 0x8a, 0xac);
   FinalizeSpriteEncodeSession();
 
@@ -1202,7 +1187,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   g_face_preview_bounds->font_slot = 1;
   PresentGraphicsPage(0);
   g_legacy_video_state = InitializeLegacyVideoStub();
-  LoadPcxIntoPage(2, "FaceArt/facebk0New.pcx");
+  LoadPcxIntoPage(2, "FaceArt/Facebk0New.pcx");
   StretchBlitGraphicsRect(g_face_fullscreen_bounds, 0, 0, 0x280, 0x1e0, g_face_work_bounds, 0, 0, global_screen_width,
                           global_screen_height);
   InitializeFaceMakerAssets();
@@ -1575,45 +1560,23 @@ int IsSpriteTileEmpty(int page_number, int x, int y, unsigned int width, int hei
 int LoadSpriteGroupsFromFile(char *sprite_path, int *group_frame_counts,
                              EncodedImage **group_entries, EncodedImage **first_sprite_out)
 {
-  struct
+  FacemakerFaceSpriteSet set = {0};
+  int group;
+  int group_count;
+  int frame;
+  if (!facemaker_face_sprite_set_load(sprite_path, &set))
+    return 0;
+  *first_sprite_out = set.base;
+  for (group = 0; group < set.group_count; ++group)
   {
-    int group_count;
-    int sprite_index;
-    int frame_count;
-    int table_total;
-    EncodedImage *sprite_table[1000];
-    EncodedImage *sprite_entry;
-  } group_loader;
-
-  group_loader.group_count = 0;
-  group_loader.frame_count = 0;
-  group_loader.table_total = ReadSpriteEntryPointers(group_loader.sprite_table, sprite_path);
-  *first_sprite_out = group_loader.sprite_table[0];
-  group_loader.sprite_index = 1;
-  for (; group_loader.sprite_index < group_loader.table_total;
-       group_loader.sprite_index = group_loader.sprite_index + 1)
-  {
-    group_loader.sprite_entry = group_loader.sprite_table[group_loader.sprite_index];
-    ((EncodedImage * (*)[20]) group_entries)[group_loader.group_count][group_loader.frame_count] =
-        group_loader.sprite_entry;
-    group_loader.frame_count = group_loader.frame_count + 1;
-    if (group_loader.sprite_entry->left_clip == 0)
-    {
-      if (group_loader.sprite_entry->top_clip == 0)
-      {
-        group_frame_counts[group_loader.group_count] = group_loader.frame_count;
-        group_loader.group_count = group_loader.group_count + 1;
-        break;
-      }
-    }
-    if (group_loader.sprite_entry->left_clip == 0)
-    {
-      group_frame_counts[group_loader.group_count] = group_loader.frame_count;
-      group_loader.group_count = group_loader.group_count + 1;
-      group_loader.frame_count = 0;
-    }
+    group_frame_counts[group] = set.frame_count[group];
+    for (frame = 0; frame < set.frame_count[group]; ++frame)
+      ((EncodedImage * (*)[20])group_entries)[group][frame] = set.groups[group][frame];
   }
-  return group_loader.group_count;
+  group_count = set.group_count;
+  set.blob = NULL;
+  facemaker_face_sprite_set_destroy(&set);
+  return group_count;
 }
 
 // FUNCTION: FACEMAKER 0x0040542d

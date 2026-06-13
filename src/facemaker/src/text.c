@@ -1,4 +1,4 @@
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>

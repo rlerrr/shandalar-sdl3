@@ -1,116 +1,70 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-cmake_policy(SET CMP0091 NEW)
+project(shandalar_facemaker LANGUAGES C)
 
-project(shandalar C CXX)
+include(FetchContent)
 
-include(CheckLanguage)
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/reccmp.cmake")
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+option(SHANDALAR_BUILD_FACEMAKER "Build the SDL3 Facemaker application" ON)
+option(SHANDALAR_BUILD_TESTS "Build Facemaker unit tests" ON)
+set(SHANDALAR_ASSET_DIR "" CACHE PATH "Directory containing the Magic game data")
 
-option(SHANDALAR_BUILD_CARDARTLIB "Build CardArtLib.dll" ON)
-option(SHANDALAR_BUILD_CDTOOLS "Build cdtools.dll" ON)
-option(SHANDALAR_BUILD_DRAWCARDLIB "Build Drawcardlib.dll" ON)
-option(SHANDALAR_BUILD_DECKDLL "Build DeckDll.dll" ON)
-option(SHANDALAR_BUILD_DECK "Build Deck.exe" ON)
-option(SHANDALAR_BUILD_FACEMAKER "Build FaceMaker.exe" ON)
-option(SHANDALAR_BUILD_MAGIC "Build Magic.exe" ON)
-option(SHANDALAR_BUILD_SHANDALAR "Build Shandalar.exe" ON)
-option(SHANDALAR_BUILD_MANALINKINTERFACE "Build manalinkinterface.dll" ON)
-option(SHANDALAR_BUILD_MAGSND "Build magsnd.dll" ON)
-set(SHANDALAR_MODERN_FIXES_DEFAULT OFF)
-
-math(EXPR bits "8 * ${CMAKE_SIZEOF_VOID_P}")
-message(STATUS "Building ${bits}-bit shandalar")
-if (NOT bits EQUAL 32)
-  message(WARNING "Only 32-bit executables are supported")
+if(SHANDALAR_BUILD_TESTS)
+  enable_testing()
 endif()
 
-set(MSVC_FOR_DECOMP FALSE)
-if (MSVC)
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11.0")
-    set(MSVC_FOR_DECOMP TRUE)
-  endif()
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SDL_PTHREADS OFF CACHE BOOL "" FORCE)
+set(SDL_AUDIO OFF CACHE BOOL "" FORCE)
+set(SDL_CAMERA OFF CACHE BOOL "" FORCE)
+set(SDL_GPU OFF CACHE BOOL "" FORCE)
+set(SDL_HAPTIC OFF CACHE BOOL "" FORCE)
+set(SDL_JOYSTICK OFF CACHE BOOL "" FORCE)
+set(SDL_SENSOR OFF CACHE BOOL "" FORCE)
 
-  # Disable ASLR for MSVC in Debug mode
-  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DYNAMICBASE:NO")
-endif()
-message(STATUS "MSVC for decompilation: ${MSVC_FOR_DECOMP}")
-
-if (NOT MSVC_FOR_DECOMP)
-  set(SHANDALAR_MODERN_FIXES_DEFAULT ON)
-endif()
-option(SHANDALAR_MODERN_FIXES "Enable modern compiler compatibility fixes" ${SHANDALAR_MODERN_FIXES_DEFAULT})
-
-add_compile_definitions(WIN32 _WINDOWS)
-if (SHANDALAR_MODERN_FIXES)
-  add_compile_definitions(MODERN_FIXES)
-endif()
-
-if (SHANDALAR_MODERN_FIXES AND CMAKE_C_COMPILER_ID MATCHES "Clang")
-  if (CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    add_compile_options(
-      $<$<COMPILE_LANGUAGE:C>:/clang:-std=gnu89>
-      $<$<COMPILE_LANGUAGE:C>:/clang:-fcommon>
-      $<$<COMPILE_LANGUAGE:C>:/clang:-Wno-error=return-type>
-    )
-    add_link_options(/INCREMENTAL:NO)
-  else()
-    add_compile_options(
-      $<$<COMPILE_LANGUAGE:C>:-std=gnu89>
-      $<$<COMPILE_LANGUAGE:C>:-fcommon>
-      $<$<COMPILE_LANGUAGE:C>:-Wno-error=return-type>
-    )
-  endif()
-endif()
-
-if (MSVC_FOR_DECOMP)
-  set(CMAKE_C_FLAGS "/W3 /D \"WIN32\" /D \"_WINDOWS\"")
-  set(CMAKE_C_FLAGS_DEBUG "/Gm /Zi /Od /D \"_DEBUG\"")
-  set(CMAKE_C_FLAGS_RELEASE "/O2 /D \"NDEBUG\"")
-  set(CMAKE_C_FLAGS_RELWITHDEBINFO "/Zi /O2 /D \"NDEBUG\"")
-  set(CMAKE_C_FLAGS_MINSIZEREL "/Os /D \"NDEBUG\"")
-
-  set(CMAKE_CXX_FLAGS "/W3 /GX /D \"WIN32\" /D \"_WINDOWS\"")
-  set(CMAKE_CXX_FLAGS_DEBUG "/Gm /Zi /Od /D \"_DEBUG\"")
-  set(CMAKE_CXX_FLAGS_RELEASE "/O2 /D \"NDEBUG\"")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Zi /O2 /D \"NDEBUG\"")
-  set(CMAKE_CXX_FLAGS_MINSIZEREL "/Os /D \"NDEBUG\"")
-
-  set(CMAKE_EXE_LINKER_FLAGS "/machine:I386")
-  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/incremental:yes /debug")
-  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/incremental:no")
-  set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/incremental:no /debug")
-  set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/incremental:no")
-
-  set(CMAKE_STATIC_LINKER_FLAGS "/machine:I386")
-
-  set(CMAKE_SHARED_LINKER_FLAGS "/machine:I386")
-  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/incremental:yes /debug")
-  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/incremental:no")
-  set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "/incremental:no /debug")
-  set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "/incremental:no")
-endif()
-
-add_subdirectory(src)
-add_subdirectory(tools)
-
-reccmp_configure()
-
-install(TARGETS
-  cardartlib
-  cdtools
-  drawcardlib
-  deckdll
-  deck
-  facemaker
-  magic
-  shandalar
-  manalinkinterface
-  magsnd
-  # any other targets
-  RUNTIME DESTINATION .
-  LIBRARY DESTINATION .
-  ARCHIVE DESTINATION .
+FetchContent_Declare(
+  SDL3
+  GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+  GIT_TAG release-3.4.10
+  GIT_SHALLOW TRUE
 )
+FetchContent_MakeAvailable(SDL3)
+if(NOT TARGET SDL3::Headers)
+  add_library(SDL3::Headers ALIAS SDL3_Headers)
+endif()
+if(NOT TARGET SDL3::SDL3)
+  add_library(SDL3::SDL3 ALIAS SDL3-static)
+endif()
+
+set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(SDLTTF_HARFBUZZ OFF CACHE BOOL "" FORCE)
+set(SDLTTF_PLUTOSVG OFF CACHE BOOL "" FORCE)
+set(SDLTTF_SAMPLES OFF CACHE BOOL "" FORCE)
+set(SDLTTF_TESTS OFF CACHE BOOL "" FORCE)
+set(SDLTTF_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  SDL3_ttf
+  GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+  GIT_TAG release-3.2.2
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(SDL3_ttf)
+
+if(MSVC)
+  add_compile_options(/W3 /wd4996)
+else()
+  add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-unused-function)
+endif()
+
+if(SHANDALAR_BUILD_FACEMAKER)
+  add_subdirectory(src)
+endif()

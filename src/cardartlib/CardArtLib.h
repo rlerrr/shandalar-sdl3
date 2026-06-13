@@ -1,7 +1,7 @@
 #ifndef __CARDARTLIB_H__
 #define __CARDARTLIB_H__
 
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

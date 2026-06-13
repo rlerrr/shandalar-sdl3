@@ -1,7 +1,7 @@
 #ifndef FACEMAKER_TYPES_H
 #define FACEMAKER_TYPES_H
 
-#include <windows.h>
+#include "platform/gdi_compat.h"
 
 typedef struct FacemakerWindowBounds
 {

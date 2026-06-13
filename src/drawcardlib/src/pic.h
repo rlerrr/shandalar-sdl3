@@ -1,7 +1,7 @@
 #ifndef SHANDALAR_SIDLIB_PIC_H
 #define SHANDALAR_SIDLIB_PIC_H
 
-#include <windows.h>
+#include "platform/gdi_compat.h"
 
 typedef struct DIBSurface
 {

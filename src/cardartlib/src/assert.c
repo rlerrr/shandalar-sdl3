@@ -1,7 +1,8 @@
 #include "inttypes.h"
 #include <stdio.h>
 #include <stdarg.h>
-#include <windows.h>
+#include <stdlib.h>
+#include "platform/gdi_compat.h"
 #include <time.h>
 #include "defs.h"
 
@@ -50,7 +51,9 @@ void assert(int condition, const char *file, int line, const char *fmt, ...)
       sprintf(g_assertMessageBuffer, "File-> %s, Line-> %d\n", file, line);
     }
 
-    _vsnprintf(g_assertMessageBuffer + strlen(g_assertMessageBuffer), 2000, fmt, args);
+    vsnprintf(g_assertMessageBuffer + strlen(g_assertMessageBuffer),
+              sizeof(g_assertMessageBuffer) - strlen(g_assertMessageBuffer), fmt, args);
+    va_end(args);
 
     time(&now);
 
@@ -91,7 +94,9 @@ void assert_noabort(int condition, const char *file, int line, const char *fmt, 
       sprintf(g_assertMessageBuffer, "File-> %s, Line-> %d\n", file, line);
     }
 
-    _vsnprintf(g_assertMessageBuffer + strlen(g_assertMessageBuffer), 2000, fmt, args);
+    vsnprintf(g_assertMessageBuffer + strlen(g_assertMessageBuffer),
+              sizeof(g_assertMessageBuffer) - strlen(g_assertMessageBuffer), fmt, args);
+    va_end(args);
 
     time(&now);
 

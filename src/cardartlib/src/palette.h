@@ -1,7 +1,7 @@
 #ifndef HUFFMAN_H
 #define HUFFMAN_H
 
-#include <windows.h>
+#include "platform/gdi_compat.h"
 
 typedef struct PaletteLog {
     WORD palVersion;

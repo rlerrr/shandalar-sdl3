@@ -1,4 +1,4 @@
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -7,11 +7,8 @@
 #include "pcxw.h"
 #include "cardartlib/src/assert.h"
 
-#pragma intrinsic(abs)
-
 typedef void *pointer;
 #ifndef MODERN_FIXES
-typedef char byte;
 #endif
 typedef unsigned short ushort;
 
@@ -176,7 +173,6 @@ bool PcxReadHeaderAndPaletteFromPath(char *path, void *paletteOut)
 
 #if defined(FACEMAKER) || defined(SHANDALAR)
 // For some reason these are actually optimized in facemaker?
-#pragma optimize("gy", on)
 #endif
 
 // FUNCTION: DRAWCARDLIB 0x100042ea
@@ -270,7 +266,6 @@ undefined4 PcxReadScanlineRle(char *dstScanline)
   return 1;
 }
 
-#pragma optimize("", on)
 
 // FUNCTION: DRAWCARDLIB 0x100045ac
 // FUNCTION: DECKDLL 0x100167e6

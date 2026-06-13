@@ -1,5 +1,4 @@
-#include <windows.h>
-#include <wingdi.h>
+#include "platform/gdi_compat.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>

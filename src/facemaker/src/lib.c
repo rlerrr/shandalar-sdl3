@@ -1,5 +1,6 @@
 #include "defs.h"
-#include <windows.h>
+#include "platform/gdi_compat.h"
+#include "platform/legacy_io.h"
 #include <stdlib.h>
 #include <string.h>
 #include "inttypes.h"
@@ -15,6 +16,7 @@ DIBSurface *InitializeGraphicsSystemDefaultMode(void);
 DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_per_pixel);
 int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
 void CopyBytesAsmCompat(double *dst, double *src, unsigned int size);
+int LoadFontCollection(char *path);
 
 // GLOBAL: SHANDALAR 0x00581804
 // GLOBAL: FACEMAKER 0x0040d084
@@ -176,76 +178,17 @@ HPALETTE g_realized_palette_handle;
 
 // Not optimized in shandalar interestingly
 #ifdef FACEMAKER
-#pragma intrinsic(memcpy)
-#pragma optimize("gy", on)
 #endif
 
 // FUNCTION: SHANDALAR 0x0041cf20
 // FUNCTION: FACEMAKER 0x004063f0
 void QueueKeyInputFromMessage(WPARAM wparam, LPARAM lparam)
 {
-  int virtual_key;
-  int modifier_mode = 0;
-  if (g_keyboard_init_done == 0)
-  {
-    while (GetAsyncKeyState(VK_MENU) != 0)
-    {
-    }
-    while (GetAsyncKeyState(VK_CONTROL) != 0)
-    {
-    }
-    g_keyboard_init_done = 1;
-  }
-
-  if (g_key_input_queue_count == 49)
-  {
-    MessageBeep(-1);
-    return;
-  }
-
-  virtual_key = (int)(((unsigned int)lparam & 0xff0000) >> 0x10);
-  if (GetAsyncKeyState(VK_MENU))
-  {
-    modifier_mode = 3;
-  }
-  else if (GetAsyncKeyState(VK_CONTROL))
-  {
-    modifier_mode = 2;
-  }
-  else
-  {
-    if (isalpha(g_virtual_key_char_map[virtual_key].states[0].ch & 0xff))
-    {
-      modifier_mode = (GetAsyncKeyState(VK_CAPITAL) != 0) ^ (GetAsyncKeyState(VK_SHIFT) != 0);
-    }
-    else if ((virtual_key >= 'G') && (virtual_key <= 'S'))
-    {
-      modifier_mode = (GetAsyncKeyState(VK_NUMLOCK) != 0) ^ (GetAsyncKeyState(VK_SHIFT) != 0);
-    }
-    else if (GetAsyncKeyState(VK_SHIFT))
-    {
-      modifier_mode = 1;
-    }
-  }
-
-  if (g_virtual_key_char_map[virtual_key].states[modifier_mode].present)
-  {
-    virtual_key = g_virtual_key_char_map[virtual_key].states[modifier_mode].ch;
-  }
-  else
-  {
-    return;
-  }
-
-  {
-    int repeat_count = lparam & 0xffff;
-    repeat_count = MIN(50 - g_key_input_queue_count, repeat_count);
-
-    while (repeat_count--)
-    {
-      g_key_input_queue[g_key_input_queue_count++] = virtual_key;
-    }
-  }
+  int repeat_count = (int)(lparam & 0xffff);
+  if (repeat_count < 1)
+    repeat_count = 1;
+  while (repeat_count-- > 0 && g_key_input_queue_count < 50)
+    g_key_input_queue[g_key_input_queue_count++] = (unsigned int)wparam;
 }
 
 // FUNCTION: SHANDALAR 0x0041d169
@@ -273,9 +216,6 @@ int PopQueuedKeyInput(void)
   return queued_key;
 }
 
-#pragma optimize("gy", on)
-#pragma intrinsic(memset)
-#pragma intrinsic(memcpy)
 
 // FUNCTION: SHANDALAR 0x00578c90
 // FUNCTION: FACEMAKER 0x004065f0
@@ -316,7 +256,6 @@ DIBSurface *GetPageByNumber(int page_number)
 // FUNCTION: FACEMAKER 0x00406650
 DIBSurface *InitializeGraphicsSystemDefaultMode(void)
 {
-  char mapping_name[10] = "rpbits";
   DIBSurface *surface;
   int width;
   int height;
@@ -324,17 +263,15 @@ DIBSurface *InitializeGraphicsSystemDefaultMode(void)
   int *bits_per_pixel_ptr;
   int image_size_bytes;
   LOGPALETTE *log_palette;
-  LOGPALETTE *log_palette_cursor;
   HPALETTE palette_handle;
-  PALETTEENTRY *palette_entry;
-  int palette_entries_left;
+  int palette_index;
 
   if (g_graphics_initialized != 0)
   {
     return g_graphics_pages[0];
   }
 
-  surface = (DIBSurface *)malloc(0x30);
+  surface = (DIBSurface *)calloc(1, sizeof(*surface));
 #ifdef MODERN_FIXES
   width = global_screen_width;
 #else
@@ -357,40 +294,32 @@ DIBSurface *InitializeGraphicsSystemDefaultMode(void)
 
   image_size_bytes = width * height * *bits_per_pixel_ptr;
   surface->imageSizeBytes = (image_size_bytes + ((image_size_bytes >> 31) & 7)) >> 3;
-  _itoa(0, mapping_name, 10);
   surface->hTempDC = global_main_hdc;
-  surface->pBitmapInfo = CreateBitmapInfo(width, height, *bits_per_pixel_ptr);
   surface->pBitmapInfo = CreateBitmapInfo(width, height, 8);
   surface->hMapping = 0;
   surface->hBitmap = 0;
 
   log_palette = (LOGPALETTE *)malloc(0x408);
   log_palette->palVersion = 0x300;
-  palette_entries_left = 0x100;
   log_palette->palNumEntries = 0x100;
-  log_palette_cursor = log_palette;
-  do
+  for (palette_index = 0; palette_index < 256; ++palette_index)
   {
-    log_palette_cursor->palPalEntry[0].peRed = 0;
-    --palette_entries_left;
-    log_palette_cursor->palPalEntry[0].peGreen = 0;
-    log_palette_cursor->palPalEntry[0].peBlue = 0;
-    log_palette_cursor->palPalEntry[0].peFlags = 1;
-    log_palette_cursor = (LOGPALETTE *)log_palette_cursor->palPalEntry;
-  } while (palette_entries_left != 0);
+    log_palette->palPalEntry[palette_index].peRed = 0;
+    log_palette->palPalEntry[palette_index].peGreen = 0;
+    log_palette->palPalEntry[palette_index].peBlue = 0;
+    log_palette->palPalEntry[palette_index].peFlags = 1;
+  }
   log_palette->palPalEntry[0].peFlags = 0;
   log_palette->palPalEntry[255].peFlags = 0;
   g_palette_layout = log_palette;
 
-  palette_entry = g_palette_entries;
-  do
+  for (palette_index = 0; palette_index < 256; ++palette_index)
   {
-    palette_entry->peRed = 0;
-    palette_entry->peGreen = 0;
-    palette_entry->peBlue = 0;
-    palette_entry->peFlags = 1;
-    ++palette_entry;
-  } while (palette_entry < (PALETTEENTRY *)g_graphics_pages);
+    g_palette_entries[palette_index].peRed = 0;
+    g_palette_entries[palette_index].peGreen = 0;
+    g_palette_entries[palette_index].peBlue = 0;
+    g_palette_entries[palette_index].peFlags = 1;
+  }
   g_palette_entries[0].peFlags = 0;
   g_palette_entries[255].peFlags = 0;
 
@@ -410,23 +339,19 @@ DIBSurface *InitializeGraphicsSystemDefaultMode(void)
 // FUNCTION: FACEMAKER 0x00406810
 DIBSurface *InitializeGraphicsSystem(int width, int height, int bits_per_pixel)
 {
-  char mapping_name[16] = "rpbits";
-
   DIBSurface *surface;
   HDC screen_dc;
   int image_size_bytes;
   LOGPALETTE *log_palette;
-  LOGPALETTE *log_palette_cursor;
   HPALETTE palette_handle;
-  PALETTEENTRY *palette_entry;
-  int palette_entries_left;
+  int palette_index;
 
   if (g_graphics_initialized != 0)
   {
     return g_graphics_pages[0];
   }
 
-  surface = (DIBSurface *)malloc(0x30);
+  surface = (DIBSurface *)calloc(1, sizeof(*surface));
   g_graphics_width = width;
   surface->width = width;
   g_graphics_height = height;
@@ -448,40 +373,32 @@ DIBSurface *InitializeGraphicsSystem(int width, int height, int bits_per_pixel)
   image_size_bytes = bits_per_pixel * height * width;
   g_graphics_internal_state = 0;
   surface->imageSizeBytes = (image_size_bytes + ((image_size_bytes >> 31) & 7)) >> 3;
-  _itoa(0, mapping_name, 10);
   surface->hTempDC = global_main_hdc;
-  surface->pBitmapInfo = CreateBitmapInfo(width, height, bits_per_pixel);
   surface->pBitmapInfo = CreateBitmapInfo(width, height, 8);
   surface->hMapping = 0;
   surface->hBitmap = 0;
 
   log_palette = (LOGPALETTE *)malloc(0x408);
   log_palette->palVersion = 0x300;
-  palette_entries_left = 0x100;
   log_palette->palNumEntries = 0x100;
-  log_palette_cursor = log_palette;
-  do
+  for (palette_index = 0; palette_index < 256; ++palette_index)
   {
-    log_palette_cursor->palPalEntry[0].peRed = 0;
-    --palette_entries_left;
-    log_palette_cursor->palPalEntry[0].peGreen = 0;
-    log_palette_cursor->palPalEntry[0].peBlue = 0;
-    log_palette_cursor->palPalEntry[0].peFlags = 1;
-    log_palette_cursor = (LOGPALETTE *)log_palette_cursor->palPalEntry;
-  } while (palette_entries_left != 0);
+    log_palette->palPalEntry[palette_index].peRed = 0;
+    log_palette->palPalEntry[palette_index].peGreen = 0;
+    log_palette->palPalEntry[palette_index].peBlue = 0;
+    log_palette->palPalEntry[palette_index].peFlags = 1;
+  }
   log_palette->palPalEntry[0].peFlags = 0;
   log_palette->palPalEntry[255].peFlags = 0;
   g_palette_layout = log_palette;
 
-  palette_entry = g_palette_entries;
-  do
+  for (palette_index = 0; palette_index < 256; ++palette_index)
   {
-    palette_entry->peRed = 0;
-    palette_entry->peGreen = 0;
-    palette_entry->peBlue = 0;
-    palette_entry->peFlags = 1;
-    ++palette_entry;
-  } while (palette_entry < (PALETTEENTRY *)g_graphics_pages);
+    g_palette_entries[palette_index].peRed = 0;
+    g_palette_entries[palette_index].peGreen = 0;
+    g_palette_entries[palette_index].peBlue = 0;
+    g_palette_entries[palette_index].peFlags = 1;
+  }
   g_palette_entries[0].peFlags = 0;
   g_palette_entries[255].peFlags = 0;
 
@@ -501,8 +418,6 @@ DIBSurface *InitializeGraphicsSystem(int width, int height, int bits_per_pixel)
 // FUNCTION: FACEMAKER 0x004069e0
 DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_per_pixel)
 {
-  char mapping_name[16] = "rpbips";
-
   DIBSurface *page;
   int row_remainder;
   int total_bits;
@@ -518,7 +433,7 @@ DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_
   assert(page_number < 10 ? 1 : 0, s_D__NewMagic__sources__sidlib__lib_c_0040d0ec, 0x121,
          "Graphic Page number out of range: %d\n", page_number);
 
-  page = (DIBSurface *)malloc(0x30);
+  page = (DIBSurface *)calloc(1, sizeof(*page));
   page->width = width;
   page->height = height;
   page->bitsPerPixel = bits_per_pixel;
@@ -541,14 +456,9 @@ DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_
   image_size_bytes = (image_size_bytes + ((image_size_bytes >> 31) & 7)) >> 3;
   page->imageSizeBytes = image_size_bytes;
 
-  _itoa(page_number, mapping_name + 6, 10);
   page->hTempDC = CreateCompatibleDC((HDC)0);
   page->pBitmapInfo = CreateBitmapInfo(width, height, bits_per_pixel);
-  page->hMapping =
-      CreateFileMappingA((HANDLE)0xffffffff, (LPSECURITY_ATTRIBUTES)0, 0x8000004, 0, image_size_bytes,
-                         mapping_name);
-  assert((int)page->hMapping, s_D__NewMagic__sources__sidlib__lib_c_0040d0ec, 0x137,
-         "Create File Mapping failed: page %d\n", page_number);
+  page->hMapping = NULL;
 
   page->hBitmap =
       CreateDIBSection(page->hTempDC, page->pBitmapInfo, (unsigned int)(bits_per_pixel == 8),
@@ -563,6 +473,7 @@ DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_
   SetStretchBltMode(page->hTempDC, 3);
 
   memset(page->pBits, 0, image_size_bytes);
+  g_graphics_pages[page_number] = page;
   return page;
 }
 
@@ -592,6 +503,48 @@ int FreeGraphicsPage(int page_number)
   free(page);
   g_graphics_pages[page_number] = (DIBSurface *)0;
   return 0;
+}
+
+void ShutdownGraphicsSystem(void)
+{
+  int page_number;
+
+  for (page_number = 1; page_number < 10; ++page_number)
+  {
+    DIBSurface *page = g_graphics_pages[page_number];
+    if (!page)
+      continue;
+    DeleteObject(page->hBitmap);
+    DeleteDC(page->hTempDC);
+    free(page->pBitmapInfo);
+    free(page);
+    g_graphics_pages[page_number] = NULL;
+  }
+
+  if (g_graphics_pages[0])
+  {
+    free(g_graphics_pages[0]->pBitmapInfo);
+    free(g_graphics_pages[0]);
+    g_graphics_pages[0] = NULL;
+  }
+  DeleteObject(g_palette_handle);
+  free(g_palette_layout);
+  free(g_scanline_bitmap_info);
+  free(g_blit_bitmap_info);
+  free(g_copy_bitmap_info);
+  g_palette_handle = NULL;
+  g_realized_palette_handle = NULL;
+  g_palette_layout = NULL;
+  g_scanline_bitmap_info = NULL;
+  g_blit_bitmap_info = NULL;
+  g_copy_bitmap_info = NULL;
+  g_scanline_bitmap_info_initialized = 0;
+  g_blit_bitmap_info_initialized = 0;
+  g_copy_bitmap_info_initialized = 0;
+  g_graphics_initialized = 0;
+  g_graphics_width = 0;
+  g_graphics_height = 0;
+  g_graphics_bpp = 0;
 }
 
 // FUNCTION: SHANDALAR 0x00579310
@@ -930,64 +883,7 @@ void ReadGraphicsScanline(unsigned int *out_scanline, int page_number, int src_x
 // FUNCTION: FACEMAKER 0x0040a1a0
 LRESULT CALLBACK PaletteClassWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  short column;
-  short row;
-  HWND palette_hwnd;
-  HDC desktop_hdc;
-  HDC palette_hdc;
-  HPEN pen_handle;
-  HGDIOBJ old_pen_handle;
-  int x;
-  int y;
-  int row_bottom;
-  HWND hWndChildAfter;
-  LPCSTR lpszClass;
-  LPCSTR lpszWindow;
-  LOGPEN pen;
-
-  if (msg != WM_PAINT)
-    return DefWindowProcA(hwnd, msg, wparam, lparam);
-
-  DefWindowProcA(hwnd, msg, wparam, lparam);
-  lpszWindow = (LPCSTR)0;
-  lpszClass = "ShowPaletteClass";
-  hWndChildAfter = (HWND)0;
-
-  palette_hwnd = FindWindowExA(GetParent(hwnd), hWndChildAfter, lpszClass, lpszWindow);
-  ShowWindow(palette_hwnd, SW_SHOW);
-  ShowWindow(palette_hwnd, SW_SHOW);
-  desktop_hdc = GetDC((HWND)0);
-  palette_hdc = GetDC(palette_hwnd);
-  SelectPalette(palette_hdc, g_palette_handle, FALSE);
-  row_bottom = 0x10;
-  RealizePalette(palette_hdc);
-  row = 0;
-  do
-  {
-    x = 0;
-    column = 0;
-    do
-    {
-      pen.lopnWidth.x = 0;
-      pen.lopnColor = (unsigned short)(row * 0x10 + column) | 0x1000000;
-      pen.lopnWidth.y = 0;
-      pen.lopnStyle = 0;
-      pen_handle = CreatePenIndirect(&pen);
-      old_pen_handle = SelectObject(palette_hdc, pen_handle);
-      DeleteObject(old_pen_handle);
-      for (y = row_bottom - 0x10; y < row_bottom; y = y + 1)
-      {
-        MoveToEx(palette_hdc, x, y, (LPPOINT)0);
-        LineTo(palette_hdc, x + 0x10, y);
-      }
-      x = x + 0x10;
-      column = column + 1;
-    } while (x < 0x100);
-    row_bottom = row_bottom + 0x10;
-    row = row + 1;
-  } while (row_bottom < 0x110);
-  ReleaseDC((HWND)0, desktop_hdc);
-  ReleaseDC(palette_hwnd, palette_hdc);
+  (void)hwnd; (void)msg; (void)wparam; (void)lparam;
   return 0;
 }
 
@@ -995,39 +891,16 @@ LRESULT CALLBACK PaletteClassWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM 
 // FUNCTION: FACEMAKER 0x0040a330
 ATOM RegisterPaletteClass(HINSTANCE hInstance)
 {
-  WNDCLASSA wndclass;
-
-  wndclass.style = 0x20;
-  wndclass.hInstance = hInstance;
-  wndclass.lpfnWndProc = PaletteClassWndProc;
-  wndclass.cbClsExtra = 0;
-  wndclass.cbWndExtra = 0;
-  wndclass.hIcon = LoadIconA((HINSTANCE)0, (LPCSTR)0x7F00);
-  wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7F00);
-  wndclass.hbrBackground = CreateSolidBrush(0);
-  wndclass.lpszMenuName = (LPCSTR)0;
-  wndclass.lpszClassName = "ShowPaletteClass";
-
-  return RegisterClassA(&wndclass);
+  (void)hInstance;
+  return 1;
 }
 
 // FUNCTION: SHANDALAR 0x0057dcb0
 // FUNCTION: FACEMAKER 0x0040a3c0
 HWND CreatePalettePopupWindow(HINSTANCE hInstance, HWND parent_hwnd)
 {
-  RECT rect;
-  rect.left = 0;
-  rect.right = 0x100;
-  rect.top = 0;
-  rect.bottom = 0x100;
-
-  AdjustWindowRect(&rect, WS_CAPTION | WS_SYSMENU | WS_THICKFRAME, FALSE);
-
-  return CreateWindowExA(0, "ShowPaletteClass", "Current Palette", WS_POPUP | WS_CAPTION | WS_SYSMENU,
-                         100, 50,
-                         rect.right - rect.left,
-                         rect.bottom - rect.top,
-                         parent_hwnd, (HMENU)0, hInstance, (LPVOID)0);
+  (void)hInstance; (void)parent_hwnd;
+  return NULL;
 }
 
 typedef struct

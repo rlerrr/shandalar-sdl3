@@ -1,7 +1,7 @@
-#include <windows.h>
+#include "platform/gdi_compat.h"
+#include "platform/legacy_io.h"
 #include <stdio.h>
 #include <string.h>
-#include <io.h>
 #include <stdlib.h>
 #include "inttypes.h"
 #include "mystdbool.h"
@@ -26,12 +26,6 @@ extern RGBQUAD g_palette_rgb[256];
 extern DIBSurface *g_graphics_pages[10];
 extern int g_graphics_height;
 extern int g_scanline_palette_needs_refresh;
-#endif
-
-#ifndef DRAWCARDLIB
-// For some reason these are actually optimized in deckdll?
-#pragma optimize("gy", on)
-#pragma intrinsic(memcpy)
 #endif
 
 // FUNCTION: DRAWCARDLIB 0x1000965b
@@ -98,7 +92,6 @@ BOOL FreeBitmapInfo(void *bitmapInfo)
 }
 
 #ifndef DRAWCARDLIB
-#pragma optimize("", on)
 #endif
 
 // GLOBAL: DRAWCARDLIB 0x100f23b0
@@ -246,20 +239,7 @@ DIBSurface *CreateDIBSurface(int width, int height, int bitsPerPixel)
   if (!global_dibSurface->pBitmapInfo)
     return NULL;
 
-  // Create shared memory for the DIB section
-  global_dibSurface->hMapping = CreateFileMappingA(
-      INVALID_HANDLE_VALUE,
-      NULL,
-      0x8000004,
-      0,
-      imageSize,
-      NULL);
-
-  if (!global_dibSurface->hMapping)
-  {
-    FreeBitmapInfo(global_dibSurface->pBitmapInfo);
-    return NULL;
-  }
+  global_dibSurface->hMapping = NULL;
 
   // Create the DIB section
   global_dibSurface->hTempDC = GetDC(NULL);
@@ -278,7 +258,6 @@ DIBSurface *CreateDIBSurface(int width, int height, int bitsPerPixel)
   if (!global_dibSurface->hBitmap)
   {
     FreeBitmapInfo(global_dibSurface->pBitmapInfo);
-    CloseHandle(global_dibSurface->hMapping);
     return 0;
   }
 
@@ -303,7 +282,7 @@ LoadPicFile(int loadFlags, undefined4 unused_arg2, undefined4 unused_arg3, char 
   unused_arg3 = unused_arg3;
   bitsPerPixel = 8;
 
-  if (strcmpi(".pcx", strchr(pcxFilename, '.')) == 0)
+  if (_stricmp(".pcx", strchr(pcxFilename, '.')) == 0)
   {
     //.pcx file
     gPcxInFile = fopen(pcxFilename, "rb");
@@ -401,7 +380,7 @@ HBITMAP load_pic(char *filename)
   iVar1 = LoadPicFile(0, 0, 0, filename, 0);
   if (iVar1 != 0)
   {
-    CloseHandle(global_dibSurface->hMapping);
+    global_dibSurface->hMapping = NULL;
   }
   return iVar1;
 }
@@ -461,7 +440,6 @@ int RpBitsRefill(void)
 // FUNCTION: SHANDALAR 0x0057a060
 // FUNCTION: FACEMAKER 0x00407720
 #if defined(FACEMAKER) || defined(SHANDALAR)
-#pragma optimize("gty", on)
 #endif
 
 void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data)
@@ -579,7 +557,7 @@ void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data)
   g_palette_rgb[255].rgbRed = 0xff;
   g_palette_rgb[255].rgbReserved = 0;
 
-  AnimatePalette(g_palette_handle, 0, 0x100, (PALETTEENTRY *)&g_palette_entries);
+  SetPaletteEntries(g_palette_handle, 0, 0x100, (PALETTEENTRY *)&g_palette_entries);
   if (g_graphics_pages[0] != (DIBSurface *)0)
   {
     RealizePalette(g_graphics_pages[0]->hTempDC);
@@ -593,17 +571,11 @@ void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data)
     }
   }
 
-  palette_window = FindWindowExA((HWND)0, (HWND)0, "ShowPaletteClass", "Current Palette");
-  if (palette_window != (HWND)0)
-  {
-    InvalidateRect(palette_window, (RECT *)0, FALSE);
-    UpdateWindow(palette_window);
-  }
+  palette_window = NULL;
   g_scanline_palette_needs_refresh = 1;
 #else
   (void)palette_data;
 #endif
 }
 #if defined(FACEMAKER) || defined(SHANDALAR)
-#pragma optimize("", on)
 #endif

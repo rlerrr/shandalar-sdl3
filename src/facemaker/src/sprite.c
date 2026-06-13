@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
-#include <io.h>
+#include "platform/legacy_io.h"
 #include <string.h>
 #include "cardartlib/src/assert.h"
 #include "drawcardlib/src/pic.h"
+#include "face_assets.h"
 #include "facemaker_types.h"
 
 #ifdef _fileno
@@ -73,29 +74,14 @@ size_t WriteSpriteBlob(void *sprite_blob, char *output_path)
 // FUNCTION: FACEMAKER 0x004089c0
 int ReadSpriteEntryPointers(EncodedImage **out_entry_ptrs, char *sprite_path)
 {
-  FILE *file;
-  int file_handle;
-  int entry_count;
-  size_t file_size;
-  int *sprite_data;
-
-  entry_count = 0;
-  file = fopen(sprite_path, g_file_read_mode);
-  assert((int)file, "D:\\NewMagic\\sources\\sidlib\\sprite.c", 0xa3,
+  unsigned char *blob;
+  size_t blob_size;
+  int entry_count = facemaker_sprite_blob_load_entries(
+      sprite_path, &blob, &blob_size, out_entry_ptrs, 1000);
+  assert(entry_count > 0, "D:\\NewMagic\\sources\\sidlib\\sprite.c", 0xa3,
          "Could not open Sprite File %s\n", sprite_path);
-  file_handle = _fileno(file);
-  file_size = _filelength(file_handle);
-  sprite_data = malloc(file_size);
-  fread(sprite_data, 1, file_size, file);
-  fclose(file);
-
-  while (*sprite_data != -1)
-  {
-    *out_entry_ptrs = (EncodedImage *)sprite_data;
-    out_entry_ptrs = out_entry_ptrs + 1;
-    entry_count = entry_count + 1;
-    sprite_data = (int *)((int)sprite_data + *sprite_data);
-  }
+  (void)blob;
+  (void)blob_size;
   return entry_count;
 }
 

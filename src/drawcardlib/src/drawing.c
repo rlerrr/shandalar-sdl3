@@ -1,4 +1,4 @@
-#include <WINDOWS.H>
+#include "platform/gdi_compat.h"
 #include "cardartlib/src/palette.h"
 
 // FUNCTION: DRAWCARDLIB 0x10007296

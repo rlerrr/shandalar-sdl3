@@ -1,8 +1,8 @@
 #ifndef MYSTDBOOL_H
 #define MYSTDBOOL_H
 
-typedef int bool;
-#define true  1
-#define false 0
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
 
 #endif /* MYSTDBOOL_H */

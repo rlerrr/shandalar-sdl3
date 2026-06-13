@@ -1,7 +1,7 @@
 #ifndef __DRAWCARDLIB_H__
 #define __DRAWCARDLIB_H__
 
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include "defs.h"
 #include "mystdbool.h"
 
