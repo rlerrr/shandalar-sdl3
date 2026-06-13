@@ -200,65 +200,62 @@ undefined4 global_color_depth;
 // FUNCTION: SHANDALAR 0x0042ec23
 int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24, int height, int width, int row_padding)
 {
-  struct
-  {
-    short *err_cell;       /* [ebp-0x94] (also reused as temp) */
-    int *delta_table;      /* [ebp-0x90] */
-    short *err_px;         /* [ebp-0x8c] */
-    int err_r;             /* [ebp-0x88] */
-    int x_byte_step;       /* [ebp-0x84] */
-    int nearest_rgb;       /* [ebp-0x80] */
-    int x_start;           /* [ebp-0x7c] */
-    undefined *kernel_ptr; /* [ebp-0x78] */
-    int kernel_count;      /* [ebp-0x74] */
-    int r_clamped;         /* [ebp-0x70] */
-    int *err_row_ptrs[6];  /* [ebp-0x6c] */
-    int y;                 /* [ebp-0x54] */
-    undefined2 pad_50;     /* [ebp-0x50] */
-    undefined2 pad_4e;     /* [ebp-0x4e] */
-    undefined2 pad_4c_w;   /* [ebp-0x4c] */
-    undefined2 pad_4a;     /* [ebp-0x4a] */
-    int x;                 /* [ebp-0x48] */
-    int k_row;             /* [ebp-0x44] */
-    int k_x_off;           /* [ebp-0x40] */
-    int err_b;             /* [ebp-0x3c] */
-    int x_step;            /* [ebp-0x38] */
-    uint g_clamped;        /* [ebp-0x34] */
-    int err_g;             /* [ebp-0x30] */
-    int *k_it;             /* [ebp-0x2c] */
-    int rgb_clamped;       /* [ebp-0x28] */
-    uint src_rgb;          /* [ebp-0x24] */
-    undefined2 pad_20;     /* [ebp-0x20] */
-    undefined2 pad_1e;     /* [ebp-0x1e] */
-    undefined2 pad_1c;     /* [ebp-0x1c] */
-    undefined2 pad_1a;     /* [ebp-0x1a] */
-    int x_end;             /* [ebp-0x18] */
-    uint clear_dwords;     /* [ebp-0x14] */
-    undefined2 pad_10;     /* [ebp-0x10] */
-    undefined2 pad_e;      /* [ebp-0xe] */
-    undefined2 pad_c_w;    /* [ebp-0xc] */
-    undefined2 pad_a;      /* [ebp-0xa] */
-    int x_byte_off;        /* [ebp-0x8] */
-    uint b_clamped;        /* [ebp-0x4] */
-  } s;
+  short *err_cell;       /* [ebp-0x94] (also reused as temp) */
+  int *delta_table;      /* [ebp-0x90] */
+  short *err_px;         /* [ebp-0x8c] */
+  int err_r;             /* [ebp-0x88] */
+  int x_byte_step;       /* [ebp-0x84] */
+  int nearest_rgb;       /* [ebp-0x80] */
+  int x_start;           /* [ebp-0x7c] */
+  undefined *kernel_ptr; /* [ebp-0x78] */
+  int kernel_count;      /* [ebp-0x74] */
+  int r_clamped;         /* [ebp-0x70] */
+  int *err_row_ptrs[6];  /* [ebp-0x6c] */
+  int y;                 /* [ebp-0x54] */
+  undefined2 pad_50;     /* [ebp-0x50] */
+  undefined2 pad_4e;     /* [ebp-0x4e] */
+  undefined2 pad_4c_w;   /* [ebp-0x4c] */
+  undefined2 pad_4a;     /* [ebp-0x4a] */
+  int x;                 /* [ebp-0x48] */
+  int k_row;             /* [ebp-0x44] */
+  int k_x_off;           /* [ebp-0x40] */
+  int err_b;             /* [ebp-0x3c] */
+  int x_step;            /* [ebp-0x38] */
+  uint g_clamped;        /* [ebp-0x34] */
+  int err_g;             /* [ebp-0x30] */
+  int *k_it;             /* [ebp-0x2c] */
+  int rgb_clamped;       /* [ebp-0x28] */
+  uint src_rgb;          /* [ebp-0x24] */
+  undefined2 pad_20;     /* [ebp-0x20] */
+  undefined2 pad_1e;     /* [ebp-0x1e] */
+  undefined2 pad_1c;     /* [ebp-0x1c] */
+  undefined2 pad_1a;     /* [ebp-0x1a] */
+  int x_end;             /* [ebp-0x18] */
+  uint clear_dwords;     /* [ebp-0x14] */
+  undefined2 pad_10;     /* [ebp-0x10] */
+  undefined2 pad_e;      /* [ebp-0xe] */
+  undefined2 pad_c_w;    /* [ebp-0xc] */
+  undefined2 pad_a;      /* [ebp-0xa] */
+  int x_byte_off;        /* [ebp-0x8] */
+  uint b_clamped;        /* [ebp-0x4] */
 
-  s.pad_10 = 0;
-  s.pad_e = 0;
-  s.pad_c_w = 0;
-  s.pad_a = 0;
-  s.pad_50 = 0;
-  s.pad_4e = 0;
-  s.pad_4c_w = 0;
-  s.pad_4a = 0;
-  s.pad_20 = 0xffff;
-  s.pad_1e = 0xffff;
-  s.pad_1c = 0xffff;
-  s.pad_1a = 0;
-  s.nearest_rgb = -1;
-  s.x_step = 1;
-  s.rgb_clamped = 0;
-  s.kernel_ptr = &g_ditherKernelTable[(dither_kernel_id << 6) * 3];
-  s.clear_dwords = (uint)((width + 10) * 8) >> 2;
+  pad_10 = 0;
+  pad_e = 0;
+  pad_c_w = 0;
+  pad_a = 0;
+  pad_50 = 0;
+  pad_4e = 0;
+  pad_4c_w = 0;
+  pad_4a = 0;
+  pad_20 = 0xffff;
+  pad_1e = 0xffff;
+  pad_1c = 0xffff;
+  pad_1a = 0;
+  nearest_rgb = -1;
+  x_step = 1;
+  rgb_clamped = 0;
+  kernel_ptr = &g_ditherKernelTable[(dither_kernel_id << 6) * 3];
+  clear_dwords = (uint)((width + 10) * 8) >> 2;
 
   if (dither_kernel_id == 0)
   {
@@ -273,21 +270,21 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
 
   if (g_paletteClampInit == 0)
   {
-    for (s.x = -0x200; s.x < 0x200; s.x = s.x + 1)
+    for (x = -0x200; x < 0x200; x = x + 1)
     {
-      if ((0 <= s.x) && (s.x <= 0xff))
+      if ((0 <= x) && (x <= 0xff))
       {
-        g_u8ClampTable[s.x] = (undefined1)s.x;
+        g_u8ClampTable[x] = (undefined1)x;
       }
       else
       {
-        if (s.x < 0)
+        if (x < 0)
         {
-          g_u8ClampTable[s.x] = 0;
+          g_u8ClampTable[x] = 0;
         }
         else
         {
-          g_u8ClampTable[s.x] = 0xff;
+          g_u8ClampTable[x] = 0xff;
         }
       }
     }
@@ -296,109 +293,109 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
 
   if ((int)g_paletteDitherKernelCachedId != dither_kernel_id)
   {
-    for (s.x = 0; (uint)s.x < 0x41; s.x = s.x + 1)
+    for (x = 0; (uint)x < 0x41; x = x + 1)
     {
-      if (g_errorDiffusionDeltaTablePtrs[s.x] != (void *)0x0)
+      if (g_errorDiffusionDeltaTablePtrs[x] != (void *)0x0)
       {
-        free(g_errorDiffusionDeltaTablePtrs[s.x]);
-        g_errorDiffusionDeltaTablePtrs[s.x] = (void *)0x0;
+        free(g_errorDiffusionDeltaTablePtrs[x]);
+        g_errorDiffusionDeltaTablePtrs[x] = (void *)0x0;
       }
     }
     InitErrorDiffusionDeltaTables(dither_kernel_id, (int *)g_errorDiffusionDeltaTablePtrs);
     g_paletteDitherKernelCachedId = dither_kernel_id;
   }
 
-  for (s.x = 0; (uint)s.x < 5; s.x = s.x + 1)
+  for (x = 0; (uint)x < 5; x = x + 1)
   {
-    SetBytes((void *)(g_errorDiffusionRowStorage + s.x * 0x8060), 0, 0x8060);
-    s.err_row_ptrs[s.x + 1] = (int *)((int)(g_errorDiffusionRowStorage + s.x * 0x8060) + 0x28);
+    SetBytes((void *)(g_errorDiffusionRowStorage + x * 0x8060), 0, 0x8060);
+    err_row_ptrs[x + 1] = (int *)((int)(g_errorDiffusionRowStorage + x * 0x8060) + 0x28);
   }
 
-  s.kernel_count = g_ditherKernelTapCounts[dither_kernel_id];
-  for (s.y = 0; s.y < height; s.y = s.y + 1, *(int *)&bgr24 += width * 3 + row_padding)
+  kernel_count = g_ditherKernelTapCounts[dither_kernel_id];
+  for (y = 0; y < height; y = y + 1, *(int *)&bgr24 += width * 3 + row_padding)
   {
-    if (0 < s.x_step)
+    if (0 < x_step)
     {
-      s.x_start = 0;
-      s.x_end = width;
-      s.x_byte_step = 3;
+      x_start = 0;
+      x_end = width;
+      x_byte_step = 3;
     }
     else
     {
-      s.x_start = width + -1;
-      s.x_end = -1;
-      s.x_byte_step = -3;
+      x_start = width + -1;
+      x_end = -1;
+      x_byte_step = -3;
     }
 
-    s.x = s.x_start;
-    s.x_byte_off = s.x_start + s.x_start + s.x_start;
-    for (; s.x != s.x_end; s.x = s.x + s.x_step, s.x_byte_off = s.x_byte_off + s.x_byte_step)
+    x = x_start;
+    x_byte_off = x_start + x_start + x_start;
+    for (; x != x_end; x = x + x_step, x_byte_off = x_byte_off + x_byte_step)
     {
-      s.src_rgb = *(uint *)(s.x_byte_off + (ptrdiff_t)bgr24) & 0xffffff;
-      *(uint *)&((byte *)bgr24)[s.x_byte_off] = *(uint *)(s.x_byte_off + (ptrdiff_t)bgr24) & 0xff000000;
+      src_rgb = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xffffff;
+      *(uint *)&((byte *)bgr24)[x_byte_off] = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xff000000;
 
-      s.err_px = (short *)s.err_row_ptrs[1] + (s.x << 2);
+      err_px = (short *)err_row_ptrs[1] + (x << 2);
 
-      if (s.src_rgb == 0)
+      if (src_rgb == 0)
       {
-        s.nearest_rgb = 0;
-        s.r_clamped = s.nearest_rgb;
-        s.g_clamped = s.r_clamped;
-        s.b_clamped = s.g_clamped;
+        nearest_rgb = 0;
+        r_clamped = nearest_rgb;
+        g_clamped = r_clamped;
+        b_clamped = g_clamped;
       }
-      else if (s.src_rgb == 0xffffff)
+      else if (src_rgb == 0xffffff)
       {
-        s.r_clamped = 0xff;
-        s.g_clamped = s.r_clamped;
-        s.b_clamped = s.g_clamped;
-        s.nearest_rgb = 0xffffff;
+        r_clamped = 0xff;
+        g_clamped = r_clamped;
+        b_clamped = g_clamped;
+        nearest_rgb = 0xffffff;
       }
       else
       {
 
-        s.b_clamped = s.src_rgb & 0xff;
-        s.b_clamped += ((int)*s.err_px >> 8);
-        s.b_clamped = (uint)(byte)g_u8ClampTable[s.b_clamped];
+        b_clamped = src_rgb & 0xff;
+        b_clamped += ((int)*err_px >> 8);
+        b_clamped = (uint)(byte)g_u8ClampTable[b_clamped];
 
-        s.g_clamped = ((byte *)&s.src_rgb)[1];
-        s.g_clamped += ((int)s.err_px[1] >> 8);
-        s.g_clamped = (uint)(byte)g_u8ClampTable[s.g_clamped];
+        g_clamped = ((byte *)&src_rgb)[1];
+        g_clamped += ((int)err_px[1] >> 8);
+        g_clamped = (uint)(byte)g_u8ClampTable[g_clamped];
 
-        s.r_clamped = (s.src_rgb & 0xff0000) >> 16;
-        s.r_clamped += ((int)s.err_px[2] >> 8);
-        s.r_clamped = (uint)(byte)g_u8ClampTable[s.r_clamped];
+        r_clamped = (src_rgb & 0xff0000) >> 16;
+        r_clamped += ((int)err_px[2] >> 8);
+        r_clamped = (uint)(byte)g_u8ClampTable[r_clamped];
 
-        s.src_rgb = s.g_clamped << 8 | s.r_clamped << 0x10 | s.b_clamped;
+        src_rgb = g_clamped << 8 | r_clamped << 0x10 | b_clamped;
 
-        s.nearest_rgb = Octree_FindNearestColor(s.src_rgb);
+        nearest_rgb = Octree_FindNearestColor(src_rgb);
       }
-      *(uint *)&((byte *)bgr24)[s.x_byte_off] = *(uint *)(s.x_byte_off + (ptrdiff_t)bgr24) | s.nearest_rgb;
+      *(uint *)&((byte *)bgr24)[x_byte_off] = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) | nearest_rgb;
 
-      s.err_b = s.b_clamped - (s.nearest_rgb & 0xff);
-      s.err_g = s.g_clamped - (s.nearest_rgb >> 8 & 0xff);
-      s.err_r = s.r_clamped - ((uint)s.nearest_rgb >> 16);
+      err_b = b_clamped - (nearest_rgb & 0xff);
+      err_g = g_clamped - (nearest_rgb >> 8 & 0xff);
+      err_r = r_clamped - ((uint)nearest_rgb >> 16);
 
-      s.k_it = (int *)s.kernel_ptr;
-      s.err_row_ptrs[0] = &s.k_it[s.kernel_count * 4];
-      for (; s.err_row_ptrs[0] > s.k_it; s.k_it += 0x4)
+      k_it = (int *)kernel_ptr;
+      err_row_ptrs[0] = &k_it[kernel_count * 4];
+      for (; err_row_ptrs[0] > k_it; k_it += 0x4)
       {
-        s.k_x_off = s.k_it[1];
-        s.k_row = s.k_it[2];
-        s.delta_table = (int *)s.k_it[3];
-        s.err_cell = ((s.k_x_off + s.x) << 2) + (short *)(s.err_row_ptrs[s.k_row + 1]);
+        k_x_off = k_it[1];
+        k_row = k_it[2];
+        delta_table = (int *)k_it[3];
+        err_cell = ((k_x_off + x) << 2) + (short *)(err_row_ptrs[k_row + 1]);
 
-        s.err_cell[0] = s.delta_table[s.err_b] + s.err_cell[0];
-        s.err_cell[1] = s.delta_table[s.err_g] + s.err_cell[1];
-        s.err_cell[2] = s.delta_table[s.err_r] + s.err_cell[2];
+        err_cell[0] = delta_table[err_b] + err_cell[0];
+        err_cell[1] = delta_table[err_g] + err_cell[1];
+        err_cell[2] = delta_table[err_r] + err_cell[2];
       }
     }
 
-    RotateDwordsLeft1((undefined4 *)(s.err_row_ptrs + 1), g_ditherKernelErrorRowCounts[dither_kernel_id]);
-    memset((void *)(s.err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] + -10), 0, s.clear_dwords << 2);
+    RotateDwordsLeft1((undefined4 *)(err_row_ptrs + 1), g_ditherKernelErrorRowCounts[dither_kernel_id]);
+    memset((void *)(err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] + -10), 0, clear_dwords << 2);
     if (serpentine != 0)
     {
-      s.x_step = -s.x_step;
-      s.kernel_ptr = (undefined *)((int)g_ditherKernelTable + (uint)(s.x_step == -1) * 0x6c0 + dither_kernel_id * 0xc0);
+      x_step = -x_step;
+      kernel_ptr = (undefined *)((int)g_ditherKernelTable + (uint)(x_step == -1) * 0x6c0 + dither_kernel_id * 0xc0);
     }
   }
 }
@@ -421,41 +418,38 @@ void RotateDwordsLeft1(undefined4 *dwords, uint count)
 // FUNCTION: SHANDALAR 0x0042f208
 int InitErrorDiffusionDeltaTables(int dither_kernel_id, int *delta_table_ptrs_base)
 {
-  struct
-  {
-    int delta;
-    int tap_index; // EBP - 0xc
-    int tap_weight; // EBP - 8
-    int half_divisor; // EBP - 4
-  } s;
+  int delta;
+  int tap_index;    // EBP - 0xc
+  int tap_weight;   // EBP - 8
+  int half_divisor; // EBP - 4
 
-  s.half_divisor = g_ditherKernelDivisors[dither_kernel_id] >> 1;
-  for (s.tap_index = 0; s.tap_index < g_ditherKernelTapCounts[dither_kernel_id]; s.tap_index = s.tap_index + 1)
+  half_divisor = g_ditherKernelDivisors[dither_kernel_id] >> 1;
+  for (tap_index = 0; tap_index < g_ditherKernelTapCounts[dither_kernel_id]; tap_index = tap_index + 1)
   {
-    s.tap_weight = *(int *)&g_ditherKernelTable[(s.tap_index << 4) + ((dither_kernel_id << 6) * 3)];
+    tap_weight = *(int *)&g_ditherKernelTable[(tap_index << 4) + ((dither_kernel_id << 6) * 3)];
 
-    if (delta_table_ptrs_base[s.tap_weight] != 0)
+    if (delta_table_ptrs_base[tap_weight] != 0)
     {
-      *(int *)&g_ditherKernelTable[0xc + ((dither_kernel_id << 6) * 3) + (s.tap_index << 4)] = delta_table_ptrs_base[s.tap_weight] + 0x400;
+      *(int *)&g_ditherKernelTable[0xc + ((dither_kernel_id << 6) * 3) + (tap_index << 4)] = delta_table_ptrs_base[tap_weight] + 0x400;
       continue;
     }
 
-    delta_table_ptrs_base[s.tap_weight] = (int)malloc(0x800);
-    assert((uint)(delta_table_ptrs_base[s.tap_weight] != 0), "D:\\Newmagic\\sources\\NedCard\\Palette.c",
+    delta_table_ptrs_base[tap_weight] = (int)malloc(0x800);
+    assert((uint)(delta_table_ptrs_base[tap_weight] != 0), "D:\\Newmagic\\sources\\NedCard\\Palette.c",
            0x4fd, "Not enough memory for delta array\r\n");
-    for (s.delta = -0x100; s.delta < 0x100; s.delta = s.delta + 1)
+    for (delta = -0x100; delta < 0x100; delta = delta + 1)
     {
-      *(int *)(delta_table_ptrs_base[s.tap_weight] + 0x400 + s.delta * 4) =
-          ((s.tap_weight * s.delta + s.half_divisor) * 0x100) / g_ditherKernelDivisors[dither_kernel_id];
+      *(int *)(delta_table_ptrs_base[tap_weight] + 0x400 + delta * 4) =
+          ((tap_weight * delta + half_divisor) * 0x100) / g_ditherKernelDivisors[dither_kernel_id];
     }
-    *(int *)&g_ditherKernelTable[0xc + ((dither_kernel_id << 6) * 3) + (s.tap_index << 4)] = delta_table_ptrs_base[s.tap_weight] + 0x3fc;
+    *(int *)&g_ditherKernelTable[0xc + ((dither_kernel_id << 6) * 3) + (tap_index << 4)] = delta_table_ptrs_base[tap_weight] + 0x3fc;
   }
 
-  for (s.tap_index = 0; s.tap_index < g_ditherKernelTapCounts[dither_kernel_id]; s.tap_index = s.tap_index + 1)
+  for (tap_index = 0; tap_index < g_ditherKernelTapCounts[dither_kernel_id]; tap_index = tap_index + 1)
   {
-    s.tap_weight = *(int *)&g_ditherKernelTable[0xc + 0x6b4 + ((dither_kernel_id << 6) * 3) + (s.tap_index << 4)];
+    tap_weight = *(int *)&g_ditherKernelTable[0xc + 0x6b4 + ((dither_kernel_id << 6) * 3) + (tap_index << 4)];
 
-    *(int *)&g_ditherKernelTable[0xc + 0x6b4 + 0xc + ((dither_kernel_id << 6) * 3) + (s.tap_index << 4)] = delta_table_ptrs_base[s.tap_weight] + 0x3fc;
+    *(int *)&g_ditherKernelTable[0xc + 0x6b4 + 0xc + ((dither_kernel_id << 6) * 3) + (tap_index << 4)] = delta_table_ptrs_base[tap_weight] + 0x3fc;
   }
   return 0;
 }
@@ -465,83 +459,80 @@ int InitErrorDiffusionDeltaTables(int dither_kernel_id, int *delta_table_ptrs_ba
 // FUNCTION: SHANDALAR 0x0042f7dc
 undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uint *bgr24, int height, int width, int row_padding)
 {
-  struct
-  {
-    short *err_cell;       /* [ebp-0x94] (also reused as temp) */
-    int *delta_table;      /* [ebp-0x90] */
-    short *err_px;         /* [ebp-0x8c] */
-    int err_r;             /* [ebp-0x88] */
-    int x_byte_step;       /* [ebp-0x84] */
-    int quant_rgb;         /* [ebp-0x80] */
-    int x_start;           /* [ebp-0x7c] */
-    undefined *kernel_ptr; /* [ebp-0x78] */
-    int kernel_count;      /* [ebp-0x74] */
-    int r_clamped;         /* [ebp-0x70] */
-    int err_row_ptrs[6];   /* [ebp-0x6c] */
-    int y;                 /* [ebp-0x54] */
-    undefined2 pad_50;     /* [ebp-0x50] */
-    undefined2 pad_4e;     /* [ebp-0x4e] */
-    undefined2 pad_4c_w;   /* [ebp-0x4c] */
-    undefined2 pad_4a;     /* [ebp-0x4a] */
-    int x;                 /* [ebp-0x48] */
-    int k_row;             /* [ebp-0x44] */
-    int k_x_off;           /* [ebp-0x40] */
-    int err_b;             /* [ebp-0x3c] */
-    int x_step;            /* [ebp-0x38] */
-    uint g_clamped;        /* [ebp-0x34] */
-    int err_g;             /* [ebp-0x30] */
-    int *k_it;             /* [ebp-0x2c] */
-    int rgb_clamped;       /* [ebp-0x28] */
-    uint src_rgb;          /* [ebp-0x24] */
-    undefined2 pad_20;     /* [ebp-0x20] */
-    undefined2 pad_1e;     /* [ebp-0x1e] */
-    undefined2 pad_1c;     /* [ebp-0x1c] */
-    undefined2 pad_1a;     /* [ebp-0x1a] */
-    int x_end;             /* [ebp-0x18] */
-    uint clear_dwords;     /* [ebp-0x14] */
-    undefined2 pad_10;     /* [ebp-0x10] */
-    undefined2 pad_e;      /* [ebp-0xe] */
-    undefined2 pad_c_w;    /* [ebp-0xc] */
-    undefined2 pad_a;      /* [ebp-0xa] */
-    int x_byte_off;        /* [ebp-0x8] */
-    uint b_clamped;        /* [ebp-0x4] */
-  } s;
+  short *err_cell;       /* [ebp-0x94] (also reused as temp) */
+  int *delta_table;      /* [ebp-0x90] */
+  short *err_px;         /* [ebp-0x8c] */
+  int err_r;             /* [ebp-0x88] */
+  int x_byte_step;       /* [ebp-0x84] */
+  int quant_rgb;         /* [ebp-0x80] */
+  int x_start;           /* [ebp-0x7c] */
+  undefined *kernel_ptr; /* [ebp-0x78] */
+  int kernel_count;      /* [ebp-0x74] */
+  int r_clamped;         /* [ebp-0x70] */
+  int err_row_ptrs[6];   /* [ebp-0x6c] */
+  int y;                 /* [ebp-0x54] */
+  undefined2 pad_50;     /* [ebp-0x50] */
+  undefined2 pad_4e;     /* [ebp-0x4e] */
+  undefined2 pad_4c_w;   /* [ebp-0x4c] */
+  undefined2 pad_4a;     /* [ebp-0x4a] */
+  int x;                 /* [ebp-0x48] */
+  int k_row;             /* [ebp-0x44] */
+  int k_x_off;           /* [ebp-0x40] */
+  int err_b;             /* [ebp-0x3c] */
+  int x_step;            /* [ebp-0x38] */
+  uint g_clamped;        /* [ebp-0x34] */
+  int err_g;             /* [ebp-0x30] */
+  int *k_it;             /* [ebp-0x2c] */
+  int rgb_clamped;       /* [ebp-0x28] */
+  uint src_rgb;          /* [ebp-0x24] */
+  undefined2 pad_20;     /* [ebp-0x20] */
+  undefined2 pad_1e;     /* [ebp-0x1e] */
+  undefined2 pad_1c;     /* [ebp-0x1c] */
+  undefined2 pad_1a;     /* [ebp-0x1a] */
+  int x_end;             /* [ebp-0x18] */
+  uint clear_dwords;     /* [ebp-0x14] */
+  undefined2 pad_10;     /* [ebp-0x10] */
+  undefined2 pad_e;      /* [ebp-0xe] */
+  undefined2 pad_c_w;    /* [ebp-0xc] */
+  undefined2 pad_a;      /* [ebp-0xa] */
+  int x_byte_off;        /* [ebp-0x8] */
+  uint b_clamped;        /* [ebp-0x4] */
 
-  s.pad_10 = 0;
-  s.pad_e = 0;
-  s.pad_c_w = 0;
-  s.pad_a = 0;
-  s.pad_50 = 0;
-  s.pad_4e = 0;
-  s.pad_4c_w = 0;
-  s.pad_4a = 0;
-  s.pad_20 = 0xffff;
-  s.pad_1e = 0xffff;
-  s.pad_1c = 0xffff;
-  s.pad_1a = 0;
-  s.quant_rgb = -1;
-  s.x_step = 1;
-  s.rgb_clamped = 0;
-  s.kernel_ptr = &g_ditherKernelTable[(dither_kernel_id << 6) * 3];
-  s.clear_dwords = (uint)((width + 10) * 8) >> 2;
+  pad_10 = 0;
+  pad_e = 0;
+  pad_c_w = 0;
+  pad_a = 0;
+  pad_50 = 0;
+  pad_4e = 0;
+  pad_4c_w = 0;
+  pad_4a = 0;
+  pad_20 = 0xffff;
+  pad_1e = 0xffff;
+  pad_1c = 0xffff;
+  pad_1a = 0;
+  quant_rgb = -1;
+  x_step = 1;
+  rgb_clamped = 0;
+  kernel_ptr = &g_ditherKernelTable[(dither_kernel_id << 6) * 3];
+  clear_dwords = (uint)((width + 10) * 8) >> 2;
 
   if (g_rgbQuantClampInit == 0)
   {
-    for (s.x = -0x200; s.x < 0x200; s.x = s.x + 1)
+    for (x = -0x200; x < 0x200; x = x + 1)
     {
-      if ((0 <= s.x) && (s.x <= 0xff))
+      if ((0 <= x) && (x <= 0xff))
       {
-        g_u8ClampTable[s.x] = (undefined1)s.x;
+        g_u8ClampTable[x] = (undefined1)x;
       }
       else
       {
-        if (s.x < 0)
+        if (x < 0)
         {
-          g_u8ClampTable[s.x] = 0;
+          g_u8ClampTable[x] = 0;
         }
         else
         {
-          g_u8ClampTable[s.x] = 0xff;
+          g_u8ClampTable[x] = 0xff;
         }
       }
     }
@@ -550,101 +541,101 @@ undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uin
 
   if ((int)g_rgbQuantKernelCachedId != dither_kernel_id)
   {
-    for (s.x = 0; (uint)s.x < 0x41; s.x = s.x + 1)
+    for (x = 0; (uint)x < 0x41; x = x + 1)
     {
-      if (g_errorDiffusionDeltaTablePtrs[s.x] != (void *)0x0)
+      if (g_errorDiffusionDeltaTablePtrs[x] != (void *)0x0)
       {
-        free(g_errorDiffusionDeltaTablePtrs[s.x]);
-        g_errorDiffusionDeltaTablePtrs[s.x] = (void *)0x0;
+        free(g_errorDiffusionDeltaTablePtrs[x]);
+        g_errorDiffusionDeltaTablePtrs[x] = (void *)0x0;
       }
     }
     InitErrorDiffusionDeltaTables(dither_kernel_id, (int *)g_errorDiffusionDeltaTablePtrs);
     g_rgbQuantKernelCachedId = dither_kernel_id;
   }
 
-  for (s.x = 0; (uint)s.x < 5; s.x = s.x + 1)
+  for (x = 0; (uint)x < 5; x = x + 1)
   {
-    memset((void *)(g_errorDiffusionRowStorage + s.x * 0x8060), 0, 0x8060);
-    s.err_row_ptrs[s.x + 1] = (int)(g_errorDiffusionRowStorage + s.x * 0x8060) + 0x28;
+    memset((void *)(g_errorDiffusionRowStorage + x * 0x8060), 0, 0x8060);
+    err_row_ptrs[x + 1] = (int)(g_errorDiffusionRowStorage + x * 0x8060) + 0x28;
   }
 
-  s.kernel_count = g_ditherKernelTapCounts[dither_kernel_id];
-  for (s.y = 0; s.y < height; s.y = s.y + 1, *(int *)&bgr24 += width * 3 + row_padding)
+  kernel_count = g_ditherKernelTapCounts[dither_kernel_id];
+  for (y = 0; y < height; y = y + 1, *(int *)&bgr24 += width * 3 + row_padding)
   {
-    if (0 < s.x_step)
+    if (0 < x_step)
     {
-      s.x_start = 0;
-      s.x_end = width;
-      s.x_byte_step = 3;
+      x_start = 0;
+      x_end = width;
+      x_byte_step = 3;
     }
     else
     {
-      s.x_start = width + -1;
-      s.x_end = -1;
-      s.x_byte_step = -3;
+      x_start = width + -1;
+      x_end = -1;
+      x_byte_step = -3;
     }
 
-    s.x = s.x_start;
-    s.x_byte_off = s.x_start + s.x_start + s.x_start;
-    for (; s.x != s.x_end; s.x = s.x + s.x_step, s.x_byte_off = s.x_byte_off + s.x_byte_step)
+    x = x_start;
+    x_byte_off = x_start + x_start + x_start;
+    for (; x != x_end; x = x + x_step, x_byte_off = x_byte_off + x_byte_step)
     {
-      s.src_rgb = *(uint *)(s.x_byte_off + (ptrdiff_t)bgr24) & 0xffffff;
-      *(uint *)&((byte *)bgr24)[s.x_byte_off] = *(uint *)(s.x_byte_off + (ptrdiff_t)bgr24) & 0xff000000;
+      src_rgb = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xffffff;
+      *(uint *)&((byte *)bgr24)[x_byte_off] = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xff000000;
 
-      s.err_px = (short *)s.err_row_ptrs[1] + (s.x << 2);
+      err_px = (short *)err_row_ptrs[1] + (x << 2);
 
-      s.b_clamped = s.src_rgb & 0xff;
-      s.b_clamped += ((int)*s.err_px >> 8);
-      s.b_clamped = (uint)(byte)g_u8ClampTable[s.b_clamped];
+      b_clamped = src_rgb & 0xff;
+      b_clamped += ((int)*err_px >> 8);
+      b_clamped = (uint)(byte)g_u8ClampTable[b_clamped];
 
-      s.g_clamped = ((byte *)&s.src_rgb)[1];
-      s.g_clamped += ((int)s.err_px[1] >> 8);
-      s.g_clamped = (uint)(byte)g_u8ClampTable[s.g_clamped];
+      g_clamped = ((byte *)&src_rgb)[1];
+      g_clamped += ((int)err_px[1] >> 8);
+      g_clamped = (uint)(byte)g_u8ClampTable[g_clamped];
 
-      s.r_clamped = (s.src_rgb & 0xff0000) >> 16;
-      s.r_clamped += ((int)s.err_px[2] >> 8);
-      s.r_clamped = (uint)(byte)g_u8ClampTable[s.r_clamped];
+      r_clamped = (src_rgb & 0xff0000) >> 16;
+      r_clamped += ((int)err_px[2] >> 8);
+      r_clamped = (uint)(byte)g_u8ClampTable[r_clamped];
 
-      s.src_rgb = s.g_clamped << 8 | s.r_clamped << 0x10 | s.b_clamped;
-      if (s.src_rgb == 0)
+      src_rgb = g_clamped << 8 | r_clamped << 0x10 | b_clamped;
+      if (src_rgb == 0)
       {
-        s.quant_rgb = 0;
+        quant_rgb = 0;
       }
-      else if (s.src_rgb == 0xffffff)
+      else if (src_rgb == 0xffffff)
       {
-        s.quant_rgb = 0xffffff;
+        quant_rgb = 0xffffff;
       }
       else
       {
-        s.quant_rgb = Rgb888_QuantizeToF8(s.src_rgb);
+        quant_rgb = Rgb888_QuantizeToF8(src_rgb);
       }
-      *(uint *)&((byte *)bgr24)[s.x_byte_off] = *(uint *)(s.x_byte_off + (ptrdiff_t)bgr24) | s.quant_rgb;
+      *(uint *)&((byte *)bgr24)[x_byte_off] = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) | quant_rgb;
 
-      s.err_b = s.b_clamped - (s.quant_rgb & 0xff);
-      s.err_g = s.g_clamped - (s.quant_rgb >> 8 & 0xff);
-      s.err_r = s.r_clamped - (s.quant_rgb >> 16 & 0xff);
-      s.err_row_ptrs[0] = 0;
-      s.k_it = (int *)s.kernel_ptr;
-      for (; s.err_row_ptrs[0] < s.kernel_count; s.err_row_ptrs[0]++, s.k_it += 0x4)
+      err_b = b_clamped - (quant_rgb & 0xff);
+      err_g = g_clamped - (quant_rgb >> 8 & 0xff);
+      err_r = r_clamped - (quant_rgb >> 16 & 0xff);
+      err_row_ptrs[0] = 0;
+      k_it = (int *)kernel_ptr;
+      for (; err_row_ptrs[0] < kernel_count; err_row_ptrs[0]++, k_it += 0x4)
       {
-        s.k_x_off = s.k_it[1];
-        s.k_row = s.k_it[2];
-        s.delta_table = (int *)s.k_it[3];
-        s.err_cell = (short *)(s.err_row_ptrs[s.k_row + 1] +
-                               (s.k_x_off + s.x) * 8);
+        k_x_off = k_it[1];
+        k_row = k_it[2];
+        delta_table = (int *)k_it[3];
+        err_cell = (short *)(err_row_ptrs[k_row + 1] +
+                             (k_x_off + x) * 8);
 
-        s.err_cell[0] = s.delta_table[s.err_b] + s.err_cell[0];
-        s.err_cell[1] = s.delta_table[s.err_g] + s.err_cell[1];
-        s.err_cell[2] = s.delta_table[s.err_r] + s.err_cell[2];
+        err_cell[0] = delta_table[err_b] + err_cell[0];
+        err_cell[1] = delta_table[err_g] + err_cell[1];
+        err_cell[2] = delta_table[err_r] + err_cell[2];
       }
     }
 
-    RotateDwordsLeft1((undefined4 *)(s.err_row_ptrs + 1), g_ditherKernelErrorRowCounts[dither_kernel_id]);
-    memset((void *)(s.err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] + -0x28), 0, s.clear_dwords << 2);
+    RotateDwordsLeft1((undefined4 *)(err_row_ptrs + 1), g_ditherKernelErrorRowCounts[dither_kernel_id]);
+    memset((void *)(err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] + -0x28), 0, clear_dwords << 2);
     if (serpentine != 0)
     {
-      s.x_step = -s.x_step;
-      s.kernel_ptr = &g_ditherKernelTable[(uint)(s.x_step == -1) * 0x6c0 + dither_kernel_id * 0xc0];
+      x_step = -x_step;
+      kernel_ptr = &g_ditherKernelTable[(uint)(x_step == -1) * 0x6c0 + dither_kernel_id * 0xc0];
     }
   }
   return 1;
@@ -665,31 +656,28 @@ uint Rgb888_QuantizeToF8(uint rgb)
 // FUNCTION: MAGIC 0x0041f670
 WvlEntry *Catalog_LoadWvlEntry(int catalog_id, char *wvl_path, int decode_haar)
 {
-  struct
-  {
-    char fullpath[0x108]; /* [ebp-0x418] */
-    char dir[0x104];      /* [ebp-0x310] */
-    char fname[0x100];    /* [ebp-0x20c] */
-    char ext[0x100];      /* [ebp-0x10c] */
-    size_t entry_size;    /* [ebp-0x0c] */
-    WvlEntry *entry;      /* [ebp-0x08] */
-    char *dir_end;        /* [ebp-0x04] */
-  } s;
+  char fullpath[0x108]; /* [ebp-0x418] */
+  char dir[0x104];      /* [ebp-0x310] */
+  char fname[0x100];    /* [ebp-0x20c] */
+  char ext[0x100];      /* [ebp-0x10c] */
+  size_t entry_size;    /* [ebp-0x0c] */
+  WvlEntry *entry;      /* [ebp-0x08] */
+  char *dir_end;        /* [ebp-0x04] */
 
-  s.entry = &g_wvlEntryScratch;
+  entry = &g_wvlEntryScratch;
   EnterCriticalSection(&global_critical_section_for_catalog);
-  _splitpath(wvl_path, (char *)0x0, s.dir, s.fname, s.ext);
+  _splitpath(wvl_path, (char *)0x0, dir, fname, ext);
   if (g_wvlCatalogsInitialized == 0)
   {
-    strcpy(s.fullpath, s.dir);
-    strcat(s.fullpath, "SmallArt.cat");
-    g_smallArtCatalogHandle = Catalog_Open(s.fullpath);
-    strcpy(s.fullpath, s.dir);
-    strcat(s.fullpath, "MedArt.cat");
-    g_medArtCatalogHandle = Catalog_Open(s.fullpath);
+    strcpy(fullpath, dir);
+    strcat(fullpath, "SmallArt.cat");
+    g_smallArtCatalogHandle = Catalog_Open(fullpath);
+    strcpy(fullpath, dir);
+    strcat(fullpath, "MedArt.cat");
+    g_medArtCatalogHandle = Catalog_Open(fullpath);
     g_wvlCatalogsInitialized = 1;
   }
-  s.dir_end = s.dir + strlen(s.dir);
+  dir_end = dir + strlen(dir);
 
   if (catalog_id == 0)
   {
@@ -705,17 +693,17 @@ WvlEntry *Catalog_LoadWvlEntry(int catalog_id, char *wvl_path, int decode_haar)
     return (WvlEntry *)0x0;
   }
 
-  strcpy(s.dir, s.fname);
-  strcat(s.dir, s.ext);
-  _strlwr(s.dir);
+  strcpy(dir, fname);
+  strcat(dir, ext);
+  _strlwr(dir);
 
-  if (s.entry != (WvlEntry *)0x0)
+  if (entry != (WvlEntry *)0x0)
   {
-    memset(s.entry, 0, 0x1b0);
-    strcpy(s.entry->wvl_path, wvl_path);
-    s.entry->data_ptr = (byte *)&g_catalogReadScratch;
-    s.entry_size = Catalog_ReadEntry(g_activeWvlCatalogHandle, s.dir, (void **)&s.entry->data_ptr);
-    if (s.entry_size == (size_t)-1)
+    memset(entry, 0, 0x1b0);
+    strcpy(entry->wvl_path, wvl_path);
+    entry->data_ptr = (byte *)&g_catalogReadScratch;
+    entry_size = Catalog_ReadEntry(g_activeWvlCatalogHandle, dir, (void **)&entry->data_ptr);
+    if (entry_size == (size_t)-1)
     {
       strcat(wvl_path, "\n");
       OutputDebugStringA((LPCSTR)wvl_path);
@@ -723,26 +711,26 @@ WvlEntry *Catalog_LoadWvlEntry(int catalog_id, char *wvl_path, int decode_haar)
       return (WvlEntry *)0x0;
     }
 
-    s.entry->data_size = s.entry_size - 0x9c;
-    memcpy(s.entry, s.entry->data_ptr, 0x9c);
-    s.entry->data_ptr = s.entry->data_ptr + 0x9c;
-    if (s.entry->pieces == 4)
+    entry->data_size = entry_size - 0x9c;
+    memcpy(entry, entry->data_ptr, 0x9c);
+    entry->data_ptr = entry->data_ptr + 0x9c;
+    if (entry->pieces == 4)
     {
-      s.entry->width = s.entry->width << 1;
-      s.entry->height = s.entry->height << 1;
+      entry->width = entry->width << 1;
+      entry->height = entry->height << 1;
     }
 
     if (decode_haar != 0)
     {
-      s.entry->decoded_ptr = Wvl_DecodeHaar(s.entry, (byte *)0x0);
-      if (s.entry->decoded_ptr != 0)
+      entry->decoded_ptr = Wvl_DecodeHaar(entry, (byte *)0x0);
+      if (entry->decoded_ptr != 0)
       {
-        s.entry->decoded_flag = 1;
+        entry->decoded_flag = 1;
         LeaveCriticalSection(&global_critical_section_for_catalog);
       }
       else
       {
-        Catalog_Unlock(s.entry);
+        Catalog_Unlock(entry);
         LeaveCriticalSection(&global_critical_section_for_catalog);
         return (WvlEntry *)0x0;
       }
@@ -750,7 +738,7 @@ WvlEntry *Catalog_LoadWvlEntry(int catalog_id, char *wvl_path, int decode_haar)
   }
 
   /* NOTE: Original does not leave the critical section on this path. */
-  return s.entry;
+  return entry;
 }
 
 // FUNCTION: CARDARTLIB 0x10006be3
@@ -759,45 +747,42 @@ WvlEntry *Catalog_LoadWvlEntry(int catalog_id, char *wvl_path, int decode_haar)
 // FUNCTION: SHANDALAR 0x00566693
 byte *Wvl_DecodeHaar(WvlEntry *wvl, byte *dst)
 {
-  struct
-  {
-    byte *bgr_tmp;      /* [ebp-0x4c] */
-    int scale_i;        /* [ebp-0x48] */
-    int piece_idx;      /* [ebp-0x44] */
-    int *y_plane;       /* [ebp-0x40] */
-    int have_dst;       /* [ebp-0x3c] */
-    int image_size;     /* [ebp-0x38] */
-    int *unused2;       /* [ebp-0x34] */
-    int chroma_base;    /* [ebp-0x30] */
-    int height_px;      /* [ebp-0x2c] */
-    int chroma_w;       /* [ebp-0x28] */
-    int *unused1;       /* [ebp-0x24] */
-    int base_size;      /* [ebp-0x20] */
-    int alloc_bytes;    /* [ebp-0x1c] */
-    int *v_plane;       /* [ebp-0x18] */
-    int block_width;    /* [ebp-0x14] */
-    int *u_plane;       /* [ebp-0x10] */
-    int block_height;   /* [ebp-0xc] */
-    int *unused3;       /* [ebp-0x8] */
-    int pieces_per_row; /* [ebp-0x4] */
-  } s;
+  byte *bgr_tmp;      /* [ebp-0x4c] */
+  int scale_i;        /* [ebp-0x48] */
+  int piece_idx;      /* [ebp-0x44] */
+  int *y_plane;       /* [ebp-0x40] */
+  int have_dst;       /* [ebp-0x3c] */
+  int image_size;     /* [ebp-0x38] */
+  int *unused2;       /* [ebp-0x34] */
+  int chroma_base;    /* [ebp-0x30] */
+  int height_px;      /* [ebp-0x2c] */
+  int chroma_w;       /* [ebp-0x28] */
+  int *unused1;       /* [ebp-0x24] */
+  int base_size;      /* [ebp-0x20] */
+  int alloc_bytes;    /* [ebp-0x1c] */
+  int *v_plane;       /* [ebp-0x18] */
+  int block_width;    /* [ebp-0x14] */
+  int *u_plane;       /* [ebp-0x10] */
+  int block_height;   /* [ebp-0xc] */
+  int *unused3;       /* [ebp-0x8] */
+  int pieces_per_row; /* [ebp-0x4] */
 
-  s.have_dst = 0;
+  have_dst = 0;
   if (g_waveletScaleToByteTableInit == 0)
   {
-    for (s.scale_i = -0x400; s.scale_i <= 0x400; s.scale_i = s.scale_i + 1)
+    for (scale_i = -0x400; scale_i <= 0x400; scale_i = scale_i + 1)
     {
-      if (s.scale_i >= 0 && s.scale_i <= 0xf8)
+      if (scale_i >= 0 && scale_i <= 0xf8)
       {
-        g_waveletScaleToByteTable[s.scale_i] = (char)((s.scale_i * 255) / 0xf8);
+        g_waveletScaleToByteTable[scale_i] = (char)((scale_i * 255) / 0xf8);
       }
-      else if (s.scale_i < 0xa)
+      else if (scale_i < 0xa)
       {
-        g_waveletScaleToByteTable[s.scale_i] = 0;
+        g_waveletScaleToByteTable[scale_i] = 0;
       }
       else
       {
-        g_waveletScaleToByteTable[s.scale_i] = 0xff;
+        g_waveletScaleToByteTable[scale_i] = 0xff;
       }
     }
     g_waveletScaleToByteTableInit = 1;
@@ -811,22 +796,22 @@ byte *Wvl_DecodeHaar(WvlEntry *wvl, byte *dst)
   else
   {
     MemZeroDwords((undefined8 *)dst, (wvl->decode_bytes + 2000) / 4);
-    s.have_dst = 1;
+    have_dst = 1;
   }
 
   g_unpackResultUnused = Wvl_UnpackPieces(dst, wvl);
 
   if (wvl->pieces == 1)
   {
-    s.pieces_per_row = 1;
+    pieces_per_row = 1;
   }
   else if (wvl->pieces == 4)
   {
-    s.pieces_per_row = 2;
+    pieces_per_row = 2;
   }
   else if (wvl->pieces == 0x10)
   {
-    s.pieces_per_row = 4;
+    pieces_per_row = 4;
   }
   else
   {
@@ -834,69 +819,69 @@ byte *Wvl_DecodeHaar(WvlEntry *wvl, byte *dst)
            "wavelet pieces has illegal value: %d", wvl->pieces);
   }
 
-  s.image_size = wvl->width;
-  s.height_px = s.image_size;
-  s.block_width = wvl->width / s.pieces_per_row;
-  s.block_height = s.block_width;
-  s.alloc_bytes = wvl->base_size;
-  s.base_size = wvl->height / s.pieces_per_row;
-  s.unused1 = &wvl->unk_2c;
-  s.unused2 = &wvl->unk_3c;
-  s.unused3 = &wvl->unk_4c;
+  image_size = wvl->width;
+  height_px = image_size;
+  block_width = wvl->width / pieces_per_row;
+  block_height = block_width;
+  alloc_bytes = wvl->base_size;
+  base_size = wvl->height / pieces_per_row;
+  unused1 = &wvl->unk_2c;
+  unused2 = &wvl->unk_3c;
+  unused3 = &wvl->unk_4c;
 
-  for (s.piece_idx = 0; s.piece_idx < wvl->pieces; s.piece_idx = s.piece_idx + 1)
+  for (piece_idx = 0; piece_idx < wvl->pieces; piece_idx = piece_idx + 1)
   {
     if (wvl->chroma_is_420 != 0)
     {
-      s.chroma_w = (s.block_height / s.pieces_per_row) / (((wvl->pieces == 1) ? 2 : 1));
-      s.chroma_base = (s.base_size / s.pieces_per_row) / (((wvl->pieces == 1) ? 2 : 1));
+      chroma_w = (block_height / pieces_per_row) / (((wvl->pieces == 1) ? 2 : 1));
+      chroma_base = (base_size / pieces_per_row) / (((wvl->pieces == 1) ? 2 : 1));
     }
     else
     {
-      s.chroma_w = s.block_height;
-      s.chroma_base = s.base_size;
+      chroma_w = block_height;
+      chroma_base = base_size;
     }
 
-    s.y_plane = (int *)&dst[(s.block_height * s.block_height + s.chroma_w * s.chroma_w * 2 + 0x40) * s.piece_idx * 4];
-    s.u_plane = &s.y_plane[s.block_height * s.block_height] + 0x20;
-    s.v_plane = &s.u_plane[s.chroma_w * s.chroma_w] + 0x20;
+    y_plane = (int *)&dst[(block_height * block_height + chroma_w * chroma_w * 2 + 0x40) * piece_idx * 4];
+    u_plane = &y_plane[block_height * block_height] + 0x20;
+    v_plane = &u_plane[chroma_w * chroma_w] + 0x20;
 
-    Haar2D_ReconstructInPlace(s.y_plane, s.block_height, s.alloc_bytes);
-    Haar2D_ReconstructInPlace(s.u_plane, s.chroma_w, s.alloc_bytes);
-    Haar2D_ReconstructInPlace(s.v_plane, s.chroma_w, s.alloc_bytes);
+    Haar2D_ReconstructInPlace(y_plane, block_height, alloc_bytes);
+    Haar2D_ReconstructInPlace(u_plane, chroma_w, alloc_bytes);
+    Haar2D_ReconstructInPlace(v_plane, chroma_w, alloc_bytes);
 
-    if (s.piece_idx < wvl->pieces / 2)
+    if (piece_idx < wvl->pieces / 2)
     {
-      s.bgr_tmp = YuvPlanesToBgr24(g_haarDecodeScratch, s.y_plane, s.block_height, s.block_height,
-                                   s.u_plane, s.v_plane, s.chroma_w, s.chroma_w, wvl->chroma_is_420);
+      bgr_tmp = YuvPlanesToBgr24(g_haarDecodeScratch, y_plane, block_height, block_height,
+                                 u_plane, v_plane, chroma_w, chroma_w, wvl->chroma_is_420);
     }
     else if (wvl->pieces > 1)
     {
-      s.bgr_tmp = YuvPlanesToBgr24(g_haarDecodeScratch, s.y_plane, s.block_height, wvl->height - s.block_width,
-                                   s.u_plane, s.v_plane, s.chroma_w, s.chroma_base, wvl->chroma_is_420);
+      bgr_tmp = YuvPlanesToBgr24(g_haarDecodeScratch, y_plane, block_height, wvl->height - block_width,
+                                 u_plane, v_plane, chroma_w, chroma_base, wvl->chroma_is_420);
     }
     else
     {
-      s.bgr_tmp = YuvPlanesToBgr24(g_haarDecodeScratch, s.y_plane, s.block_height, s.base_size,
-                                   s.u_plane, s.v_plane, s.chroma_w, s.chroma_base, wvl->chroma_is_420);
+      bgr_tmp = YuvPlanesToBgr24(g_haarDecodeScratch, y_plane, block_height, base_size,
+                                 u_plane, v_plane, chroma_w, chroma_base, wvl->chroma_is_420);
     }
 
     if (wvl->pieces > 1)
     {
 
-      CopyBgr24RectIntoStridedBuffer(dst, s.bgr_tmp,
-                                     (s.height_px / s.pieces_per_row) * (s.piece_idx % s.pieces_per_row),
-                                     (s.height_px / s.pieces_per_row) * (s.piece_idx / s.pieces_per_row), s.block_height,
-                                     s.block_height, s.height_px, s.height_px);
-      free(s.bgr_tmp);
+      CopyBgr24RectIntoStridedBuffer(dst, bgr_tmp,
+                                     (height_px / pieces_per_row) * (piece_idx % pieces_per_row),
+                                     (height_px / pieces_per_row) * (piece_idx / pieces_per_row), block_height,
+                                     block_height, height_px, height_px);
+      free(bgr_tmp);
     }
     else
     {
-      if (s.have_dst == 0)
+      if (have_dst == 0)
       {
         free(dst);
       }
-      dst = s.bgr_tmp;
+      dst = bgr_tmp;
     }
   }
   return dst;
@@ -992,46 +977,43 @@ void SetBytes(void *dst, int value, size_t num)
 // FUNCTION: SHANDALAR 0x00566d8e
 void Haar2D_ReconstructInPlace(int *coeffs, int full_size, int base_size)
 {
-  struct
-  {
-    int *idk;
-    int *piVar1;       // ebp - 0x18
-    int *haarScratchA; // ebp - 0x14
-    int *haarScratchB; // ebp - 0x10
-    int i;             // ebp - 0xc
-    int *pad2;         // ebp - 8
-    int *pad3;         // ebp - 4
-  } s;
+  int *idk;
+  int *piVar1;       // ebp - 0x18
+  int *haarScratchA; // ebp - 0x14
+  int *haarScratchB; // ebp - 0x10
+  int i;             // ebp - 0xc
+  int *pad2;         // ebp - 8
+  int *pad3;         // ebp - 4
 
   if (g_haarScratchInit == 0)
   {
     g_haarScratchA = malloc(0x32000);
-    s.haarScratchA = g_haarScratchA;
+    haarScratchA = g_haarScratchA;
     g_haarScratchB = malloc(0x32000);
 
-    s.haarScratchB = g_haarScratchB;
+    haarScratchB = g_haarScratchB;
     g_haarScratchInit = 1;
   }
   else
   {
-    s.haarScratchA = g_haarScratchA;
-    s.haarScratchB = g_haarScratchB;
+    haarScratchA = g_haarScratchA;
+    haarScratchB = g_haarScratchB;
   }
 
-  for (s.i = base_size; s.i < full_size; s.i = s.i << 1)
+  for (i = base_size; i < full_size; i = i << 1)
   {
-    s.pad2 = coeffs;
-    s.idk = &coeffs[s.i * s.i];
+    pad2 = coeffs;
+    idk = &coeffs[i * i];
 
-    Haar_CombineSumDiff(s.pad2, s.idk, s.haarScratchA, s.i, s.i, s.i * 2, s.i);
+    Haar_CombineSumDiff(pad2, idk, haarScratchA, i, i, i * 2, i);
 
-    s.pad3 = &coeffs[s.i * s.i * 2];
-    s.piVar1 = &coeffs[s.i * s.i * 3];
+    pad3 = &coeffs[i * i * 2];
+    piVar1 = &coeffs[i * i * 3];
 
-    Haar_CombineSumDiff(s.pad3, s.piVar1, s.haarScratchB, s.i,
-                        s.i, s.i * 2, s.i);
+    Haar_CombineSumDiff(pad3, piVar1, haarScratchB, i,
+                        i, i * 2, i);
 
-    Haar_CombineSumDiffHalf(s.haarScratchA, s.haarScratchB, coeffs, s.i, s.i * 2, s.i * 2, s.i * 2);
+    Haar_CombineSumDiffHalf(haarScratchA, haarScratchB, coeffs, i, i * 2, i * 2, i * 2);
   }
 }
 
@@ -1040,33 +1022,30 @@ void Haar2D_ReconstructInPlace(int *coeffs, int full_size, int base_size)
 // FUNCTION: SHANDALAR 0x00566ecc
 void Haar_CombineSumDiff(int *src_a, int *src_b, int *dst, int width, int rows, undefined4 src_stride_unused, int dst_stride)
 {
-  struct
-  {
-    int *src_a_end;  // ebp - 0x10
-    int *src_a_row0; // ebp - 0xc
-    int *dst_row;    // ebp - 8
-    int row;         // ebp - 4
-  } s;
+  int *src_a_end;  // ebp - 0x10
+  int *src_a_row0; // ebp - 0xc
+  int *dst_row;    // ebp - 8
+  int row;         // ebp - 4
 
-  s.row = dst_stride;
+  row = dst_stride;
 
-  for (s.row = 0; s.row < rows; s.row++, dst++, src_b++)
+  for (row = 0; row < rows; row++, dst++, src_b++)
   {
-    s.dst_row = dst;
-    s.src_a_row0 = src_a;
-    s.src_a_end = (width - 1) + src_a + 1;
-    s.dst_row = s.dst_row + dst_stride * 2;
+    dst_row = dst;
+    src_a_row0 = src_a;
+    src_a_end = (width - 1) + src_a + 1;
+    dst_row = dst_row + dst_stride * 2;
     src_a++;
 
-    for (; s.src_a_end > src_a; src_a++, src_b++, s.dst_row += dst_stride * 2)
+    for (; src_a_end > src_a; src_a++, src_b++, dst_row += dst_stride * 2)
     {
-      *s.dst_row = *src_b + *src_a;
+      *dst_row = *src_b + *src_a;
 
-      *(int *)((char *)s.dst_row + dst_stride * 4) = *src_a - *src_b;
+      *(int *)((char *)dst_row + dst_stride * 4) = *src_a - *src_b;
     }
 
-    *dst = *src_b + *s.src_a_row0;
-    dst[dst_stride] = *s.src_a_row0 - *src_b;
+    *dst = *src_b + *src_a_row0;
+    dst[dst_stride] = *src_a_row0 - *src_b;
   }
 }
 
@@ -1075,30 +1054,27 @@ void Haar_CombineSumDiff(int *src_a, int *src_b, int *dst, int width, int rows, 
 // FUNCTION: SHANDALAR 0x00566fa1
 void Haar_CombineSumDiffHalf(int *src_a, int *src_b, int *dst, int width, int rows, undefined4 src_stride_unused, int dst_stride)
 {
-  struct
-  {
-    int *src_a_end;  // ebp - 0x10
-    int *src_a_row0; // ebp - 0xc
-    int *dst_row;    // ebp - 8
-    int row;         // ebp - 4
-  } s;
+  int *src_a_end;  // ebp - 0x10
+  int *src_a_row0; // ebp - 0xc
+  int *dst_row;    // ebp - 8
+  int row;         // ebp - 4
 
-  for (s.row = 0; s.row < rows; s.row++, dst++, src_b++)
+  for (row = 0; row < rows; row++, dst++, src_b++)
   {
-    s.dst_row = dst;
-    s.src_a_row0 = src_a;
-    s.src_a_end = (width - 1) + src_a + 1;
-    s.dst_row = s.dst_row + dst_stride * 2;
+    dst_row = dst;
+    src_a_row0 = src_a;
+    src_a_end = (width - 1) + src_a + 1;
+    dst_row = dst_row + dst_stride * 2;
     src_a++;
 
-    for (; s.src_a_end > src_a; src_a++, src_b++, s.dst_row += dst_stride * 2)
+    for (; src_a_end > src_a; src_a++, src_b++, dst_row += dst_stride * 2)
     {
-      *s.dst_row = (*src_b + *src_a) >> 1;
-      *(int *)((char *)s.dst_row + dst_stride * 4) = (*src_a - *src_b) >> 1;
+      *dst_row = (*src_b + *src_a) >> 1;
+      *(int *)((char *)dst_row + dst_stride * 4) = (*src_a - *src_b) >> 1;
     }
 
-    *dst = (*src_b + *s.src_a_row0) >> 1;
-    dst[dst_stride] = (*s.src_a_row0 - *src_b) >> 1;
+    *dst = (*src_b + *src_a_row0) >> 1;
+    dst[dst_stride] = (*src_a_row0 - *src_b) >> 1;
   }
 }
 
@@ -1109,32 +1085,29 @@ undefined1 *YuvPlanesToBgr24(undefined1 *out_bgr24, int *luma, int width, int he
                              int chroma_stride, undefined4 unused_chroma_height, int chroma_is_420)
 
 {
-  struct
-  {
-    int y;                /* ebp - 0x2c */
-    int u;                /* ebp - 0x28 */
-    int v;                /* ebp - 0x24 */
-    undefined1 *out_base; /* ebp - 0x20 */
-    int row;              /* ebp - 0x1c */
-    int col;              /* ebp - 0x18 */
-    int green;            /* ebp - 0x14 */
-    int *chroma_u_ptr;    /* ebp - 0x10 */
-    int *chroma_v_ptr;    /* ebp - 0xc */
-    int red;              /* ebp - 8 */
-    int blue;             /* ebp - 4 */
-  } s;
+  int y;                /* ebp - 0x2c */
+  int u;                /* ebp - 0x28 */
+  int v;                /* ebp - 0x24 */
+  undefined1 *out_base; /* ebp - 0x20 */
+  int row;              /* ebp - 0x1c */
+  int col;              /* ebp - 0x18 */
+  int green;            /* ebp - 0x14 */
+  int *chroma_u_ptr;    /* ebp - 0x10 */
+  int *chroma_v_ptr;    /* ebp - 0xc */
+  int red;              /* ebp - 8 */
+  int blue;             /* ebp - 4 */
 
   if (g_yuvClampTableInit == 0)
   {
-    for (s.col = -0x400; s.col < 0x1c00; s.col = s.col + 1)
+    for (col = -0x400; col < 0x1c00; col = col + 1)
     {
-      if (0 < s.col)
+      if (0 < col)
       {
-        g_yuvClampTable[s.col] = (char)(((s.col >> 2) <= 0xff) ? (s.col >> 2) : 0xff);
+        g_yuvClampTable[col] = (char)(((col >> 2) <= 0xff) ? (col >> 2) : 0xff);
       }
       else
       {
-        g_yuvClampTable[s.col] = 0;
+        g_yuvClampTable[col] = 0;
       }
     }
     g_yuvClampTableInit = 1;
@@ -1142,76 +1115,76 @@ undefined1 *YuvPlanesToBgr24(undefined1 *out_bgr24, int *luma, int width, int he
   if (out_bgr24 == (undefined1 *)0x0)
   {
     out_bgr24 = malloc(width * width * 3 + 0x10);
-    s.out_base = out_bgr24;
+    out_base = out_bgr24;
   }
   else
   {
-    s.out_base = out_bgr24;
+    out_base = out_bgr24;
   }
 
-  for (s.row = 0; s.row < height; s.row++)
+  for (row = 0; row < height; row++)
   {
     if (chroma_is_420 != 0)
     {
-      s.chroma_u_ptr = &chroma_u[s.row / 2 * chroma_stride];
-      s.chroma_v_ptr = &chroma_v[s.row / 2 * chroma_stride];
+      chroma_u_ptr = &chroma_u[row / 2 * chroma_stride];
+      chroma_v_ptr = &chroma_v[row / 2 * chroma_stride];
     }
     else
     {
-      s.chroma_u_ptr = &chroma_u[s.row * chroma_stride];
-      s.chroma_v_ptr = &chroma_v[s.row * chroma_stride];
+      chroma_u_ptr = &chroma_u[row * chroma_stride];
+      chroma_v_ptr = &chroma_v[row * chroma_stride];
     }
 
-    for (s.col = 0; s.col < width; s.col++, luma++, out_bgr24 += 3)
+    for (col = 0; col < width; col++, luma++, out_bgr24 += 3)
     {
-      s.y = *luma;
+      y = *luma;
 
       if (chroma_is_420 != 0)
       {
-        if ((s.col & 1) == 0)
+        if ((col & 1) == 0)
         {
-          s.u = *s.chroma_u_ptr;
-          s.v = *s.chroma_v_ptr;
+          u = *chroma_u_ptr;
+          v = *chroma_v_ptr;
         }
         else
         {
-          s.u = (*s.chroma_u_ptr + s.chroma_u_ptr[((uint)(width - 1) - (uint)s.col) != 0]) / 2;
-          s.v = (*s.chroma_v_ptr + s.chroma_v_ptr[((uint)(width - 1) - (uint)s.col) != 0]) / 2;
+          u = (*chroma_u_ptr + chroma_u_ptr[((uint)(width - 1) - (uint)col) != 0]) / 2;
+          v = (*chroma_v_ptr + chroma_v_ptr[((uint)(width - 1) - (uint)col) != 0]) / 2;
         }
 
-        s.red = ((s.v >> 3) + (s.v >> 1) + s.v) - 0x333 + s.y;
-        s.blue = (s.u * 2) - 0x400 + s.y;
+        red = ((v >> 3) + (v >> 1) + v) - 0x333 + y;
+        blue = (u * 2) - 0x400 + y;
       }
       else
       {
-        s.u = *s.chroma_u_ptr;
-        s.v = *s.chroma_v_ptr;
+        u = *chroma_u_ptr;
+        v = *chroma_v_ptr;
 
-        s.red = ((s.v >> 3) + (s.v >> 1) + s.v) - 0x333 + s.y;
-        s.blue = (s.u * 2) - 0x400 + s.y;
+        red = ((v >> 3) + (v >> 1) + v) - 0x333 + y;
+        blue = (u * 2) - 0x400 + y;
       }
 
-      s.green = (((s.y * 2) - (s.y >> 2)) - (s.red >> 1)) - ((s.blue >> 2) - (s.blue >> 4));
-      out_bgr24[0] = g_yuvClampTable[s.blue];
-      out_bgr24[1] = g_yuvClampTable[s.green];
-      out_bgr24[2] = g_yuvClampTable[s.red];
+      green = (((y * 2) - (y >> 2)) - (red >> 1)) - ((blue >> 2) - (blue >> 4));
+      out_bgr24[0] = g_yuvClampTable[blue];
+      out_bgr24[1] = g_yuvClampTable[green];
+      out_bgr24[2] = g_yuvClampTable[red];
 
       if (chroma_is_420 != 0)
       {
-        if ((s.col & 1) != 0)
+        if ((col & 1) != 0)
         {
-          s.chroma_u_ptr = s.chroma_u_ptr + 1;
-          s.chroma_v_ptr = s.chroma_v_ptr + 1;
+          chroma_u_ptr = chroma_u_ptr + 1;
+          chroma_v_ptr = chroma_v_ptr + 1;
         }
       }
       else
       {
-        s.chroma_u_ptr = s.chroma_u_ptr + 1;
-        s.chroma_v_ptr = s.chroma_v_ptr + 1;
+        chroma_u_ptr = chroma_u_ptr + 1;
+        chroma_v_ptr = chroma_v_ptr + 1;
       }
     }
   }
-  return s.out_base;
+  return out_base;
 }
 
 // FUNCTION: CARDARTLIB 0x100078b8
@@ -1219,81 +1192,78 @@ undefined1 *YuvPlanesToBgr24(undefined1 *out_bgr24, int *luma, int width, int he
 // FUNCTION: SHANDALAR 0x0056735f
 BOOL Wvl_UnpackPieces(byte *dst, WvlEntry *wvl)
 {
-  struct
+  byte *dst_y;        /* ebp - 0x3c */
+  WvlEntry *target;   /* ebp - 0x38 */
+  int node_count;     /* ebp - 0x34 */
+  int chroma_w;       /* ebp - 0x30 */
+  int base_size;      /* ebp - 0x2c */
+  int chroma_h;       /* ebp - 0x28 */
+  int layer;          /* ebp - 0x24 */
+  uint *symbol_table; /* ebp - 0x20 */
+  int full_w;         /* ebp - 0x1c */
+  byte *dst_v;        /* ebp - 0x18 */
+  byte *bitstream;    /* ebp - 0x14 */
+  byte *huff_data;    /* ebp - 0x10 */
+  int full_h;         /* ebp - 0x0c */
+  int tmp;            /* ebp - 0x08 */
+  byte *dst_u;        /* ebp - 0x04 */
+
+  target = wvl;
+
+  full_w = target->width / ((target->pieces == 1) ? 1 : 2);
+  full_h = full_w;
+  chroma_w = full_h / ((target->chroma_is_420 == 0) ? 1 : 2);
+  chroma_h = chroma_w;
+
+  bitstream = wvl->data_ptr;
+  huff_data = bitstream;
+  base_size = target->base_size;
+
+  tmp = (full_w * full_h) + chroma_w * chroma_h * 2;
+
+  node_count = *(int *)bitstream;
+  bitstream = bitstream + 4;
+  symbol_table = (uint *)bitstream;
+  *symbol_table = 0x80000000;
+  bitstream = bitstream + (node_count << 2);
+  bitstream =
+      bitstream +
+      Huffman13_Init((undefined4)bitstream, (undefined4)symbol_table, (undefined4)node_count);
+
+  for (layer = 0; layer < target->pieces; layer = layer + 1)
   {
-    byte *dst_y;        /* ebp - 0x3c */
-    WvlEntry *target;   /* ebp - 0x38 */
-    int node_count;     /* ebp - 0x34 */
-    int chroma_w;       /* ebp - 0x30 */
-    int base_size;      /* ebp - 0x2c */
-    int chroma_h;       /* ebp - 0x28 */
-    int layer;          /* ebp - 0x24 */
-    uint *symbol_table; /* ebp - 0x20 */
-    int full_w;         /* ebp - 0x1c */
-    byte *dst_v;        /* ebp - 0x18 */
-    byte *bitstream;    /* ebp - 0x14 */
-    byte *huff_data;    /* ebp - 0x10 */
-    int full_h;         /* ebp - 0x0c */
-    int tmp;            /* ebp - 0x08 */
-    byte *dst_u;        /* ebp - 0x04 */
-  } s;
+    dst_y = &dst[(((tmp + 0x40) * layer) << 2)];
 
-  s.target = wvl;
+    dst_u = &dst_y[((full_w * full_h) << 2)] + 0x80;
 
-  s.full_w = s.target->width / ((s.target->pieces == 1) ? 1 : 2);
-  s.full_h = s.full_w;
-  s.chroma_w = s.full_h / ((s.target->chroma_is_420 == 0) ? 1 : 2);
-  s.chroma_h = s.chroma_w;
+    dst_v = &dst_u[((chroma_w * chroma_h) << 2)] + 0x80;
 
-  s.bitstream = wvl->data_ptr;
-  s.huff_data = s.bitstream;
-  s.base_size = s.target->base_size;
+    memcpy(dst_y, bitstream, (base_size * base_size) << 2);
 
-  s.tmp = (s.full_w * s.full_h) + s.chroma_w * s.chroma_h * 2;
+    dst_y += (base_size * base_size) << 2;
 
-  s.node_count = *(int *)s.bitstream;
-  s.bitstream = s.bitstream + 4;
-  s.symbol_table = (uint *)s.bitstream;
-  *s.symbol_table = 0x80000000;
-  s.bitstream = s.bitstream + (s.node_count << 2);
-  s.bitstream =
-      s.bitstream +
-      Huffman13_Init((undefined4)s.bitstream, (undefined4)s.symbol_table, (undefined4)s.node_count);
+    bitstream += (base_size * base_size) << 2;
 
-  for (s.layer = 0; s.layer < s.target->pieces; s.layer = s.layer + 1)
-  {
-    s.dst_y = &dst[(((s.tmp + 0x40) * s.layer) << 2)];
+    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)dst_y, (uint *)bitstream, target->huff_bytes_y[layer]);
+    bitstream = bitstream + target->huff_bytes_y[layer];
 
-    s.dst_u = &s.dst_y[((s.full_w * s.full_h) << 2)] + 0x80;
+    memcpy(dst_u, bitstream, (base_size * base_size) << 2);
 
-    s.dst_v = &s.dst_u[((s.chroma_w * s.chroma_h) << 2)] + 0x80;
+    dst_u += (base_size * base_size) << 2;
 
-    memcpy(s.dst_y, s.bitstream, (s.base_size * s.base_size) << 2);
+    bitstream += (base_size * base_size) << 2;
 
-    s.dst_y += (s.base_size * s.base_size) << 2;
+    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)dst_u, (uint *)bitstream, target->huff_bytes_u[layer]);
+    bitstream = bitstream + target->huff_bytes_u[layer];
 
-    s.bitstream += (s.base_size * s.base_size) << 2;
+    memcpy(dst_v, bitstream, (base_size * base_size) << 2);
 
-    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)s.dst_y, (uint *)s.bitstream, s.target->huff_bytes_y[s.layer]);
-    s.bitstream = s.bitstream + s.target->huff_bytes_y[s.layer];
+    dst_v += (base_size * base_size) << 2;
 
-    memcpy(s.dst_u, s.bitstream, (s.base_size * s.base_size) << 2);
+    bitstream += (base_size * base_size) << 2;
 
-    s.dst_u += (s.base_size * s.base_size) << 2;
-
-    s.bitstream += (s.base_size * s.base_size) << 2;
-
-    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)s.dst_u, (uint *)s.bitstream, s.target->huff_bytes_u[s.layer]);
-    s.bitstream = s.bitstream + s.target->huff_bytes_u[s.layer];
-
-    memcpy(s.dst_v, s.bitstream, (s.base_size * s.base_size) << 2);
-
-    s.dst_v += (s.base_size * s.base_size) << 2;
-
-    s.bitstream += (s.base_size * s.base_size) << 2;
-
-    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)s.dst_v, (uint *)s.bitstream, s.target->huff_bytes_v[s.layer]);
-    s.bitstream = s.bitstream + s.target->huff_bytes_v[s.layer];
+    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)dst_v, (uint *)bitstream, target->huff_bytes_v[layer]);
+    bitstream = bitstream + target->huff_bytes_v[layer];
   }
   return 0;
 }
@@ -1303,49 +1273,46 @@ BOOL Wvl_UnpackPieces(byte *dst, WvlEntry *wvl)
 // FUNCTION: SHANDALAR 0x005678fa
 uint *Wvl_DecodeToBgr24(byte *out_bgr24, WvlEntry *wvl_entry, int width, int height)
 {
-  struct
-  {
-    int output_row_align;
-    int row_padding;
-    int y_step;
-    int x_step;
-    byte *out_base;
-    uint x_map[4096];
-    byte *decoded;    // ebp - 0x104c
-    int y;            // ebp - 0x1048
-    int y_acc;        // ebp - 0x1044
-    int x;            // ebp - 0x1040
-    int out_nonnull;  // ebp - 0x103c
-    int src_width;    // ebp - 0x1038
-    int *y_map_ptr;   // ebp - 0x1034
-    int x_acc;        // ebp - 0x1030
-    int *x_map_ptr;   // ebp - 0x102c
-    byte *out_start;  // ebp - 0x1028
-    byte *out_ptr;    // ebp - 0x1024
-    int y_scale;      // ebp - 0x1020
-    int row_pad;      // ebp - 0x101c
-    int row_bytes;    // ebp - 0x1018
-    int x_scale;      // ebp - 0x1014
-    int zero_1010;    // ebp - 0x1010
-    byte *src_ptr;    // ebp - 0x100c
-    uint y_map[1024]; // ebp - 0x1008
-    int tmp_8;        // ebp - 0x8
-    byte *tmp_4;      // ebp - 0x4
-  } s;
+  int output_row_align;
+  int row_padding;
+  int y_step;
+  int x_step;
+  byte *out_base;
+  uint x_map[4096];
+  byte *decoded;    // ebp - 0x104c
+  int y;            // ebp - 0x1048
+  int y_acc;        // ebp - 0x1044
+  int x;            // ebp - 0x1040
+  int out_nonnull;  // ebp - 0x103c
+  int src_width;    // ebp - 0x1038
+  int *y_map_ptr;   // ebp - 0x1034
+  int x_acc;        // ebp - 0x1030
+  int *x_map_ptr;   // ebp - 0x102c
+  byte *out_start;  // ebp - 0x1028
+  byte *out_ptr;    // ebp - 0x1024
+  int y_scale;      // ebp - 0x1020
+  int row_pad;      // ebp - 0x101c
+  int row_bytes;    // ebp - 0x1018
+  int x_scale;      // ebp - 0x1014
+  int zero_1010;    // ebp - 0x1010
+  byte *src_ptr;    // ebp - 0x100c
+  uint y_map[1024]; // ebp - 0x1008
+  int tmp_8;        // ebp - 0x8
+  byte *tmp_4;      // ebp - 0x4
 
-  s.x_acc = 0;
-  s.y_acc = 0;
-  s.out_base = out_bgr24;
-  s.out_start = (byte *)0;
-  s.x_map_ptr = s.x_map;
-  s.y_map_ptr = s.y_map;
+  x_acc = 0;
+  y_acc = 0;
+  out_base = out_bgr24;
+  out_start = (byte *)0;
+  x_map_ptr = x_map;
+  y_map_ptr = y_map;
   if (out_bgr24 != (byte *)0)
   {
-    s.out_nonnull = 1;
+    out_nonnull = 1;
   }
   else
   {
-    s.out_nonnull = 0;
+    out_nonnull = 0;
   }
 
   if (wvl_entry == (WvlEntry *)0)
@@ -1353,42 +1320,42 @@ uint *Wvl_DecodeToBgr24(byte *out_bgr24, WvlEntry *wvl_entry, int width, int hei
     return (uint *)0;
   }
 
-  s.x_scale = wvl_entry->width;
-  s.y_scale = wvl_entry->height;
-  s.x_scale <<= 0x10;
-  s.y_scale <<= 0x10;
-  s.x_step = s.x_scale / width;
-  s.y_step = s.y_scale / height;
+  x_scale = wvl_entry->width;
+  y_scale = wvl_entry->height;
+  x_scale <<= 0x10;
+  y_scale <<= 0x10;
+  x_step = x_scale / width;
+  y_step = y_scale / height;
 
   if (wvl_entry->decoded_flag != 0)
   {
-    s.decoded = wvl_entry->decoded_ptr;
+    decoded = wvl_entry->decoded_ptr;
   }
   else
   {
-    s.decoded = Wvl_DecodeHaar(wvl_entry, g_haarDecodeScratch);
+    decoded = Wvl_DecodeHaar(wvl_entry, g_haarDecodeScratch);
   }
 
-  s.src_width = wvl_entry->width;
-  s.tmp_8 = 3;
-  s.zero_1010 = 0;
-  s.row_pad = (g_rowAlignBytes - (width * 3) % g_rowAlignBytes) % g_rowAlignBytes;
+  src_width = wvl_entry->width;
+  tmp_8 = 3;
+  zero_1010 = 0;
+  row_pad = (g_rowAlignBytes - (width * 3) % g_rowAlignBytes) % g_rowAlignBytes;
 
   if (out_bgr24 == (byte *)0)
   {
     out_bgr24 = g_catalogReadScratch;
-    s.out_base = out_bgr24;
+    out_base = out_bgr24;
   }
   else
   {
-    s.out_base = out_bgr24;
+    out_base = out_bgr24;
   }
 
-  for (s.x = 0, s.x_acc = 0; s.x < width; s.x += 1, s.x_acc += s.x_step, s.x_map_ptr += 1)
+  for (x = 0, x_acc = 0; x < width; x += 1, x_acc += x_step, x_map_ptr += 1)
   {
-    if (s.tmp_8 == 3)
+    if (tmp_8 == 3)
     {
-      *s.x_map_ptr = (uint)(s.x_acc >> 8);
+      *x_map_ptr = (uint)(x_acc >> 8);
     }
     else
     {
@@ -1399,34 +1366,34 @@ uint *Wvl_DecodeToBgr24(byte *out_bgr24, WvlEntry *wvl_entry, int width, int hei
 
   if (wvl_entry->height < height)
   {
-    out_bgr24 += (height - wvl_entry->height) * (s.row_pad + width * 3);
-    s.out_ptr = out_bgr24;
+    out_bgr24 += (height - wvl_entry->height) * (row_pad + width * 3);
+    out_ptr = out_bgr24;
   }
   else
-    s.out_ptr = (byte *)out_bgr24;
+    out_ptr = (byte *)out_bgr24;
 
-  for (s.y = 0; s.y < wvl_entry->height; s.y += 1, out_bgr24 += s.row_pad)
+  for (y = 0; y < wvl_entry->height; y += 1, out_bgr24 += row_pad)
   {
-    s.tmp_4 = s.decoded + (s.src_width * s.tmp_8 + s.zero_1010) * s.y;
-    s.x_map_ptr = s.x_map;
+    tmp_4 = decoded + (src_width * tmp_8 + zero_1010) * y;
+    x_map_ptr = x_map;
 
-    for (s.x = 0; s.x < width; s.x += 1, s.x_map_ptr += 1)
+    for (x = 0; x < width; x += 1, x_map_ptr += 1)
     {
-      s.src_ptr = s.tmp_4 + (((int)*s.x_map_ptr >> 8) * 3);
+      src_ptr = tmp_4 + (((int)*x_map_ptr >> 8) * 3);
 
-      out_bgr24[0] = ((int)((uint)s.src_ptr[3] - (uint)s.src_ptr[0]) * (*s.x_map_ptr & 0xff) >> 8) + (int)(uint)s.src_ptr[0];
-      out_bgr24[1] = ((int)((uint)s.src_ptr[4] - (uint)s.src_ptr[1]) * (*s.x_map_ptr & 0xff) >> 8) + (int)(uint)s.src_ptr[1];
-      out_bgr24[2] = ((int)((uint)s.src_ptr[5] - (uint)s.src_ptr[2]) * (*s.x_map_ptr & 0xff) >> 8) + (int)(uint)s.src_ptr[2];
+      out_bgr24[0] = ((int)((uint)src_ptr[3] - (uint)src_ptr[0]) * (*x_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[0];
+      out_bgr24[1] = ((int)((uint)src_ptr[4] - (uint)src_ptr[1]) * (*x_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[1];
+      out_bgr24[2] = ((int)((uint)src_ptr[5] - (uint)src_ptr[2]) * (*x_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[2];
 
       out_bgr24 += 3;
     }
   }
 
-  for (s.x = 0, s.y_acc = 0; s.x < height; s.x++, s.y_acc += s.y_step, s.y_map_ptr++)
+  for (x = 0, y_acc = 0; x < height; x++, y_acc += y_step, y_map_ptr++)
   {
-    if (s.tmp_8 == 3)
+    if (tmp_8 == 3)
     {
-      *s.y_map_ptr = (uint)(s.y_acc >> 8);
+      *y_map_ptr = (uint)(y_acc >> 8);
     }
     else
     {
@@ -1435,51 +1402,51 @@ uint *Wvl_DecodeToBgr24(byte *out_bgr24, WvlEntry *wvl_entry, int width, int hei
     }
   }
 
-  s.row_bytes = width * 3 + s.row_pad;
+  row_bytes = width * 3 + row_pad;
   if (height < wvl_entry->height)
   {
-    memcpy(s.x_map, &s.out_base[(wvl_entry->height - 1) * s.row_bytes], s.row_bytes);
+    memcpy(x_map, &out_base[(wvl_entry->height - 1) * row_bytes], row_bytes);
   }
 
-  for (s.x = 0; s.x < width; s.x++)
+  for (x = 0; x < width; x++)
   {
-    out_bgr24 = &s.out_base[s.x * 3];
-    s.tmp_4 = s.out_ptr + s.x * 3;
-    s.y_map_ptr = s.y_map;
+    out_bgr24 = &out_base[x * 3];
+    tmp_4 = out_ptr + x * 3;
+    y_map_ptr = y_map;
 
-    for (s.y = 0; s.y < height - 1; s.y++, s.y_map_ptr++, out_bgr24 += s.row_bytes)
+    for (y = 0; y < height - 1; y++, y_map_ptr++, out_bgr24 += row_bytes)
     {
-      s.src_ptr = (byte *)(MIN((int)*s.y_map_ptr >> 8, wvl_entry->height - 2) * s.row_bytes + (int)s.tmp_4);
+      src_ptr = (byte *)(MIN((int)*y_map_ptr >> 8, wvl_entry->height - 2) * row_bytes + (int)tmp_4);
 
-      out_bgr24[0] = ((int)((uint)s.src_ptr[s.row_bytes] - (uint)s.src_ptr[0]) * (*s.y_map_ptr & 0xff) >> 8) + (int)(uint)s.src_ptr[0];
-      out_bgr24[1] = ((int)((uint)s.src_ptr[s.row_bytes + 1] - (uint)s.src_ptr[1]) * (*s.y_map_ptr & 0xff) >> 8) + (int)(uint)s.src_ptr[1];
-      out_bgr24[2] = ((int)((uint)s.src_ptr[s.row_bytes + 2] - (uint)s.src_ptr[2]) * (*s.y_map_ptr & 0xff) >> 8) + (int)(uint)s.src_ptr[2];
+      out_bgr24[0] = ((int)((uint)src_ptr[row_bytes] - (uint)src_ptr[0]) * (*y_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[0];
+      out_bgr24[1] = ((int)((uint)src_ptr[row_bytes + 1] - (uint)src_ptr[1]) * (*y_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[1];
+      out_bgr24[2] = ((int)((uint)src_ptr[row_bytes + 2] - (uint)src_ptr[2]) * (*y_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[2];
     }
   }
 
   if (height < wvl_entry->height)
   {
-    memcpy(&s.out_base[(height - 1) * s.row_bytes], s.x_map, s.row_bytes);
+    memcpy(&out_base[(height - 1) * row_bytes], x_map, row_bytes);
   }
   else
   {
-    memset(&s.out_base[(height - 1) * s.row_bytes], 0, s.row_bytes);
+    memset(&out_base[(height - 1) * row_bytes], 0, row_bytes);
   }
 
-  s.output_row_align = 4;
-  s.row_padding = (s.output_row_align - ((width * 3) % s.output_row_align)) % s.output_row_align;
+  output_row_align = 4;
+  row_padding = (output_row_align - ((width * 3) % output_row_align)) % output_row_align;
   if (global_dither_kernel_id == 0)
   {
-    QuantizeBgr24ToNearestPaletteColorInPlace((uint *)s.out_base, height, width, s.row_padding);
+    QuantizeBgr24ToNearestPaletteColorInPlace((uint *)out_base, height, width, row_padding);
   }
   else if (global_color_depth == 16)
   {
-    DitherBgr24ToRgbQuantizedF8(global_dither_kernel_id, global_serpentine, (uint *)s.out_base, height, width, s.row_padding);
+    DitherBgr24ToRgbQuantizedF8(global_dither_kernel_id, global_serpentine, (uint *)out_base, height, width, row_padding);
   }
   else if (global_color_depth == 8)
   {
-    DitherBgr24ToPaletteColors(global_dither_kernel_id, global_serpentine, (uint *)s.out_base, height, width, s.row_padding);
+    DitherBgr24ToPaletteColors(global_dither_kernel_id, global_serpentine, (uint *)out_base, height, width, row_padding);
   }
 
-  return (uint *)s.out_base;
+  return (uint *)out_base;
 }

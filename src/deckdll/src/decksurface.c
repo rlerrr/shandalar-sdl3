@@ -241,107 +241,101 @@ static const char s_White_100315b0[8] = "White";
 static void __cdecl
 DrawGroupBoxWithLabel(HDC hdc, RECT *rect, const char *label)
 {
-  struct
-  {
-    SIZE text_size;
-    RECT label_rect;
-    int saved_dc;
-    HPEN shadow_pen;
-    HPEN highlight_pen;
-  } s;
+  SIZE text_size;
+  RECT label_rect;
+  int saved_dc;
+  HPEN shadow_pen;
+  HPEN highlight_pen;
 
-  CopyRect(&s.label_rect, rect);
-  GetTextExtentPointA(hdc, label, strlen(label), &s.text_size);
+  CopyRect(&label_rect, rect);
+  GetTextExtentPointA(hdc, label, strlen(label), &text_size);
 
-  s.highlight_pen = CreatePen(0, 1, GetSysColor(0x10));
-  s.shadow_pen = CreatePen(0, 1, GetSysColor(0x16));
+  highlight_pen = CreatePen(0, 1, GetSysColor(0x10));
+  shadow_pen = CreatePen(0, 1, GetSysColor(0x16));
 
-  s.saved_dc = SaveDC(hdc);
+  saved_dc = SaveDC(hdc);
   SetBkMode(hdc, 1);
 
-  OffsetRect(&s.label_rect, 1, 1);
+  OffsetRect(&label_rect, 1, 1);
   SetTextColor(hdc, GetSysColor(0x16));
-  SelectObject(hdc, s.shadow_pen);
-  MoveToEx(hdc, s.label_rect.left, s.label_rect.top + s.text_size.cy / 2, (LPPOINT)0x0);
-  LineTo(hdc, s.label_rect.left + 10, s.label_rect.top + s.text_size.cy / 2);
-  TextOutA(hdc, s.label_rect.left + 0xe, s.label_rect.top, label, strlen(label));
-  MoveToEx(hdc, s.label_rect.left + s.text_size.cx + 0x12, s.label_rect.top + s.text_size.cy / 2, (LPPOINT)0x0);
-  LineTo(hdc, s.label_rect.right, s.label_rect.top + s.text_size.cy / 2);
-  LineTo(hdc, s.label_rect.right, s.label_rect.bottom);
-  LineTo(hdc, s.label_rect.left, s.label_rect.bottom);
-  LineTo(hdc, s.label_rect.left, s.label_rect.top + s.text_size.cy / 2);
+  SelectObject(hdc, shadow_pen);
+  MoveToEx(hdc, label_rect.left, label_rect.top + text_size.cy / 2, (LPPOINT)0x0);
+  LineTo(hdc, label_rect.left + 10, label_rect.top + text_size.cy / 2);
+  TextOutA(hdc, label_rect.left + 0xe, label_rect.top, label, strlen(label));
+  MoveToEx(hdc, label_rect.left + text_size.cx + 0x12, label_rect.top + text_size.cy / 2, (LPPOINT)0x0);
+  LineTo(hdc, label_rect.right, label_rect.top + text_size.cy / 2);
+  LineTo(hdc, label_rect.right, label_rect.bottom);
+  LineTo(hdc, label_rect.left, label_rect.bottom);
+  LineTo(hdc, label_rect.left, label_rect.top + text_size.cy / 2);
 
-  OffsetRect(&s.label_rect, -1, -1);
+  OffsetRect(&label_rect, -1, -1);
   SetTextColor(hdc, GetSysColor(0x10));
-  SelectObject(hdc, s.highlight_pen);
-  MoveToEx(hdc, s.label_rect.left, s.label_rect.top + s.text_size.cy / 2, (LPPOINT)0x0);
-  LineTo(hdc, s.label_rect.left + 10, s.label_rect.top + s.text_size.cy / 2);
-  TextOutA(hdc, s.label_rect.left + 0xe, s.label_rect.top, label, strlen(label));
-  MoveToEx(hdc, s.label_rect.left + s.text_size.cx + 0x12, s.label_rect.top + s.text_size.cy / 2, (LPPOINT)0x0);
-  LineTo(hdc, s.label_rect.right, s.label_rect.top + s.text_size.cy / 2);
-  LineTo(hdc, s.label_rect.right, s.label_rect.bottom);
-  LineTo(hdc, s.label_rect.left, s.label_rect.bottom);
-  LineTo(hdc, s.label_rect.left, s.label_rect.top + s.text_size.cy / 2);
+  SelectObject(hdc, highlight_pen);
+  MoveToEx(hdc, label_rect.left, label_rect.top + text_size.cy / 2, (LPPOINT)0x0);
+  LineTo(hdc, label_rect.left + 10, label_rect.top + text_size.cy / 2);
+  TextOutA(hdc, label_rect.left + 0xe, label_rect.top, label, strlen(label));
+  MoveToEx(hdc, label_rect.left + text_size.cx + 0x12, label_rect.top + text_size.cy / 2, (LPPOINT)0x0);
+  LineTo(hdc, label_rect.right, label_rect.top + text_size.cy / 2);
+  LineTo(hdc, label_rect.right, label_rect.bottom);
+  LineTo(hdc, label_rect.left, label_rect.bottom);
+  LineTo(hdc, label_rect.left, label_rect.top + text_size.cy / 2);
 
-  RestoreDC(hdc, s.saved_dc);
-  DeleteObject(s.highlight_pen);
-  DeleteObject(s.shadow_pen);
+  RestoreDC(hdc, saved_dc);
+  DeleteObject(highlight_pen);
+  DeleteObject(shadow_pen);
 }
 
 // FUNCTION: DECKDLL 0x10005317
 static int pick_group_id_from_point(RECT *group_rects, int group_count, POINT *pt)
 {
-  struct
-  {
-    int best_xdist;
-    int best_ydist;
-    int group_i;
-    int best_group;
-    int dist_xy[50];
-    int hit_found;
-  } s;
+  int best_xdist;
+  int best_ydist;
+  int group_i;
+  int best_group;
+  int dist_xy[50];
+  int hit_found;
 
-  s.group_i = 0;
-  s.hit_found = 0;
-  for (; (s.group_i < group_count) && (s.hit_found == 0); s.group_i++)
+  group_i = 0;
+  hit_found = 0;
+  for (; (group_i < group_count) && (hit_found == 0); group_i++)
   {
-    if (PtInRect(&group_rects[s.group_i], *pt) != 0)
+    if (PtInRect(&group_rects[group_i], *pt) != 0)
     {
-      s.best_group = s.group_i;
-      s.hit_found = 1;
+      best_group = group_i;
+      hit_found = 1;
     }
     else
     {
-      s.dist_xy[s.group_i * 2] = MAX(
-          abs(pt->x - group_rects[s.group_i].right),
-          abs(pt->x - group_rects[s.group_i].left));
+      dist_xy[group_i * 2] = MAX(
+          abs(pt->x - group_rects[group_i].right),
+          abs(pt->x - group_rects[group_i].left));
 
-      s.dist_xy[s.group_i * 2 + 1] = MAX(
-          abs(pt->y - group_rects[s.group_i].bottom),
-          abs(pt->y - group_rects[s.group_i].top));
+      dist_xy[group_i * 2 + 1] = MAX(
+          abs(pt->y - group_rects[group_i].bottom),
+          abs(pt->y - group_rects[group_i].top));
     }
   }
 
-  if (s.hit_found == 0)
+  if (hit_found == 0)
   {
-    s.best_xdist = 1000;
-    for (s.group_i = 0; s.group_i < group_count; s.group_i = s.group_i + 1)
+    best_xdist = 1000;
+    for (group_i = 0; group_i < group_count; group_i = group_i + 1)
     {
-      if (s.dist_xy[s.group_i * 2] < s.best_xdist)
+      if (dist_xy[group_i * 2] < best_xdist)
       {
-        s.best_xdist = s.dist_xy[s.group_i * 2];
-        s.best_group = s.group_i;
-        s.best_ydist = s.dist_xy[s.best_group * 2 + 1];
+        best_xdist = dist_xy[group_i * 2];
+        best_group = group_i;
+        best_ydist = dist_xy[best_group * 2 + 1];
       }
-      else if ((s.dist_xy[s.group_i * 2] == s.best_xdist) &&
-               (s.dist_xy[s.group_i * 2 + 1] < s.best_ydist))
+      else if ((dist_xy[group_i * 2] == best_xdist) &&
+               (dist_xy[group_i * 2 + 1] < best_ydist))
       {
-        s.best_ydist = s.dist_xy[s.group_i * 2 + 1];
-        s.best_group = s.group_i;
+        best_ydist = dist_xy[group_i * 2 + 1];
+        best_group = group_i;
       }
     }
   }
-  return s.best_group;
+  return best_group;
 }
 
 // FUNCTION: DECKDLL 0x100055cc
@@ -421,38 +415,35 @@ void destroy_child_windows(HWND hwnd)
 static void __cdecl
 layout_child_smallcard_windows(HWND hwnd_parent, RECT *group_rects, int group_count)
 {
-  struct
-  {
-    HWND last_child;
-    int y_step;
-    HWND child;
-    int group_i;
-    int group_xy[40];
-  } s;
+  HWND last_child;
+  int y_step;
+  HWND child;
+  int group_i;
+  int group_xy[40];
 
-  s.y_step = (global_smallcard_height * 0x12) / 100;
-  for (s.group_i = 0; s.group_i < group_count; s.group_i = s.group_i + 1)
+  y_step = (global_smallcard_height * 0x12) / 100;
+  for (group_i = 0; group_i < group_count; group_i = group_i + 1)
   {
-    s.group_xy[s.group_i * 2] =
-        group_rects[s.group_i].left +
-        (((group_rects[s.group_i].right - group_rects[s.group_i].left) - global_smallcard_width) / 2);
-    s.group_xy[s.group_i * 2 + 1] =
-        group_rects[s.group_i].top + global_smallcard_height / 5;
+    group_xy[group_i * 2] =
+        group_rects[group_i].left +
+        (((group_rects[group_i].right - group_rects[group_i].left) - global_smallcard_width) / 2);
+    group_xy[group_i * 2 + 1] =
+        group_rects[group_i].top + global_smallcard_height / 5;
   }
 
-  s.last_child = (HWND)0x0;
-  for (s.child = GetTopWindow(hwnd_parent); s.child != (HWND)0x0; s.child = GetWindow(s.child, GW_HWNDNEXT))
-    s.last_child = s.child;
+  last_child = (HWND)0x0;
+  for (child = GetTopWindow(hwnd_parent); child != (HWND)0x0; child = GetWindow(child, GW_HWNDNEXT))
+    last_child = child;
 
-  for (s.child = s.last_child; s.child != (HWND)0x0; s.child = GetWindow(s.child, GW_HWNDPREV))
+  for (child = last_child; child != (HWND)0x0; child = GetWindow(child, GW_HWNDPREV))
   {
-    for (s.group_i = 0; s.group_i < group_count; s.group_i = s.group_i + 1)
+    for (group_i = 0; group_i < group_count; group_i = group_i + 1)
     {
-      if (GetDlgCtrlID(s.child) == s.group_i)
+      if (GetDlgCtrlID(child) == group_i)
       {
-        SetWindowPos(s.child, (HWND)0x0, s.group_xy[s.group_i * 2], s.group_xy[s.group_i * 2 + 1],
+        SetWindowPos(child, (HWND)0x0, group_xy[group_i * 2], group_xy[group_i * 2 + 1],
                      global_smallcard_width, global_smallcard_height, SWP_NOZORDER);
-        s.group_xy[s.group_i * 2 + 1] = s.group_xy[s.group_i * 2 + 1] + s.y_step;
+        group_xy[group_i * 2 + 1] = group_xy[group_i * 2 + 1] + y_step;
       }
     }
   }
@@ -505,36 +496,33 @@ void resize_child_smallcard_windows(HWND hwnd_parent)
 LRESULT CALLBACK
 wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int mosaic_inx; /* [ebp-0xa4] */
-    POINT popup_pt; /* [ebp-0xa0] */
-    RECT tile_rect; /* [ebp-0x98] */
-    BITMAP bmp;     /* [ebp-0x88] */
-    int pad;        /* [ebp-0x70] */
-    int mosaic_x;   /* [ebp-0x6c] */
-    int mosaic_y;   /* [ebp-0x68] */
-    RECT r2;        /* [ebp-0x64] */
-    RECT refresh_rect;
-    int pad2;     /* [ebp-0x44] */
-    LRESULT pcVar1; /* [ebp-0x40] */
-    int x;        /* [ebp-0x3c] */
-    int y;        /* [ebp-0x38] */
-    int tile;     /* [ebp-0x34] */
+  int mosaic_inx; /* [ebp-0xa4] */
+  POINT popup_pt; /* [ebp-0xa0] */
+  RECT tile_rect; /* [ebp-0x98] */
+  BITMAP bmp;     /* [ebp-0x88] */
+  int pad;        /* [ebp-0x70] */
+  int mosaic_x;   /* [ebp-0x6c] */
+  int mosaic_y;   /* [ebp-0x68] */
+  RECT r2;        /* [ebp-0x64] */
+  RECT refresh_rect;
+  int pad2;       /* [ebp-0x44] */
+  LRESULT pcVar1; /* [ebp-0x40] */
+  int x;          /* [ebp-0x3c] */
+  int y;          /* [ebp-0x38] */
+  int tile;       /* [ebp-0x34] */
 
-    HWND hwnd_card; /* [ebp-0x30] */
-    csvid_t csvid;  /* [ebp-0x2c] */
+  HWND hwnd_card; /* [ebp-0x30] */
+  csvid_t csvid;  /* [ebp-0x2c] */
 
-    HDC hdc0; /* [ebp-0x28] */
+  HDC hdc0; /* [ebp-0x28] */
 
-    int idx_i; /* [ebp-0x24] */
-    int idx_d; /* [ebp-0x20] */
-    int idx_c; /* [ebp-0x1c] */
+  int idx_i; /* [ebp-0x24] */
+  int idx_d; /* [ebp-0x20] */
+  int idx_c; /* [ebp-0x1c] */
 
-    HDC mosaics[5]; /* [ebp-0x18] */
+  HDC mosaics[5]; /* [ebp-0x18] */
 
-    LRESULT result; /* [ebp-0x4] */
-  } s;
+  LRESULT result; /* [ebp-0x4] */
   // GLOBAL: DECKDLL 0x1003105c
   static int cleared_global_deck_num_entries = 0;
   // GLOBAL: DECKDLL 0x10031060
@@ -542,7 +530,7 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   // GLOBAL: DECKDLL 0x101f1e40
   static char mosaic_order[50];
 
-  s.result = 1;
+  result = 1;
 
   switch (msg)
   {
@@ -556,141 +544,141 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     if (global_cfg_consolidate)
     {
-      for (s.idx_i = 0; s.idx_i < PACK1_MAX + 1; s.idx_i = s.idx_i + 1)
+      for (idx_i = 0; idx_i < PACK1_MAX + 1; idx_i = idx_i + 1)
       {
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_LAND].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_LAND].num; idx_c = idx_c + 1)
         {
           add_smallcard_window(
               hwnd,
-              (csvid_t)(global_packs[s.idx_i][PACK2_LAND].table[s.idx_c].val & 0xffff),
-              global_packs[s.idx_i][PACK2_LAND].table[s.idx_c].val >> 0x10);
+              (csvid_t)(global_packs[idx_i][PACK2_LAND].table[idx_c].val & 0xffff),
+              global_packs[idx_i][PACK2_LAND].table[idx_c].val >> 0x10);
         }
       }
 
-      for (s.idx_i = 0; s.idx_i < PACK1_MAX + 1; s.idx_i = s.idx_i + 1)
+      for (idx_i = 0; idx_i < PACK1_MAX + 1; idx_i = idx_i + 1)
       {
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_CREATURE].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_CREATURE].num; idx_c = idx_c + 1)
         {
           add_smallcard_window(
               hwnd,
-              (csvid_t)(global_packs[s.idx_i][PACK2_CREATURE].table[s.idx_c].val & 0xffff),
-              global_packs[s.idx_i][PACK2_CREATURE].table[s.idx_c].val >> 0x10);
+              (csvid_t)(global_packs[idx_i][PACK2_CREATURE].table[idx_c].val & 0xffff),
+              global_packs[idx_i][PACK2_CREATURE].table[idx_c].val >> 0x10);
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_ENCHANTMENT].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_ENCHANTMENT].num; idx_c = idx_c + 1)
         {
           add_smallcard_window(
               hwnd,
-              (csvid_t)(global_packs[s.idx_i][PACK2_ENCHANTMENT].table[s.idx_c].val & 0xffff),
-              global_packs[s.idx_i][PACK2_ENCHANTMENT].table[s.idx_c].val >> 0x10);
+              (csvid_t)(global_packs[idx_i][PACK2_ENCHANTMENT].table[idx_c].val & 0xffff),
+              global_packs[idx_i][PACK2_ENCHANTMENT].table[idx_c].val >> 0x10);
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_SORCERY].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_SORCERY].num; idx_c = idx_c + 1)
         {
           add_smallcard_window(
               hwnd,
-              (csvid_t)(global_packs[s.idx_i][PACK2_SORCERY].table[s.idx_c].val & 0xffff),
-              global_packs[s.idx_i][PACK2_SORCERY].table[s.idx_c].val >> 0x10);
+              (csvid_t)(global_packs[idx_i][PACK2_SORCERY].table[idx_c].val & 0xffff),
+              global_packs[idx_i][PACK2_SORCERY].table[idx_c].val >> 0x10);
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_INTERRUPT].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_INTERRUPT].num; idx_c = idx_c + 1)
         {
           add_smallcard_window(
               hwnd,
-              (csvid_t)(global_packs[s.idx_i][PACK2_INTERRUPT].table[s.idx_c].val & 0xffff),
-              global_packs[s.idx_i][PACK2_INTERRUPT].table[s.idx_c].val >> 0x10);
+              (csvid_t)(global_packs[idx_i][PACK2_INTERRUPT].table[idx_c].val & 0xffff),
+              global_packs[idx_i][PACK2_INTERRUPT].table[idx_c].val >> 0x10);
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_INSTANT].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_INSTANT].num; idx_c = idx_c + 1)
         {
           add_smallcard_window(
               hwnd,
-              (csvid_t)(global_packs[s.idx_i][PACK2_INSTANT].table[s.idx_c].val & 0xffff),
-              global_packs[s.idx_i][PACK2_INSTANT].table[s.idx_c].val >> 0x10);
+              (csvid_t)(global_packs[idx_i][PACK2_INSTANT].table[idx_c].val & 0xffff),
+              global_packs[idx_i][PACK2_INSTANT].table[idx_c].val >> 0x10);
         }
       }
     }
     else
     {
-      for (s.idx_i = 0; s.idx_i < PACK1_MAX + 1; s.idx_i = s.idx_i + 1)
+      for (idx_i = 0; idx_i < PACK1_MAX + 1; idx_i = idx_i + 1)
       {
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_LAND].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_LAND].num; idx_c = idx_c + 1)
         {
-          for (s.idx_d = 0;
-               s.idx_d < (global_packs[s.idx_i][PACK2_LAND].table[s.idx_c].val >> 0x10);
-               s.idx_d = s.idx_d + 1)
+          for (idx_d = 0;
+               idx_d < (global_packs[idx_i][PACK2_LAND].table[idx_c].val >> 0x10);
+               idx_d = idx_d + 1)
           {
             add_smallcard_window(
                 hwnd,
-                (csvid_t)(global_packs[s.idx_i][PACK2_LAND].table[s.idx_c].val & 0xffff),
+                (csvid_t)(global_packs[idx_i][PACK2_LAND].table[idx_c].val & 0xffff),
                 1);
           }
         }
       }
 
-      for (s.idx_i = 0; s.idx_i < PACK1_MAX + 1; s.idx_i = s.idx_i + 1)
+      for (idx_i = 0; idx_i < PACK1_MAX + 1; idx_i = idx_i + 1)
       {
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_CREATURE].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_CREATURE].num; idx_c = idx_c + 1)
         {
-          for (s.idx_d = 0;
-               s.idx_d < (global_packs[s.idx_i][PACK2_CREATURE].table[s.idx_c].val >> 0x10);
-               s.idx_d = s.idx_d + 1)
+          for (idx_d = 0;
+               idx_d < (global_packs[idx_i][PACK2_CREATURE].table[idx_c].val >> 0x10);
+               idx_d = idx_d + 1)
           {
             add_smallcard_window(
                 hwnd,
-                (csvid_t)(global_packs[s.idx_i][PACK2_CREATURE].table[s.idx_c].val & 0xffff),
+                (csvid_t)(global_packs[idx_i][PACK2_CREATURE].table[idx_c].val & 0xffff),
                 1);
           }
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_ENCHANTMENT].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_ENCHANTMENT].num; idx_c = idx_c + 1)
         {
-          for (s.idx_d = 0;
-               s.idx_d < (global_packs[s.idx_i][PACK2_ENCHANTMENT].table[s.idx_c].val >> 0x10);
-               s.idx_d = s.idx_d + 1)
+          for (idx_d = 0;
+               idx_d < (global_packs[idx_i][PACK2_ENCHANTMENT].table[idx_c].val >> 0x10);
+               idx_d = idx_d + 1)
           {
             add_smallcard_window(
                 hwnd,
-                (csvid_t)(global_packs[s.idx_i][PACK2_ENCHANTMENT].table[s.idx_c].val & 0xffff),
+                (csvid_t)(global_packs[idx_i][PACK2_ENCHANTMENT].table[idx_c].val & 0xffff),
                 1);
           }
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_SORCERY].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_SORCERY].num; idx_c = idx_c + 1)
         {
-          for (s.idx_d = 0;
-               s.idx_d < (global_packs[s.idx_i][PACK2_SORCERY].table[s.idx_c].val >> 0x10);
-               s.idx_d = s.idx_d + 1)
+          for (idx_d = 0;
+               idx_d < (global_packs[idx_i][PACK2_SORCERY].table[idx_c].val >> 0x10);
+               idx_d = idx_d + 1)
           {
             add_smallcard_window(
                 hwnd,
-                (csvid_t)(global_packs[s.idx_i][PACK2_SORCERY].table[s.idx_c].val & 0xffff),
+                (csvid_t)(global_packs[idx_i][PACK2_SORCERY].table[idx_c].val & 0xffff),
                 1);
           }
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_INTERRUPT].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_INTERRUPT].num; idx_c = idx_c + 1)
         {
-          for (s.idx_d = 0;
-               s.idx_d < (global_packs[s.idx_i][PACK2_INTERRUPT].table[s.idx_c].val >> 0x10);
-               s.idx_d = s.idx_d + 1)
+          for (idx_d = 0;
+               idx_d < (global_packs[idx_i][PACK2_INTERRUPT].table[idx_c].val >> 0x10);
+               idx_d = idx_d + 1)
           {
             add_smallcard_window(
                 hwnd,
-                (csvid_t)(global_packs[s.idx_i][PACK2_INTERRUPT].table[s.idx_c].val & 0xffff),
+                (csvid_t)(global_packs[idx_i][PACK2_INTERRUPT].table[idx_c].val & 0xffff),
                 1);
           }
         }
 
-        for (s.idx_c = 0; s.idx_c < global_packs[s.idx_i][PACK2_INSTANT].num; s.idx_c = s.idx_c + 1)
+        for (idx_c = 0; idx_c < global_packs[idx_i][PACK2_INSTANT].num; idx_c = idx_c + 1)
         {
-          for (s.idx_d = 0;
-               s.idx_d < (global_packs[s.idx_i][PACK2_INSTANT].table[s.idx_c].val >> 0x10);
-               s.idx_d = s.idx_d + 1)
+          for (idx_d = 0;
+               idx_d < (global_packs[idx_i][PACK2_INSTANT].table[idx_c].val >> 0x10);
+               idx_d = idx_d + 1)
           {
             add_smallcard_window(
                 hwnd,
-                (csvid_t)(global_packs[s.idx_i][PACK2_INSTANT].table[s.idx_c].val & 0xffff),
+                (csvid_t)(global_packs[idx_i][PACK2_INSTANT].table[idx_c].val & 0xffff),
                 1);
           }
         }
@@ -701,38 +689,38 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     SendMessage(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
     refresh_numofcards_text();
-    return s.result;
+    return result;
   }
 
   case 0x4c8:
   {
-    s.tile = 1;
-    s.csvid = wparam;
-    s.x = lparam & 0xffff;
-    s.y = (lparam >> 16) & 0xffff;
+    tile = 1;
+    csvid = wparam;
+    x = lparam & 0xffff;
+    y = (lparam >> 16) & 0xffff;
 
-    if (global_cfg_consolidate && (s.hwnd_card = find_wanted_window(hwnd, s.csvid)))
+    if (global_cfg_consolidate && (hwnd_card = find_wanted_window(hwnd, csvid)))
     {
-      insert_cards_into_deck(s.csvid, 1, &global_edited_deck);
-      s.pcVar1 = SendMessage(s.hwnd_card, 0x402, 0, 0);
-      SendMessage(s.hwnd_card, 0x401, 1 + s.pcVar1, 0);
+      insert_cards_into_deck(csvid, 1, &global_edited_deck);
+      pcVar1 = SendMessage(hwnd_card, 0x402, 0, 0);
+      SendMessage(hwnd_card, 0x401, 1 + pcVar1, 0);
     }
     else
     {
-      s.hwnd_card = CreateWindowEx(0, "MAGICDECK_CardClass", "",
-                                   WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                   s.x, s.y, global_smallcard_width, global_smallcard_height,
-                                   hwnd,
-                                   (HMENU)1,
-                                   global_hinstance, (LPVOID)s.csvid);
-      if (s.hwnd_card)
+      hwnd_card = CreateWindowEx(0, "MAGICDECK_CardClass", "",
+                                 WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                 x, y, global_smallcard_width, global_smallcard_height,
+                                 hwnd,
+                                 (HMENU)1,
+                                 global_hinstance, (LPVOID)csvid);
+      if (hwnd_card)
       {
-        BringWindowToTop(s.hwnd_card);
-        insert_cards_into_deck(s.csvid, 1, &global_edited_deck);
+        BringWindowToTop(hwnd_card);
+        insert_cards_into_deck(csvid, 1, &global_edited_deck);
         SendMessage(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
       }
       else
-        s.tile = 0;
+        tile = 0;
     }
 
     if (cleared_global_deck_num_entries)
@@ -743,13 +731,13 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       cleared_global_deck_num_cards = 0;
       cleared_global_deck_num_entries = cleared_global_deck_num_cards;
     }
-    return s.tile;
+    return tile;
   }
 
   case 0x466:
   {
-    s.pad2 = wparam;
-    invalidate_wanted_window(hwnd, s.pad2);
+    pad2 = wparam;
+    invalidate_wanted_window(hwnd, pad2);
     return 0;
   }
 
@@ -767,10 +755,10 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     case RES_MENU_REFRESH:
     {
-      GetClientRect(hwnd, &s.refresh_rect);
-      InflateRect(&s.refresh_rect, -5, -5);
+      GetClientRect(hwnd, &refresh_rect);
+      InflateRect(&refresh_rect, -5, -5);
       LockWindowUpdate(global_main_hwnd);
-      reset_dim_and_pos_all_cards(hwnd, &s.refresh_rect);
+      reset_dim_and_pos_all_cards(hwnd, &refresh_rect);
       LockWindowUpdate(NULL);
       break;
     }
@@ -930,9 +918,9 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       clear_packs_copy();
     }
 
-    for (s.idx_c = 0; s.idx_c < 50; s.idx_c++)
+    for (idx_c = 0; idx_c < 50; idx_c++)
     {
-      mosaic_order[s.idx_c] = (char)(((unsigned char)rand()) % 5);
+      mosaic_order[idx_c] = (char)(((unsigned char)rand()) % 5);
     }
 
     global_decksurface_popup = CreatePopupMenu();
@@ -1004,42 +992,42 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_ERASEBKGND:
   {
-    s.hdc0 = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.hdc0);
+    hdc0 = (HDC)wparam;
+    ApplyCardArtPaletteToDc(hdc0);
 
-    for (s.pad = 0; s.pad < 5; s.pad++)
+    for (pad = 0; pad < 5; pad++)
     {
-      s.mosaics[s.pad] = CreateCompatibleDC(s.hdc0);
-      ApplyCardArtPaletteToDc(s.mosaics[s.pad]);
+      mosaics[pad] = CreateCompatibleDC(hdc0);
+      ApplyCardArtPaletteToDc(mosaics[pad]);
     }
 
-    SelectObject(s.mosaics[0], global_pic_bldr01c);
-    SelectObject(s.mosaics[1], global_pic_bldr02c);
-    SelectObject(s.mosaics[2], global_pic_bldr03c);
-    SelectObject(s.mosaics[3], global_pic_bldr04c);
-    SelectObject(s.mosaics[4], global_pic_bldr05c);
+    SelectObject(mosaics[0], global_pic_bldr01c);
+    SelectObject(mosaics[1], global_pic_bldr02c);
+    SelectObject(mosaics[2], global_pic_bldr03c);
+    SelectObject(mosaics[3], global_pic_bldr04c);
+    SelectObject(mosaics[4], global_pic_bldr05c);
 
-    GetClientRect(hwnd, &s.r2);
-    GetClientRect(hwnd, &s.tile_rect);
-    GetObjectA(global_pic_bldr01c, 0x18, &s.bmp);
+    GetClientRect(hwnd, &r2);
+    GetClientRect(hwnd, &tile_rect);
+    GetObjectA(global_pic_bldr01c, 0x18, &bmp);
 
-    s.tile_rect.right = s.r2.right / 6;
-    s.tile_rect.bottom = s.r2.bottom / 5;
+    tile_rect.right = r2.right / 6;
+    tile_rect.bottom = r2.bottom / 5;
 
-    s.pad = 0;
-    for (s.mosaic_y = 0; s.mosaic_y < s.r2.right; s.mosaic_y += s.tile_rect.right)
+    pad = 0;
+    for (mosaic_y = 0; mosaic_y < r2.right; mosaic_y += tile_rect.right)
     {
-      for (s.mosaic_x = 0; s.mosaic_x < s.r2.bottom; s.mosaic_x += s.tile_rect.bottom)
+      for (mosaic_x = 0; mosaic_x < r2.bottom; mosaic_x += tile_rect.bottom)
       {
-        s.mosaic_inx = s.pad++;
-        StretchBlt(s.hdc0, s.mosaic_y, s.mosaic_x, s.tile_rect.right, s.tile_rect.bottom, s.mosaics[mosaic_order[s.mosaic_inx]], 0, 0, s.bmp.bmWidth,
-                   s.bmp.bmHeight, SRCCOPY);
+        mosaic_inx = pad++;
+        StretchBlt(hdc0, mosaic_y, mosaic_x, tile_rect.right, tile_rect.bottom, mosaics[mosaic_order[mosaic_inx]], 0, 0, bmp.bmWidth,
+                   bmp.bmHeight, SRCCOPY);
       }
     }
 
-    ReleaseDC(hwnd, s.hdc0);
-    for (s.pad = 0; s.pad < 5; s.pad++)
-      DeleteDC(s.mosaics[s.pad]);
+    ReleaseDC(hwnd, hdc0);
+    for (pad = 0; pad < 5; pad++)
+      DeleteDC(mosaics[pad]);
 
     return 1;
   }
@@ -1059,10 +1047,10 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_RBUTTONDOWN:
   {
-    s.popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
-    s.popup_pt.y = (int)((unsigned)lparam >> 16) & 0xFFFF;
-    ClientToScreen(hwnd, &s.popup_pt);
-    TrackPopupMenu(global_decksurface_popup, TPM_RIGHTBUTTON, s.popup_pt.x, s.popup_pt.y, 0, hwnd, NULL);
+    popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
+    popup_pt.y = (int)((unsigned)lparam >> 16) & 0xFFFF;
+    ClientToScreen(hwnd, &popup_pt);
+    TrackPopupMenu(global_decksurface_popup, TPM_RIGHTBUTTON, popup_pt.x, popup_pt.y, 0, hwnd, NULL);
     return 0;
   }
 
@@ -1115,242 +1103,239 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
   // GLOBAL: DECKDLL 0x10031078
   static int saved_sideboard_total_red = 0;
 
-  struct
-  {
-    int pad0; /* matches [ebp-0xb0] */
-    int pad1;
-    int iVar1;
-    int iVar2;
-    int iVar3;
-    int iVar4;
-    POINT popup_pt;
-    HDC paint_hdc;
-    PAINTSTRUCT paint;
-    HDC erase_hdc;
-    RECT client_rect;
-    HDC invalidate_hdc;
-    LRESULT current_amount;
-    POINT drop_pt;
-    LRESULT drop_ok;
-    HWND card_hwnd;
-    HMENU group_id;
-    HDC csvid_arg;
-    int copy_idx;
-    int entry_idx;
-    LRESULT rebuild_ok;
-    HWND created_card_hwnd;
-  } s;
+  int pad0; /* matches [ebp-0xb0] */
+  int pad1;
+  int iVar1;
+  int iVar2;
+  int iVar3;
+  int iVar4;
+  POINT popup_pt;
+  HDC paint_hdc;
+  PAINTSTRUCT paint;
+  HDC erase_hdc;
+  RECT client_rect;
+  HDC invalidate_hdc;
+  LRESULT current_amount;
+  POINT drop_pt;
+  LRESULT drop_ok;
+  HWND card_hwnd;
+  HMENU group_id;
+  HDC csvid_arg;
+  int copy_idx;
+  int entry_idx;
+  LRESULT rebuild_ok;
+  HWND created_card_hwnd;
 
   switch (msg)
   {
   case 0x401:
-    s.rebuild_ok = 1;
+    rebuild_ok = 1;
     destroy_child_windows(hwnd);
     if (global_cfg_consolidate != 0)
     {
-      for (s.entry_idx = 0; global_edited_deck.sideboard[0].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[0].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031218, s_Empty_10031214,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x0, global_hinstance,
-                                    (LPVOID)global_edited_deck.sideboard[0].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          SendMessageA(s.created_card_hwnd, 0x401, global_edited_deck.sideboard[0].entries[s.entry_idx].DeckEntry_Amount, 0);
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031218, s_Empty_10031214,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x0, global_hinstance,
+                                            (LPVOID)global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_Amount, 0);
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[1].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[1].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031230, s_Empty_1003122c,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x1, global_hinstance,
-                                    (LPVOID)global_edited_deck.sideboard[1].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          SendMessageA(s.created_card_hwnd, 0x401, global_edited_deck.sideboard[1].entries[s.entry_idx].DeckEntry_Amount, 0);
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031230, s_Empty_1003122c,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x1, global_hinstance,
+                                            (LPVOID)global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_Amount, 0);
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[2].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[2].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031248, s_Empty_10031244,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x2, global_hinstance,
-                                    (LPVOID)global_edited_deck.sideboard[2].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          SendMessageA(s.created_card_hwnd, 0x401, global_edited_deck.sideboard[2].entries[s.entry_idx].DeckEntry_Amount, 0);
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031248, s_Empty_10031244,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x2, global_hinstance,
+                                            (LPVOID)global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_Amount, 0);
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[3].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[3].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031260, s_Empty_1003125c,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x3, global_hinstance,
-                                    (LPVOID)global_edited_deck.sideboard[3].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          SendMessageA(s.created_card_hwnd, 0x401, global_edited_deck.sideboard[3].entries[s.entry_idx].DeckEntry_Amount, 0);
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031260, s_Empty_1003125c,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x3, global_hinstance,
+                                            (LPVOID)global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_Amount, 0);
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[5].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[5].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031278, s_Empty_10031274,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x5, global_hinstance,
-                                    (LPVOID)global_edited_deck.sideboard[5].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          SendMessageA(s.created_card_hwnd, 0x401, global_edited_deck.sideboard[5].entries[s.entry_idx].DeckEntry_Amount, 0);
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031278, s_Empty_10031274,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x5, global_hinstance,
+                                            (LPVOID)global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_Amount, 0);
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[4].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[4].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031290, s_Empty_1003128c,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x4, global_hinstance,
-                                    (LPVOID)global_edited_deck.sideboard[4].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          SendMessageA(s.created_card_hwnd, 0x401, global_edited_deck.sideboard[4].entries[s.entry_idx].DeckEntry_Amount, 0);
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031290, s_Empty_1003128c,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x4, global_hinstance,
+                                            (LPVOID)global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_Amount, 0);
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
     else
     {
-      for (s.entry_idx = 0; global_edited_deck.sideboard[0].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[0].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        for (s.copy_idx = 0; global_edited_deck.sideboard[0].entries[s.entry_idx].DeckEntry_Amount > s.copy_idx; s.copy_idx = s.copy_idx + 1)
+        for (copy_idx = 0; global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_Amount > copy_idx; copy_idx = copy_idx + 1)
         {
-          if ((s.rebuild_ok == 0) ||
-              ((s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312a8, s_Empty_100312a4,
-                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                            0, 0, global_smallcard_width, global_smallcard_height,
-                                            hwnd, (HMENU)0x0, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[0].entries[s.entry_idx].DeckEntry_csvid)) == NULL))
-            s.rebuild_ok = 0;
+          if ((rebuild_ok == 0) ||
+              ((created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312a8, s_Empty_100312a4,
+                                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                                    0, 0, global_smallcard_width, global_smallcard_height,
+                                                    hwnd, (HMENU)0x0, global_hinstance,
+                                                    (LPVOID)global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_csvid)) == NULL))
+            rebuild_ok = 0;
           else
-            s.rebuild_ok = 1;
+            rebuild_ok = 1;
         }
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[1].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[1].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        for (s.copy_idx = 0; global_edited_deck.sideboard[1].entries[s.entry_idx].DeckEntry_Amount > s.copy_idx; s.copy_idx = s.copy_idx + 1)
+        for (copy_idx = 0; global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_Amount > copy_idx; copy_idx = copy_idx + 1)
         {
-          if ((s.rebuild_ok == 0) ||
-              ((s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312c0, s_Empty_100312bc,
-                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                            0, 0, global_smallcard_width, global_smallcard_height,
-                                            hwnd, (HMENU)0x1, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[1].entries[s.entry_idx].DeckEntry_csvid)) == NULL))
-            s.rebuild_ok = 0;
+          if ((rebuild_ok == 0) ||
+              ((created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312c0, s_Empty_100312bc,
+                                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                                    0, 0, global_smallcard_width, global_smallcard_height,
+                                                    hwnd, (HMENU)0x1, global_hinstance,
+                                                    (LPVOID)global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_csvid)) == NULL))
+            rebuild_ok = 0;
           else
-            s.rebuild_ok = 1;
+            rebuild_ok = 1;
         }
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[2].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[2].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        for (s.copy_idx = 0; global_edited_deck.sideboard[2].entries[s.entry_idx].DeckEntry_Amount > s.copy_idx; s.copy_idx = s.copy_idx + 1)
+        for (copy_idx = 0; global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_Amount > copy_idx; copy_idx = copy_idx + 1)
         {
-          if ((s.rebuild_ok == 0) ||
-              ((s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312d8, s_Empty_100312d4,
-                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                            0, 0, global_smallcard_width, global_smallcard_height,
-                                            hwnd, (HMENU)0x2, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[2].entries[s.entry_idx].DeckEntry_csvid)) == NULL))
-            s.rebuild_ok = 0;
+          if ((rebuild_ok == 0) ||
+              ((created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312d8, s_Empty_100312d4,
+                                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                                    0, 0, global_smallcard_width, global_smallcard_height,
+                                                    hwnd, (HMENU)0x2, global_hinstance,
+                                                    (LPVOID)global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_csvid)) == NULL))
+            rebuild_ok = 0;
           else
-            s.rebuild_ok = 1;
+            rebuild_ok = 1;
         }
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[3].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[3].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        for (s.copy_idx = 0; global_edited_deck.sideboard[3].entries[s.entry_idx].DeckEntry_Amount > s.copy_idx; s.copy_idx = s.copy_idx + 1)
+        for (copy_idx = 0; global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_Amount > copy_idx; copy_idx = copy_idx + 1)
         {
-          if ((s.rebuild_ok == 0) ||
-              ((s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312f0, s_Empty_100312ec,
-                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                            0, 0, global_smallcard_width, global_smallcard_height,
-                                            hwnd, (HMENU)0x3, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[3].entries[s.entry_idx].DeckEntry_csvid)) == NULL))
-            s.rebuild_ok = 0;
+          if ((rebuild_ok == 0) ||
+              ((created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100312f0, s_Empty_100312ec,
+                                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                                    0, 0, global_smallcard_width, global_smallcard_height,
+                                                    hwnd, (HMENU)0x3, global_hinstance,
+                                                    (LPVOID)global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_csvid)) == NULL))
+            rebuild_ok = 0;
           else
-            s.rebuild_ok = 1;
+            rebuild_ok = 1;
         }
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[5].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[5].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        for (s.copy_idx = 0; global_edited_deck.sideboard[5].entries[s.entry_idx].DeckEntry_Amount > s.copy_idx; s.copy_idx = s.copy_idx + 1)
+        for (copy_idx = 0; global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_Amount > copy_idx; copy_idx = copy_idx + 1)
         {
-          if ((s.rebuild_ok == 0) ||
-              ((s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031308, s_Empty_10031304,
-                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                            0, 0, global_smallcard_width, global_smallcard_height,
-                                            hwnd, (HMENU)0x5, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[5].entries[s.entry_idx].DeckEntry_csvid)) == NULL))
-            s.rebuild_ok = 0;
+          if ((rebuild_ok == 0) ||
+              ((created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031308, s_Empty_10031304,
+                                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                                    0, 0, global_smallcard_width, global_smallcard_height,
+                                                    hwnd, (HMENU)0x5, global_hinstance,
+                                                    (LPVOID)global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_csvid)) == NULL))
+            rebuild_ok = 0;
           else
-            s.rebuild_ok = 1;
+            rebuild_ok = 1;
         }
       }
-      for (s.entry_idx = 0; global_edited_deck.sideboard[4].total > s.entry_idx; s.entry_idx = s.entry_idx + 1)
+      for (entry_idx = 0; global_edited_deck.sideboard[4].total > entry_idx; entry_idx = entry_idx + 1)
       {
-        for (s.copy_idx = 0; global_edited_deck.sideboard[4].entries[s.entry_idx].DeckEntry_Amount > s.copy_idx; s.copy_idx = s.copy_idx + 1)
+        for (copy_idx = 0; global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_Amount > copy_idx; copy_idx = copy_idx + 1)
         {
-          if ((s.rebuild_ok == 0) ||
-              ((s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031320, s_Empty_1003131c,
-                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                            0, 0, global_smallcard_width, global_smallcard_height,
-                                            hwnd, (HMENU)0x4, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[4].entries[s.entry_idx].DeckEntry_csvid)) == NULL))
-            s.rebuild_ok = 0;
+          if ((rebuild_ok == 0) ||
+              ((created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031320, s_Empty_1003131c,
+                                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                                    0, 0, global_smallcard_width, global_smallcard_height,
+                                                    hwnd, (HMENU)0x4, global_hinstance,
+                                                    (LPVOID)global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_csvid)) == NULL))
+            rebuild_ok = 0;
           else
-            s.rebuild_ok = 1;
+            rebuild_ok = 1;
         }
       }
     }
     SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
-    return s.rebuild_ok;
+    return rebuild_ok;
 
   case 0x4c8:
-    s.drop_ok = 1;
-    s.csvid_arg = (HDC)wparam;
-    s.drop_pt.x = (int)((unsigned)lparam & 0xFFFF);
-    s.drop_pt.y = (int)((unsigned)lparam >> 16);
-    s.group_id = (HMENU)pick_group_id_from_point(&sideboard_group_rects[0], 6, &s.drop_pt);
-    if ((global_cfg_consolidate != 0) && ((s.card_hwnd = find_wanted_window_in_group(hwnd, (int)s.group_id, (int)s.csvid_arg)) != NULL))
+    drop_ok = 1;
+    csvid_arg = (HDC)wparam;
+    drop_pt.x = (int)((unsigned)lparam & 0xFFFF);
+    drop_pt.y = (int)((unsigned)lparam >> 16);
+    group_id = (HMENU)pick_group_id_from_point(&sideboard_group_rects[0], 6, &drop_pt);
+    if ((global_cfg_consolidate != 0) && ((card_hwnd = find_wanted_window_in_group(hwnd, (int)group_id, (int)csvid_arg)) != NULL))
     {
-      add_or_increment_sideboard_bucket_entry((int)s.group_id, (int)s.csvid_arg, 1, &global_edited_deck);
-      s.current_amount = SendMessageA(s.card_hwnd, 0x402, 0, 0);
-      SendMessageA(s.card_hwnd, 0x401, s.current_amount + 1, 0);
+      add_or_increment_sideboard_bucket_entry((int)group_id, (int)csvid_arg, 1, &global_edited_deck);
+      current_amount = SendMessageA(card_hwnd, 0x402, 0, 0);
+      SendMessageA(card_hwnd, 0x401, current_amount + 1, 0);
     }
     else
     {
-      s.card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031338, s_Empty_10031334,
-                                   WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                   s.drop_pt.x, s.drop_pt.y, global_smallcard_width,
-                                   global_smallcard_height, hwnd, s.group_id, global_hinstance,
-                                   (LPVOID)s.csvid_arg);
-      if (s.card_hwnd == NULL)
+      card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031338, s_Empty_10031334,
+                                  WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                  drop_pt.x, drop_pt.y, global_smallcard_width,
+                                  global_smallcard_height, hwnd, group_id, global_hinstance,
+                                  (LPVOID)csvid_arg);
+      if (card_hwnd == NULL)
       {
-        s.drop_ok = 0;
+        drop_ok = 0;
       }
       else
       {
-        BringWindowToTop(s.card_hwnd);
-        add_or_increment_sideboard_bucket_entry((int)s.group_id, (int)s.csvid_arg, 1, &global_edited_deck);
+        BringWindowToTop(card_hwnd);
+        add_or_increment_sideboard_bucket_entry((int)group_id, (int)csvid_arg, 1, &global_edited_deck);
         SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
       }
     }
 
     if ((((saved_sideboard_total_none == 0) && (saved_sideboard_total_black == 0)) && (saved_sideboard_total_blue == 0)) &&
         (((saved_sideboard_total_green == 0 && (saved_sideboard_total_white == 0)) && (saved_sideboard_total_red == 0))))
-      return s.drop_ok;
+      return drop_ok;
 
     AppendMenuA(global_sideboardsurface_popup, MF_ENABLED, RES_MENU_CLEARDECK, s_C_lear_sideboard_1003134c);
     DeleteMenu(global_sideboardsurface_popup, RES_MENU_RESTOREDECK, 0);
@@ -1361,10 +1346,10 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
     saved_sideboard_total_green = 0;
     saved_sideboard_total_white = 0;
     saved_sideboard_total_red = 0;
-    return s.drop_ok;
+    return drop_ok;
 
   case 0x466:
-    s.invalidate_hdc = (HDC)wparam;
+    invalidate_hdc = (HDC)wparam;
     invalidate_wanted_window(hwnd, wparam);
     return 0;
 
@@ -1474,10 +1459,10 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
     return 0;
 
   case WM_ERASEBKGND:
-    s.erase_hdc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.erase_hdc);
-    GetClientRect(hwnd, &s.client_rect);
-    FillRect(s.erase_hdc, &s.client_rect, global_create_brush_6);
+    erase_hdc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(erase_hdc);
+    GetClientRect(hwnd, &client_rect);
+    FillRect(erase_hdc, &client_rect, global_create_brush_6);
     return 1;
 
   case WM_INITMENU:
@@ -1492,40 +1477,40 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
     return 0;
 
   case WM_PAINT:
-    s.paint_hdc = BeginPaint(hwnd, &s.paint);
-    ApplyCardArtPaletteToDc(s.paint_hdc);
-    DrawGroupBoxWithLabel(s.paint_hdc, &sideboard_group_rects[0], s_None_10031428);
-    DrawGroupBoxWithLabel(s.paint_hdc, &sideboard_group_rects[1], s_Black_10031430);
-    DrawGroupBoxWithLabel(s.paint_hdc, &sideboard_group_rects[2], s_Blue_10031438);
-    DrawGroupBoxWithLabel(s.paint_hdc, &sideboard_group_rects[5], s_Red_10031440);
-    DrawGroupBoxWithLabel(s.paint_hdc, &sideboard_group_rects[3], s_Green_10031444);
-    DrawGroupBoxWithLabel(s.paint_hdc, &sideboard_group_rects[4], s_White_1003144c);
-    EndPaint(hwnd, &s.paint);
+    paint_hdc = BeginPaint(hwnd, &paint);
+    ApplyCardArtPaletteToDc(paint_hdc);
+    DrawGroupBoxWithLabel(paint_hdc, &sideboard_group_rects[0], s_None_10031428);
+    DrawGroupBoxWithLabel(paint_hdc, &sideboard_group_rects[1], s_Black_10031430);
+    DrawGroupBoxWithLabel(paint_hdc, &sideboard_group_rects[2], s_Blue_10031438);
+    DrawGroupBoxWithLabel(paint_hdc, &sideboard_group_rects[5], s_Red_10031440);
+    DrawGroupBoxWithLabel(paint_hdc, &sideboard_group_rects[3], s_Green_10031444);
+    DrawGroupBoxWithLabel(paint_hdc, &sideboard_group_rects[4], s_White_1003144c);
+    EndPaint(hwnd, &paint);
     return 0;
 
   case WM_RBUTTONDOWN:
-    s.popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
-    s.popup_pt.y = (int)((unsigned)lparam >> 16);
-    ClientToScreen(hwnd, &s.popup_pt);
-    TrackPopupMenu(global_sideboardsurface_popup, TPM_RIGHTBUTTON, s.popup_pt.x, s.popup_pt.y, 0, hwnd, NULL);
+    popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
+    popup_pt.y = (int)((unsigned)lparam >> 16);
+    ClientToScreen(hwnd, &popup_pt);
+    TrackPopupMenu(global_sideboardsurface_popup, TPM_RIGHTBUTTON, popup_pt.x, popup_pt.y, 0, hwnd, NULL);
     return 0;
 
   case WM_SIZE:
-    s.iVar3 = (int)(((unsigned)lparam & 0xFFFF) - 0x28) / 3;
-    s.iVar4 = (int)(((unsigned)lparam >> 16) - 0x1e) / 2;
+    iVar3 = (int)(((unsigned)lparam & 0xFFFF) - 0x28) / 3;
+    iVar4 = (int)(((unsigned)lparam >> 16) - 0x1e) / 2;
 
-    SetRect(&sideboard_group_rects[0], 10, 10, s.iVar3 + 10, s.iVar4 + 10);
-    s.iVar1 = s.iVar3 + 0x14;
-    SetRect(&sideboard_group_rects[1], s.iVar1, 10, s.iVar3 + s.iVar1, s.iVar4 + 10);
-    s.iVar1 = s.iVar1 + s.iVar3 + 10;
-    SetRect(&sideboard_group_rects[4], s.iVar1, 10, s.iVar3 + s.iVar1, s.iVar4 + 10);
+    SetRect(&sideboard_group_rects[0], 10, 10, iVar3 + 10, iVar4 + 10);
+    iVar1 = iVar3 + 0x14;
+    SetRect(&sideboard_group_rects[1], iVar1, 10, iVar3 + iVar1, iVar4 + 10);
+    iVar1 = iVar1 + iVar3 + 10;
+    SetRect(&sideboard_group_rects[4], iVar1, 10, iVar3 + iVar1, iVar4 + 10);
 
-    s.iVar1 = s.iVar4 + 0x14;
-    SetRect(&sideboard_group_rects[2], 10, s.iVar1, s.iVar3 + 10, s.iVar1 + s.iVar4);
-    s.iVar2 = s.iVar3 + 0x14;
-    SetRect(&sideboard_group_rects[3], s.iVar2, s.iVar1, s.iVar3 + s.iVar2, s.iVar1 + s.iVar4);
-    s.iVar2 = s.iVar2 + s.iVar3 + 10;
-    SetRect(&sideboard_group_rects[5], s.iVar2, s.iVar1, s.iVar3 + s.iVar2, s.iVar1 + s.iVar4);
+    iVar1 = iVar4 + 0x14;
+    SetRect(&sideboard_group_rects[2], 10, iVar1, iVar3 + 10, iVar1 + iVar4);
+    iVar2 = iVar3 + 0x14;
+    SetRect(&sideboard_group_rects[3], iVar2, iVar1, iVar3 + iVar2, iVar1 + iVar4);
+    iVar2 = iVar2 + iVar3 + 10;
+    SetRect(&sideboard_group_rects[5], iVar2, iVar1, iVar3 + iVar2, iVar1 + iVar4);
 
     SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
     return 0;
@@ -1554,170 +1539,167 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
   // GLOBAL: DECKDLL 0x10031094
   static int saved_trade_total_red = 0;
 
-  struct
-  {
-    int pad0; /* matches [ebp-0xa8] */
-    int pad1;
-    int iVar1;
-    int iVar2;
-    int iVar3;
-    int iVar4;
-    POINT popup_pt;
-    HDC paint_hdc;
-    PAINTSTRUCT paint;
-    HDC erase_hdc;
-    RECT client_rect;
-    HDC invalidate_hdc;
-    POINT drop_pt;
-    LRESULT drop_ok;
-    HWND card_hwnd;
-    HMENU group_id;
-    HDC csvid_arg;
-    int entry_idx;
-    int rebuild_ok;
-    HWND created_card_hwnd;
-  } s;
+  int pad0; /* matches [ebp-0xa8] */
+  int pad1;
+  int iVar1;
+  int iVar2;
+  int iVar3;
+  int iVar4;
+  POINT popup_pt;
+  HDC paint_hdc;
+  PAINTSTRUCT paint;
+  HDC erase_hdc;
+  RECT client_rect;
+  HDC invalidate_hdc;
+  POINT drop_pt;
+  LRESULT drop_ok;
+  HWND card_hwnd;
+  HMENU group_id;
+  HDC csvid_arg;
+  int entry_idx;
+  int rebuild_ok;
+  HWND created_card_hwnd;
 
   switch (msg)
   {
   case 0x401:
-    s.rebuild_ok = 1;
+    rebuild_ok = 1;
     destroy_child_windows(hwnd);
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[0].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[0].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031458, s_Empty_10031454,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x6, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[0].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031458, s_Empty_10031454,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x6, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[0].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[1].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[1].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031470, s_Empty_1003146c,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x0, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[1].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031470, s_Empty_1003146c,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x0, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[1].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[2].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[2].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031488, s_Empty_10031484,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x1, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[2].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031488, s_Empty_10031484,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x1, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[2].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[3].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[3].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314a0, s_Empty_1003149c,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x2, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[3].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314a0, s_Empty_1003149c,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x2, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[3].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[4].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[4].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314b8, s_Empty_100314b4,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x3, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[4].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314b8, s_Empty_100314b4,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x3, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[4].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[6].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[6].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314d0, s_Empty_100314cc,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x5, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[6].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314d0, s_Empty_100314cc,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x5, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[6].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
-    for (s.entry_idx = 0; s.entry_idx < global_edited_deck.trade[5].total; s.entry_idx = s.entry_idx + 1)
+    for (entry_idx = 0; entry_idx < global_edited_deck.trade[5].total; entry_idx = entry_idx + 1)
     {
-      if (s.rebuild_ok != 0)
+      if (rebuild_ok != 0)
       {
-        s.created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314e8, s_Empty_100314e4,
-                                    WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                    0, 0, global_smallcard_width, global_smallcard_height,
-                                    hwnd, (HMENU)0x4, global_hinstance,
-                                    (LPVOID)global_edited_deck.trade[5].entries[s.entry_idx].DeckEntry_csvid);
-        if (s.created_card_hwnd != NULL)
-          s.rebuild_ok = 1;
+        created_card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_100314e8, s_Empty_100314e4,
+                                            WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                            0, 0, global_smallcard_width, global_smallcard_height,
+                                            hwnd, (HMENU)0x4, global_hinstance,
+                                            (LPVOID)global_edited_deck.trade[5].entries[entry_idx].DeckEntry_csvid);
+        if (created_card_hwnd != NULL)
+          rebuild_ok = 1;
         else
-          s.rebuild_ok = 0;
+          rebuild_ok = 0;
       }
     }
 
     SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
-    return s.rebuild_ok;
+    return rebuild_ok;
 
   case 0x4c8:
-    s.drop_ok = 1;
-    s.csvid_arg = (HDC)wparam;
-    s.drop_pt.x = (int)((unsigned)lparam & 0xFFFF);
-    s.drop_pt.y = (int)((unsigned)lparam >> 16) & 0xFFFF;
-    s.group_id = (HMENU)pick_group_id_from_point(&trade_group_rects[0], 7, &s.drop_pt);
-    s.card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031500, s_Empty_100314fc,
-                                 WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
-                                 s.drop_pt.x, s.drop_pt.y, global_smallcard_width,
-                                 global_smallcard_height, hwnd, s.group_id, global_hinstance,
-                                 (LPVOID)s.csvid_arg);
-    if (s.card_hwnd != NULL)
+    drop_ok = 1;
+    csvid_arg = (HDC)wparam;
+    drop_pt.x = (int)((unsigned)lparam & 0xFFFF);
+    drop_pt.y = (int)((unsigned)lparam >> 16) & 0xFFFF;
+    group_id = (HMENU)pick_group_id_from_point(&trade_group_rects[0], 7, &drop_pt);
+    card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031500, s_Empty_100314fc,
+                                WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
+                                drop_pt.x, drop_pt.y, global_smallcard_width,
+                                global_smallcard_height, hwnd, group_id, global_hinstance,
+                                (LPVOID)csvid_arg);
+    if (card_hwnd != NULL)
     {
-      BringWindowToTop(s.card_hwnd);
-      append_trade_bucket_entry((int)s.group_id, (int)s.csvid_arg, 1, &global_edited_deck);
+      BringWindowToTop(card_hwnd);
+      append_trade_bucket_entry((int)group_id, (int)csvid_arg, 1, &global_edited_deck);
       SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
     }
     else
     {
-      s.drop_ok = 0;
+      drop_ok = 0;
     }
 
     if ((((saved_trade_total_deck == 0) && (saved_trade_total_none == 0)) && (saved_trade_total_black == 0)) &&
         (((saved_trade_total_blue == 0 && (saved_trade_total_green == 0)) &&
           ((saved_trade_total_white == 0 && (saved_trade_total_red == 0))))))
-      return s.drop_ok;
+      return drop_ok;
 
     load_text(s_menus_10031528, s_DECKSURFACE_TRADE_10031514);
     AppendMenuA(global_tradesurface_popup, MF_ENABLED, RES_MENU_CLEARDECK, text_lines[1]);
@@ -1730,7 +1712,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
     saved_trade_total_green = 0;
     saved_trade_total_white = 0;
     saved_trade_total_red = 0;
-    return s.drop_ok;
+    return drop_ok;
 
   case WM_COMMAND:
     switch ((unsigned)wparam & 0xFFFF)
@@ -1845,10 +1827,10 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
     return 0;
 
   case WM_ERASEBKGND:
-    s.erase_hdc = (HDC)wparam;
+    erase_hdc = (HDC)wparam;
     ApplyCardArtPaletteToDc((HDC)wparam);
-    GetClientRect(hwnd, &s.client_rect);
-    FillRect(s.erase_hdc, &s.client_rect, global_create_brush_6);
+    GetClientRect(hwnd, &client_rect);
+    FillRect(erase_hdc, &client_rect, global_create_brush_6);
     return 1;
 
   case WM_INITMENU:
@@ -1863,50 +1845,50 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
     return 0;
 
   case WM_PAINT:
-    s.paint_hdc = BeginPaint(hwnd, &s.paint);
-    ApplyCardArtPaletteToDc(s.paint_hdc);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[6], s_Deck_10031584);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[0], s_None_1003158c);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[1], s_Black_10031594);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[2], s_Blue_1003159c);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[5], s_Red_100315a4);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[3], s_Green_100315a8);
-    DrawGroupBoxWithLabel(s.paint_hdc, &trade_group_rects[4], s_White_100315b0);
-    EndPaint(hwnd, &s.paint);
+    paint_hdc = BeginPaint(hwnd, &paint);
+    ApplyCardArtPaletteToDc(paint_hdc);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[6], s_Deck_10031584);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[0], s_None_1003158c);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[1], s_Black_10031594);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[2], s_Blue_1003159c);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[5], s_Red_100315a4);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[3], s_Green_100315a8);
+    DrawGroupBoxWithLabel(paint_hdc, &trade_group_rects[4], s_White_100315b0);
+    EndPaint(hwnd, &paint);
     return 0;
 
   case WM_RBUTTONDOWN:
-    s.popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
-    s.popup_pt.y = (int)((unsigned)lparam >> 16);
-    ClientToScreen(hwnd, &s.popup_pt);
-    TrackPopupMenu(global_tradesurface_popup, TPM_RIGHTBUTTON, s.popup_pt.x, s.popup_pt.y, 0, hwnd, NULL);
+    popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
+    popup_pt.y = (int)((unsigned)lparam >> 16);
+    ClientToScreen(hwnd, &popup_pt);
+    TrackPopupMenu(global_tradesurface_popup, TPM_RIGHTBUTTON, popup_pt.x, popup_pt.y, 0, hwnd, NULL);
     return 0;
 
   case 0x466:
-    s.invalidate_hdc = (HDC)wparam;
+    invalidate_hdc = (HDC)wparam;
     invalidate_wanted_window(hwnd, wparam);
     return 0;
 
   case WM_SIZE:
-    s.iVar1 = ((int)((unsigned)lparam & 0xFFFF) - 0x32);
-    s.iVar2 = (int)(s.iVar1 + ((unsigned)s.iVar1 >> 31 & 3U)) >> 2;
-    s.iVar3 = (int)(((unsigned)lparam >> 16) - 0x1e) / 2;
+    iVar1 = ((int)((unsigned)lparam & 0xFFFF) - 0x32);
+    iVar2 = (int)(iVar1 + ((unsigned)iVar1 >> 31 & 3U)) >> 2;
+    iVar3 = (int)(((unsigned)lparam >> 16) - 0x1e) / 2;
 
-    SetRect(&trade_group_rects[6], 10, 10, s.iVar2 + 10, s.iVar3 + 10);
-    s.iVar1 = s.iVar2 + 0x14;
-    SetRect(&trade_group_rects[0], s.iVar1, 10, s.iVar1 + s.iVar2, s.iVar3 + 10);
-    s.iVar1 = s.iVar1 + s.iVar2 + 10;
-    SetRect(&trade_group_rects[1], s.iVar1, 10, s.iVar1 + s.iVar2, s.iVar3 + 10);
-    s.iVar1 = s.iVar1 + s.iVar2 + 10;
-    SetRect(&trade_group_rects[4], s.iVar1, 10, s.iVar1 + s.iVar2, s.iVar3 + 10);
+    SetRect(&trade_group_rects[6], 10, 10, iVar2 + 10, iVar3 + 10);
+    iVar1 = iVar2 + 0x14;
+    SetRect(&trade_group_rects[0], iVar1, 10, iVar1 + iVar2, iVar3 + 10);
+    iVar1 = iVar1 + iVar2 + 10;
+    SetRect(&trade_group_rects[1], iVar1, 10, iVar1 + iVar2, iVar3 + 10);
+    iVar1 = iVar1 + iVar2 + 10;
+    SetRect(&trade_group_rects[4], iVar1, 10, iVar1 + iVar2, iVar3 + 10);
 
-    s.iVar4 = s.iVar2 + 0x14;
-    s.iVar1 = s.iVar3 + 0x14;
-    SetRect(&trade_group_rects[2], s.iVar4, s.iVar1, s.iVar4 + s.iVar2, s.iVar1 + s.iVar3);
-    s.iVar4 = s.iVar4 + s.iVar2 + 10;
-    SetRect(&trade_group_rects[3], s.iVar4, s.iVar1, s.iVar4 + s.iVar2, s.iVar1 + s.iVar3);
-    s.iVar4 = s.iVar4 + s.iVar2 + 10;
-    SetRect(&trade_group_rects[5], s.iVar4, s.iVar1, s.iVar4 + s.iVar2, s.iVar1 + s.iVar3);
+    iVar4 = iVar2 + 0x14;
+    iVar1 = iVar3 + 0x14;
+    SetRect(&trade_group_rects[2], iVar4, iVar1, iVar4 + iVar2, iVar1 + iVar3);
+    iVar4 = iVar4 + iVar2 + 10;
+    SetRect(&trade_group_rects[3], iVar4, iVar1, iVar4 + iVar2, iVar1 + iVar3);
+    iVar4 = iVar4 + iVar2 + 10;
+    SetRect(&trade_group_rects[5], iVar4, iVar1, iVar4 + iVar2, iVar1 + iVar3);
 
     SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
     return 0;

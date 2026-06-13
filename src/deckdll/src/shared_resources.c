@@ -32,30 +32,27 @@ static LOGFONT global_font_template_ini = {
 // FUNCTION: SHANDALAR 0x00466928
 LOGFONT *LoadFontFromIni(char *name, int italic)
 {
-  struct
-  {
-    char key[100]; /* ebp - 0x68 */
-    UINT bold;     /* ebp - 0x4 */
-  } s;
+  char key[100]; /* ebp - 0x68 */
+  UINT bold;     /* ebp - 0x4 */
 
   memcpy(&global_font_from_ini, &global_font_template_ini, sizeof(LOGFONT));
 
-  strcpy(s.key, "size");
-  strcat(s.key, name);
-  global_font_from_ini.lfHeight = GetPrivateProfileIntA("Fonts", s.key, 0x14, global_duel_dat_path);
+  strcpy(key, "size");
+  strcat(key, name);
+  global_font_from_ini.lfHeight = GetPrivateProfileIntA("Fonts", key, 0x14, global_duel_dat_path);
 
-  strcpy(s.key, "bold");
-  strcat(s.key, name);
-  s.bold = GetPrivateProfileIntA("Fonts", s.key, 0, global_duel_dat_path);
-  if (s.bold != 0)
+  strcpy(key, "bold");
+  strcat(key, name);
+  bold = GetPrivateProfileIntA("Fonts", key, 0, global_duel_dat_path);
+  if (bold != 0)
     global_font_from_ini.lfWeight = FW_BOLD;
 
   if (italic != 0)
     global_font_from_ini.lfItalic = TRUE;
 
-  strcpy(s.key, "font");
-  strcat(s.key, name);
-  GetPrivateProfileStringA("Fonts", s.key, "MS Sans Serif",
+  strcpy(key, "font");
+  strcat(key, name);
+  GetPrivateProfileStringA("Fonts", key, "MS Sans Serif",
                            global_font_from_ini.lfFaceName, 0x20, global_duel_dat_path);
   return &global_font_from_ini;
 }
@@ -65,57 +62,54 @@ LOGFONT *LoadFontFromIni(char *name, int italic)
 // FUNCTION: SHANDALAR 0x0056f300
 bool create_fonts(void)
 {
-  struct
-  {
-    char path[MAX_PATH + 4]; /* big buffer first */
-    int debug_pen_index;     /* ebp - 0x8 */
-    int debug_pens_ok;       /* ebp - 0x4 */
-  } s;
+  char path[MAX_PATH + 4]; /* big buffer first */
+  int debug_pen_index;     /* ebp - 0x8 */
+  int debug_pens_ok;       /* ebp - 0x4 */
 
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0530m_.TTF");
-  AddFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Magis___.TTF");
-  AddFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0127m_.TTF");
-  AddFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0085m_.TTF");
-  AddFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0298m_.TTF");
-  AddFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0299m_.TTF");
-  AddFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0300m_.TTF");
-  AddFontResourceA(s.path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0530m_.TTF");
+  AddFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Magis___.TTF");
+  AddFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0127m_.TTF");
+  AddFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0085m_.TTF");
+  AddFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0298m_.TTF");
+  AddFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0299m_.TTF");
+  AddFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0300m_.TTF");
+  AddFontResourceA(path);
 
   global_fonts_init_state = 3;
 
-  sprintf(s.path, "%s\\Damage.pic", global_cardart_path);
-  global_damage_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\CardCounters.pic", global_cardart_path);
-  global_card_counters_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\ManaSymbols.pic", global_cardart_path);
-  global_mana_symbols_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\Abilities.pic", global_cardart_path);
-  global_abilities_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\ManaStripes.pic", global_cardart_path);
-  global_mana_stripes_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\Summon.pic", global_cardart_path);
-  global_summon_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\Dying.pic", global_cardart_path);
-  global_dying_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\Target.pic", global_cardart_path);
-  global_target_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\CantTarget.pic", global_cardart_path);
-  global_cant_target_pic = load_pic(s.path);
-  sprintf(s.path, "%s\\WillUntap.pic", global_cardart_path);
-  global_will_untap_pic = load_pic(s.path);
+  sprintf(path, "%s\\Damage.pic", global_cardart_path);
+  global_damage_pic = load_pic(path);
+  sprintf(path, "%s\\CardCounters.pic", global_cardart_path);
+  global_card_counters_pic = load_pic(path);
+  sprintf(path, "%s\\ManaSymbols.pic", global_cardart_path);
+  global_mana_symbols_pic = load_pic(path);
+  sprintf(path, "%s\\Abilities.pic", global_cardart_path);
+  global_abilities_pic = load_pic(path);
+  sprintf(path, "%s\\ManaStripes.pic", global_cardart_path);
+  global_mana_stripes_pic = load_pic(path);
+  sprintf(path, "%s\\Summon.pic", global_cardart_path);
+  global_summon_pic = load_pic(path);
+  sprintf(path, "%s\\Dying.pic", global_cardart_path);
+  global_dying_pic = load_pic(path);
+  sprintf(path, "%s\\Target.pic", global_cardart_path);
+  global_target_pic = load_pic(path);
+  sprintf(path, "%s\\CantTarget.pic", global_cardart_path);
+  global_cant_target_pic = load_pic(path);
+  sprintf(path, "%s\\WillUntap.pic", global_cardart_path);
+  global_will_untap_pic = load_pic(path);
 
   global_smallcard_pt_font = CreateFontIndirectA(LoadFontFromIni("SmallCardPT", 0));
   global_damage_font = CreateFontIndirectA(LoadFontFromIni("Damage", 0));
@@ -132,22 +126,22 @@ bool create_fonts(void)
   global_pen_palette_5d = CreatePen(6, 2, global_palette_col_5d);
   global_pen_palette_1f = CreatePen(6, 2, global_palette_col_1f);
 
-  for (s.debug_pen_index = 0, s.debug_pens_ok = 1; s.debug_pen_index < 10; ++s.debug_pen_index)
+  for (debug_pen_index = 0, debug_pens_ok = 1; debug_pen_index < 10; ++debug_pen_index)
   {
-    global_debug_pens[s.debug_pen_index] =
+    global_debug_pens[debug_pen_index] =
         CreatePen(6, 3,
-                  ((unsigned int)(BYTE)(s.debug_pen_index * 75) << 16) |
-                      ((unsigned int)(BYTE)(s.debug_pen_index * 20) << 8) |
-                      (unsigned int)(BYTE)(s.debug_pen_index * 10));
-    if (global_debug_pens[s.debug_pen_index] == (HPEN)0)
-      s.debug_pens_ok = 0;
+                  ((unsigned int)(BYTE)(debug_pen_index * 75) << 16) |
+                      ((unsigned int)(BYTE)(debug_pen_index * 20) << 8) |
+                      (unsigned int)(BYTE)(debug_pen_index * 10));
+    if (global_debug_pens[debug_pen_index] == (HPEN)0)
+      debug_pens_ok = 0;
   }
 
   if (!global_damage_pic || !global_card_counters_pic || !global_mana_symbols_pic ||
       !global_abilities_pic || !global_mana_stripes_pic || !global_summon_pic ||
       !global_dying_pic || !global_target_pic || !global_cant_target_pic ||
       !global_will_untap_pic || !global_smallcard_pt_font || !global_damage_font ||
-      !global_idtag_font || !global_pen_palette_5d || !global_pen_palette_1f || !s.debug_pens_ok)
+      !global_idtag_font || !global_pen_palette_5d || !global_pen_palette_1f || !debug_pens_ok)
   {
     destroy_create_fonts_resources();
     return false;
@@ -161,36 +155,33 @@ bool create_fonts(void)
 // FUNCTION: SHANDALAR 0x0056f8c1
 void destroy_create_fonts_resources(void)
 {
-  struct
-  {
-    char path[MAX_PATH + 4];
-    int i;
-  } s;
+  char path[MAX_PATH + 4];
+  int i;
 
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Magim___.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0530m_.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Magis___.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0127m_.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0085m_.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0298m_.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0299m_.TTF");
-  RemoveFontResourceA(s.path);
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\Tt0300m_.TTF");
-  RemoveFontResourceA(s.path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Magim___.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0530m_.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Magis___.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0127m_.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0085m_.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0298m_.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0299m_.TTF");
+  RemoveFontResourceA(path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\Tt0300m_.TTF");
+  RemoveFontResourceA(path);
 
   if (global_damage_pic)
   {
@@ -259,11 +250,11 @@ void destroy_create_fonts_resources(void)
     DeleteObject(global_pen_palette_1f);
   global_pen_palette_1f = NULL;
 
-  for (s.i = 0; s.i < 10; s.i++)
-    if (global_debug_pens[s.i])
+  for (i = 0; i < 10; i++)
+    if (global_debug_pens[i])
     {
-      DeleteObject(global_debug_pens[s.i]);
-      global_debug_pens[s.i] = NULL;
+      DeleteObject(global_debug_pens[i]);
+      global_debug_pens[i] = NULL;
     }
 }
 
@@ -279,21 +270,18 @@ static int global_deleteobj_platform_id = -1;
 // FUNCTION: SHANDALAR 0x0046537b
 void delete_and_close_object(HANDLE obj)
 {
-  struct
-  {
-    char dbg_buf[500];
-    OSVERSIONINFOA ver;
-    HANDLE section_handle;
-    DIBSECTION dib_section;
-    char *bits_pointer;
-  } s;
+  char dbg_buf[500];
+  OSVERSIONINFOA ver;
+  HANDLE section_handle;
+  DIBSECTION dib_section;
+  char *bits_pointer;
 
   if (global_deleteobj_platform_id == -1)
   {
-    s.ver.dwOSVersionInfoSize = 0x94;
-    memset(&s.ver.dwMajorVersion, 0, 0x90);
-    GetVersionExA(&s.ver);
-    if (s.ver.dwPlatformId == 1)
+    ver.dwOSVersionInfoSize = 0x94;
+    memset(&ver.dwMajorVersion, 0, 0x90);
+    GetVersionExA(&ver);
+    if (ver.dwPlatformId == 1)
       global_deleteobj_platform_id = 1;
     else
       global_deleteobj_platform_id = 0;
@@ -301,19 +289,19 @@ void delete_and_close_object(HANDLE obj)
 
   if (obj != (HANDLE)0)
   {
-    GetObjectA(obj, 0x54, &s.dib_section);
-    s.section_handle = s.dib_section.dshSection;
-    s.bits_pointer = (char *)s.dib_section.dsBm.bmBits;
-    s.bits_pointer += s.dib_section.dsOffset;
+    GetObjectA(obj, 0x54, &dib_section);
+    section_handle = dib_section.dshSection;
+    bits_pointer = (char *)dib_section.dsBm.bmBits;
+    bits_pointer += dib_section.dsOffset;
     DeleteObject(obj);
-    if (s.section_handle != (HANDLE)0 && global_deleteobj_platform_id != 0)
-      CloseHandle(s.section_handle);
+    if (section_handle != (HANDLE)0 && global_deleteobj_platform_id != 0)
+      CloseHandle(section_handle);
   }
 
   if (global_DIB_debug != 0)
   {
-    sprintf(s.dbg_buf, "  %08x DestroyDIBSection (file mapping: %08x)\n", obj, s.section_handle);
-    OutputDebugStringA(s.dbg_buf);
+    sprintf(dbg_buf, "  %08x DestroyDIBSection (file mapping: %08x)\n", obj, section_handle);
+    OutputDebugStringA(dbg_buf);
   }
 }
 

@@ -49,68 +49,65 @@ uint Catalog_MakeKeyFromPath(const char *path);
 // FUNCTION: DRAWCARDLIB 0x1000b820
 int Catalog_Open(const char *catalog_path)
 {
-  struct
-  {
-    int iVar1;
-    int entry_index;
-    Catalog *other_catalog;
-    Catalog *catalog;
-    int other_slot;
-    int slot_index;
-    FILE *catalog_file;
-  } s;
+  int iVar1;
+  int entry_index;
+  Catalog *other_catalog;
+  Catalog *catalog;
+  int other_slot;
+  int slot_index;
+  FILE *catalog_file;
 
-  s.slot_index = -1;
+  slot_index = -1;
 
-  for (s.other_slot = 0; s.other_slot < 5; s.other_slot++)
+  for (other_slot = 0; other_slot < 5; other_slot++)
   {
-    if (g_catalogs[s.other_slot].file == 0)
+    if (g_catalogs[other_slot].file == 0)
     {
-      s.slot_index = s.other_slot;
+      slot_index = other_slot;
       break;
     }
   }
 
-  assert((uint)(s.slot_index != -1), "D:\\Newmagic\\sources\\NedCard\\Catalog.c", 0x43,
+  assert((uint)(slot_index != -1), "D:\\Newmagic\\sources\\NedCard\\Catalog.c", 0x43,
          "Too many open Catalogs: Max %d\n", 5);
 
-  s.catalog = &g_catalogs[s.slot_index];
-  s.catalog->cached_entry = (CatalogEntry *)0x0;
-  strcpy(s.catalog->path, catalog_path);
-  s.catalog->file = fopen(catalog_path, "rb");
-  s.catalog_file = s.catalog->file;
-  if (s.catalog_file == (FILE *)0x0)
+  catalog = &g_catalogs[slot_index];
+  catalog->cached_entry = (CatalogEntry *)0x0;
+  strcpy(catalog->path, catalog_path);
+  catalog->file = fopen(catalog_path, "rb");
+  catalog_file = catalog->file;
+  if (catalog_file == (FILE *)0x0)
     return 0;
 
-  fread(&s.catalog->entry_count, 4, 1, s.catalog_file);
-  s.catalog->entries = (CatalogEntry *)malloc(s.catalog->entry_count * sizeof(CatalogEntry));
-  fread(s.catalog->entries, sizeof(CatalogEntry), (size_t)s.catalog->entry_count, s.catalog_file);
+  fread(&catalog->entry_count, 4, 1, catalog_file);
+  catalog->entries = (CatalogEntry *)malloc(catalog->entry_count * sizeof(CatalogEntry));
+  fread(catalog->entries, sizeof(CatalogEntry), (size_t)catalog->entry_count, catalog_file);
   if (g_catalogDuplicateCheckEnabled != 0)
   {
-    for (s.other_slot = 0; s.other_slot < 5; s.other_slot = s.other_slot + 1)
+    for (other_slot = 0; other_slot < 5; other_slot = other_slot + 1)
     {
-      if (s.slot_index == s.other_slot)
+      if (slot_index == other_slot)
         continue;
 
-      if (g_catalogs[s.other_slot].file == 0)
+      if (g_catalogs[other_slot].file == 0)
         continue;
 
-      s.other_catalog = &g_catalogs[s.other_slot];
+      other_catalog = &g_catalogs[other_slot];
 
-      for (s.entry_index = 0; 0 != s.catalog->entry_count; s.entry_index++)
+      for (entry_index = 0; 0 != catalog->entry_count; entry_index++)
       {
-        for (s.iVar1 = 0; s.iVar1 < s.other_catalog->entry_count; s.iVar1 = s.iVar1 + 1)
+        for (iVar1 = 0; iVar1 < other_catalog->entry_count; iVar1 = iVar1 + 1)
         {
-          assert(s.catalog->entries[s.entry_index].key - s.other_catalog->entries[s.entry_index].key != 0,
+          assert(catalog->entries[entry_index].key - other_catalog->entries[entry_index].key != 0,
                  "D:\\Newmagic\\sources\\NedCard\\Catalog.c", 0x69,
-                 "Duplicate short name found in catalogs\n%s entry %d and\n%s entry %d\nShortName value 0x%08lx", s.catalog->path, s.entry_index,
-                 s.other_catalog->path, s.iVar1, s.catalog->entries[s.entry_index].key);
+                 "Duplicate short name found in catalogs\n%s entry %d and\n%s entry %d\nShortName value 0x%08lx", catalog->path, entry_index,
+                 other_catalog->path, iVar1, catalog->entries[entry_index].key);
         }
       }
     }
   }
 
-  return s.slot_index + 1;
+  return slot_index + 1;
 }
 
 // MATCHING
@@ -204,44 +201,41 @@ size_t Catalog_ReadEntry(int catalog_handle, const char *name, void **buffer)
 // FUNCTION: MAGIC 0x0040ceb4
 uint Catalog_MakeKeyFromPath(const char *path)
 {
-  struct
+  int acc_odd;
+  char ext_buf[16];
+  char dir_buf[256];
+
+  uint key;
+  int pad0;
+  char filename_buf[12];
+  uint multiplier;
+  int ch;
+  int acc_even;
+
+  multiplier = 3;
+  pad0 = 0;
+  acc_odd = 0;
+  acc_even = 0;
+  _splitpath(path, ext_buf, dir_buf, filename_buf, ext_buf);
+  path = filename_buf;
+  strcat(filename_buf, ext_buf);
+  key = (undefined4)(((int)(signed char)path[1] ^ (int)(signed char)path[0]) << 0x18);
+
+  while ((ch = (int)(signed char)*(path++)) != 0)
   {
-    int acc_odd;
-    char ext_buf[16];
-    char dir_buf[256];
-
-    uint key;
-    int pad0;
-    char filename_buf[12];
-    uint multiplier;
-    int ch;
-    int acc_even;
-  } s;
-
-  s.multiplier = 3;
-  s.pad0 = 0;
-  s.acc_odd = 0;
-  s.acc_even = 0;
-  _splitpath(path, s.ext_buf, s.dir_buf, s.filename_buf, s.ext_buf);
-  path = s.filename_buf;
-  strcat(s.filename_buf, s.ext_buf);
-  s.key = (undefined4)(((int)(signed char)path[1] ^ (int)(signed char)path[0]) << 0x18);
-
-  while ((s.ch = (int)(signed char)*(path++)) != 0)
-  {
-    if ((s.multiplier & 1) != 0)
+    if ((multiplier & 1) != 0)
     {
-      s.acc_odd = s.multiplier * s.ch + s.acc_odd;
+      acc_odd = multiplier * ch + acc_odd;
     }
     else
     {
-      s.acc_even = s.multiplier * s.ch + s.acc_even;
+      acc_even = multiplier * ch + acc_even;
     }
-    s.multiplier = s.multiplier + 1;
+    multiplier = multiplier + 1;
   }
 
-  s.key = (undefined4)((uint)s.key | (s.acc_even * s.acc_odd & 0xffffffU));
-  return (uint)s.key;
+  key = (undefined4)((uint)key | (acc_even * acc_odd & 0xffffffU));
+  return (uint)key;
 }
 
 // MATCHING

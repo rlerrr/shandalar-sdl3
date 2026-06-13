@@ -218,11 +218,8 @@ DIBSurface *CreateDIBSurface(int width, int height, int bitsPerPixel)
 {
   // Gotta be leftover debugging or something
   char unused[16] = "rpbits";
-  struct
-  {
-    DWORD imageSize;
-    int screenDC;
-  } s;
+  DWORD imageSize;
+  int screenDC;
 
   // Store basic parameters
   global_dibSurface->width = width;
@@ -240,9 +237,9 @@ DIBSurface *CreateDIBSurface(int width, int height, int bitsPerPixel)
   }
 
   // Total image size (+ a little extra, matching original)
-  s.screenDC = global_dibSurface->rowPadding;
-  s.imageSize = (width + (int)s.screenDC) * bitsPerPixel * height / 8 + 0x10;
-  global_dibSurface->imageSizeBytes = s.imageSize;
+  screenDC = global_dibSurface->rowPadding;
+  imageSize = (width + (int)screenDC) * bitsPerPixel * height / 8 + 0x10;
+  global_dibSurface->imageSizeBytes = imageSize;
 
   // Create BITMAPINFO
   global_dibSurface->pBitmapInfo = CreateBitmapInfo(width, height, bitsPerPixel);
@@ -255,7 +252,7 @@ DIBSurface *CreateDIBSurface(int width, int height, int bitsPerPixel)
       NULL,
       0x8000004,
       0,
-      s.imageSize,
+      imageSize,
       NULL);
 
   if (!global_dibSurface->hMapping)
@@ -296,18 +293,15 @@ DIBSurface *CreateDIBSurface(int width, int height, int bitsPerPixel)
 HBITMAP
 LoadPicFile(int loadFlags, undefined4 unused_arg2, undefined4 unused_arg3, char *pcxFilename, undefined1 *palette)
 {
-  struct
-  {
-    int pic_width_padding;
-    int pcx_width_padding;
-    undefined1 temp_palette[1024];
-    char *dst_scanline;
-    int bitsPerPixel;
-  } s;
+  int pic_width_padding;
+  int pcx_width_padding;
+  undefined1 temp_palette[1024];
+  char *dst_scanline;
+  int bitsPerPixel;
 
   unused_arg2 = unused_arg2;
   unused_arg3 = unused_arg3;
-  s.bitsPerPixel = 8;
+  bitsPerPixel = 8;
 
   if (strcmpi(".pcx", strchr(pcxFilename, '.')) == 0)
   {
@@ -320,7 +314,7 @@ LoadPicFile(int loadFlags, undefined4 unused_arg2, undefined4 unused_arg3, char 
     gPcxPath = pcxFilename;
     if (palette == (undefined1 *)0x1)
     {
-      palette = s.temp_palette;
+      palette = temp_palette;
     }
     if (palette != (undefined1 *)0x0)
     {
@@ -340,19 +334,19 @@ LoadPicFile(int loadFlags, undefined4 unused_arg2, undefined4 unused_arg3, char 
       }
       if ((global_pcxw_image_width & 3) != 0)
       {
-        s.pcx_width_padding = 4 - (global_pcxw_image_width & 3);
+        pcx_width_padding = 4 - (global_pcxw_image_width & 3);
       }
       else
       {
-        s.pcx_width_padding = 0;
+        pcx_width_padding = 0;
       }
-      g_pcxPaddedWidth = global_pcxw_image_width + s.pcx_width_padding;
-      CreateDIBSurface(g_pcxPaddedWidth, global_pcxw_image_height, s.bitsPerPixel);
-      s.dst_scanline = (char *)global_dibSurface->pBits;
+      g_pcxPaddedWidth = global_pcxw_image_width + pcx_width_padding;
+      CreateDIBSurface(g_pcxPaddedWidth, global_pcxw_image_height, bitsPerPixel);
+      dst_scanline = (char *)global_dibSurface->pBits;
       for (global_pcx_lineNum = 0; (int)global_pcx_lineNum < global_pcxw_image_height; global_pcx_lineNum++,
-          s.dst_scanline += (s.bitsPerPixel / 8 * g_pcxPaddedWidth))
+          dst_scanline += (bitsPerPixel / 8 * g_pcxPaddedWidth))
       {
-        PcxReadScanlineRle(s.dst_scanline);
+        PcxReadScanlineRle(dst_scanline);
       }
       fclose(gPcxInFile);
     }
@@ -367,22 +361,22 @@ LoadPicFile(int loadFlags, undefined4 unused_arg2, undefined4 unused_arg3, char 
       RpBits_ReadTables((ushort *)palette);
       if ((global_pcxw_image_width & 3) != 0)
       {
-        s.pic_width_padding = 4 - (global_pcxw_image_width & 3);
+        pic_width_padding = 4 - (global_pcxw_image_width & 3);
       }
       else
       {
-        s.pic_width_padding = 0;
+        pic_width_padding = 0;
       }
-      g_pcxPaddedWidth = global_pcxw_image_width + s.pic_width_padding;
+      g_pcxPaddedWidth = global_pcxw_image_width + pic_width_padding;
 
-      if (CreateDIBSurface(global_pcxw_image_width, global_pcxw_image_height, s.bitsPerPixel) != 0)
+      if (CreateDIBSurface(global_pcxw_image_width, global_pcxw_image_height, bitsPerPixel) != 0)
       {
-        s.dst_scanline = (char *)global_dibSurface->pBits;
+        dst_scanline = (char *)global_dibSurface->pBits;
 
         for (global_pcx_lineNum = 0; (int)global_pcx_lineNum < global_pcxw_image_height; global_pcx_lineNum++,
-            s.dst_scanline += global_dibSurface->rowPadding + (global_pcxw_image_width * s.bitsPerPixel) / 8)
+            dst_scanline += global_dibSurface->rowPadding + (global_pcxw_image_width * bitsPerPixel) / 8)
         {
-          RpBits_DecodeImage(s.dst_scanline, global_pcxw_image_width);
+          RpBits_DecodeImage(dst_scanline, global_pcxw_image_width);
         }
       }
       else

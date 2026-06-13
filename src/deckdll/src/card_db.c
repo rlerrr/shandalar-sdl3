@@ -105,134 +105,131 @@ name_table_entry_t global_legacy_names[2000];
 // FUNCTION: SHANDALAR 0x004424b0
 int read_db_guts(char *cards_dat_filename)
 {
-  struct
-  {
-    int init_idx;               /* ebp - 0x80c */
-    int flavor_out_idx;         /* ebp - 0x808 */
-    int flavor_card_idx;        /* ebp - 0x804 */
-    char flavor_text_buf[1000]; /* ebp - 0x800 */
-    char *flavor_in;            /* ebp - 0x418 */
-    int rules_out_idx;          /* ebp - 0x414 */
-    int rules_card_idx;         /* ebp - 0x410 */
-    char rules_text_buf[1000];  /* ebp - 0x40c */
-    char *rules_in;             /* ebp - 0x24 */
-    int req_idx;                /* ebp - 0x20 */
-    int exp_idx;                /* ebp - 0x1c */
-    card_ptr_t *cp;
-    size_t record_size;
-    int card_idx; /* ebp - 0x10 */
-    FILE *cards_dat;
-  } s;
+  int init_idx;               /* ebp - 0x80c */
+  int flavor_out_idx;         /* ebp - 0x808 */
+  int flavor_card_idx;        /* ebp - 0x804 */
+  char flavor_text_buf[1000]; /* ebp - 0x800 */
+  char *flavor_in;            /* ebp - 0x418 */
+  int rules_out_idx;          /* ebp - 0x414 */
+  int rules_card_idx;         /* ebp - 0x410 */
+  char rules_text_buf[1000];  /* ebp - 0x40c */
+  char *rules_in;             /* ebp - 0x24 */
+  int req_idx;                /* ebp - 0x20 */
+  int exp_idx;                /* ebp - 0x1c */
+  card_ptr_t *cp;
+  size_t record_size;
+  int card_idx; /* ebp - 0x10 */
+  FILE *cards_dat;
 
-  s.cards_dat = fopen(cards_dat_filename, "rb");
-  if (s.cards_dat == NULL)
+  cards_dat = fopen(cards_dat_filename, "rb");
+  if (cards_dat == NULL)
     return 0;
 
-  fread(&global_available_slots, 4, 1, s.cards_dat);
-  fread(&s.record_size, 4, 1, s.cards_dat);
+  fread(&global_available_slots, 4, 1, cards_dat);
+  fread(&record_size, 4, 1, cards_dat);
 
-  global_base_txt = (char *)malloc(s.record_size);
+  global_base_txt = (char *)malloc(record_size);
   if (global_base_txt == NULL)
   {
-    fclose(s.cards_dat);
+    fclose(cards_dat);
     return 0;
   }
 
-  fread(global_raw_cards_storage, 0x98, global_available_slots, s.cards_dat);
-  fread(global_base_txt, 1, s.record_size, s.cards_dat);
-  fclose(s.cards_dat);
+  fread(global_raw_cards_storage, 0x98, global_available_slots, cards_dat);
+  fread(global_base_txt, 1, record_size, cards_dat);
+  fclose(cards_dat);
 
-  for (s.card_idx = 0; s.card_idx < global_available_slots; s.card_idx += 1)
+  for (card_idx = 0; card_idx < global_available_slots; card_idx += 1)
   {
-    *(int *)&global_raw_cards_storage[s.card_idx].full_name += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[s.card_idx].name += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[s.card_idx].type_text += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[s.card_idx].rules_text += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[s.card_idx].flavor_text += (int)global_base_txt;
+    *(int *)&global_raw_cards_storage[card_idx].full_name += (int)global_base_txt;
+    *(int *)&global_raw_cards_storage[card_idx].name += (int)global_base_txt;
+    *(int *)&global_raw_cards_storage[card_idx].type_text += (int)global_base_txt;
+    *(int *)&global_raw_cards_storage[card_idx].rules_text += (int)global_base_txt;
+    *(int *)&global_raw_cards_storage[card_idx].flavor_text += (int)global_base_txt;
 
-    if (_strcmpi(global_raw_cards_storage[s.card_idx].rules_text, "None") == 0)
-      global_raw_cards_storage[s.card_idx].rules_text = read_db_empty_rules;
+    if (_strcmpi(global_raw_cards_storage[card_idx].rules_text, "None") == 0)
+      global_raw_cards_storage[card_idx].rules_text = read_db_empty_rules;
 
-    if ((_strcmpi(global_raw_cards_storage[s.card_idx].flavor_text, "None") == 0) ||
-        (_strcmpi(global_raw_cards_storage[s.card_idx].flavor_text, "Blank") == 0))
-      global_raw_cards_storage[s.card_idx].flavor_text = read_db_empty_flavor;
+    if ((_strcmpi(global_raw_cards_storage[card_idx].flavor_text, "None") == 0) ||
+        (_strcmpi(global_raw_cards_storage[card_idx].flavor_text, "Blank") == 0))
+      global_raw_cards_storage[card_idx].flavor_text = read_db_empty_flavor;
 
-    global_raw_cards_storage[s.card_idx].artist =
-        const_db_artist_names[(int)global_raw_cards_storage[s.card_idx].artist];
+    global_raw_cards_storage[card_idx].artist =
+        const_db_artist_names[(int)global_raw_cards_storage[card_idx].artist];
 
-    if (global_raw_cards_storage[s.card_idx].num_pics == 0)
-      global_raw_cards_storage[s.card_idx].num_pics = 1;
+    if (global_raw_cards_storage[card_idx].num_pics == 0)
+      global_raw_cards_storage[card_idx].num_pics = 1;
   }
 
-  for (s.exp_idx = 0; s.exp_idx < global_available_slots; s.exp_idx += 1)
-    if (global_raw_cards_storage[s.exp_idx].expansion & 0x40)
-      global_raw_cards_storage[s.exp_idx].expansion = 0x80;
+  for (exp_idx = 0; exp_idx < global_available_slots; exp_idx += 1)
+    if (global_raw_cards_storage[exp_idx].expansion & 0x40)
+      global_raw_cards_storage[exp_idx].expansion = 0x80;
 
-  for (s.req_idx = 0; s.req_idx < global_available_slots; s.req_idx += 1)
-    if ((signed char)global_raw_cards_storage[s.req_idx].req.req_colorless == 0x11)
-      global_raw_cards_storage[s.req_idx].req.req_colorless = 10;
+  for (req_idx = 0; req_idx < global_available_slots; req_idx += 1)
+    if ((signed char)global_raw_cards_storage[req_idx].req.req_colorless == 0x11)
+      global_raw_cards_storage[req_idx].req.req_colorless = 10;
 
-  for (s.rules_card_idx = 0; s.rules_card_idx < global_available_slots;
-       s.rules_card_idx += 1)
+  for (rules_card_idx = 0; rules_card_idx < global_available_slots;
+       rules_card_idx += 1)
   {
-    s.rules_out_idx = 0;
-    for (s.rules_in = global_raw_cards_storage[s.rules_card_idx].rules_text;
-         *s.rules_in;)
+    rules_out_idx = 0;
+    for (rules_in = global_raw_cards_storage[rules_card_idx].rules_text;
+         *rules_in;)
     {
-      if (((*s.rules_in == '\\') && (s.rules_in[1] == '\\')) ||
-          ((*s.rules_in == '\\') && (s.rules_in[1] == 'n')))
+      if (((*rules_in == '\\') && (rules_in[1] == '\\')) ||
+          ((*rules_in == '\\') && (rules_in[1] == 'n')))
       {
-        s.rules_in += 1;
-        s.rules_text_buf[s.rules_out_idx] = '\n';
-        s.rules_out_idx += 1;
+        rules_in += 1;
+        rules_text_buf[rules_out_idx] = '\n';
+        rules_out_idx += 1;
       }
       else
       {
-        s.rules_text_buf[s.rules_out_idx] = *s.rules_in;
-        s.rules_out_idx += 1;
+        rules_text_buf[rules_out_idx] = *rules_in;
+        rules_out_idx += 1;
       }
 
-      s.rules_in += 1;
+      rules_in += 1;
     }
 
-    s.rules_text_buf[s.rules_out_idx] = '\0';
-    strcpy(global_raw_cards_storage[s.rules_card_idx].rules_text, s.rules_text_buf);
+    rules_text_buf[rules_out_idx] = '\0';
+    strcpy(global_raw_cards_storage[rules_card_idx].rules_text, rules_text_buf);
   }
 
-  for (s.flavor_card_idx = 0; s.flavor_card_idx < global_available_slots;
-       s.flavor_card_idx += 1)
+  for (flavor_card_idx = 0; flavor_card_idx < global_available_slots;
+       flavor_card_idx += 1)
   {
-    s.flavor_out_idx = 0;
-    for (s.flavor_in = global_raw_cards_storage[s.flavor_card_idx].flavor_text;
-         *s.flavor_in;)
+    flavor_out_idx = 0;
+    for (flavor_in = global_raw_cards_storage[flavor_card_idx].flavor_text;
+         *flavor_in;)
     {
-      if (((*s.flavor_in == '\\') && (s.flavor_in[1] == '\\')) ||
-          ((*s.flavor_in == '\\') && (s.flavor_in[1] == 'n')))
+      if (((*flavor_in == '\\') && (flavor_in[1] == '\\')) ||
+          ((*flavor_in == '\\') && (flavor_in[1] == 'n')))
       {
-        s.flavor_in += 1;
-        s.flavor_text_buf[s.flavor_out_idx] = '\n';
-        s.flavor_out_idx += 1;
+        flavor_in += 1;
+        flavor_text_buf[flavor_out_idx] = '\n';
+        flavor_out_idx += 1;
       }
       else
       {
-        s.flavor_text_buf[s.flavor_out_idx] = *s.flavor_in;
-        s.flavor_out_idx += 1;
+        flavor_text_buf[flavor_out_idx] = *flavor_in;
+        flavor_out_idx += 1;
       }
 
-      s.flavor_in += 1;
+      flavor_in += 1;
     }
 
-    s.flavor_text_buf[s.flavor_out_idx] = '\0';
-    strcpy(global_raw_cards_storage[s.flavor_card_idx].flavor_text, s.flavor_text_buf);
+    flavor_text_buf[flavor_out_idx] = '\0';
+    strcpy(global_raw_cards_storage[flavor_card_idx].flavor_text, flavor_text_buf);
   }
 
 #define SET_HACK(idx, col) \
   *(int *)&global_raw_cards_storage[(idx)].hack_colors = (col)
 
-  for (s.init_idx = 0; s.init_idx < global_available_slots; s.init_idx += 1)
+  for (init_idx = 0; init_idx < global_available_slots; init_idx += 1)
   {
-    global_raw_cards_storage[s.init_idx].sleight_color = 0;
-    SET_HACK(s.init_idx, 0);
+    global_raw_cards_storage[init_idx].sleight_color = 0;
+    SET_HACK(init_idx, 0);
   }
 
   global_raw_cards_storage[0x227].sleight_color = 0x28;
@@ -384,83 +381,80 @@ int read_db_guts(char *cards_dat_filename)
 // FUNCTION: MAGIC 0x004537d8
 int ReadLegacyCsv(const char *filename)
 {
-  struct
-  {
-    char *next;
-    HANDLE file;
-    int result;
-    DWORD bytes_read;
-    DWORD size;
-    int card_index;
-    char *line;
-  } s;
+  char *next;
+  HANDLE file;
+  int result;
+  DWORD bytes_read;
+  DWORD size;
+  int card_index;
+  char *line;
 
-  s.result = 0;
+  result = 0;
 
-  for (s.card_index = 0; s.card_index < global_available_slots; ++s.card_index)
+  for (card_index = 0; card_index < global_available_slots; ++card_index)
   {
-    global_legacy_names[s.card_index].damage_text = "";
-    global_legacy_names[s.card_index].effect_title = "";
-    global_legacy_names[s.card_index].effect_text = "";
-    global_legacy_names[s.card_index].legacy_title = "";
-    global_legacy_names[s.card_index].legacy_text = "";
+    global_legacy_names[card_index].damage_text = "";
+    global_legacy_names[card_index].effect_title = "";
+    global_legacy_names[card_index].effect_text = "";
+    global_legacy_names[card_index].legacy_title = "";
+    global_legacy_names[card_index].legacy_text = "";
   }
 
-  s.file = CreateFileA(filename,
-                       GENERIC_READ,
-                       FILE_SHARE_READ,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                       NULL);
-  if (s.file != INVALID_HANDLE_VALUE)
+  file = CreateFileA(filename,
+                     GENERIC_READ,
+                     FILE_SHARE_READ,
+                     NULL,
+                     OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                     NULL);
+  if (file != INVALID_HANDLE_VALUE)
   {
-    s.size = GetFileSize(s.file, NULL);
-    global_rarities_csv_raw = malloc(s.size + 1);
+    size = GetFileSize(file, NULL);
+    global_rarities_csv_raw = malloc(size + 1);
     if (global_rarities_csv_raw != NULL)
     {
-      ReadFile(s.file, global_rarities_csv_raw, s.size, &s.bytes_read, NULL);
-      s.line = global_rarities_csv_raw;
-      s.line = strchr(s.line, '\n') + 1;
+      ReadFile(file, global_rarities_csv_raw, size, &bytes_read, NULL);
+      line = global_rarities_csv_raw;
+      line = strchr(line, '\n') + 1;
 
-      for (s.card_index = 0; s.card_index < global_available_slots; ++s.card_index)
+      for (card_index = 0; card_index < global_available_slots; ++card_index)
       {
-        s.next = s.line;
+        next = line;
 
-        s.next = CsvParseNextField(&s.line);
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        line = next;
 
-        s.next = CsvParseNextField(&s.line);
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        line = next;
 
-        s.next = CsvParseNextField(&s.line);
-        global_legacy_names[s.card_index].damage_text = s.line;
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        global_legacy_names[card_index].damage_text = line;
+        line = next;
 
-        s.next = CsvParseNextField(&s.line);
-        global_legacy_names[s.card_index].effect_title = s.line;
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        global_legacy_names[card_index].effect_title = line;
+        line = next;
 
-        s.next = CsvParseNextField(&s.line);
-        global_legacy_names[s.card_index].effect_text = s.line;
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        global_legacy_names[card_index].effect_text = line;
+        line = next;
 
-        s.next = CsvParseNextField(&s.line);
-        global_legacy_names[s.card_index].legacy_title = s.line;
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        global_legacy_names[card_index].legacy_title = line;
+        line = next;
 
-        s.next = CsvParseNextField(&s.line);
-        global_legacy_names[s.card_index].legacy_text = s.line;
-        s.line = s.next;
+        next = CsvParseNextField(&line);
+        global_legacy_names[card_index].legacy_text = line;
+        line = next;
       }
 
-      s.result = 1;
+      result = 1;
     }
 
-    CloseHandle(s.file);
+    CloseHandle(file);
   }
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: SHANDALAR 0x00443209
@@ -468,46 +462,43 @@ int ReadLegacyCsv(const char *filename)
 // FUNCTION: MAGIC 0x00453a46
 char *CsvParseNextField(char **txt)
 {
-  struct
-  {
-    char *cr;
-    char *next;
-    char *comma;
-    char *p;
-    char *field;
-  } s;
+  char *cr;
+  char *next;
+  char *comma;
+  char *p;
+  char *field;
 
-  s.field = *txt;
+  field = *txt;
 
-  if (*s.field == 0x22)
+  if (*field == 0x22)
   {
-    s.field += 1;
-    s.p = strchr(s.field, 0x22);
-    *s.p = '\0';
-    s.p++;
-    if (*s.p == 0x2c)
-      s.next = s.p + 1;
+    field += 1;
+    p = strchr(field, 0x22);
+    *p = '\0';
+    p++;
+    if (*p == 0x2c)
+      next = p + 1;
     else
-      s.next = s.p + 2;
+      next = p + 2;
   }
   else
   {
-    s.comma = strchr(s.field, 0x2c);
-    s.cr = strchr(s.field, 0xd);
-    if (s.comma != NULL && s.cr > s.comma)
+    comma = strchr(field, 0x2c);
+    cr = strchr(field, 0xd);
+    if (comma != NULL && cr > comma)
     {
-      *s.comma = '\0';
-      s.next = s.comma + 1;
+      *comma = '\0';
+      next = comma + 1;
     }
     else
     {
-      *s.cr = '\0';
-      s.next = s.cr + 2;
+      *cr = '\0';
+      next = cr + 2;
     }
   }
 
-  *txt = s.field;
-  return s.next;
+  *txt = field;
+  return next;
 }
 
 // FUNCTION: DECKDLL 0x1001b4df
@@ -526,17 +517,14 @@ void FreeRaritiesCsvRaw(void)
 // FUNCTION: MAGIC 0x00453d68
 int ReadDeckbuilderCsv(const char *filename, OrigRarities *orig_rarities)
 {
-  struct
-  {
-    HANDLE hfile;     /* ebp - 0x8c */
-    int rval;         /* ebp - 0x88 */
-    DWORD bytes_read; /* ebp - 0x84 */
-    DWORD size;       /* ebp - 0x80 */
-    char *next;       /* ebp - 0x7c */
-    char set_id;      /* ebp - 0x78 */
-    int i;      /* ebp - 0x74 */
-    char *line; /* ebp - 0x70 */
-  } s;
+  HANDLE hfile;     /* ebp - 0x8c */
+  int rval;         /* ebp - 0x88 */
+  DWORD bytes_read; /* ebp - 0x84 */
+  DWORD size;       /* ebp - 0x80 */
+  char *next;       /* ebp - 0x7c */
+  char set_id;      /* ebp - 0x78 */
+  int i;            /* ebp - 0x74 */
+  char *line;       /* ebp - 0x70 */
 
   char set_names[7][15] = {
       "Antiquities",
@@ -548,82 +536,82 @@ int ReadDeckbuilderCsv(const char *filename, OrigRarities *orig_rarities)
       "Unlimited",
   };
 
-  s.rval = 0;
-  for (s.i = 0; s.i < global_available_slots; s.i++)
+  rval = 0;
+  for (i = 0; i < global_available_slots; i++)
   {
-    orig_rarities[s.i].set = SET_INVALID;
+    orig_rarities[i].set = SET_INVALID;
   }
 
-  s.hfile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
-  if (s.hfile != INVALID_HANDLE_VALUE)
+  hfile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+  if (hfile != INVALID_HANDLE_VALUE)
   {
-    s.size = GetFileSize(s.hfile, NULL);
-    global_rarities_csv_raw = (char *)malloc(s.size + 1);
+    size = GetFileSize(hfile, NULL);
+    global_rarities_csv_raw = (char *)malloc(size + 1);
     if (global_rarities_csv_raw)
     {
-      ReadFile(s.hfile, global_rarities_csv_raw, s.size, &s.bytes_read, NULL);
-      s.line = global_rarities_csv_raw;
-      s.line = strchr(s.line, '\n') + 1;
-      s.line = strchr(s.line, '\n') + 1;
+      ReadFile(hfile, global_rarities_csv_raw, size, &bytes_read, NULL);
+      line = global_rarities_csv_raw;
+      line = strchr(line, '\n') + 1;
+      line = strchr(line, '\n') + 1;
 
-      for (s.i = 0; s.i < global_available_slots; s.i = s.i + 1)
+      for (i = 0; i < global_available_slots; i = i + 1)
       {
-        s.next = s.line;
-        s.next = CsvParseNextField(&s.line);
-        s.line = s.next;
-        s.next = CsvParseNextField(&s.line);
-        s.line = s.next;
-        s.next = CsvParseNextField(&s.line);
+        next = line;
+        next = CsvParseNextField(&line);
+        line = next;
+        next = CsvParseNextField(&line);
+        line = next;
+        next = CsvParseNextField(&line);
 
-        for (s.set_id = '\0'; s.set_id < '\a'; s.set_id++)
+        for (set_id = '\0'; set_id < '\a'; set_id++)
         {
-          if (!strcmp(set_names[s.set_id], s.line))
+          if (!strcmp(set_names[set_id], line))
             break;
         }
 
-        if (s.set_id != '\a')
+        if (set_id != '\a')
         {
-          orig_rarities[s.i].set = s.set_id;
+          orig_rarities[i].set = set_id;
 
-          s.line = s.next;
-          s.next = CsvParseNextField(&s.line);
-          orig_rarities[s.i].rarity = *s.line;
+          line = next;
+          next = CsvParseNextField(&line);
+          orig_rarities[i].rarity = *line;
 
-          s.line = s.next;
-          s.next = CsvParseNextField(&s.line);
-          orig_rarities[s.i].exp_rarities[0] = *s.line;
+          line = next;
+          next = CsvParseNextField(&line);
+          orig_rarities[i].exp_rarities[0] = *line;
 
-          s.line = s.next;
-          s.next = CsvParseNextField(&s.line);
-          orig_rarities[s.i].exp_rarities[1] = *s.line;
+          line = next;
+          next = CsvParseNextField(&line);
+          orig_rarities[i].exp_rarities[1] = *line;
 
-          s.line = s.next;
-          s.next = CsvParseNextField(&s.line);
-          orig_rarities[s.i].exp_rarities[2] = *s.line;
+          line = next;
+          next = CsvParseNextField(&line);
+          orig_rarities[i].exp_rarities[2] = *line;
 
-          s.line = s.next;
-          s.next = CsvParseNextField(&s.line);
-          orig_rarities[s.i].exp_rarities[3] = *s.line;
+          line = next;
+          next = CsvParseNextField(&line);
+          orig_rarities[i].exp_rarities[3] = *line;
         }
         else
         {
-          orig_rarities[s.i].set = SET_INVALID;
-          orig_rarities[s.i].exp_rarities[0] = '-';
-          orig_rarities[s.i].exp_rarities[1] = '-';
-          orig_rarities[s.i].exp_rarities[2] = '-';
-          orig_rarities[s.i].exp_rarities[3] = '-';
+          orig_rarities[i].set = SET_INVALID;
+          orig_rarities[i].exp_rarities[0] = '-';
+          orig_rarities[i].exp_rarities[1] = '-';
+          orig_rarities[i].exp_rarities[2] = '-';
+          orig_rarities[i].exp_rarities[3] = '-';
         }
 
-        s.line = s.next;
-        s.line = strchr(s.line, '\n') + 1;
+        line = next;
+        line = strchr(line, '\n') + 1;
       }
 
-      s.rval = 1;
+      rval = 1;
     }
 
-    CloseHandle(s.hfile);
+    CloseHandle(hfile);
   }
 
-  return s.rval;
+  return rval;
 }

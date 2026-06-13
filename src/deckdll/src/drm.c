@@ -74,25 +74,22 @@ static void ScrubString(char *decoded_string)
 // FUNCTION: SHANDALAR 0x00441b96
 static void ReverseBits32(uint *value)
 {
-  struct
-  {
-    int i;        // ebp - 0x10
-    uint result;  // ebp - 0x0c
-    uint dst_bit_mask; // ebp - 0x08
-    uint src_bit_mask; // ebp - 0x04
-  } s;
+  int i;             // ebp - 0x10
+  uint result;       // ebp - 0x0c
+  uint dst_bit_mask; // ebp - 0x08
+  uint src_bit_mask; // ebp - 0x04
 
-  s.result = 0;
-  s.src_bit_mask = 1;
-  s.dst_bit_mask = 0x80000000;
-  for (s.i = 0; s.i < 0x20; s.i++)
+  result = 0;
+  src_bit_mask = 1;
+  dst_bit_mask = 0x80000000;
+  for (i = 0; i < 0x20; i++)
   {
-    if (s.src_bit_mask & *value)
-      s.result |= s.dst_bit_mask;
-    s.src_bit_mask <<= 1;
-    s.dst_bit_mask >>= 1;
+    if (src_bit_mask & *value)
+      result |= dst_bit_mask;
+    src_bit_mask <<= 1;
+    dst_bit_mask >>= 1;
   }
-  *value = s.result;
+  *value = result;
 }
 
 // FUNCTION: DECKDLL 0x1000deb9
@@ -101,95 +98,92 @@ static void ReverseBits32(uint *value)
 int InitLicenseSecretsFromRegistry(void)
 {
 #ifndef MODERN_FIXES
-  struct
-  {
-    int sProductIdLength;
-    size_t sFirstInstallDateTimeLength;
-    int sWindowsCurrentVersionKeyLength;
-    int repeat_idx;
-    DWORD lpcbData;
-    size_t winProductIdLength;
-    uint i;
-    HKEY hKey;
-    BYTE winProductId[1024];
-    char *prodKeyPtr;
-    DWORD lpType;
-  } s;
+  int sProductIdLength;
+  size_t sFirstInstallDateTimeLength;
+  int sWindowsCurrentVersionKeyLength;
+  int repeat_idx;
+  DWORD lpcbData;
+  size_t winProductIdLength;
+  uint i;
+  HKEY hKey;
+  BYTE winProductId[1024];
+  char *prodKeyPtr;
+  DWORD lpType;
 
-  s.prodKeyPtr = NULL;
+  prodKeyPtr = NULL;
   // This generates "SOFTWARE\Microsoft\Windows\CurrentVersion"
-  for (s.i = 0; strlen(s__100330c8) > s.i; s.i++)
+  for (i = 0; strlen(s__100330c8) > i; i++)
   {
-    s__100330c8[s.i] = encoded_windows_current_version_key[s.i] ^ 0x41;
+    s__100330c8[i] = encoded_windows_current_version_key[i] ^ 0x41;
   }
-  s.sWindowsCurrentVersionKeyLength = strlen(s__100330c8);
-  s__100330c8[s.sWindowsCurrentVersionKeyLength] = '\0';
+  sWindowsCurrentVersionKeyLength = strlen(s__100330c8);
+  s__100330c8[sWindowsCurrentVersionKeyLength] = '\0';
 
-  if (RegOpenKeyA((HKEY)0x80000002, s__100330c8, &s.hKey) != 0)
+  if (RegOpenKeyA((HKEY)0x80000002, s__100330c8, &hKey) != 0)
   {
     ScrubString(s__100330c8);
     return 1;
   }
 
   ScrubString(s__100330c8);
-  s.lpType = 4;
-  s.lpcbData = 4;
+  lpType = 4;
+  lpcbData = 4;
 
   // This generates "FirstInstallDateTime" which is a Windows 95/98/ME thing
-  for (s.i = 0; strlen(s__100330f8) > s.i; s.i++)
+  for (i = 0; strlen(s__100330f8) > i; i++)
   {
-    s__100330f8[s.i] = encoded_first_install_date_time[s.i] ^ 0x41;
+    s__100330f8[i] = encoded_first_install_date_time[i] ^ 0x41;
   }
 
-  s.sFirstInstallDateTimeLength = strlen(s__100330f8);
-  s__100330f8[s.sFirstInstallDateTimeLength] = '\0';
+  sFirstInstallDateTimeLength = strlen(s__100330f8);
+  s__100330f8[sFirstInstallDateTimeLength] = '\0';
 
-  if (RegQueryValueExA(s.hKey, s__100330f8, (LPDWORD)0x0, &s.lpType, (LPBYTE)&global_Windows_FirstInstallDateTime, &s.lpcbData) != 0)
+  if (RegQueryValueExA(hKey, s__100330f8, (LPDWORD)0x0, &lpType, (LPBYTE)&global_Windows_FirstInstallDateTime, &lpcbData) != 0)
   {
     ScrubString(s__100330f8);
-    RegCloseKey(s.hKey);
+    RegCloseKey(hKey);
     return 1;
   }
 
   ScrubString(s__100330f8);
-  s.lpType = 1;
-  s.lpcbData = 0x400;
+  lpType = 1;
+  lpcbData = 0x400;
 
   // This generates "ProductId"
-  for (s.i = 0; strlen(s__100330b8) > s.i; s.i++)
+  for (i = 0; strlen(s__100330b8) > i; i++)
   {
-    s__100330b8[s.i] = encoded_product_id_value[s.i] ^ 0x41;
+    s__100330b8[i] = encoded_product_id_value[i] ^ 0x41;
   }
 
-  s.sProductIdLength = strlen(s__100330b8);
-  s__100330b8[s.sProductIdLength] = '\0';
+  sProductIdLength = strlen(s__100330b8);
+  s__100330b8[sProductIdLength] = '\0';
 
-  if (RegQueryValueExA(s.hKey, s__100330b8, (LPDWORD)0x0, &s.lpType, s.winProductId, &s.lpcbData) != 0)
+  if (RegQueryValueExA(hKey, s__100330b8, (LPDWORD)0x0, &lpType, winProductId, &lpcbData) != 0)
   {
     ScrubString(s__100330b8);
-    RegCloseKey(s.hKey);
+    RegCloseKey(hKey);
     return 1;
   }
 
   ScrubString(s__100330b8);
-  s.winProductIdLength = strlen((char *)s.winProductId);
+  winProductIdLength = strlen((char *)winProductId);
 
   // Repeats product key into itself up to 16 chars
-  for (s.repeat_idx = 0; strlen((char *)s.winProductId) < 0x10;)
+  for (repeat_idx = 0; strlen((char *)winProductId) < 0x10;)
   {
-    s.winProductId[s.winProductIdLength] = s.winProductId[s.repeat_idx];
-    s.repeat_idx = s.repeat_idx + 1;
-    s.winProductIdLength++;
-    s.winProductId[s.winProductIdLength] = '\0';
+    winProductId[winProductIdLength] = winProductId[repeat_idx];
+    repeat_idx = repeat_idx + 1;
+    winProductIdLength++;
+    winProductId[winProductIdLength] = '\0';
   }
 
   // Using product key as entropy in a weird way (just the last 8 chars)
-  s.prodKeyPtr = &(s.winProductId - 8)[strlen((char *)s.winProductId)];
-  memcpy(&global_product_id_seed_a, s.prodKeyPtr, 4);
-  s.prodKeyPtr += 4;
-  memcpy(&global_product_id_seed_b, s.prodKeyPtr, 4);
-  s.prodKeyPtr = NULL;
-  RegCloseKey(s.hKey);
+  prodKeyPtr = &(winProductId - 8)[strlen((char *)winProductId)];
+  memcpy(&global_product_id_seed_a, prodKeyPtr, 4);
+  prodKeyPtr += 4;
+  memcpy(&global_product_id_seed_b, prodKeyPtr, 4);
+  prodKeyPtr = NULL;
+  RegCloseKey(hKey);
 #endif
   return 0;
 }
@@ -204,39 +198,36 @@ int InitLicenseSecretsFromRegistry(void)
 // FUNCTION: SHANDALAR 0x00441f4a
 static int ValidateRegistrySerial(uint32_t *out_value)
 {
-  struct
-  {
-    int regPathLength; // ebp - 0x40
-    uint8_t *buf;      // ebp - 0x3c
-    uint32_t i;        // ebp - 0x38
-    int sumpt8;        // ebp - 0x34
-    int sumpt7;        // ebp - 0x30
-    char *pad6;        // ebp - 0x2c
-    uint32_t checksum; // ebp - 0x28
-    int sumpt6;        // ebp - 0x24
-    DWORD size;        // ebp - 0x20
-    int sumpt5;        // ebp - 0x1c
-    HKEY hKey;
-    int sumpt4;      // ebp - 0x14
-    int sumpt3;      // ebp - 0x10
-    int sumpt2;      // ebp - 0xc
-    DWORD type;      // ebp - 0x8
-    uint32_t sumpt1; // ebp - 0x4
-  } s;
+  int regPathLength; // ebp - 0x40
+  uint8_t *buf;      // ebp - 0x3c
+  uint32_t i;        // ebp - 0x38
+  int sumpt8;        // ebp - 0x34
+  int sumpt7;        // ebp - 0x30
+  char *pad6;        // ebp - 0x2c
+  uint32_t checksum; // ebp - 0x28
+  int sumpt6;        // ebp - 0x24
+  DWORD size;        // ebp - 0x20
+  int sumpt5;        // ebp - 0x1c
+  HKEY hKey;
+  int sumpt4;      // ebp - 0x14
+  int sumpt3;      // ebp - 0x10
+  int sumpt2;      // ebp - 0xc
+  DWORD type;      // ebp - 0x8
+  uint32_t sumpt1; // ebp - 0x4
 
   *out_value = 0;
 
-  for (s.i = 0; s.i < strlen(s__10033088); s.i++)
+  for (i = 0; i < strlen(s__10033088); i++)
   {
-    s__10033088[s.i] = encoded_magic_registry_key[s.i] ^ 0x41;
+    s__10033088[i] = encoded_magic_registry_key[i] ^ 0x41;
   }
-  s.regPathLength = strlen(s__10033088);
-  s__10033088[s.regPathLength] = '\0';
+  regPathLength = strlen(s__10033088);
+  s__10033088[regPathLength] = '\0';
 
   // ------------------------------------------------------------
   // Open HKLM\<decoded key>
   // ------------------------------------------------------------
-  if (RegOpenKeyA(HKEY_LOCAL_MACHINE, s__10033088, &s.hKey) != ERROR_SUCCESS)
+  if (RegOpenKeyA(HKEY_LOCAL_MACHINE, s__10033088, &hKey) != ERROR_SUCCESS)
   {
     ScrubString(s__10033088); // wipe decoded string
     return 1;
@@ -247,12 +238,12 @@ static int ValidateRegistrySerial(uint32_t *out_value)
   // ------------------------------------------------------------
   // Allocate buffer for serial (12 bytes)
   // ------------------------------------------------------------
-  s.size = 12;
-  s.type = REG_BINARY;
-  s.buf = malloc(s.size);
-  if (!s.buf)
+  size = 12;
+  type = REG_BINARY;
+  buf = malloc(size);
+  if (!buf)
   {
-    RegCloseKey(s.hKey);
+    RegCloseKey(hKey);
     return 1;
   }
 
@@ -260,54 +251,54 @@ static int ValidateRegistrySerial(uint32_t *out_value)
   // Read "SerialNumber" value
   // ------------------------------------------------------------
   if (RegQueryValueExA(
-          s.hKey,
+          hKey,
           "SerialNumber",
           NULL,
-          &s.type,
-          s.buf,
-          &s.size) != ERROR_SUCCESS)
+          &type,
+          buf,
+          &size) != ERROR_SUCCESS)
   {
-    RegCloseKey(s.hKey);
+    RegCloseKey(hKey);
     return 1;
   }
 
-  RegCloseKey(s.hKey);
+  RegCloseKey(hKey);
 
   // ------------------------------------------------------------
   // Split serial fields
   // ------------------------------------------------------------
-  s.pad6 = s.buf;
-  memcpy(&global_serial_part_a, s.pad6, 4); // part A
-  s.pad6 += 4;
-  memcpy(&global_serial_part_b, s.pad6, 4); // part B
-  s.pad6 += 4;
-  memcpy(&s.checksum, s.pad6, 4); // checksum
-  s.pad6 = NULL;
-  s.checksum ^= global_Windows_FirstInstallDateTime;
+  pad6 = buf;
+  memcpy(&global_serial_part_a, pad6, 4); // part A
+  pad6 += 4;
+  memcpy(&global_serial_part_b, pad6, 4); // part B
+  pad6 += 4;
+  memcpy(&checksum, pad6, 4); // checksum
+  pad6 = NULL;
+  checksum ^= global_Windows_FirstInstallDateTime;
 
   // ------------------------------------------------------------
   // Nibble checksum verification
   // ------------------------------------------------------------
-  *(byte *)&s.sumpt1 = ((global_serial_part_a >> 24) & 0xF);
-  *(byte *)&s.sumpt2 = ((global_serial_part_a >> 16) & 0xF);
-  *(byte *)&s.sumpt3 = ((global_serial_part_a >> 8) & 0xF);
-  *(byte *)&s.sumpt4 = ((global_serial_part_a >> 0) & 0xF);
-  *(byte *)&s.sumpt5 = ((global_serial_part_b >> 24) & 0xF);
-  *(byte *)&s.sumpt6 = ((global_serial_part_b >> 16) & 0xF);
-  *(byte *)&s.sumpt7 = ((global_serial_part_b >> 8) & 0xF);
-  *(byte *)&s.sumpt8 = ((global_serial_part_b >> 0) & 0xF);
+  *(byte *)&sumpt1 = ((global_serial_part_a >> 24) & 0xF);
+  *(byte *)&sumpt2 = ((global_serial_part_a >> 16) & 0xF);
+  *(byte *)&sumpt3 = ((global_serial_part_a >> 8) & 0xF);
+  *(byte *)&sumpt4 = ((global_serial_part_a >> 0) & 0xF);
+  *(byte *)&sumpt5 = ((global_serial_part_b >> 24) & 0xF);
+  *(byte *)&sumpt6 = ((global_serial_part_b >> 16) & 0xF);
+  *(byte *)&sumpt7 = ((global_serial_part_b >> 8) & 0xF);
+  *(byte *)&sumpt8 = ((global_serial_part_b >> 0) & 0xF);
 
-  //*(byte*)&s.sum =
+  //*(byte*)&sum =
 
   if ((
-          *(byte *)&s.sumpt1 +
-          *(byte *)&s.sumpt2 +
-          *(byte *)&s.sumpt3 +
-          *(byte *)&s.sumpt4 +
-          *(byte *)&s.sumpt5 +
-          *(byte *)&s.sumpt6 +
-          *(byte *)&s.sumpt7 +
-          *(byte *)&s.sumpt8) != s.checksum)
+          *(byte *)&sumpt1 +
+          *(byte *)&sumpt2 +
+          *(byte *)&sumpt3 +
+          *(byte *)&sumpt4 +
+          *(byte *)&sumpt5 +
+          *(byte *)&sumpt6 +
+          *(byte *)&sumpt7 +
+          *(byte *)&sumpt8) != checksum)
     return 2;
 
   // ------------------------------------------------------------

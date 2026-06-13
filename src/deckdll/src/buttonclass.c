@@ -23,48 +23,45 @@ static BOOL CALLBACK enum_child_palette_message_proc(HWND child_hwnd, LPARAM lpa
 // FUNCTION: SHANDALAR 0x00466d5f
 int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam_hwnd, LPARAM lparam)
 {
+  HDC hdc2; // ebp - 0x38
   struct
   {
-    HDC hdc2; // ebp - 0x38
-    struct
-    {
-      HWND hwnd;     // ebp - 0x34
-      UINT msg;      // ebp - 0x30
-      HWND wparam;   // ebp - 0x2c
-      LPARAM lparam; // ebp - 0x28
-      int pad1;
-      int pad2;
-      int pad3;
-    } args;
+    HWND hwnd;     // ebp - 0x34
+    UINT msg;      // ebp - 0x30
+    HWND wparam;   // ebp - 0x2c
+    LPARAM lparam; // ebp - 0x28
+    int pad1;
+    int pad2;
+    int pad3;
+  } args;
 
-    DWORD tid_dst;    // ebp - 0x18
-    HDC hdc;          // ebp - 0x14
-    DWORD tid_src;    // ebp - 0x10
-    DWORD procid_dst; // ebp - 0xc
-    HWND changed_hwnd; // ebp - 0x8
-    DWORD procid_src; // ebp - 0x4
-  } s;
+  DWORD tid_dst;     // ebp - 0x18
+  HDC hdc;           // ebp - 0x14
+  DWORD tid_src;     // ebp - 0x10
+  DWORD procid_dst;  // ebp - 0xc
+  HWND changed_hwnd; // ebp - 0x8
+  DWORD procid_src;  // ebp - 0x4
 
   switch (msg)
   {
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    s.changed_hwnd = wparam_hwnd;
-    if (s.changed_hwnd != hwnd)
+    changed_hwnd = wparam_hwnd;
+    if (changed_hwnd != hwnd)
     {
-      s.tid_src = GetWindowThreadProcessId(s.changed_hwnd, &s.procid_src);
-      s.tid_dst = GetWindowThreadProcessId(hwnd, &s.procid_dst);
+      tid_src = GetWindowThreadProcessId(changed_hwnd, &procid_src);
+      tid_dst = GetWindowThreadProcessId(hwnd, &procid_dst);
 
-      if (s.procid_src != s.procid_dst)
+      if (procid_src != procid_dst)
       {
         InvalidateRect(hwnd, NULL, TRUE);
       }
       else if (GetParent(hwnd) == NULL)
       {
-        s.hdc = GetDC(hwnd);
-        SelectPalette(s.hdc, global_cart_art_hpalette, TRUE);
+        hdc = GetDC(hwnd);
+        SelectPalette(hdc, global_cart_art_hpalette, TRUE);
         InvalidateRect(hwnd, NULL, TRUE);
-        ReleaseDC(hwnd, s.hdc);
+        ReleaseDC(hwnd, hdc);
       }
       else if (!(GetWindowLongA(hwnd, GWL_STYLE) & WS_CHILD))
       {
@@ -73,23 +70,23 @@ int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam_hwnd, LPARAM 
     }
     if (msg == WM_PALETTECHANGED)
     {
-      s.args.hwnd = hwnd;
-      s.args.msg = msg;
-      s.args.wparam = wparam_hwnd;
-      s.args.lparam = lparam;
-      EnumChildWindows(hwnd, enum_child_palette_message_proc, (LPARAM)&s.args);
+      args.hwnd = hwnd;
+      args.msg = msg;
+      args.wparam = wparam_hwnd;
+      args.lparam = lparam;
+      EnumChildWindows(hwnd, enum_child_palette_message_proc, (LPARAM)&args);
     }
     return 0;
 
   case WM_QUERYNEWPALETTE:
     UnrealizeObject(global_cart_art_hpalette);
-    s.hdc2 = GetDC(hwnd);
-    SelectPalette(s.hdc2, global_cart_art_hpalette, FALSE);
+    hdc2 = GetDC(hwnd);
+    SelectPalette(hdc2, global_cart_art_hpalette, FALSE);
 
-    if (RealizePalette(s.hdc2))
+    if (RealizePalette(hdc2))
       InvalidateRect(hwnd, NULL, TRUE);
 
-    ReleaseDC(hwnd, s.hdc2);
+    ReleaseDC(hwnd, hdc2);
     return 1;
   default:
     return 0;
@@ -116,41 +113,38 @@ static int is_buttonclass(HWND hwnd)
 // FUNCTION: MAGIC 0x00495d01
 LRESULT CALLBACK wndproc_ButtonClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    HWND lost_focus_button;
-    HWND focused_button;
-    LRESULT result;
-  } s;
+  HWND lost_focus_button;
+  HWND focused_button;
+  LRESULT result;
 
   if ((msg == WM_SETFOCUS) || (msg == WM_KILLFOCUS))
   {
     if (msg == WM_SETFOCUS)
     {
-      s.focused_button = hwnd;
-      s.lost_focus_button = (HWND)wparam;
+      focused_button = hwnd;
+      lost_focus_button = (HWND)wparam;
     }
     else
     {
-      s.lost_focus_button = hwnd;
-      s.focused_button = (HWND)wparam;
+      lost_focus_button = hwnd;
+      focused_button = (HWND)wparam;
     }
-    if (is_buttonclass(s.focused_button) == 0)
-      s.focused_button = (HWND)0;
-    if (is_buttonclass(s.lost_focus_button) == 0)
-      s.lost_focus_button = (HWND)0;
-    SendMessageA(GetParent(hwnd), WM_USER + 0xC8, (WPARAM)s.focused_button, (LPARAM)s.lost_focus_button);
-    s.result = 0;
+    if (is_buttonclass(focused_button) == 0)
+      focused_button = (HWND)0;
+    if (is_buttonclass(lost_focus_button) == 0)
+      lost_focus_button = (HWND)0;
+    SendMessageA(GetParent(hwnd), WM_USER + 0xC8, (WPARAM)focused_button, (LPARAM)lost_focus_button);
+    result = 0;
   }
   else if ((msg == WM_PALETTECHANGED) || (msg == WM_PALETTEISCHANGING) || (msg == WM_QUERYNEWPALETTE))
   {
-    s.result = CallWindowProcA(global_wndproc_std_ButtonClass, hwnd, msg, wparam, lparam);
+    result = CallWindowProcA(global_wndproc_std_ButtonClass, hwnd, msg, wparam, lparam);
     handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
   }
   else
-    s.result = CallWindowProcA(global_wndproc_std_ButtonClass, hwnd, msg, wparam, lparam);
+    result = CallWindowProcA(global_wndproc_std_ButtonClass, hwnd, msg, wparam, lparam);
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: DECKDLL 0x10025552

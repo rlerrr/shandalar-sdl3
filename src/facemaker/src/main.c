@@ -394,17 +394,14 @@ void InitOpenFileDialog(HWND owner_hwnd, OPENFILENAMEA *open_file, char *initial
 // FUNCTION: FACEMAKER 0x00406369
 int ShowSaveFaceDialog(void)
 {
-  struct
-  {
-    OPENFILENAMEA open_file;
-    int save_result;
-  } s;
+  OPENFILENAMEA open_file;
+  int save_result;
 
   strcpy(g_face_output_path, "*.pic");
-  InitOpenFileDialog(g_main_hwnd, &s.open_file, g_default_face_filename, "*.pic", g_face_output_path);
-  s.save_result = GetSaveFileNameA(&s.open_file);
+  InitOpenFileDialog(g_main_hwnd, &open_file, g_default_face_filename, "*.pic", g_face_output_path);
+  save_result = GetSaveFileNameA(&open_file);
   g_mouse_button_down = 0;
-  if (s.save_result != 0)
+  if (save_result != 0)
     return 1;
   else
     return 0;

@@ -481,12 +481,9 @@ void DestroyAllCardBackgrounds(void)
 // FUNCTION: DRAWCARDLIB 0x10005830
 void DrawCardBack(HDC dc, RECT *rect)
 {
-  struct
-  {
-    int xInset;
-    int yInset;
-    RECT innerRect;
-  } s;
+  int xInset;
+  int yInset;
+  RECT innerRect;
 
   if (dc == NULL || rect == NULL)
   {
@@ -495,13 +492,13 @@ void DrawCardBack(HDC dc, RECT *rect)
 
   if (global_CardBack != 0)
   {
-    s.xInset = max(((rect->right - rect->left) * 3) / 100, 1);
-    s.yInset = max(((rect->bottom - rect->top) * 2) / 100, 1);
+    xInset = max(((rect->right - rect->left) * 3) / 100, 1);
+    yInset = max(((rect->bottom - rect->top) * 2) / 100, 1);
 
     FillRect(dc, rect, GetStockObject(4));
-    SetRect(&s.innerRect, rect->left + s.xInset, rect->top + s.yInset, rect->right - s.xInset,
-            rect->bottom - s.yInset);
-    DrawBitmapToRect(dc, &s.innerRect, global_CardBack);
+    SetRect(&innerRect, rect->left + xInset, rect->top + yInset, rect->right - xInset,
+            rect->bottom - yInset);
+    DrawBitmapToRect(dc, &innerRect, global_CardBack);
   }
   else
   {
@@ -512,182 +509,179 @@ void DrawCardBack(HDC dc, RECT *rect)
 // FUNCTION: DRAWCARDLIB 0x1000592c
 undefined4 DrawFullCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version, uint drawFlags, bool expanded_text, LPCSTR artistFormat)
 {
-  struct
-  {
-    int backgroundCropLeftPermille;
-    int backgroundCropTopPermille;
-    BITMAP backgroundBitmapInfo;
-    int rulesBackgroundTopInset;
-    int backgroundCropHeightPermille;
-    int backgroundCropWidthPermille;
-    TEXTMETRICA textMetrics;
-    RECT flavorRect;
-    int textBlockHeight;
-    uint manaTextHeight;
-    RECT artDeviceRect;
-    LPCSTR typeText;
-    int defaultPowerToughness;
-    HBITMAP *backgroundPointer;
-    RECT cardBackgroundRect;
-    HBRUSH frameBrush;
-    RECT artRect;
-    RECT powerToughnessRect;
-    int shadowOffset;
-    COLORREF textColor;
-    char rules_text[1000];
-    int cardWidth;
-    RECT artistRect;
-    char tempText[52];
-    RECT rulesBackgroundRect;
-    undefined4 result;
-    HANDLE backgroundBitmap;
-    RECT typeLineRect;
-    RECT rulesTextRect;
-    int cornerWidth;
-    RECT nameRect;
-    int nSavedDC;
-    int cardHeight;
-    int cornerHeight;
-    RECT castingCostRect;
-    RECT setIconRect;
-  } s;
+  int backgroundCropLeftPermille;
+  int backgroundCropTopPermille;
+  BITMAP backgroundBitmapInfo;
+  int rulesBackgroundTopInset;
+  int backgroundCropHeightPermille;
+  int backgroundCropWidthPermille;
+  TEXTMETRICA textMetrics;
+  RECT flavorRect;
+  int textBlockHeight;
+  uint manaTextHeight;
+  RECT artDeviceRect;
+  LPCSTR typeText;
+  int defaultPowerToughness;
+  HBITMAP *backgroundPointer;
+  RECT cardBackgroundRect;
+  HBRUSH frameBrush;
+  RECT artRect;
+  RECT powerToughnessRect;
+  int shadowOffset;
+  COLORREF textColor;
+  char rules_text[1000];
+  int cardWidth;
+  RECT artistRect;
+  char tempText[52];
+  RECT rulesBackgroundRect;
+  undefined4 result;
+  HANDLE backgroundBitmap;
+  RECT typeLineRect;
+  RECT rulesTextRect;
+  int cornerWidth;
+  RECT nameRect;
+  int nSavedDC;
+  int cardHeight;
+  int cornerHeight;
+  RECT castingCostRect;
+  RECT setIconRect;
 
   if (((dc == (HDC)0x0) || (rect == (RECT *)0x0)) || (card == (card_ptr_t *)0x0))
   {
     return 0;
   }
 
-  s.nSavedDC = SaveDC(dc);
-  s.cardWidth = 200;
-  s.cardHeight = 300;
+  nSavedDC = SaveDC(dc);
+  cardWidth = 200;
+  cardHeight = 300;
   SetMapMode(dc, 7);
-  SetWindowExtEx(dc, s.cardWidth, s.cardHeight, (LPSIZE)0x0);
+  SetWindowExtEx(dc, cardWidth, cardHeight, (LPSIZE)0x0);
   SetViewportExtEx(dc, rect->right - rect->left, rect->bottom - rect->top, (LPSIZE)0x0);
-  SetWindowOrgEx(dc, s.cardWidth / 2, s.cardHeight / 2, (LPPOINT)0x0);
+  SetWindowOrgEx(dc, cardWidth / 2, cardHeight / 2, (LPPOINT)0x0);
   SetViewportOrgEx(dc, rect->left + (rect->right - rect->left) / 2,
                    rect->top + (rect->bottom - rect->top) / 2, (LPPOINT)0x0);
-  s.cornerWidth = 6;
-  s.cornerHeight = 6;
-  SetRect(&s.nameRect, 10, 5, 0xbc, 0x15);
-  SetRect(&s.castingCostRect, 0xc, 8, 0xbe, 0x14);
-  SetRect(&s.artRect, 0x15, 0x19, 0xb5, 0xa4);
-  SetRect(&s.typeLineRect, 0xc, 0xa8, 0xba, 0xb3);
-  SetRect(&s.setIconRect, 0xc, 0xa9, 0xba, 0xb4);
-  SetRect(&s.rulesTextRect, 0x1c, 0xb9, 0xae, 0x10c);
-  SetRect(&s.rulesBackgroundRect, 0x14, 0xb4, 0xb6, 0x10f);
-  SetRect(&s.artistRect, 0xc, 0x114, 0xbc, 0x124);
-  SetRect(&s.powerToughnessRect, 0xc, 0x114, 0xbc, 0x124);
+  cornerWidth = 6;
+  cornerHeight = 6;
+  SetRect(&nameRect, 10, 5, 0xbc, 0x15);
+  SetRect(&castingCostRect, 0xc, 8, 0xbe, 0x14);
+  SetRect(&artRect, 0x15, 0x19, 0xb5, 0xa4);
+  SetRect(&typeLineRect, 0xc, 0xa8, 0xba, 0xb3);
+  SetRect(&setIconRect, 0xc, 0xa9, 0xba, 0xb4);
+  SetRect(&rulesTextRect, 0x1c, 0xb9, 0xae, 0x10c);
+  SetRect(&rulesBackgroundRect, 0x14, 0xb4, 0xb6, 0x10f);
+  SetRect(&artistRect, 0xc, 0x114, 0xbc, 0x124);
+  SetRect(&powerToughnessRect, 0xc, 0x114, 0xbc, 0x124);
   if (card->expansion == -1 || (card->expansion & 0x10) != 0 || (card->expansion & 0x80) != 0)
   {
-    s.frameBrush = CreateSolidBrush(g_defaultCardFrameColor);
-    SelectObject(dc, s.frameBrush);
+    frameBrush = CreateSolidBrush(g_defaultCardFrameColor);
+    SelectObject(dc, frameBrush);
   }
   else
   {
-    s.frameBrush = CreateSolidBrush(g_alternateCardFrameColor);
-    SelectObject(dc, s.frameBrush);
+    frameBrush = CreateSolidBrush(g_alternateCardFrameColor);
+    SelectObject(dc, frameBrush);
   }
   SelectObject(dc, GetStockObject(8));
-  RoundRect(dc, 0, 0, s.cardWidth, s.cardHeight, s.cornerWidth / 2, s.cornerHeight / 2);
+  RoundRect(dc, 0, 0, cardWidth, cardHeight, cornerWidth / 2, cornerHeight / 2);
   SelectObject(dc, GetStockObject(4));
-  if (s.frameBrush != (HBRUSH)0x0)
+  if (frameBrush != (HBRUSH)0x0)
   {
-    DeleteObject(s.frameBrush);
+    DeleteObject(frameBrush);
   }
-  s.backgroundPointer = GetCardBackgroundPointer(card);
-  LoadCardBackground(s.backgroundPointer);
-  SetRect(&s.cardBackgroundRect, s.cornerWidth, s.cornerHeight,
+  backgroundPointer = GetCardBackgroundPointer(card);
+  LoadCardBackground(backgroundPointer);
+  SetRect(&cardBackgroundRect, cornerWidth, cornerHeight,
           // Well these are weird
-          s.cornerWidth + s.cardWidth - (s.cornerWidth << 1),
-          s.cornerHeight + s.cardHeight - (s.cornerHeight << 1));
-  if (*s.backgroundPointer != 0)
+          cornerWidth + cardWidth - (cornerWidth << 1),
+          cornerHeight + cardHeight - (cornerHeight << 1));
+  if (*backgroundPointer != 0)
   {
-    DrawBitmapToRect(dc, &s.cardBackgroundRect, *s.backgroundPointer);
+    DrawBitmapToRect(dc, &cardBackgroundRect, *backgroundPointer);
   }
   else
   {
-    FillRect(dc, &s.cardBackgroundRect, GetStockObject(0));
+    FillRect(dc, &cardBackgroundRect, GetStockObject(0));
   }
-  s.backgroundBitmap = *s.backgroundPointer;
-  s.shadowOffset = 1;
-  s.textColor = GetPaletteColor(0xbf);
+  backgroundBitmap = *backgroundPointer;
+  shadowOffset = 1;
+  textColor = GetPaletteColor(0xbf);
   SelectObject(dc, g_bigCardTitleFont);
   SetBkMode(dc, 1);
   SetTextColor(dc, g_cardTextShadowColor);
-  OffsetRect(&s.nameRect, s.shadowOffset, s.shadowOffset);
-  DrawTextA(dc, card->full_name, -1, &s.nameRect, 0x824);
-  OffsetRect(&s.nameRect, -s.shadowOffset, -s.shadowOffset);
-  SetTextColor(dc, s.textColor);
-  DrawTextA(dc, card->full_name, -1, &s.nameRect, 0x824);
-  s.defaultPowerToughness = 0x64;
+  OffsetRect(&nameRect, shadowOffset, shadowOffset);
+  DrawTextA(dc, card->full_name, -1, &nameRect, 0x824);
+  OffsetRect(&nameRect, -shadowOffset, -shadowOffset);
+  SetTextColor(dc, textColor);
+  DrawTextA(dc, card->full_name, -1, &nameRect, 0x824);
+  defaultPowerToughness = 0x64;
   SelectObject(dc, g_bigCardPowerToughnessFont);
   if ((card->power != 0) || (card->toughness != 0))
   {
-    s.tempText[0] = '\0';
-    if (card->power == s.defaultPowerToughness)
+    tempText[0] = '\0';
+    if (card->power == defaultPowerToughness)
     {
-      strcat(s.tempText, "*");
+      strcat(tempText, "*");
     }
-    else if (s.defaultPowerToughness < card->power)
+    else if (defaultPowerToughness < card->power)
     {
-      wsprintfA((char *)((ptrdiff_t)&s.tempText + strlen(s.tempText)), "%d+*", card->power - s.defaultPowerToughness);
-    }
-    else
-    {
-      wsprintfA((char *)((ptrdiff_t)&s.tempText + strlen(s.tempText)), "%d", card->power);
-    }
-    strcat(s.tempText, "/");
-    if (card->toughness == s.defaultPowerToughness)
-    {
-      strcat(s.tempText, "*");
-    }
-    else if (s.defaultPowerToughness < card->toughness)
-    {
-      wsprintfA((char *)((ptrdiff_t)&s.tempText + strlen(s.tempText)), "%d+*", card->toughness - s.defaultPowerToughness);
+      wsprintfA((char *)((ptrdiff_t)&tempText + strlen(tempText)), "%d+*", card->power - defaultPowerToughness);
     }
     else
     {
-      wsprintfA((char *)((ptrdiff_t)&s.tempText + strlen(s.tempText)), "%d", card->toughness);
+      wsprintfA((char *)((ptrdiff_t)&tempText + strlen(tempText)), "%d", card->power);
+    }
+    strcat(tempText, "/");
+    if (card->toughness == defaultPowerToughness)
+    {
+      strcat(tempText, "*");
+    }
+    else if (defaultPowerToughness < card->toughness)
+    {
+      wsprintfA((char *)((ptrdiff_t)&tempText + strlen(tempText)), "%d+*", card->toughness - defaultPowerToughness);
+    }
+    else
+    {
+      wsprintfA((char *)((ptrdiff_t)&tempText + strlen(tempText)), "%d", card->toughness);
     }
     SetTextColor(dc, g_cardTextShadowColor);
-    OffsetRect(&s.powerToughnessRect, s.shadowOffset, s.shadowOffset);
-    DrawTextA(dc, s.tempText, -1, &s.powerToughnessRect, 0x26);
-    OffsetRect(&s.powerToughnessRect, -s.shadowOffset, -s.shadowOffset);
-    SetTextColor(dc, s.textColor);
-    DrawTextA(dc, s.tempText, -1, &s.powerToughnessRect, 0x26);
+    OffsetRect(&powerToughnessRect, shadowOffset, shadowOffset);
+    DrawTextA(dc, tempText, -1, &powerToughnessRect, 0x26);
+    OffsetRect(&powerToughnessRect, -shadowOffset, -shadowOffset);
+    SetTextColor(dc, textColor);
+    DrawTextA(dc, tempText, -1, &powerToughnessRect, 0x26);
   }
   SelectObject(dc, g_bigCardSubtitleFont);
   SetBkMode(dc, 1);
   if ((card->card_type != -1) && (card->card_type != 0))
   {
-    s.typeText = card->type_text;
+    typeText = card->type_text;
     SetTextColor(dc, g_cardTextShadowColor);
-    OffsetRect(&s.typeLineRect, s.shadowOffset, s.shadowOffset);
-    DrawTextA(dc, s.typeText, -1, &s.typeLineRect, 0x24);
-    OffsetRect(&s.typeLineRect, -s.shadowOffset, -s.shadowOffset);
-    SetTextColor(dc, s.textColor);
-    DrawTextA(dc, s.typeText, -1, &s.typeLineRect, 0x24);
+    OffsetRect(&typeLineRect, shadowOffset, shadowOffset);
+    DrawTextA(dc, typeText, -1, &typeLineRect, 0x24);
+    OffsetRect(&typeLineRect, -shadowOffset, -shadowOffset);
+    SetTextColor(dc, textColor);
+    DrawTextA(dc, typeText, -1, &typeLineRect, 0x24);
   }
   if (card->artist != 0)
   {
-    wsprintfA(s.tempText, artistFormat, card->artist);
+    wsprintfA(tempText, artistFormat, card->artist);
     SetTextColor(dc, g_cardTextShadowColor);
-    OffsetRect(&s.artistRect, s.shadowOffset, s.shadowOffset);
-    DrawTextA(dc, s.tempText, -1, &s.artistRect, 0x824);
-    OffsetRect(&s.artistRect, -s.shadowOffset, -s.shadowOffset);
-    SetTextColor(dc, s.textColor);
-    DrawTextA(dc, s.tempText, -1, &s.artistRect, 0x824);
+    OffsetRect(&artistRect, shadowOffset, shadowOffset);
+    DrawTextA(dc, tempText, -1, &artistRect, 0x824);
+    OffsetRect(&artistRect, -shadowOffset, -shadowOffset);
+    SetTextColor(dc, textColor);
+    DrawTextA(dc, tempText, -1, &artistRect, 0x824);
   }
   if (((card->card_type != 5) && (card->card_type != 8)) && (card->card_type != 0))
   {
-    DrawCastingCost(dc, &s.castingCostRect, &card->req);
+    DrawCastingCost(dc, &castingCostRect, &card->req);
   }
   if (card->expansion != -1)
   {
-    DrawCardSet(dc, &s.setIconRect, card->expansion);
+    DrawCardSet(dc, &setIconRect, card->expansion);
   }
-  CopyRect(&s.artDeviceRect, &s.artRect);
-  LPtoDP(dc, (LPPOINT)&s.artDeviceRect, 2);
+  CopyRect(&artDeviceRect, &artRect);
+  LPtoDP(dc, (LPPOINT)&artDeviceRect, 2);
 
   // HMMM
   switch (drawFlags & 0xf)
@@ -695,11 +689,11 @@ undefined4 DrawFullCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version
   case 0:
     if (IsBigArtIn(card->id, version) != 0)
     {
-      DrawBigArt(dc, &s.artRect, card->id, version);
+      DrawBigArt(dc, &artRect, card->id, version);
     }
     else
     {
-      DrawSmallArt(dc, &s.artRect, card->id, version);
+      DrawSmallArt(dc, &artRect, card->id, version);
     }
     break;
 
@@ -708,90 +702,90 @@ undefined4 DrawFullCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version
     {
       if (((drawFlags & 0x10) != 0) && (IsSmallArtIn(card->id, version) != 0))
       {
-        DrawSmallArt(dc, &s.artRect, card->id, version);
+        DrawSmallArt(dc, &artRect, card->id, version);
       }
-      LoadBigArt(card->id, version, s.artDeviceRect.right - s.artDeviceRect.left,
-                 s.artDeviceRect.bottom - s.artDeviceRect.top);
+      LoadBigArt(card->id, version, artDeviceRect.right - artDeviceRect.left,
+                 artDeviceRect.bottom - artDeviceRect.top);
     }
-    DrawBigArt(dc, &s.artRect, card->id, version);
+    DrawBigArt(dc, &artRect, card->id, version);
     break;
   default:
     if (((IsBigArtIn(card->id, version) == 0) && ((drawFlags & 0x10) != 0)) &&
         (IsSmallArtIn(card->id, version) != 0))
     {
-      DrawSmallArt(dc, &s.artRect, card->id, version);
+      DrawSmallArt(dc, &artRect, card->id, version);
     }
-    if (LoadBigArt(card->id, version, s.artDeviceRect.right - s.artDeviceRect.left,
-                   s.artDeviceRect.bottom - s.artDeviceRect.top) != 0)
+    if (LoadBigArt(card->id, version, artDeviceRect.right - artDeviceRect.left,
+                   artDeviceRect.bottom - artDeviceRect.top) != 0)
     {
-      DrawBigArt(dc, &s.artRect, card->id, version);
+      DrawBigArt(dc, &artRect, card->id, version);
     }
     else
     {
-      DrawSmallArt(dc, &s.artRect, card->id, version);
+      DrawSmallArt(dc, &artRect, card->id, version);
     }
     break;
   }
-  s.result = IsBigArtRightSize(card->id, version, s.artDeviceRect.right - s.artDeviceRect.left,
-                               s.artDeviceRect.bottom - s.artDeviceRect.top);
-  strcpy(s.rules_text, card->rules_text);
-  ReplaceSubstring(s.rules_text, "|H1", 1, "");
-  ReplaceSubstring(s.rules_text, "|H2", 1, "");
-  ReplaceSubstring(s.rules_text, "|H3", 1, "");
-  ReplaceSubstring(s.rules_text, "|H4", 1, "");
-  ReplaceSubstring(s.rules_text, "|H", 1, "");
-  ReplaceSubstring(s.rules_text, "|S1", 1, "");
-  ReplaceSubstring(s.rules_text, "|S2", 1, "");
-  ReplaceSubstring(s.rules_text, "|S3", 1, "");
-  ReplaceSubstring(s.rules_text, "|S4", 1, "");
-  ReplaceSubstring(s.rules_text, "|S", 1, "");
+  result = IsBigArtRightSize(card->id, version, artDeviceRect.right - artDeviceRect.left,
+                             artDeviceRect.bottom - artDeviceRect.top);
+  strcpy(rules_text, card->rules_text);
+  ReplaceSubstring(rules_text, "|H1", 1, "");
+  ReplaceSubstring(rules_text, "|H2", 1, "");
+  ReplaceSubstring(rules_text, "|H3", 1, "");
+  ReplaceSubstring(rules_text, "|H4", 1, "");
+  ReplaceSubstring(rules_text, "|H", 1, "");
+  ReplaceSubstring(rules_text, "|S1", 1, "");
+  ReplaceSubstring(rules_text, "|S2", 1, "");
+  ReplaceSubstring(rules_text, "|S3", 1, "");
+  ReplaceSubstring(rules_text, "|S4", 1, "");
+  ReplaceSubstring(rules_text, "|S", 1, "");
   SetTextColor(dc, g_rulesTextColor);
   SetBkMode(dc, 1);
   if (expanded_text != 0)
   {
     SelectObject(dc, g_bigCardTextFont);
-    s.manaTextHeight = (unsigned short)((CalcDrawManaText(dc, &s.rulesTextRect, s.rules_text) >> 0x10) & 0xffff);
-    GetTextMetricsA(dc, &s.textMetrics);
-    CopyRect(&s.flavorRect, &s.rulesTextRect);
-    s.flavorRect.top += s.manaTextHeight;
-    s.flavorRect.top += s.textMetrics.tmHeight / 2;
+    manaTextHeight = (unsigned short)((CalcDrawManaText(dc, &rulesTextRect, rules_text) >> 0x10) & 0xffff);
+    GetTextMetricsA(dc, &textMetrics);
+    CopyRect(&flavorRect, &rulesTextRect);
+    flavorRect.top += manaTextHeight;
+    flavorRect.top += textMetrics.tmHeight / 2;
     SelectObject(dc, g_bigCardTextItalicFont);
-    DrawTextA(dc, card->flavor_text, -1, &s.flavorRect, 0x410);
-    s.textBlockHeight = s.flavorRect.bottom - s.rulesTextRect.top;
-    if (s.rulesTextRect.bottom - s.rulesTextRect.top < s.textBlockHeight)
+    DrawTextA(dc, card->flavor_text, -1, &flavorRect, 0x410);
+    textBlockHeight = flavorRect.bottom - rulesTextRect.top;
+    if (rulesTextRect.bottom - rulesTextRect.top < textBlockHeight)
     {
-      s.rulesBackgroundTopInset = s.rulesTextRect.top - s.rulesBackgroundRect.top;
-      s.rulesTextRect.top = s.rulesTextRect.bottom - s.textBlockHeight;
-      s.rulesBackgroundRect.top = s.rulesTextRect.top - s.rulesBackgroundTopInset;
-      if (s.backgroundBitmap != 0)
+      rulesBackgroundTopInset = rulesTextRect.top - rulesBackgroundRect.top;
+      rulesTextRect.top = rulesTextRect.bottom - textBlockHeight;
+      rulesBackgroundRect.top = rulesTextRect.top - rulesBackgroundTopInset;
+      if (backgroundBitmap != 0)
       {
-        GetObjectA(s.backgroundBitmap, 0x18, &s.backgroundBitmapInfo);
-        s.backgroundCropLeftPermille = 0x49;
-        s.backgroundCropTopPermille = 0x25d;
-        s.backgroundCropWidthPermille = 0x359;
-        s.backgroundCropHeightPermille = 0x140;
-        DrawBitmapSubrectToRect(dc, &s.rulesBackgroundRect, s.backgroundBitmap,
-                                (s.backgroundBitmapInfo.bmWidth * s.backgroundCropLeftPermille) / 1000,
-                                (s.backgroundBitmapInfo.bmHeight * s.backgroundCropTopPermille) / 1000,
-                                (s.backgroundBitmapInfo.bmWidth * s.backgroundCropWidthPermille) / 1000,
-                                (s.backgroundBitmapInfo.bmHeight * s.backgroundCropHeightPermille) / 1000);
+        GetObjectA(backgroundBitmap, 0x18, &backgroundBitmapInfo);
+        backgroundCropLeftPermille = 0x49;
+        backgroundCropTopPermille = 0x25d;
+        backgroundCropWidthPermille = 0x359;
+        backgroundCropHeightPermille = 0x140;
+        DrawBitmapSubrectToRect(dc, &rulesBackgroundRect, backgroundBitmap,
+                                (backgroundBitmapInfo.bmWidth * backgroundCropLeftPermille) / 1000,
+                                (backgroundBitmapInfo.bmHeight * backgroundCropTopPermille) / 1000,
+                                (backgroundBitmapInfo.bmWidth * backgroundCropWidthPermille) / 1000,
+                                (backgroundBitmapInfo.bmHeight * backgroundCropHeightPermille) / 1000);
       }
       else
       {
-        FillRect(dc, &s.rulesBackgroundRect, GetStockObject(0));
+        FillRect(dc, &rulesBackgroundRect, GetStockObject(0));
       }
     }
   }
   SelectObject(dc, g_bigCardTextFont);
-  s.manaTextHeight = (unsigned short)((DrawManaText(dc, &s.rulesTextRect, s.rules_text, 1) >> 0x10) & 0xffff);
-  GetTextMetricsA(dc, &s.textMetrics);
-  CopyRect(&s.flavorRect, &s.rulesTextRect);
-  s.flavorRect.top += s.manaTextHeight;
-  s.flavorRect.top += s.textMetrics.tmHeight / 3;
+  manaTextHeight = (unsigned short)((DrawManaText(dc, &rulesTextRect, rules_text, 1) >> 0x10) & 0xffff);
+  GetTextMetricsA(dc, &textMetrics);
+  CopyRect(&flavorRect, &rulesTextRect);
+  flavorRect.top += manaTextHeight;
+  flavorRect.top += textMetrics.tmHeight / 3;
   SelectObject(dc, g_bigCardTextItalicFont);
-  DrawTextA(dc, card->flavor_text, -1, &s.flavorRect, 0x10);
-  RestoreDC(dc, s.nSavedDC);
-  return s.result;
+  DrawTextA(dc, card->flavor_text, -1, &flavorRect, 0x10);
+  RestoreDC(dc, nSavedDC);
+  return result;
 }
 
 // FUNCTION: DRAWCARDLIB 0x100067c7
@@ -907,11 +901,8 @@ HBITMAP *GetCardBackgroundPointer(card_ptr_t *card)
 // FUNCTION: DRAWCARDLIB 0x10006a41
 BOOL LoadCardBackground(HBITMAP *outBitmap)
 {
-  struct
-  {
-    char filepath[264];
-    char filename[100];
-  } s;
+  char filepath[264];
+  char filename[100];
 
   if (outBitmap == (HBITMAP *)0x0)
   {
@@ -923,84 +914,84 @@ BOOL LoadCardBackground(HBITMAP *outBitmap)
   }
   if (outBitmap == &global_CARDBK_Green)
   {
-    strcpy(s.filename, "CARDBK_Green");
+    strcpy(filename, "CARDBK_Green");
   }
   else if (outBitmap == &global_CARDBK_White)
   {
-    strcpy(s.filename, "CARDBK_White");
+    strcpy(filename, "CARDBK_White");
   }
   else if (outBitmap == &global_CARDBK_Blue)
   {
-    strcpy(s.filename, "CARDBK_Blue");
+    strcpy(filename, "CARDBK_Blue");
   }
   else if (outBitmap == &global_CARDBK_Black)
   {
-    strcpy(s.filename, "CARDBK_Black");
+    strcpy(filename, "CARDBK_Black");
   }
   else if (outBitmap == &global_CARDBK_Red)
   {
-    strcpy(s.filename, "CARDBK_Red");
+    strcpy(filename, "CARDBK_Red");
   }
   else if (outBitmap == &global_CARDBK_Gold)
   {
-    strcpy(s.filename, "CARDBK_Gold");
+    strcpy(filename, "CARDBK_Gold");
   }
   else if (outBitmap == &global_CARDBK_Artifact)
   {
-    strcpy(s.filename, "CARDBK_Artifact");
+    strcpy(filename, "CARDBK_Artifact");
   }
   else if (outBitmap == &global_CARDBK_GreenLand)
   {
-    strcpy(s.filename, "CARDBK_GreenLand");
+    strcpy(filename, "CARDBK_GreenLand");
   }
   else if (outBitmap == &global_CARDBK_WhiteLand)
   {
-    strcpy(s.filename, "CARDBK_WhiteLand");
+    strcpy(filename, "CARDBK_WhiteLand");
   }
   else if (outBitmap == &global_CARDBK_BlueLand)
   {
-    strcpy(s.filename, "CARDBK_BlueLand");
+    strcpy(filename, "CARDBK_BlueLand");
   }
   else if (outBitmap == &global_CARDBK_BlackLand)
   {
-    strcpy(s.filename, "CARDBK_BlackLand");
+    strcpy(filename, "CARDBK_BlackLand");
   }
   else if (outBitmap == &global_CARDBK_RedLand)
   {
-    strcpy(s.filename, "CARDBK_RedLand");
+    strcpy(filename, "CARDBK_RedLand");
   }
   else if (outBitmap == &global_CARDBK_DarklandsLand)
   {
-    strcpy(s.filename, "CARDBK_DarklandsLand");
+    strcpy(filename, "CARDBK_DarklandsLand");
   }
   else if (outBitmap == &global_CARDBK_FallenEmpiresLand)
   {
-    strcpy(s.filename, "CARDBK_FallenEmpiresLand");
+    strcpy(filename, "CARDBK_FallenEmpiresLand");
   }
   else if (outBitmap == &global_CARDBK_AntiquitiesLand)
   {
-    strcpy(s.filename, "CARDBK_AntiquitiesLand");
+    strcpy(filename, "CARDBK_AntiquitiesLand");
   }
   else if (outBitmap == &global_CARDBK_LegendsLand)
   {
-    strcpy(s.filename, "CARDBK_LegendsLand");
+    strcpy(filename, "CARDBK_LegendsLand");
   }
   else if (outBitmap == &global_CARDBK_ArabianNightsLand)
   {
-    strcpy(s.filename, "CARDBK_ArabianNightsLand");
+    strcpy(filename, "CARDBK_ArabianNightsLand");
   }
   else if (outBitmap == &global_CARDBK_Special)
   {
-    strcpy(s.filename, "CARDBK_Special");
+    strcpy(filename, "CARDBK_Special");
   }
   else
   {
-    strcpy(s.filename, (char *)&g_emptyStringStorage);
+    strcpy(filename, (char *)&g_emptyStringStorage);
   }
-  if (s.filename[0] != '\0')
+  if (filename[0] != '\0')
   {
-    sprintf(s.filepath, "%s\\%s\x2Epic", &global_cardart_directory, s.filename);
-    *outBitmap = load_pic(s.filepath);
+    sprintf(filepath, "%s\\%s\x2Epic", &global_cardart_directory, filename);
+    *outBitmap = load_pic(filepath);
   }
   if (*outBitmap != 0)
   {
@@ -1013,18 +1004,15 @@ BOOL LoadCardBackground(HBITMAP *outBitmap)
 // FUNCTION: DRAWCARDLIB 0x10006d5f
 void DrawCardSet(HDC dc, RECT *rect, uint expansion)
 {
-  struct
-  {
-    BITMAP bm; // ebp - 0x40
-    int cellH; // ebp - 0x24
+  BITMAP bm; // ebp - 0x40
+  int cellH; // ebp - 0x24
 
-    int dstW;     // ebp - 0x24
-    int cellW;    // ebp - 0x20
-    int srcX;     // ebp - 0x1c
-    RECT dstRect; // ebp - 0x18
-    int srcX2;    // ebp - 8
-    int dstH;
-  } s;
+  int dstW;     // ebp - 0x24
+  int cellW;    // ebp - 0x20
+  int srcX;     // ebp - 0x1c
+  RECT dstRect; // ebp - 0x18
+  int srcX2;    // ebp - 8
+  int dstH;
 
   if (dc == 0 || rect == (RECT *)0x0)
   {
@@ -1042,35 +1030,35 @@ void DrawCardSet(HDC dc, RECT *rect, uint expansion)
   {
     if (((expansion & 0x2e) != 0) || ((expansion & 0x100) != 0))
     {
-      GetObjectA(global_CardSets, 0x18, &s.bm);
-      s.cellW = s.bm.bmWidth / 10;
-      s.cellH = s.bm.bmHeight;
+      GetObjectA(global_CardSets, 0x18, &bm);
+      cellW = bm.bmWidth / 10;
+      cellH = bm.bmHeight;
       if ((expansion & 0x20) != 0)
       {
-        s.srcX = 0;
+        srcX = 0;
       }
       else if ((expansion & 0x100) != 0)
       {
-        s.srcX = s.cellW * 2;
+        srcX = cellW * 2;
       }
       else if ((expansion & 4) != 0)
       {
-        s.srcX = s.cellW << 2;
+        srcX = cellW << 2;
       }
       else if ((expansion & 2) != 0)
       {
-        s.srcX = s.cellW * 6;
+        srcX = cellW * 6;
       }
       else if ((expansion & 8) != 0)
       {
-        s.srcX = s.cellW << 3;
+        srcX = cellW << 3;
       }
 
-      s.srcX2 = s.cellW + s.srcX;
-      s.dstH = rect->bottom - rect->top;
-      s.dstW = (s.dstH * s.cellW) / s.cellH;
-      SetRect(&s.dstRect, rect->right - s.dstW, rect->top, rect->right, rect->top + s.dstH);
-      DrawMaskedBitmapToRect(dc, &s.dstRect, global_CardSets, s.cellW, s.cellH, s.srcX, 0, s.srcX2, 0);
+      srcX2 = cellW + srcX;
+      dstH = rect->bottom - rect->top;
+      dstW = (dstH * cellW) / cellH;
+      SetRect(&dstRect, rect->right - dstW, rect->top, rect->right, rect->top + dstH);
+      DrawMaskedBitmapToRect(dc, &dstRect, global_CardSets, cellW, cellH, srcX, 0, srcX2, 0);
     }
   }
 }
@@ -1078,40 +1066,37 @@ void DrawCardSet(HDC dc, RECT *rect, uint expansion)
 // FUNCTION: DRAWCARDLIB 0x10006eed
 void DrawCastingCost(HDC dc, RECT *rect, casting_cost_t *castingCost)
 {
-  struct
-  {
-    int width;
-    char castingCostString[20];
-    int top;
-    char symbol;
-    int left;
-    char *stringPtr;
-    int height;
-    int costReqs[7];
-  } s;
+  int width;
+  char castingCostString[20];
+  int top;
+  char symbol;
+  int left;
+  char *stringPtr;
+  int height;
+  int costReqs[7];
 
   if (dc == 0 || rect == 0 || castingCost == NULL)
   {
   }
   else
   {
-    s.costReqs[0] = (int)(char)castingCost->req_colorless;
-    s.costReqs[1] = (int)(char)castingCost->req_black;
-    s.costReqs[5] = (int)(char)castingCost->req_white;
-    s.costReqs[3] = (int)(char)castingCost->req_green;
-    s.costReqs[4] = (int)(char)castingCost->req_red;
-    s.costReqs[2] = (int)(char)castingCost->req_blue;
-    BuildCostString(s.costReqs, s.castingCostString);
-    s.height = rect->bottom - rect->top;
-    s.width = s.height;
-    s.left = rect->right - (strlen(s.castingCostString) >> 1) * s.width;
-    s.top = rect->top;
-    s.stringPtr = s.castingCostString;
-    while (*s.stringPtr != '\0')
+    costReqs[0] = (int)(char)castingCost->req_colorless;
+    costReqs[1] = (int)(char)castingCost->req_black;
+    costReqs[5] = (int)(char)castingCost->req_white;
+    costReqs[3] = (int)(char)castingCost->req_green;
+    costReqs[4] = (int)(char)castingCost->req_red;
+    costReqs[2] = (int)(char)castingCost->req_blue;
+    BuildCostString(costReqs, castingCostString);
+    height = rect->bottom - rect->top;
+    width = height;
+    left = rect->right - (strlen(castingCostString) >> 1) * width;
+    top = rect->top;
+    stringPtr = castingCostString;
+    while (*stringPtr != '\0')
     {
-      s.symbol = GetNextManaSymbol(&s.stringPtr);
-      DrawManaSymbol(dc, s.symbol, s.left, s.top, s.width, s.height);
-      s.left += s.width;
+      symbol = GetNextManaSymbol(&stringPtr);
+      DrawManaSymbol(dc, symbol, left, top, width, height);
+      left += width;
     }
   }
 }
@@ -1119,145 +1104,139 @@ void DrawCastingCost(HDC dc, RECT *rect, casting_cost_t *castingCost)
 // FUNCTION: DRAWCARDLIB 0x10006ff3
 int BuildCostString(int *costReqs, char *costStringOut)
 {
-  struct
-  {
-    int req_black;
-    int req_blue;
-    int length;
-    char result[52];
-    int req_colorless;
-    int req_red;
-    int req_white;
-    int done;
-    int req_green;
-  } s;
+  int req_black;
+  int req_blue;
+  int length;
+  char result[52];
+  int req_colorless;
+  int req_red;
+  int req_white;
+  int done;
+  int req_green;
 
   if ((costReqs == (int *)0x0) || (costStringOut == 0))
   {
     return 0;
   }
 
-  s.req_white = costReqs[5];
-  s.req_green = costReqs[3];
-  s.req_red = costReqs[4];
-  s.req_black = costReqs[1];
-  s.req_blue = costReqs[2];
-  s.req_colorless = costReqs[0];
-  s.length = 0;
-  if (s.req_colorless != 0)
+  req_white = costReqs[5];
+  req_green = costReqs[3];
+  req_red = costReqs[4];
+  req_black = costReqs[1];
+  req_blue = costReqs[2];
+  req_colorless = costReqs[0];
+  length = 0;
+  if (req_colorless != 0)
   {
-    if (s.req_colorless == -1)
+    if (req_colorless == -1)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'X';
-      s.length++;
+      result[length] = '|';
+      length++;
+      result[length] = 'X';
+      length++;
     }
-    else if (s.req_colorless == 0x48)
+    else if (req_colorless == 0x48)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'X';
-      s.length++;
+      result[length] = '|';
+      length++;
+      result[length] = 'X';
+      length++;
     }
-    else if (s.req_colorless == 0x28)
+    else if (req_colorless == 0x28)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'X';
-      s.length++;
+      result[length] = '|';
+      length++;
+      result[length] = 'X';
+      length++;
     }
-    else if ((s.req_colorless >= 1) && (9 >= s.req_colorless))
+    else if ((req_colorless >= 1) && (9 >= req_colorless))
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = (char)(s.req_colorless + '0');
-      s.length++;
+      result[length] = '|';
+      length++;
+      result[length] = (char)(req_colorless + '0');
+      length++;
     }
-    else if (s.req_colorless == 10)
+    else if (req_colorless == 10)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = '1';
-      s.length++;
-      s.result[s.length] = '0';
-      s.length++;
+      result[length] = '|';
+      length++;
+      result[length] = '1';
+      length++;
+      result[length] = '0';
+      length++;
     }
   }
-  s.done = 0;
-  while (s.done == 0)
+  done = 0;
+  while (done == 0)
   {
-    if (s.req_white != 0)
+    if (req_white != 0)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'W';
-      s.length++;
-      s.req_white--;
+      result[length] = '|';
+      length++;
+      result[length] = 'W';
+      length++;
+      req_white--;
     }
-    else if (s.req_green != 0)
+    else if (req_green != 0)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'G';
-      s.length++;
-      s.req_green--;
+      result[length] = '|';
+      length++;
+      result[length] = 'G';
+      length++;
+      req_green--;
     }
-    else if (s.req_red != 0)
+    else if (req_red != 0)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'R';
-      s.length++;
-      s.req_red--;
+      result[length] = '|';
+      length++;
+      result[length] = 'R';
+      length++;
+      req_red--;
     }
-    else if (s.req_black != 0)
+    else if (req_black != 0)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'B';
-      s.length++;
-      --s.req_black;
+      result[length] = '|';
+      length++;
+      result[length] = 'B';
+      length++;
+      --req_black;
     }
-    else if (s.req_blue != 0)
+    else if (req_blue != 0)
     {
-      s.result[s.length] = '|';
-      s.length++;
-      s.result[s.length] = 'U';
-      s.length++;
-      --s.req_blue;
+      result[length] = '|';
+      length++;
+      result[length] = 'U';
+      length++;
+      --req_blue;
     }
     else
     {
-      s.result[s.length] = '\0';
-      s.done = 1;
+      result[length] = '\0';
+      done = 1;
     }
   }
-  if ((((s.req_colorless == 0) && (s.length == 0)) && (s.req_white == 0)) &&
-      (((s.req_green == 0 && (s.req_red == 0)) && ((s.req_black == 0 && (s.req_blue == 0))))))
+  if ((((req_colorless == 0) && (length == 0)) && (req_white == 0)) &&
+      (((req_green == 0 && (req_red == 0)) && ((req_black == 0 && (req_blue == 0))))))
   {
     // 0 cost
-    strcpy(s.result, "|0");
+    strcpy(result, "|0");
   }
   if (costStringOut != 0)
   {
-    strcpy(costStringOut, s.result);
+    strcpy(costStringOut, result);
   }
-  return s.length;
+  return length;
 }
 
 // FUNCTION: DRAWCARDLIB 0x100074b2
 void DrawManaSymbol(HDC dc, char symbol, int left, int top, int width, int height)
 {
-  struct
-  {
-    BITMAP bm;
-    int hSrc;
-    int wSrc;
-    int symbolX;
-    RECT rect;
-    int maskX;
-  } s;
+  BITMAP bm;
+  int hSrc;
+  int wSrc;
+  int symbolX;
+  RECT rect;
+  int maskX;
 
   if (dc == (HDC)0x0)
   {
@@ -1267,130 +1246,124 @@ void DrawManaSymbol(HDC dc, char symbol, int left, int top, int width, int heigh
   {
     return;
   }
-  GetObjectA(global_ManaSymbols, 0x18, &s.bm);
-  s.wSrc = s.bm.bmHeight;
-  s.hSrc = s.wSrc;
-  s.maskX = s.bm.bmWidth - s.wSrc;
+  GetObjectA(global_ManaSymbols, 0x18, &bm);
+  wSrc = bm.bmHeight;
+  hSrc = wSrc;
+  maskX = bm.bmWidth - wSrc;
   if (symbol == -0x10)
   {
-    s.symbolX = 0;
+    symbolX = 0;
   }
   else if (symbol == -0xf)
   {
-    s.symbolX = s.wSrc;
+    symbolX = wSrc;
   }
   else if (symbol == -0xe)
   {
-    s.symbolX = s.wSrc * 2;
+    symbolX = wSrc * 2;
   }
   else if (symbol == -0xd)
   {
-    s.symbolX = s.wSrc * 3;
+    symbolX = wSrc * 3;
   }
   else if (symbol == -0xc)
   {
-    s.symbolX = s.wSrc << 2;
+    symbolX = wSrc << 2;
   }
   else if (symbol == -0xb)
   {
-    s.symbolX = s.wSrc * 5;
+    symbolX = wSrc * 5;
   }
   else if (symbol == -10)
   {
-    s.symbolX = (s.wSrc * 3) * 2;
+    symbolX = (wSrc * 3) * 2;
   }
   else if (symbol == -9)
   {
-    s.symbolX = s.wSrc * 7;
+    symbolX = wSrc * 7;
   }
   else if (symbol == -8)
   {
-    s.symbolX = s.wSrc << 3;
+    symbolX = wSrc << 3;
   }
   else if (symbol == -7)
   {
-    s.symbolX = s.wSrc * 9;
+    symbolX = wSrc * 9;
   }
   else if (symbol == -6)
   {
-    s.symbolX = s.wSrc * 10;
+    symbolX = wSrc * 10;
   }
   else if (symbol == -0x11)
   {
-    s.symbolX = s.wSrc * 0xb;
+    symbolX = wSrc * 0xb;
   }
   else if (symbol == -5)
   {
-    s.symbolX = s.wSrc * 0xc;
+    symbolX = wSrc * 0xc;
   }
   else if (symbol == -4)
   {
-    s.symbolX = s.wSrc * 0xd;
+    symbolX = wSrc * 0xd;
   }
   else if (symbol == -3)
   {
-    s.symbolX = s.wSrc * 0xe;
+    symbolX = wSrc * 0xe;
   }
   else if (symbol == -2)
   {
-    s.symbolX = s.wSrc * 0xf;
+    symbolX = wSrc * 0xf;
   }
   else if (symbol == -1)
   {
-    s.symbolX = s.wSrc << 4;
+    symbolX = wSrc << 4;
   }
   else if (symbol == -0x12)
   {
-    s.symbolX = s.wSrc * 17;
+    symbolX = wSrc * 17;
   }
-  SetRect(&s.rect, left, top, width + left, height + top);
-  DrawMaskedBitmapToRect(dc, &s.rect, global_ManaSymbols, s.wSrc, s.hSrc, s.symbolX, 0, s.maskX, 0);
+  SetRect(&rect, left, top, width + left, height + top);
+  DrawMaskedBitmapToRect(dc, &rect, global_ManaSymbols, wSrc, hSrc, symbolX, 0, maskX, 0);
 }
 
 // FUNCTION: DRAWCARDLIB 0x1000775c
 undefined4 CalcDrawManaText(HDC dc, RECT *rect, char *text)
 {
-  struct
-  {
-    int nSavedDC;
-    undefined4 result;
-  } s;
+  int nSavedDC;
+  undefined4 result;
 
   /* 0x775c  1  CalcDrawManaText */
   if (((dc == (HDC)0x0) || (rect == (RECT *)0x0)) || (text == (char *)0x0))
   {
     return 0;
   }
-  s.nSavedDC = SaveDC(dc);
+  nSavedDC = SaveDC(dc);
   IntersectClipRect(dc, 0, 0, 1, 1);
-  s.result = DrawManaText(dc, rect, text, 0);
-  RestoreDC(dc, s.nSavedDC);
-  return s.result;
+  result = DrawManaText(dc, rect, text, 0);
+  RestoreDC(dc, nSavedDC);
+  return result;
 }
 
 // FUNCTION: DRAWCARDLIB 0x100077dd
 uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
 {
-  struct
-  {
-    int line_height;
-    int symbol_step;
-    char buf[52];
-    int symbol_width;
-    int font_height;
-    int temp;
-    int nSavedDC;
-    int top;
-    int idx;
-    char symbol;
-    int max_width;            // ebp - 0x60
-    int left;                 // ebp - 0x5c
-    TEXTMETRICA text_metrics; // ebp - 0x58
-    int symbol_height;        // ebp - 0x20
-    RECT rc;                  // ebp - 0x1c
-    SIZE size;                // ebp - 0xc
-    int height;               // ebp - 0x4
-  } s;
+  int line_height;
+  int symbol_step;
+  char buf[52];
+  int symbol_width;
+  int font_height;
+  int temp;
+  int nSavedDC;
+  int top;
+  int idx;
+  char symbol;
+  int max_width;            // ebp - 0x60
+  int left;                 // ebp - 0x5c
+  TEXTMETRICA text_metrics; // ebp - 0x58
+  int symbol_height;        // ebp - 0x20
+  RECT rc;                  // ebp - 0x1c
+  SIZE size;                // ebp - 0xc
+  int height;               // ebp - 0x4
 
   if (((dc == (HDC)0x0) || (rect == (RECT *)0x0)) || (text == (char *)0x0))
   {
@@ -1400,150 +1373,147 @@ uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
   {
     return 0;
   }
-  s.nSavedDC = SaveDC(dc);
-  s.max_width = 0;
-  s.height = 0;
-  GetTextMetricsA(dc, &s.text_metrics);
-  s.line_height = s.text_metrics.tmExternalLeading + s.text_metrics.tmHeight;
-  SetRect(&s.rc, 0, 0, 0, s.text_metrics.tmHeight);
-  LPtoDP(dc, (LPPOINT)&s.rc, 2);
-  SetRect(&s.rc, 0, 0, s.rc.bottom - s.rc.top, 0);
-  DPtoLP(dc, (LPPOINT)&s.rc, 2);
-  s.symbol_width = ((s.rc.right - s.rc.left) * 0x4b) / 100;
-  s.symbol_step = ((s.rc.right - s.rc.left) * 0x55) / 100;
-  s.symbol_height = (s.text_metrics.tmHeight * 0x4b) / 100;
-  s.font_height = s.text_metrics.tmHeight;
+  nSavedDC = SaveDC(dc);
+  max_width = 0;
+  height = 0;
+  GetTextMetricsA(dc, &text_metrics);
+  line_height = text_metrics.tmExternalLeading + text_metrics.tmHeight;
+  SetRect(&rc, 0, 0, 0, text_metrics.tmHeight);
+  LPtoDP(dc, (LPPOINT)&rc, 2);
+  SetRect(&rc, 0, 0, rc.bottom - rc.top, 0);
+  DPtoLP(dc, (LPPOINT)&rc, 2);
+  symbol_width = ((rc.right - rc.left) * 0x4b) / 100;
+  symbol_step = ((rc.right - rc.left) * 0x55) / 100;
+  symbol_height = (text_metrics.tmHeight * 0x4b) / 100;
+  font_height = text_metrics.tmHeight;
   IntersectClipRect(dc, rect->left, rect->top, rect->right + 1, rect->bottom);
   SelectObject(dc, GetStockObject(4));
   SelectObject(dc, GetStockObject(8));
-  s.left = rect->left;
-  s.top = rect->top;
+  left = rect->left;
+  top = rect->top;
   while (*text != '\0')
   {
     if (*text == ' ')
     {
-      s.idx = 0;
-      s.buf[s.idx] = *text;
+      idx = 0;
+      buf[idx] = *text;
       text = text + 1;
-      s.idx = s.idx + 1;
+      idx = idx + 1;
       while (*text != '\0' && *text == ' ')
       {
-        s.buf[s.idx] = *text;
+        buf[idx] = *text;
         text = text + 1;
-        s.idx = s.idx + 1;
+        idx = idx + 1;
       }
-      s.buf[s.idx] = '\0';
-      GetTextExtentPoint32A(dc, s.buf, s.idx, &s.size);
-      s.left = s.left + s.size.cx;
+      buf[idx] = '\0';
+      GetTextExtentPoint32A(dc, buf, idx, &size);
+      left = left + size.cx;
     }
     else if (*text != '\0' && *text == '\n')
     {
       text = text + 1;
-      s.top = s.top + s.line_height + s.line_height / 3;
-      s.left = rect->left;
+      top = top + line_height + line_height / 3;
+      left = rect->left;
     }
     else
     {
-      s.symbol = GetNextManaSymbol(&text);
-      if (s.symbol != '\0')
+      symbol = GetNextManaSymbol(&text);
+      if (symbol != '\0')
       {
-        s.idx = 0;
-        s.buf[s.idx] = s.symbol;
-        s.idx = s.idx + 1;
-        while (*text != '\0' && (s.symbol = GetNextManaSymbol(&text)) != '\0')
+        idx = 0;
+        buf[idx] = symbol;
+        idx = idx + 1;
+        while (*text != '\0' && (symbol = GetNextManaSymbol(&text)) != '\0')
         {
-          s.buf[s.idx++] = s.symbol;
+          buf[idx++] = symbol;
         }
-        s.buf[s.idx] = '\0';
-        s.size.cx = s.idx * s.symbol_width;
-        if (rect->right < s.size.cx + s.left)
+        buf[idx] = '\0';
+        size.cx = idx * symbol_width;
+        if (rect->right < size.cx + left)
         {
-          s.max_width = max(s.max_width, s.left - rect->left);
-          s.top = s.top + s.line_height;
-          s.left = rect->left;
+          max_width = max(max_width, left - rect->left);
+          top = top + line_height;
+          left = rect->left;
         }
-        s.temp = strlen(s.buf);
-        for (s.idx = 0; s.temp > s.idx; s.idx = s.idx + 1)
+        temp = strlen(buf);
+        for (idx = 0; temp > idx; idx = idx + 1)
         {
           if (drawSymbols != 0)
           {
-            DrawManaSymbol(dc, s.buf[s.idx], s.left + (s.symbol_step - s.symbol_width) / 2,
-                           s.top + (s.font_height - s.symbol_height) / 2, s.symbol_width, s.symbol_height);
+            DrawManaSymbol(dc, buf[idx], left + (symbol_step - symbol_width) / 2,
+                           top + (font_height - symbol_height) / 2, symbol_width, symbol_height);
           }
           else
           {
-            Ellipse(dc, s.left + (s.symbol_step - s.symbol_width) / 2,
-                    s.top + (s.font_height - s.symbol_height) / 2,
-                    s.symbol_width + (s.symbol_step - s.symbol_width) / 2 + s.left,
-                    s.symbol_height + (s.font_height - s.symbol_height) / 2 + s.top);
+            Ellipse(dc, left + (symbol_step - symbol_width) / 2,
+                    top + (font_height - symbol_height) / 2,
+                    symbol_width + (symbol_step - symbol_width) / 2 + left,
+                    symbol_height + (font_height - symbol_height) / 2 + top);
           }
-          s.left = s.left + s.symbol_step;
+          left = left + symbol_step;
         }
         if ((*text == ':') || (*text == ','))
         {
-          s.idx = 0;
-          s.buf[s.idx] = *text;
+          idx = 0;
+          buf[idx] = *text;
           text = text + 1;
-          s.idx = s.idx + 1;
-          s.buf[s.idx] = '\0';
-          GetTextExtentPoint32A(dc, s.buf, s.idx, &s.size);
-          TextOutA(dc, s.left, s.top, s.buf, strlen(s.buf));
-          s.left = s.left + s.size.cx;
+          idx = idx + 1;
+          buf[idx] = '\0';
+          GetTextExtentPoint32A(dc, buf, idx, &size);
+          TextOutA(dc, left, top, buf, strlen(buf));
+          left = left + size.cx;
         }
       }
       else
       {
-        s.idx = 0;
-        s.buf[s.idx] = *text;
+        idx = 0;
+        buf[idx] = *text;
         text = text + 1;
-        s.idx = s.idx + 1;
+        idx = idx + 1;
         while (*text != '\0' && *text != ' ' && *text != '\n' && *text != '|')
         {
-          s.buf[s.idx] = *text;
+          buf[idx] = *text;
           text = text + 1;
-          s.idx = s.idx + 1;
+          idx = idx + 1;
         }
-        s.buf[s.idx] = '\0';
-        GetTextExtentPoint32A(dc, s.buf, s.idx, &s.size);
-        if (rect->right < s.size.cx + s.left)
+        buf[idx] = '\0';
+        GetTextExtentPoint32A(dc, buf, idx, &size);
+        if (rect->right < size.cx + left)
         {
-          s.max_width = max(s.max_width, s.left - rect->left);
-          s.top = s.top + s.line_height;
-          s.left = rect->left;
+          max_width = max(max_width, left - rect->left);
+          top = top + line_height;
+          left = rect->left;
         }
-        TextOutA(dc, s.left, s.top, s.buf, strlen(s.buf));
-        s.left = s.left + s.size.cx;
+        TextOutA(dc, left, top, buf, strlen(buf));
+        left = left + size.cx;
       }
     }
   }
-  s.max_width = max(s.max_width, s.left - rect->left);
-  s.height = (s.line_height + s.top) - rect->top;
-  RestoreDC(dc, s.nSavedDC);
-  return ((unsigned short)s.height << 0x10) | (unsigned short)s.max_width;
+  max_width = max(max_width, left - rect->left);
+  height = (line_height + top) - rect->top;
+  RestoreDC(dc, nSavedDC);
+  return ((unsigned short)height << 0x10) | (unsigned short)max_width;
 }
 
 // FUNCTION: DRAWCARDLIB 0x10007dd7
 void DrawSmallCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version, int reloadIfWrongSize)
 {
-  struct
-  {
-    RECT artRect;   // ebp - 0x30
-    int artTop;     // ebp - 0x20
-    int artLeft;    // ebp - 0x1c
-    int cardHeight; // ebp - 0x18
-    int cardWidth;  // ebp - 0x14
-    int artHeight;  // ebp - 0x10
-    int status;     // ebp - 0xc
-    int artWidth;   // ebp - 0x8
-    int nSavedDC;   // ebp - 0x4
-  } s;
+  RECT artRect;   // ebp - 0x30
+  int artTop;     // ebp - 0x20
+  int artLeft;    // ebp - 0x1c
+  int cardHeight; // ebp - 0x18
+  int cardWidth;  // ebp - 0x14
+  int artHeight;  // ebp - 0x10
+  int status;     // ebp - 0xc
+  int artWidth;   // ebp - 0x8
+  int nSavedDC;   // ebp - 0x4
 
   if (dc == NULL || rect == NULL || card == NULL)
   {
     return;
   }
 
-  s.nSavedDC = SaveDC(dc);
+  nSavedDC = SaveDC(dc);
   SetMapMode(dc, 8);
   SetWindowExtEx(dc, 200, 0x118, (LPSIZE)0x0);
   SetViewportExtEx(dc, rect->right - rect->left, rect->bottom - rect->top, (LPSIZE)0x0);
@@ -1555,61 +1525,58 @@ void DrawSmallCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version, int
   SelectObject(dc, (HGDIOBJ)g_cardBorderPen);
   Rectangle(dc, 0, 0, 200, 0x118);
   SetMapMode(dc, 1);
-  s.cardWidth = rect->right - rect->left;
-  s.cardHeight = rect->bottom - rect->top;
-  s.artLeft = (s.cardWidth * 0x12) / 0xe4;
-  s.artTop = (s.cardHeight * 8) / 100 + (s.cardHeight * 0xb) / 100 + -2;
-  s.artWidth = ((s.cardWidth * 0xd3) / 0xe4 - s.artLeft) + 1;
-  s.artHeight = (s.cardHeight * 0xb2) / 0xbf - s.artTop;
-  SetRect(&s.artRect, s.artLeft, s.artTop, s.artWidth + s.artLeft, s.artHeight + s.artTop);
+  cardWidth = rect->right - rect->left;
+  cardHeight = rect->bottom - rect->top;
+  artLeft = (cardWidth * 0x12) / 0xe4;
+  artTop = (cardHeight * 8) / 100 + (cardHeight * 0xb) / 100 + -2;
+  artWidth = ((cardWidth * 0xd3) / 0xe4 - artLeft) + 1;
+  artHeight = (cardHeight * 0xb2) / 0xbf - artTop;
+  SetRect(&artRect, artLeft, artTop, artWidth + artLeft, artHeight + artTop);
   if (IsSmallArtIn(card->id, version) == 0)
   {
-    LoadSmallArt(card->id, version, s.artWidth, s.artHeight);
+    LoadSmallArt(card->id, version, artWidth, artHeight);
   }
   else if (reloadIfWrongSize != 0)
   {
-    ReloadSmallArtIfWrongSize(card->id, version, s.artWidth, s.artHeight);
+    ReloadSmallArtIfWrongSize(card->id, version, artWidth, artHeight);
   }
-  s.status = DrawSmallArt(dc, &s.artRect, card->id, version);
-  if (s.status == 0)
+  status = DrawSmallArt(dc, &artRect, card->id, version);
+  if (status == 0)
   {
-    DrawBigArt(dc, &s.artRect, card->id, version);
+    DrawBigArt(dc, &artRect, card->id, version);
   }
-  RestoreDC(dc, s.nSavedDC);
+  RestoreDC(dc, nSavedDC);
 }
 
 // FUNCTION: DRAWCARDLIB 0x10008065
 void DrawCardBackground(HDC dc, RECT *rect, card_ptr_t *card)
 {
-  struct
-  {
-    int scaledHeight;
-    BITMAP bm;
-    HBITMAP *backgroundPointer;
-    RECT dstRect;
-    int sectionTop;
-    int sectionHeight;
-  } s;
+  int scaledHeight;
+  BITMAP bm;
+  HBITMAP *backgroundPointer;
+  RECT dstRect;
+  int sectionTop;
+  int sectionHeight;
 
   if (dc == NULL || rect == NULL || card == NULL)
   {
     return;
   }
 
-  s.backgroundPointer = GetCardBackgroundPointer(card);
-  LoadCardBackground(s.backgroundPointer);
-  if (*s.backgroundPointer != 0)
+  backgroundPointer = GetCardBackgroundPointer(card);
+  LoadCardBackground(backgroundPointer);
+  if (*backgroundPointer != 0)
   {
-    GetObjectA(*s.backgroundPointer, 0x18, &s.bm);
-    SetRect(&s.dstRect, 0, 0, 200, 0x118);
-    DrawBitmapSubrectToRect(dc, &s.dstRect, *s.backgroundPointer, 0, 0, s.bm.bmWidth,
-                            (s.bm.bmHeight * 0x3b) / 100);
-    s.scaledHeight = (((s.bm.bmHeight * 0x3b) / 100) * 0xb) / 100;
-    s.sectionHeight = 0x1e;
-    s.sectionTop = 0x16;
-    SetRect(&s.dstRect, 0, s.sectionTop, 200, s.sectionHeight + s.sectionTop);
-    DrawBitmapSubrectToRect(dc, &s.dstRect, *s.backgroundPointer, 0, 2, s.bm.bmWidth,
-                            s.scaledHeight + 2);
+    GetObjectA(*backgroundPointer, 0x18, &bm);
+    SetRect(&dstRect, 0, 0, 200, 0x118);
+    DrawBitmapSubrectToRect(dc, &dstRect, *backgroundPointer, 0, 0, bm.bmWidth,
+                            (bm.bmHeight * 0x3b) / 100);
+    scaledHeight = (((bm.bmHeight * 0x3b) / 100) * 0xb) / 100;
+    sectionHeight = 0x1e;
+    sectionTop = 0x16;
+    SetRect(&dstRect, 0, sectionTop, 200, sectionHeight + sectionTop);
+    DrawBitmapSubrectToRect(dc, &dstRect, *backgroundPointer, 0, 2, bm.bmWidth,
+                            scaledHeight + 2);
   }
   else
   {
@@ -1620,20 +1587,17 @@ void DrawCardBackground(HDC dc, RECT *rect, card_ptr_t *card)
 // FUNCTION: DRAWCARDLIB 0x100081b2
 void DrawSmallCardTitle(HDC dc, RECT *rect, char *name, int colorMode, int transparentBackground)
 {
-  struct
-  {
-    COLORREF titleColor;
-    char titleText[100];
-    int nSavedDC;
-  } s;
+  COLORREF titleColor;
+  char titleText[100];
+  int nSavedDC;
 
   /* 0x81b2  7  DrawSmallCardTitle */
   if (((dc == (HDC)0x0) || (rect == (RECT *)0x0)) || (name == 0))
   {
     return;
   }
-  strcpy(s.titleText, name);
-  s.nSavedDC = SaveDC(dc);
+  strcpy(titleText, name);
+  nSavedDC = SaveDC(dc);
   SetMapMode(dc, 8);
   SetWindowExtEx(dc, 200, 0x118, (LPSIZE)0x0);
   SetViewportExtEx(dc, rect->right - rect->left, rect->bottom - rect->top, (LPSIZE)0x0);
@@ -1641,15 +1605,15 @@ void DrawSmallCardTitle(HDC dc, RECT *rect, char *name, int colorMode, int trans
   SetViewportOrgEx(dc, rect->left, rect->top, (LPPOINT)0x0);
   if (colorMode == 0)
   {
-    s.titleColor = g_smallCardTitleColor;
+    titleColor = g_smallCardTitleColor;
   }
   else if (colorMode == 2)
   {
-    s.titleColor = g_smallCardTitleAltColor;
+    titleColor = g_smallCardTitleAltColor;
   }
   else
   {
-    s.titleColor = g_smallCardTitleFallbackColor;
+    titleColor = g_smallCardTitleFallbackColor;
   }
   SelectObject(dc, g_smallCardTitleFont);
   SetTextAlign(dc, 0);
@@ -1663,30 +1627,27 @@ void DrawSmallCardTitle(HDC dc, RECT *rect, char *name, int colorMode, int trans
     SetBkMode(dc, 1);
   }
   SetTextColor(dc, g_cardTextShadowColor);
-  TextOutA(dc, 5, 1, s.titleText, strlen(s.titleText));
-  SetTextColor(dc, s.titleColor);
+  TextOutA(dc, 5, 1, titleText, strlen(titleText));
+  SetTextColor(dc, titleColor);
   SetBkMode(dc, 1);
-  TextOutA(dc, 2, -2, s.titleText, strlen(s.titleText));
-  RestoreDC(dc, s.nSavedDC);
+  TextOutA(dc, 2, -2, titleText, strlen(titleText));
+  RestoreDC(dc, nSavedDC);
 }
 
 // FUNCTION: DRAWCARDLIB 0x1000ac34
 void DeleteAndCloseObject(HANDLE handle)
 {
-  struct
-  {
-    OSVERSIONINFOA ver;
-    HANDLE sectionHandle;
-    DIBSECTION dibSection;
-    char *bitsPointer;
-  } s;
+  OSVERSIONINFOA ver;
+  HANDLE sectionHandle;
+  DIBSECTION dibSection;
+  char *bitsPointer;
 
   if (global_dwPlatformId == -1)
   {
-    s.ver.dwOSVersionInfoSize = 0x94;
-    memset(&s.ver.dwMajorVersion, 0, 0x90);
-    GetVersionExA(&s.ver);
-    if (s.ver.dwPlatformId == 1)
+    ver.dwOSVersionInfoSize = 0x94;
+    memset(&ver.dwMajorVersion, 0, 0x90);
+    GetVersionExA(&ver);
+    if (ver.dwPlatformId == 1)
     {
       global_dwPlatformId = 1;
     }
@@ -1697,16 +1658,16 @@ void DeleteAndCloseObject(HANDLE handle)
   }
   if (handle != (HANDLE)0x0)
   {
-    GetObjectA(handle, 0x54, &s.dibSection);
-    s.sectionHandle = s.dibSection.dshSection;
-    s.bitsPointer = (char *)s.dibSection.dsBm.bmBits;
-    s.bitsPointer += s.dibSection.dsOffset;
+    GetObjectA(handle, 0x54, &dibSection);
+    sectionHandle = dibSection.dshSection;
+    bitsPointer = (char *)dibSection.dsBm.bmBits;
+    bitsPointer += dibSection.dsOffset;
     DeleteObject(handle);
-    if (s.sectionHandle != (HANDLE)0x0)
+    if (sectionHandle != (HANDLE)0x0)
     {
       if (global_dwPlatformId != 0)
       {
-        CloseHandle(s.sectionHandle);
+        CloseHandle(sectionHandle);
       }
     }
   }
@@ -1715,14 +1676,11 @@ void DeleteAndCloseObject(HANDLE handle)
 // FUNCTION: DRAWCARDLIB 0x1000b06a
 void ReplaceSubstring(char *inOutStr, char *needle, int caseSensitive, char *replacement)
 {
-  struct
-  {
-    int outLen;
-    char outStr[1000];
-    size_t needleLen;
-    int matched;
-    char *cur;
-  } s;
+  int outLen;
+  char outStr[1000];
+  size_t needleLen;
+  int matched;
+  char *cur;
 
   if (((inOutStr == (char *)0x0) || (needle == (char *)0x0)) || (replacement == (char *)0x0))
   {
@@ -1734,32 +1692,32 @@ void ReplaceSubstring(char *inOutStr, char *needle, int caseSensitive, char *rep
     return;
   }
 
-  s.needleLen = strlen(needle);
-  s.cur = inOutStr;
-  s.outStr[0] = '\0';
-  s.outLen = 0;
-  while (*s.cur != '\0')
+  needleLen = strlen(needle);
+  cur = inOutStr;
+  outStr[0] = '\0';
+  outLen = 0;
+  while (*cur != '\0')
   {
-    s.matched = 0;
-    if ((caseSensitive != 0 && strncmp(s.cur, needle, s.needleLen) == 0) || (caseSensitive == 0 && _strnicmp(s.cur, needle, s.needleLen) == 0))
+    matched = 0;
+    if ((caseSensitive != 0 && strncmp(cur, needle, needleLen) == 0) || (caseSensitive == 0 && _strnicmp(cur, needle, needleLen) == 0))
     {
-      s.matched = 1;
+      matched = 1;
     }
-    if (s.matched != 0)
+    if (matched != 0)
     {
-      strcat(s.outStr, replacement);
-      s.outLen += strlen(replacement);
-      s.cur += s.needleLen;
+      strcat(outStr, replacement);
+      outLen += strlen(replacement);
+      cur += needleLen;
     }
     else
     {
-      s.outStr[s.outLen] = *s.cur;
-      s.cur++;
-      s.outLen++;
-      s.outStr[s.outLen] = '\0';
+      outStr[outLen] = *cur;
+      cur++;
+      outLen++;
+      outStr[outLen] = '\0';
     }
   }
-  strcpy(inOutStr, s.outStr);
+  strcpy(inOutStr, outStr);
 }
 
 // FUNCTION: DRAWCARDLIB 0x1000bd90
@@ -1789,20 +1747,17 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved)
 // FUNCTION: DRAWCARDLIB 0x1000be22
 int read_cfg(HINSTANCE hinst)
 {
-  struct
-  {
-    char *lastSlash;
-    void *recordBuf;
-    char cards_dat_filename[264];
-    size_t global_available_slots;
-    size_t record_size;
-    int slotIndex;
-    FILE *cards_dat;
-    int record_table[76000];
-    int result;
-  } s;
+  char *lastSlash;
+  void *recordBuf;
+  char cards_dat_filename[264];
+  size_t global_available_slots;
+  size_t record_size;
+  int slotIndex;
+  FILE *cards_dat;
+  int record_table[76000];
+  int result;
 
-  s.result = 1;
+  result = 1;
   g_drawCardLibInstance = hinst;
   InitializeCriticalSection(&global_critical_section_for_catalog);
 
@@ -1814,8 +1769,8 @@ int read_cfg(HINSTANCE hinst)
   }
 #else
   GetModuleFileNameA((HMODULE)0x0, global_base_directory, 0x105);
-  s.lastSlash = strrchr(global_base_directory, '\\');
-  *s.lastSlash = '\0';
+  lastSlash = strrchr(global_base_directory, '\\');
+  *lastSlash = '\0';
 #endif
 
   strcpy(global_cardart_directory, global_base_directory);
@@ -1823,46 +1778,46 @@ int read_cfg(HINSTANCE hinst)
   global_dither_kernel_id = 3;
   global_color_depth = 0x10;
   InitCardArtGdiResources();
-  strcpy(s.cards_dat_filename, global_base_directory);
-  strcat(s.cards_dat_filename, "\\CARDS.DAT");
-  s.cards_dat = fopen(s.cards_dat_filename, "rb");
-  if (s.cards_dat != (FILE *)0x0)
+  strcpy(cards_dat_filename, global_base_directory);
+  strcat(cards_dat_filename, "\\CARDS.DAT");
+  cards_dat = fopen(cards_dat_filename, "rb");
+  if (cards_dat != (FILE *)0x0)
   {
-    fread(&s.global_available_slots, 4, 1, s.cards_dat);
-    fread(&s.record_size, 4, 1, s.cards_dat);
-    fread(s.record_table, 0x98, s.global_available_slots, s.cards_dat);
-    s.recordBuf = malloc(s.record_size);
-    if (s.recordBuf != (void *)0x0)
+    fread(&global_available_slots, 4, 1, cards_dat);
+    fread(&record_size, 4, 1, cards_dat);
+    fread(record_table, 0x98, global_available_slots, cards_dat);
+    recordBuf = malloc(record_size);
+    if (recordBuf != (void *)0x0)
     {
-      fread(s.recordBuf, 1, s.record_size, s.cards_dat);
-      for (s.slotIndex = 0; (int)s.global_available_slots > s.slotIndex;
-           s.slotIndex = s.slotIndex + 1)
+      fread(recordBuf, 1, record_size, cards_dat);
+      for (slotIndex = 0; (int)global_available_slots > slotIndex;
+           slotIndex = slotIndex + 1)
       {
-        s.record_table[s.slotIndex * 0x26 + 1] = s.record_table[s.slotIndex * 0x26 + 1] + (int)s.recordBuf;
-        strncpy(g_cardNames + s.slotIndex * 100, (char *)s.record_table[s.slotIndex * 0x26 + 1], 100);
-        g_cardNameSlotTerminators[s.slotIndex * 100] = 0;
+        record_table[slotIndex * 0x26 + 1] = record_table[slotIndex * 0x26 + 1] + (int)recordBuf;
+        strncpy(g_cardNames + slotIndex * 100, (char *)record_table[slotIndex * 0x26 + 1], 100);
+        g_cardNameSlotTerminators[slotIndex * 100] = 0;
       }
-      free(s.recordBuf);
+      free(recordBuf);
     }
     else
     {
-      s.result = 0;
+      result = 0;
     }
-    fclose(s.cards_dat);
+    fclose(cards_dat);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
-  if (s.result == 0)
+  if (result == 0)
   {
-    for (s.slotIndex = 0; (int)s.global_available_slots > s.slotIndex;
-         s.slotIndex = s.slotIndex + 1)
+    for (slotIndex = 0; (int)global_available_slots > slotIndex;
+         slotIndex = slotIndex + 1)
     {
-      strcpy(g_cardNames + s.slotIndex * 100, "");
+      strcpy(g_cardNames + slotIndex * 100, "");
     }
   }
-  return s.result;
+  return result;
 }
 
 // FUNCTION: DRAWCARDLIB 0x1000c0ca

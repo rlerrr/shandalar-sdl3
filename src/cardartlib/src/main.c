@@ -112,20 +112,17 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
 // FUNCTION: CARDARTLIB 0x10003175
 static BOOL CardArtLib_Initialize(HINSTANCE instance)
 {
-  struct
-  {
-    char *last_slash;           /* -0x4a4a4 */
-    char cards_dat_path[0x108]; /* -0x4a4a0 */
-    int card_count;             /* -0x4a398 */
-    int unused_header_value;    /* -0x4a394 */
-    int idx;                    /* -0x4a390 */
-    FILE *cards_file;           /* -0x4a38c */
-    card_ptr_t records[2000];   /* -0x4a388 */
-    int result;                 /* -0x08 */
-    int i;                      /* -0x04 */
-  } s;
+  char *last_slash;           /* -0x4a4a4 */
+  char cards_dat_path[0x108]; /* -0x4a4a0 */
+  int card_count;             /* -0x4a398 */
+  int unused_header_value;    /* -0x4a394 */
+  int idx;                    /* -0x4a390 */
+  FILE *cards_file;           /* -0x4a38c */
+  card_ptr_t records[2000];   /* -0x4a388 */
+  int result;                 /* -0x08 */
+  int i;                      /* -0x04 */
 
-  s.result = 1;
+  result = 1;
   global_hinstance = (undefined4)instance;
   InitializeCriticalSection(&global_critical_section_for_small_art);
   InitializeCriticalSection(&global_critical_section_for_big_art);
@@ -139,64 +136,64 @@ static BOOL CardArtLib_Initialize(HINSTANCE instance)
   }
 #else
   GetModuleFileNameA((HMODULE)0x0, global_base_directory, 0x105);
-  s.last_slash = strrchr(global_base_directory, 0x5c);
-  *s.last_slash = '\0';
+  last_slash = strrchr(global_base_directory, 0x5c);
+  *last_slash = '\0';
 #endif
 
   strcpy(global_cartart_directory, global_base_directory);
   strcat(global_cartart_directory, "\\CARDART");
   InitCardArtGdiResources();
-  strcpy(s.cards_dat_path, global_base_directory);
-  strcat(s.cards_dat_path, "\\CARDS.DAT");
-  s.cards_file = fopen(s.cards_dat_path, "rb");
+  strcpy(cards_dat_path, global_base_directory);
+  strcat(cards_dat_path, "\\CARDS.DAT");
+  cards_file = fopen(cards_dat_path, "rb");
 
-  if (s.cards_file != (FILE *)0x0)
+  if (cards_file != (FILE *)0x0)
   {
-    fread(&s.card_count, 4, 1, s.cards_file);
-    fread(&s.unused_header_value, 4, 1, s.cards_file);
-    fread(s.records, 0x98, (size_t)s.card_count, s.cards_file);
+    fread(&card_count, 4, 1, cards_file);
+    fread(&unused_header_value, 4, 1, cards_file);
+    fread(records, 0x98, (size_t)card_count, cards_file);
 
-    for (s.idx = 0; s.idx < s.card_count; s.idx = s.idx + 1)
+    for (idx = 0; idx < card_count; idx = idx + 1)
     {
-      if (s.records[s.idx].num_pics > 0)
+      if (records[idx].num_pics > 0)
       {
-        g_cardPicCounts[s.idx] = s.records[s.idx].num_pics;
+        g_cardPicCounts[idx] = records[idx].num_pics;
       }
       else
       {
-        g_cardPicCounts[s.idx] = 1;
+        g_cardPicCounts[idx] = 1;
       }
     }
 
-    fclose(s.cards_file);
+    fclose(cards_file);
   }
   else
   {
-    for (s.idx = 0; s.idx < s.card_count; s.idx = s.idx + 1)
+    for (idx = 0; idx < card_count; idx = idx + 1)
     {
-      g_cardPicCounts[s.idx] = 1;
+      g_cardPicCounts[idx] = 1;
     }
   }
 
-  for (s.i = 0; s.i < 2000; s.i = s.i + 1)
+  for (i = 0; i < 2000; i = i + 1)
   {
-    g_SmallArtCache[s.i].hbm = 0;
+    g_SmallArtCache[i].hbm = 0;
   }
 
-  for (s.i = 0; s.i < 100; s.i = s.i + 1)
+  for (i = 0; i < 100; i = i + 1)
   {
-    g_versionedSmallArtCache[s.i].hbm = 0;
+    g_versionedSmallArtCache[i].hbm = 0;
   }
   g_versionedSmallArtCount = 0;
 
-  for (s.i = 0; s.i < 0x14; s.i = s.i + 1)
+  for (i = 0; i < 0x14; i = i + 1)
   {
-    g_versionedBigArtCache[s.i].hbm = 0;
+    g_versionedBigArtCache[i].hbm = 0;
   }
 
   g_versionedBigArtCount = 0;
   global_dither_kernel_id = 3;
-  return s.result;
+  return result;
 }
 
 // MATCHING
@@ -214,22 +211,19 @@ void CardArtLib_Shutdown(void)
 // FUNCTION: CARDARTLIB 0x10003480
 int LoadBigArt(card_id_t id, int version, int width, int height)
 {
-  struct
-  {
-    int align_bytes;      /* -0x158 */
-    HDC desktop_hdc;      /* -0x154 */
-    char wvl_path[0x108]; /* -0x150 */
-    int existing;         /* -0x48 */
-    HBITMAP bitmap;       /* -0x44 */
-    HDC mem_dc;           /* -0x40 */
-    int ok;               /* -0x3c */
-    WvlEntry *wvl_entry;  /* -0x38 */
-    void *dib_bits;       /* -0x34 */
-    uint *decoded;        /* -0x30 */
-    BITMAPINFO bmi;       /* -0x2c */
-  } s;
+  int align_bytes;      /* -0x158 */
+  HDC desktop_hdc;      /* -0x154 */
+  char wvl_path[0x108]; /* -0x150 */
+  int existing;         /* -0x48 */
+  HBITMAP bitmap;       /* -0x44 */
+  HDC mem_dc;           /* -0x40 */
+  int ok;               /* -0x3c */
+  WvlEntry *wvl_entry;  /* -0x38 */
+  void *dib_bits;       /* -0x34 */
+  uint *decoded;        /* -0x30 */
+  BITMAPINFO bmi;       /* -0x2c */
 
-  s.ok = 1;
+  ok = 1;
   if (id == -1)
   {
     return 0;
@@ -237,10 +231,10 @@ int LoadBigArt(card_id_t id, int version, int width, int height)
 
   EnterCriticalSection(&global_critical_section_for_big_art);
 
-  s.existing = IsBigArtIn(id, version);
-  if (s.existing != 0)
+  existing = IsBigArtIn(id, version);
+  if (existing != 0)
   {
-    if ((*(int *)(s.existing + 8) == width) && (*(int *)(s.existing + 0xc) == height))
+    if ((*(int *)(existing + 8) == width) && (*(int *)(existing + 0xc) == height))
     {
       LeaveCriticalSection(&global_critical_section_for_big_art);
       return 1;
@@ -251,65 +245,65 @@ int LoadBigArt(card_id_t id, int version, int width, int height)
 
   if ((g_cardPicCounts[id] > 1) && (version != 0))
   {
-    sprintf(s.wvl_path, "%s\\%04d%c.WVL", &global_cartart_directory, id, (int)(char)(version + '`'));
+    sprintf(wvl_path, "%s\\%04d%c.WVL", &global_cartart_directory, id, (int)(char)(version + '`'));
   }
   else
   {
-    sprintf(s.wvl_path, "%s\\%04d.WVL", &global_cartart_directory, id);
+    sprintf(wvl_path, "%s\\%04d.WVL", &global_cartart_directory, id);
   }
 
-  s.desktop_hdc = GetDC(GetDesktopWindow());
-  global_color_depth = GetDeviceCaps(s.desktop_hdc, BITSPIXEL) * GetDeviceCaps(s.desktop_hdc, PLANES);
-  ReleaseDC(GetDesktopWindow(), s.desktop_hdc);
+  desktop_hdc = GetDC(GetDesktopWindow());
+  global_color_depth = GetDeviceCaps(desktop_hdc, BITSPIXEL) * GetDeviceCaps(desktop_hdc, PLANES);
+  ReleaseDC(GetDesktopWindow(), desktop_hdc);
 
-  s.wvl_entry = Catalog_LoadWvlEntry(1, s.wvl_path, 0);
-  if (s.wvl_entry != (WvlEntry *)0x0)
+  wvl_entry = Catalog_LoadWvlEntry(1, wvl_path, 0);
+  if (wvl_entry != (WvlEntry *)0x0)
   {
-    s.mem_dc = GetDC((HWND)0x0);
-    ApplyCardArtPaletteToDc(s.mem_dc);
-    InitBitmapInfo24bppTopDown(&s.bmi, width, height);
-    s.bitmap = CreateDIBSection(s.mem_dc, &s.bmi, 0, &s.dib_bits, (HANDLE)0x0, 0);
-    if (s.bitmap != (HBITMAP)0x0)
+    mem_dc = GetDC((HWND)0x0);
+    ApplyCardArtPaletteToDc(mem_dc);
+    InitBitmapInfo24bppTopDown(&bmi, width, height);
+    bitmap = CreateDIBSection(mem_dc, &bmi, 0, &dib_bits, (HANDLE)0x0, 0);
+    if (bitmap != (HBITMAP)0x0)
     {
-      s.decoded = Wvl_DecodeToBgr24((byte *)0x0, s.wvl_entry, width, height);
-      if (s.decoded != (uint *)0x0)
+      decoded = Wvl_DecodeToBgr24((byte *)0x0, wvl_entry, width, height);
+      if (decoded != (uint *)0x0)
       {
         if ((-(width + width - width) & 3U) != 0)
         {
-          s.align_bytes = 4 - (-(width + width - width) & 3U);
+          align_bytes = 4 - (-(width + width - width) & 3U);
         }
         else
-          s.align_bytes = 0;
+          align_bytes = 0;
 
-        memcpy(s.dib_bits, s.decoded, (width * 3 + s.align_bytes) * height);
+        memcpy(dib_bits, decoded, (width * 3 + align_bytes) * height);
       }
       else
       {
-        s.ok = 0;
-        DeleteObject(s.bitmap);
+        ok = 0;
+        DeleteObject(bitmap);
       }
     }
     else
     {
-      s.ok = 0;
+      ok = 0;
     }
-    ReleaseDC((HWND)0x0, s.mem_dc);
-    Catalog_Unlock(s.wvl_entry);
+    ReleaseDC((HWND)0x0, mem_dc);
+    Catalog_Unlock(wvl_entry);
   }
   else
   {
-    s.ok = 0;
+    ok = 0;
   }
 
-  if (s.ok != 0)
+  if (ok != 0)
   {
     if ((int)g_versionedBigArtCount >= 0x14)
     {
       DestroyBigArt(g_versionedBigArtCache[0].id, g_versionedBigArtCache[0].version);
     }
 
-    g_versionedBigArtCache[g_versionedBigArtCount].hbm = s.bitmap;
-    g_versionedBigArtCache[g_versionedBigArtCount].bits = s.dib_bits;
+    g_versionedBigArtCache[g_versionedBigArtCount].hbm = bitmap;
+    g_versionedBigArtCache[g_versionedBigArtCount].bits = dib_bits;
     g_versionedBigArtCache[g_versionedBigArtCount].width = width;
     g_versionedBigArtCache[g_versionedBigArtCount].height = height;
     g_versionedBigArtCache[g_versionedBigArtCount].id = id;
@@ -318,35 +312,32 @@ int LoadBigArt(card_id_t id, int version, int width, int height)
   }
 
   LeaveCriticalSection(&global_critical_section_for_big_art);
-  return s.ok;
+  return ok;
 }
 
 // FUNCTION: CARDARTLIB 0x100037ba
 int IsBigArtIn(card_id_t id, int version)
 {
-  struct
-  {
-    int result;
-    int i;
-  } s;
+  int result;
+  int i;
 
-  s.result = 0;
+  result = 0;
   if (id == -1)
     return 0;
 
   EnterCriticalSection(&global_critical_section_for_big_art);
 
-  for (s.i = 0; s.i < g_versionedBigArtCount && s.result == 0; s.i++)
+  for (i = 0; i < g_versionedBigArtCount && result == 0; i++)
   {
-    if (g_versionedBigArtCache[s.i].id == id && g_versionedBigArtCache[s.i].version == version)
+    if (g_versionedBigArtCache[i].id == id && g_versionedBigArtCache[i].version == version)
     {
-      s.result = (int)&g_versionedBigArtCache[s.i];
+      result = (int)&g_versionedBigArtCache[i];
     }
   }
 
   LeaveCriticalSection(&global_critical_section_for_big_art);
 
-  return s.result;
+  return result;
 }
 
 // MATCHING
@@ -373,13 +364,10 @@ int IsBigArtRightSize(card_id_t id, int version, int width, int height)
 // FUNCTION: CARDARTLIB 0x100038ed
 int DrawBigArt(HDC hdc, RECT *rect, card_id_t id, int version)
 {
-  struct
-  {
-    int result;
-    int found_index;
-    int i;
-    int found;
-  } s;
+  int result;
+  int found_index;
+  int i;
+  int found;
 
   if (id == -1)
   {
@@ -387,33 +375,33 @@ int DrawBigArt(HDC hdc, RECT *rect, card_id_t id, int version)
   }
 
   EnterCriticalSection(&global_critical_section_for_big_art);
-  s.i = 0;
-  s.found = 0;
-  for (; s.i < (int)g_versionedBigArtCount && (s.found == 0); s.i++)
+  i = 0;
+  found = 0;
+  for (; i < (int)g_versionedBigArtCount && (found == 0); i++)
   {
-    if (g_versionedBigArtCache[s.i].id == id && g_versionedBigArtCache[s.i].version == version)
+    if (g_versionedBigArtCache[i].id == id && g_versionedBigArtCache[i].version == version)
     {
-      s.found = 1;
-      s.found_index = s.i;
+      found = 1;
+      found_index = i;
     }
   }
 
-  if (s.found != 0)
+  if (found != 0)
   {
-    s.result = DrawBitmapToRect(hdc, rect, g_versionedBigArtCache[s.found_index].hbm);
+    result = DrawBitmapToRect(hdc, rect, g_versionedBigArtCache[found_index].hbm);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
 
-  if (s.result == 0)
+  if (result == 0)
   {
     FillRect(hdc, rect, GetStockObject(2));
   }
 
   LeaveCriticalSection(&global_critical_section_for_big_art);
-  return s.result;
+  return result;
 }
 
 // MATCHING
@@ -447,12 +435,9 @@ int ReloadBigArtIfWrongSize(card_id_t id, int version, int width, int height)
 // FUNCTION: CARDARTLIB 0x10003a80
 void DestroyBigArt(card_id_t id, int version)
 {
-  struct
-  {
-    int j;
-    int i;
-    int found;
-  } s;
+  int j;
+  int i;
+  int found;
 
   if (id == -1)
   {
@@ -460,31 +445,31 @@ void DestroyBigArt(card_id_t id, int version)
   }
 
   EnterCriticalSection(&global_critical_section_for_big_art);
-  s.i = 0;
-  s.found = 0;
+  i = 0;
+  found = 0;
 
-  for (; s.i < g_versionedBigArtCount && (s.found == 0); s.i++)
+  for (; i < g_versionedBigArtCount && (found == 0); i++)
   {
-    if (g_versionedBigArtCache[s.i].id == id && g_versionedBigArtCache[s.i].version == version)
+    if (g_versionedBigArtCache[i].id == id && g_versionedBigArtCache[i].version == version)
     {
-      s.found = 1;
+      found = 1;
 
-      if (g_versionedBigArtCache[s.i].hbm != 0)
+      if (g_versionedBigArtCache[i].hbm != 0)
       {
-        DeleteObject(g_versionedBigArtCache[s.i].hbm);
+        DeleteObject(g_versionedBigArtCache[i].hbm);
       }
 
       g_versionedBigArtCount--;
 
-      s.j = s.i;
-      for (; s.j < g_versionedBigArtCount; s.j++)
+      j = i;
+      for (; j < g_versionedBigArtCount; j++)
       {
-        g_versionedBigArtCache[s.j].hbm = g_versionedBigArtCache[s.j + 1].hbm;
-        g_versionedBigArtCache[s.j].bits = g_versionedBigArtCache[s.j + 1].bits;
-        g_versionedBigArtCache[s.j].width = g_versionedBigArtCache[s.j + 1].width;
-        g_versionedBigArtCache[s.j].height = g_versionedBigArtCache[s.j + 1].height;
-        g_versionedBigArtCache[s.j].id = g_versionedBigArtCache[s.j + 1].id;
-        g_versionedBigArtCache[s.j].version = g_versionedBigArtCache[s.j + 1].version;
+        g_versionedBigArtCache[j].hbm = g_versionedBigArtCache[j + 1].hbm;
+        g_versionedBigArtCache[j].bits = g_versionedBigArtCache[j + 1].bits;
+        g_versionedBigArtCache[j].width = g_versionedBigArtCache[j + 1].width;
+        g_versionedBigArtCache[j].height = g_versionedBigArtCache[j + 1].height;
+        g_versionedBigArtCache[j].id = g_versionedBigArtCache[j + 1].id;
+        g_versionedBigArtCache[j].version = g_versionedBigArtCache[j + 1].version;
       }
     }
   }
@@ -508,21 +493,18 @@ void DestroyAllBigArts(void)
 // FUNCTION: CARDARTLIB 0x10003cf0
 int LoadSmallArt(card_id_t id, int version, int width, int height)
 {
-  struct
-  {
-    int row_pad;
-    HDC desktop_hdc;
-    uint wvl_path[66];
-    HBITMAP hbm;
-    HDC hdc;
-    int ok;
-    WvlEntry *wvl_entry;
-    void *dib_bits;
-    uint *decoded_bgr;
-    BITMAPINFO bmi;
-  } s;
+  int row_pad;
+  HDC desktop_hdc;
+  uint wvl_path[66];
+  HBITMAP hbm;
+  HDC hdc;
+  int ok;
+  WvlEntry *wvl_entry;
+  void *dib_bits;
+  uint *decoded_bgr;
+  BITMAPINFO bmi;
 
-  s.ok = 1;
+  ok = 1;
   if (id == -1)
   {
     return 0;
@@ -546,62 +528,62 @@ int LoadSmallArt(card_id_t id, int version, int width, int height)
       DestroySmallArt(id, 0);
   }
 
-  s.desktop_hdc = GetDC(GetDesktopWindow());
-  global_color_depth = GetDeviceCaps(s.desktop_hdc, BITSPIXEL) * GetDeviceCaps(s.desktop_hdc, PLANES);
-  ReleaseDC(GetDesktopWindow(), s.desktop_hdc);
+  desktop_hdc = GetDC(GetDesktopWindow());
+  global_color_depth = GetDeviceCaps(desktop_hdc, BITSPIXEL) * GetDeviceCaps(desktop_hdc, PLANES);
+  ReleaseDC(GetDesktopWindow(), desktop_hdc);
 
-  sprintf((char *)s.wvl_path, "%s\\%04d.WVL", &global_cartart_directory, id);
-  s.wvl_entry = Catalog_LoadWvlEntry(0, (char *)s.wvl_path, 0);
-  if (s.wvl_entry != (WvlEntry *)0x0)
+  sprintf((char *)wvl_path, "%s\\%04d.WVL", &global_cartart_directory, id);
+  wvl_entry = Catalog_LoadWvlEntry(0, (char *)wvl_path, 0);
+  if (wvl_entry != (WvlEntry *)0x0)
   {
-    s.hdc = GetDC((HWND)0x0);
-    ApplyCardArtPaletteToDc(s.hdc);
-    InitBitmapInfo24bppTopDown(&s.bmi, width, height);
-    s.hbm = CreateDIBSection(s.hdc, &s.bmi, 0, &s.dib_bits, (HANDLE)0x0, 0);
-    if (s.hbm != (HBITMAP)0x0)
+    hdc = GetDC((HWND)0x0);
+    ApplyCardArtPaletteToDc(hdc);
+    InitBitmapInfo24bppTopDown(&bmi, width, height);
+    hbm = CreateDIBSection(hdc, &bmi, 0, &dib_bits, (HANDLE)0x0, 0);
+    if (hbm != (HBITMAP)0x0)
     {
-      s.decoded_bgr = Wvl_DecodeToBgr24((byte *)0x0, s.wvl_entry, width, height);
-      if (s.decoded_bgr != (uint *)0x0)
+      decoded_bgr = Wvl_DecodeToBgr24((byte *)0x0, wvl_entry, width, height);
+      if (decoded_bgr != (uint *)0x0)
       {
         do
         {
           if ((-(width + width - width) & 3) != 0)
           {
-            s.row_pad = 4 - (-(width + width - width) & 3);
+            row_pad = 4 - (-(width + width - width) & 3);
             break;
           }
-          s.row_pad = 0;
+          row_pad = 0;
         } while (0);
-        memcpy(s.dib_bits, s.decoded_bgr, (width * 3 + s.row_pad) * height);
+        memcpy(dib_bits, decoded_bgr, (width * 3 + row_pad) * height);
       }
       else
       {
-        s.ok = 0;
-        DeleteObject(s.hbm);
+        ok = 0;
+        DeleteObject(hbm);
       }
     }
     else
     {
-      s.ok = 0;
+      ok = 0;
     }
-    ReleaseDC((HWND)0x0, s.hdc);
-    Catalog_Unlock(s.wvl_entry);
+    ReleaseDC((HWND)0x0, hdc);
+    Catalog_Unlock(wvl_entry);
   }
   else
   {
-    s.ok = 0;
+    ok = 0;
   }
 
-  if (s.ok != 0)
+  if (ok != 0)
   {
-    g_SmallArtCache[id].hbm = s.hbm;
-    g_SmallArtCache[id].bits = s.dib_bits;
+    g_SmallArtCache[id].hbm = hbm;
+    g_SmallArtCache[id].bits = dib_bits;
     g_SmallArtCache[id].width = width;
     g_SmallArtCache[id].height = height;
   }
 
   LeaveCriticalSection(&global_critical_section_for_small_art);
-  return s.ok;
+  return ok;
 }
 
 // MATCHING
@@ -681,11 +663,8 @@ int DrawSmallArt(HDC hdc, RECT *rect, card_id_t id, int version)
 // FUNCTION: CARDARTLIB 0x10004128
 bool ReloadSmallArtIfWrongSize(card_id_t id, int version, int width, int height)
 {
-  struct
-  {
-    int result;
-    HGDIOBJ old;
-  } s;
+  int result;
+  HGDIOBJ old;
 
   if (id == -1)
   {
@@ -701,29 +680,29 @@ bool ReloadSmallArtIfWrongSize(card_id_t id, int version, int width, int height)
 
   if (g_SmallArtCache[id].hbm != (HGDIOBJ)0x0 && g_SmallArtCache[id].width == width && g_SmallArtCache[id].height == height)
   {
-    s.result = 1;
+    result = 1;
   }
   else
   {
-    s.old = g_SmallArtCache[id].hbm;
+    old = g_SmallArtCache[id].hbm;
     g_SmallArtCache[id].hbm = (HGDIOBJ)0x0;
     if (LoadSmallArt(id, version, width, height) != 0)
     {
-      if (s.old != (HGDIOBJ)0x0)
+      if (old != (HGDIOBJ)0x0)
       {
-        DeleteObject(s.old);
+        DeleteObject(old);
       }
-      s.result = 1;
+      result = 1;
     }
     else
     {
-      g_SmallArtCache[id].hbm = s.old;
-      s.result = 0;
+      g_SmallArtCache[id].hbm = old;
+      result = 0;
     }
   }
 
   LeaveCriticalSection(&global_critical_section_for_small_art);
-  return s.result;
+  return result;
 }
 
 // FUNCTION: CARDARTLIB 0x10004251
@@ -768,21 +747,18 @@ void DestroyAllSmallArts(void)
 // FUNCTION: CARDARTLIB 0x10004346
 int LoadVersionedSmallArt(card_id_t id, int version, int width, int height)
 {
-  struct
-  {
-    int row_pad;
-    uint wvl_path[66];
-    HBITMAP hbm;
-    HDC hdc;
-    int ok;
-    WvlEntry *wvl_entry;
-    void *dib_bits;
-    uint *decoded_bgr;
-    BITMAPINFO bmi;
-    VersionedArtCacheEntry *cache_entry;
-  } s;
+  int row_pad;
+  uint wvl_path[66];
+  HBITMAP hbm;
+  HDC hdc;
+  int ok;
+  WvlEntry *wvl_entry;
+  void *dib_bits;
+  uint *decoded_bgr;
+  BITMAPINFO bmi;
+  VersionedArtCacheEntry *cache_entry;
 
-  s.ok = 1;
+  ok = 1;
   if (id == -1)
   {
     return 0;
@@ -790,10 +766,10 @@ int LoadVersionedSmallArt(card_id_t id, int version, int width, int height)
 
   EnterCriticalSection(&global_critical_section_for_small_art);
 
-  s.cache_entry = (VersionedArtCacheEntry *)FindVersionedSmallArtCacheEntry(id, version);
-  if (s.cache_entry != (VersionedArtCacheEntry *)0x0)
+  cache_entry = (VersionedArtCacheEntry *)FindVersionedSmallArtCacheEntry(id, version);
+  if (cache_entry != (VersionedArtCacheEntry *)0x0)
   {
-    if ((s.cache_entry->width == width) && (s.cache_entry->height == height))
+    if ((cache_entry->width == width) && (cache_entry->height == height))
     {
       LeaveCriticalSection(&global_critical_section_for_small_art);
       return 1;
@@ -804,57 +780,57 @@ int LoadVersionedSmallArt(card_id_t id, int version, int width, int height)
 
   if (version != 0)
   {
-    sprintf((char *)s.wvl_path, "%s\\%04d%c.WVL", &global_cartart_directory, id, (int)(char)(version + '`'));
+    sprintf((char *)wvl_path, "%s\\%04d%c.WVL", &global_cartart_directory, id, (int)(char)(version + '`'));
   }
   else
   {
-    sprintf((char *)s.wvl_path, "%s\\%04d.WVL", &global_cartart_directory, id);
+    sprintf((char *)wvl_path, "%s\\%04d.WVL", &global_cartart_directory, id);
   }
 
-  s.wvl_entry = Catalog_LoadWvlEntry(0, (char *)s.wvl_path, 0);
-  if (s.wvl_entry != (WvlEntry *)0x0)
+  wvl_entry = Catalog_LoadWvlEntry(0, (char *)wvl_path, 0);
+  if (wvl_entry != (WvlEntry *)0x0)
   {
-    s.hdc = GetDC((HWND)0x0);
-    ApplyCardArtPaletteToDc(s.hdc);
-    InitBitmapInfo24bppTopDown(&s.bmi, width, height);
-    s.hbm = CreateDIBSection(s.hdc, &s.bmi, 0, &s.dib_bits, (HANDLE)0x0, 0);
-    if (s.hbm != (HBITMAP)0x0)
+    hdc = GetDC((HWND)0x0);
+    ApplyCardArtPaletteToDc(hdc);
+    InitBitmapInfo24bppTopDown(&bmi, width, height);
+    hbm = CreateDIBSection(hdc, &bmi, 0, &dib_bits, (HANDLE)0x0, 0);
+    if (hbm != (HBITMAP)0x0)
     {
-      s.decoded_bgr = Wvl_DecodeToBgr24((byte *)0x0, s.wvl_entry, width, height);
-      if (s.decoded_bgr != (uint *)0x0)
+      decoded_bgr = Wvl_DecodeToBgr24((byte *)0x0, wvl_entry, width, height);
+      if (decoded_bgr != (uint *)0x0)
       {
         if ((-(width + width - width) & 3) != 0)
         {
-          s.row_pad = 4 - (-(width + width - width) & 3);
+          row_pad = 4 - (-(width + width - width) & 3);
         }
         else
         {
-          s.row_pad = 0;
+          row_pad = 0;
         }
-        memcpy(s.dib_bits, s.decoded_bgr, (width * 3 + s.row_pad) * height);
+        memcpy(dib_bits, decoded_bgr, (width * 3 + row_pad) * height);
       }
       else
       {
-        s.ok = 0;
-        DeleteObject(s.hbm);
+        ok = 0;
+        DeleteObject(hbm);
       }
     }
     else
     {
-      s.ok = 0;
+      ok = 0;
     }
-    ReleaseDC((HWND)0x0, s.hdc);
-    Catalog_Unlock(s.wvl_entry);
+    ReleaseDC((HWND)0x0, hdc);
+    Catalog_Unlock(wvl_entry);
   }
   else
   {
-    s.ok = 0;
+    ok = 0;
   }
 
-  if (s.ok != 0)
+  if (ok != 0)
   {
-    g_versionedSmallArtCache[g_versionedSmallArtCount].hbm = s.hbm;
-    g_versionedSmallArtCache[g_versionedSmallArtCount].bits = s.dib_bits;
+    g_versionedSmallArtCache[g_versionedSmallArtCount].hbm = hbm;
+    g_versionedSmallArtCache[g_versionedSmallArtCount].bits = dib_bits;
     g_versionedSmallArtCache[g_versionedSmallArtCount].width = width;
     g_versionedSmallArtCache[g_versionedSmallArtCount].height = height;
     g_versionedSmallArtCache[g_versionedSmallArtCount].id = id;
@@ -863,7 +839,7 @@ int LoadVersionedSmallArt(card_id_t id, int version, int width, int height)
   }
 
   LeaveCriticalSection(&global_critical_section_for_small_art);
-  return s.ok;
+  return ok;
 }
 
 // FUNCTION: CARDARTLIB 0x100045fe
@@ -894,43 +870,40 @@ VersionedArtCacheEntry *FindVersionedSmallArtCacheEntry(card_id_t id, int versio
 // FUNCTION: CARDARTLIB 0x100046aa
 int DrawVersionedSmallArt(HDC hdc, RECT *rect, card_id_t id, int version)
 {
-  struct
-  {
-    int result;
-    int found_index;
-    int i;
-    bool bVar1;
-  } s;
+  int result;
+  int found_index;
+  int i;
+  bool bVar1;
 
   if (id == -1)
     return 0;
 
   EnterCriticalSection(&global_critical_section_for_small_art);
 
-  for (s.i = 0, s.bVar1 = false; s.i < g_versionedSmallArtCount && (!s.bVar1); s.i++)
+  for (i = 0, bVar1 = false; i < g_versionedSmallArtCount && (!bVar1); i++)
   {
-    if (g_versionedSmallArtCache[s.i].id == id && g_versionedSmallArtCache[s.i].version == version)
+    if (g_versionedSmallArtCache[i].id == id && g_versionedSmallArtCache[i].version == version)
     {
-      s.bVar1 = true;
-      s.found_index = s.i;
+      bVar1 = true;
+      found_index = i;
     }
   }
 
-  if (s.bVar1)
+  if (bVar1)
   {
-    s.result = DrawBitmapToRect(hdc, rect, g_versionedSmallArtCache[s.found_index].hbm);
+    result = DrawBitmapToRect(hdc, rect, g_versionedSmallArtCache[found_index].hbm);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
-  if (s.result == 0)
+  if (result == 0)
   {
     FillRect(hdc, rect, GetStockObject(2));
   }
   LeaveCriticalSection(&global_critical_section_for_small_art);
 
-  return s.result;
+  return result;
 }
 
 // MATCHING
@@ -970,12 +943,9 @@ bool ReloadVersionedSmallArtIfWrongSize(card_id_t id, int version, int width, in
 // FUNCTION: CARDARTLIB 0x1000485a
 void DestroyVersionedSmallArt(card_id_t id, int version)
 {
-  struct
-  {
-    int j;
-    int i;
-    bool found;
-  } s;
+  int j;
+  int i;
+  bool found;
 
   if (id == -1)
   {
@@ -984,27 +954,27 @@ void DestroyVersionedSmallArt(card_id_t id, int version)
 
   EnterCriticalSection(&global_critical_section_for_small_art);
 
-  for (s.i = 0, s.found = 0; s.i < g_versionedSmallArtCount && s.found == 0; s.i++)
+  for (i = 0, found = 0; i < g_versionedSmallArtCount && found == 0; i++)
   {
-    if (g_versionedSmallArtCache[s.i].id == id && g_versionedSmallArtCache[s.i].version == version)
+    if (g_versionedSmallArtCache[i].id == id && g_versionedSmallArtCache[i].version == version)
     {
-      s.found = 1;
+      found = 1;
 
-      if (g_versionedSmallArtCache[s.i].hbm != 0)
+      if (g_versionedSmallArtCache[i].hbm != 0)
       {
-        DeleteObject(g_versionedSmallArtCache[s.i].hbm);
+        DeleteObject(g_versionedSmallArtCache[i].hbm);
       }
 
       g_versionedSmallArtCount = g_versionedSmallArtCount + -1;
 
-      for (s.j = s.i; s.j < g_versionedSmallArtCount; s.j++)
+      for (j = i; j < g_versionedSmallArtCount; j++)
       {
-        g_versionedSmallArtCache[s.j].hbm = g_versionedSmallArtCache[s.j + 1].hbm;
-        g_versionedSmallArtCache[s.j].bits = g_versionedSmallArtCache[s.j + 1].bits;
-        g_versionedSmallArtCache[s.j].width = g_versionedSmallArtCache[s.j + 1].width;
-        g_versionedSmallArtCache[s.j].height = g_versionedSmallArtCache[s.j + 1].height;
-        g_versionedSmallArtCache[s.j].id = g_versionedSmallArtCache[s.j + 1].id;
-        g_versionedSmallArtCache[s.j].version = g_versionedSmallArtCache[s.j + 1].version;
+        g_versionedSmallArtCache[j].hbm = g_versionedSmallArtCache[j + 1].hbm;
+        g_versionedSmallArtCache[j].bits = g_versionedSmallArtCache[j + 1].bits;
+        g_versionedSmallArtCache[j].width = g_versionedSmallArtCache[j + 1].width;
+        g_versionedSmallArtCache[j].height = g_versionedSmallArtCache[j + 1].height;
+        g_versionedSmallArtCache[j].id = g_versionedSmallArtCache[j + 1].id;
+        g_versionedSmallArtCache[j].version = g_versionedSmallArtCache[j + 1].version;
       }
     }
   }

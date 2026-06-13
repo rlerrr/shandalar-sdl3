@@ -105,14 +105,11 @@ void PcxBuildSaveScanline(byte *dstScanline, undefined *srcPixels, undefined4 ar
 // FUNCTION: DECKDLL 0x10016280
 undefined1 *PcxLoad8bppImage(char *path, undefined1 *imagePixels, void *paletteOut)
 {
-  struct
-  {
-    int isPalettized256;
-    int col;
-    int padBytes;
-    undefined1 *basePixels;
-    int row;
-  } s;
+  int isPalettized256;
+  int col;
+  int padBytes;
+  undefined1 *basePixels;
+  int row;
 
   gPcxInFile = fopen(path, "rb");
   assert(gPcxInFile != (FILE *)0x0, PTR_s_D__Newmagic_sources_sidlib_Pcxw__10021ed0, 0x69,
@@ -121,44 +118,44 @@ undefined1 *PcxLoad8bppImage(char *path, undefined1 *imagePixels, void *paletteO
   PcxReadHeaderAndPalette(paletteOut);
   if ((gPcxHeader.bitsPerPixel == 8) && (gPcxHeader.nPlanes == 1))
   {
-    s.isPalettized256 = 1;
+    isPalettized256 = 1;
   }
   else
   {
-    s.isPalettized256 = 0;
+    isPalettized256 = 0;
   }
-  assert(s.isPalettized256, PTR_s_D__Newmagic_sources_sidlib_Pcxw__10021ed0, 0x6f,
+  assert(isPalettized256, PTR_s_D__Newmagic_sources_sidlib_Pcxw__10021ed0, 0x6f,
          "%s Not a 256 color palettized pcx file\r\n", gPcxPath);
-  s.padBytes = abs(4 - (global_pcxw_image_width & 3)) & 3;
+  padBytes = abs(4 - (global_pcxw_image_width & 3)) & 3;
   if ((global_pcxw_image_width == gPcxBufferWidth) && (global_pcxw_image_height == gPcxBufferHeight))
   {
-    memset(imagePixels, 0, (gPcxBufferWidth + s.padBytes) * gPcxBufferHeight);
-    s.basePixels = imagePixels;
+    memset(imagePixels, 0, (gPcxBufferWidth + padBytes) * gPcxBufferHeight);
+    basePixels = imagePixels;
   }
   else
   {
     GlobalUnlock(GlobalHandle(imagePixels));
     GlobalUnlock(GlobalHandle(imagePixels));
     GlobalFree(GlobalHandle(imagePixels));
-    imagePixels = GlobalLock(GlobalAlloc(0x40, (global_pcxw_image_width + s.padBytes) * global_pcxw_image_height));
-    s.basePixels = imagePixels;
+    imagePixels = GlobalLock(GlobalAlloc(0x40, (global_pcxw_image_width + padBytes) * global_pcxw_image_height));
+    basePixels = imagePixels;
     GlobalLock(GlobalHandle(imagePixels));
     gPcxBufferWidth = global_pcxw_image_width;
     gPcxBufferHeight = global_pcxw_image_height;
   }
 
-  for (s.row = 0; global_pcxw_image_height > s.row; s.row = s.row + 1)
+  for (row = 0; global_pcxw_image_height > row; row = row + 1)
   {
     PcxReadScanlineRle((char *)gPcxScanlineBuffer);
-    for (s.col = 0; s.col < global_pcxw_image_width; s.col = s.col + 1)
+    for (col = 0; col < global_pcxw_image_width; col = col + 1)
     {
-      *imagePixels = gPcxScanlineBuffer[s.col];
+      *imagePixels = gPcxScanlineBuffer[col];
       imagePixels = imagePixels + 1;
     }
-    imagePixels = imagePixels + s.padBytes;
+    imagePixels = imagePixels + padBytes;
   }
   fclose(gPcxInFile);
-  return s.basePixels;
+  return basePixels;
 }
 
 // FUNCTION: DRAWCARDLIB 0x10004267
@@ -230,47 +227,44 @@ undefined4 PcxReadHeaderAndPalette(void *paletteOut)
 // FUNCTION: DECKDLL 0x10016708
 undefined4 PcxReadScanlineRle(char *dstScanline)
 {
-  struct
-  {
-    int bytesRemaining;
-    int runCount;
-    uint repeatIndex;
-    int dummy;
-    byte b;
-  } s;
+  int bytesRemaining;
+  int runCount;
+  uint repeatIndex;
+  int dummy;
+  byte b;
 
-  s.runCount = 0;
-  s.dummy = 0;
-  s.bytesRemaining = (int)(short)gPcxHeader.bytesPerLine;
-  while (0 < s.bytesRemaining)
+  runCount = 0;
+  dummy = 0;
+  bytesRemaining = (int)(short)gPcxHeader.bytesPerLine;
+  while (0 < bytesRemaining)
   {
-    s.b = (byte)fgetc(gPcxInFile);
-    if ((s.b & 0xc0) == 0xc0)
+    b = (byte)fgetc(gPcxInFile);
+    if ((b & 0xc0) == 0xc0)
     {
-      s.runCount = (int)(s.b & 0x3f);
-      s.b = (byte)fgetc(gPcxInFile);
-      if (1 < (uint)s.runCount)
+      runCount = (int)(b & 0x3f);
+      b = (byte)fgetc(gPcxInFile);
+      if (1 < (uint)runCount)
       {
-        for (s.repeatIndex = 0; s.repeatIndex < (uint)s.runCount; s.repeatIndex = s.repeatIndex + 1)
+        for (repeatIndex = 0; repeatIndex < (uint)runCount; repeatIndex = repeatIndex + 1)
         {
-          *dstScanline = (char)s.b;
+          *dstScanline = (char)b;
           dstScanline = dstScanline + 1;
         }
 
-        s.bytesRemaining -= (uint)s.runCount;
+        bytesRemaining -= (uint)runCount;
       }
       else
       {
-        *dstScanline = (char)s.b;
+        *dstScanline = (char)b;
         dstScanline = dstScanline + 1;
-        s.bytesRemaining--;
+        bytesRemaining--;
       }
     }
     else
     {
-      *dstScanline = (char)s.b;
+      *dstScanline = (char)b;
       dstScanline = dstScanline + 1;
-      s.bytesRemaining--;
+      bytesRemaining--;
     }
   }
   return 1;
@@ -285,24 +279,21 @@ PcxSave8bppImage(undefined *srcPixels, char *path, void *palette, undefined4 unu
                  undefined4 unused_param_5, int width, int height)
 
 {
-  struct
-  {
-    int row;
-    undefined1 scanline[0x1000];
-    byte paletteMarker;
-  } s;
+  int row;
+  undefined1 scanline[0x1000];
+  byte paletteMarker;
 
-  s.paletteMarker = '\f';
+  paletteMarker = '\f';
   gPcxOutFile = fopen(path, "w+b");
   assert((uint)(gPcxOutFile != (FILE *)0x0),
          PTR_s_D__Newmagic_sources_sidlib_Pcxw__10021ed0, 0x146,
          "Error Opening File %s\r\n", path);
   gPcxPath = path;
   PcxWriteHeader(width, height);
-  for (s.row = 0; s.row < height; s.row = s.row + 1)
+  for (row = 0; row < height; row = row + 1)
   {
-    PcxBuildSaveScanline((byte *)s.scanline, srcPixels, unused_param_4, (undefined4)(s.row + (int)unused_param_5), width);
-    PcxWriteScanlineRle((char *)s.scanline, width);
+    PcxBuildSaveScanline((byte *)scanline, srcPixels, unused_param_4, (undefined4)(row + (int)unused_param_5), width);
+    PcxWriteScanlineRle((char *)scanline, width);
   }
   PcxWritePalette256(palette);
   fclose(gPcxOutFile);
@@ -338,41 +329,38 @@ undefined4 PcxWriteHeader(int width, int height)
 // FUNCTION: DECKDLL 0x1001699d
 undefined4 PcxWriteScanlineRle(char *srcScanline, int widthBytes)
 {
-  struct
-  {
-    int pos;
-    int maxCount;
-    int runCount;
-    uint value;
-  } s;
+  int pos;
+  int maxCount;
+  int runCount;
+  uint value;
 
-  *(unsigned char *)&s.value = *(unsigned char *)srcScanline;
-  s.maxCount = 0;
-  s.pos = 0;
-  while (s.pos < widthBytes)
+  *(unsigned char *)&value = *(unsigned char *)srcScanline;
+  maxCount = 0;
+  pos = 0;
+  while (pos < widthBytes)
   {
-    *(unsigned char *)&s.value = *(unsigned char *)srcScanline;
-    if ((widthBytes - s.pos == 1) || ((unsigned char)srcScanline[1] != (unsigned char)s.value))
+    *(unsigned char *)&value = *(unsigned char *)srcScanline;
+    if ((widthBytes - pos == 1) || ((unsigned char)srcScanline[1] != (unsigned char)value))
     {
-      PcxWriteRleByte((unsigned char)s.value);
-      s.pos = s.pos + 1;
+      PcxWriteRleByte((unsigned char)value);
+      pos = pos + 1;
       srcScanline = srcScanline + 1;
     }
     else
     {
-      s.runCount = CountRepeats((unsigned char)s.value, (unsigned char *)srcScanline,
-                                (widthBytes - s.pos < 0x3f) ? (widthBytes - s.pos) : 0x3f);
-      s.pos = s.pos + s.runCount;
-      srcScanline = srcScanline + s.runCount;
-      s.runCount = s.runCount | 0xc0;
-      fwrite(&s.runCount, 1, 1, gPcxOutFile);
-      fwrite(&s.value, 1, 1, gPcxOutFile);
+      runCount = CountRepeats((unsigned char)value, (unsigned char *)srcScanline,
+                              (widthBytes - pos < 0x3f) ? (widthBytes - pos) : 0x3f);
+      pos = pos + runCount;
+      srcScanline = srcScanline + runCount;
+      runCount = runCount | 0xc0;
+      fwrite(&runCount, 1, 1, gPcxOutFile);
+      fwrite(&value, 1, 1, gPcxOutFile);
     }
   }
-  if (s.pos < (int)(short)gPcxHeader.bytesPerLine)
+  if (pos < (int)(short)gPcxHeader.bytesPerLine)
   {
-    *(unsigned char *)&s.value = 0;
-    fwrite(&s.value, 1, 1, gPcxOutFile);
+    *(unsigned char *)&value = 0;
+    fwrite(&value, 1, 1, gPcxOutFile);
   }
   return 1;
 }
@@ -397,28 +385,25 @@ void PcxWriteRleByte(unsigned char value)
 // FUNCTION: MAGIC 0x00499626
 int CountRepeats(unsigned char value, unsigned char *buffer, int maxCount)
 {
-  struct
-  {
-    unsigned char *current;
-    int remaining;
-    int count;
-  } s;
+  unsigned char *current;
+  int remaining;
+  int count;
 
-  s.count = 0;
-  while ((s.remaining = maxCount--) != 0)
+  count = 0;
+  while ((remaining = maxCount--) != 0)
   {
-    s.current = buffer;
+    current = buffer;
     buffer++;
-    if (*s.current == value)
+    if (*current == value)
     {
-      s.count++;
+      count++;
     }
     else
     {
       break;
     }
   }
-  return s.count;
+  return count;
 }
 
 // MATCHING
