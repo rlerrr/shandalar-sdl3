@@ -9,6 +9,7 @@
 #include <io.h>
 #else
 #include <dirent.h>
+#include <strings.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -20,7 +21,6 @@
 #define _O_TRUNC O_TRUNC
 #define _S_IREAD S_IRUSR
 #define _S_IWRITE S_IWUSR
-#define _open open
 #define _read read
 #define _write write
 #define _close close
@@ -29,6 +29,10 @@
 #define _chdir chdir
 #define _getcwd getcwd
 #define _stricmp strcasecmp
+#define _strcmpi strcasecmp
+#define _strnicmp strncasecmp
+#define _strlwr shandalar_strlwr
+#define _splitpath shandalar_splitpath
 #define _itoa(value, buffer, radix) (snprintf((buffer), 34, ((radix) == 16 ? "%x" : "%d"), (value)), (buffer))
 
 typedef intptr_t intptr_find_t;
@@ -39,10 +43,18 @@ struct _finddata_t {
 intptr_find_t shandalar_findfirst(const char *pattern, struct _finddata_t *data);
 int shandalar_findnext(intptr_find_t handle, struct _finddata_t *data);
 int shandalar_findclose(intptr_find_t handle);
+char *shandalar_strlwr(char *str);
+void shandalar_splitpath(const char *path, char *drive, char *dir, char *fname, char *ext);
+FILE *shandalar_fopen(const char *path, const char *mode);
+int shandalar_open(const char *path, int flags, ...);
 
 #define _findfirst shandalar_findfirst
 #define _findnext shandalar_findnext
 #define _findclose shandalar_findclose
+#define _open shandalar_open
+#ifndef SHANDALAR_LEGACY_IO_IMPLEMENTATION
+#define fopen shandalar_fopen
+#endif
 #endif
 
 #endif

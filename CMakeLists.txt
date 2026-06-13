@@ -1,16 +1,20 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-project(shandalar_facemaker LANGUAGES C)
+project(shandalar_wasm LANGUAGES C CXX)
 
 include(FetchContent)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(SHANDALAR_BUILD_FACEMAKER "Build the SDL3 Facemaker application" ON)
-option(SHANDALAR_BUILD_TESTS "Build Facemaker unit tests" ON)
+option(SHANDALAR_BUILD_DECK "Build the SDL3 Deck Builder application" OFF)
+option(SHANDALAR_BUILD_TESTS "Build unit tests" ON)
 set(SHANDALAR_ASSET_DIR "" CACHE PATH "Directory containing the Magic game data")
 
 if(SHANDALAR_BUILD_TESTS)
@@ -59,12 +63,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL3_ttf)
 
+if(SHANDALAR_BUILD_DECK)
+  FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.91.9b
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_MakeAvailable(imgui)
+endif()
+
 if(MSVC)
   add_compile_options(/W3 /wd4996)
 else()
   add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-unused-function)
 endif()
 
-if(SHANDALAR_BUILD_FACEMAKER)
+if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_DECK)
   add_subdirectory(src)
 endif()

@@ -12,6 +12,7 @@
 
 #include "../defs.h"
 #include "resources.h"
+#include "card_db.h"
 
 typedef enum
 {
@@ -192,29 +193,6 @@ enum Abilities
   ABIL_GRANTS_TRAMPLE = 41,
   ABIL_GRANTS_REACH = 42,
 };
-
-enum OrigRaritySet
-{
-  SET_INVALID = 0xFF,
-  SET_ANTIQUITIES = 0,
-  SET_ARABIAN_NIGHTS = 1,
-  SET_ASTRAL = 2,
-  SET_THE_DARK = 3,
-  SET_LEGENDS = 4,
-  SET_PROMO = 5,
-  SET_UNLIMITED = 6,
-  SET_8TH_EDITION = 7,
-  SET_FALLEN_EMPIRES = 8,
-  SET_TEMPEST = 9,
-  SET_RANDOM = 10
-};
-
-typedef struct OrigRarities_t
-{
-  int8_t set;
-  char rarity;
-  char exp_rarities[4];
-} OrigRarities;
 
 enum Pack1
 { // Using color_t would make too much sense.

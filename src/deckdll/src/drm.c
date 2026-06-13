@@ -1,9 +1,12 @@
 #include "defs.h"
-#include <WINDOWS.H>
+#include "drm.h"
+#include "platform/gdi_compat.h"
 #include "mystdbool.h"
 
+#ifndef MODERN_FIXES
 #pragma intrinsic(_rotl)
 #pragma intrinsic(_rotr)
+#endif
 
 // GLOBAL: DECKDLL 0x10035b88
 // GLOBAL: MAGIC 0x00571d68
@@ -13,6 +16,8 @@ uint8_t card_coded[3][128] = {
     {0, 26, 16, 0, 128, 74, 64, 49, 128, 132, 1, 0, 129, 8, 192, 4, 20, 38, 16, 0, 0, 20, 0, 32, 36, 200, 20, 9, 4, 0, 2, 80, 134, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 97, 250, 77, 181, 181, 61, 205, 190, 137, 123, 55, 4, 42, 39, 135, 90, 223, 14, 242, 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 208, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 75, 16, 26, 25, 148, 4, 66, 10, 0, 196, 16, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 18, 32, 9, 66, 16, 168, 146, 160, 128, 8, 129, 4, 20, 40, 37, 72, 16, 225, 1, 10, 192, 5, 128, 0, 40, 128, 76, 0, 5, 82, 32, 0, 1, 8, 128, 60, 5, 0, 0, 0, 128, 0, 0, 0, 0, 0, 0, 49, 153, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 };
+
+#ifndef MODERN_FIXES
 
 // GLOBAL: DECKDLL 0x10033008
 // GLOBAL: SHANDALAR 0x00583848
@@ -332,6 +337,12 @@ static int ValidateRegistrySerial(uint32_t *out_value)
   *out_value = global_serial_part_a;
   return 0;
 }
+#else
+int InitLicenseSecretsFromRegistry(void)
+{
+  return 0;
+}
+#endif
 
 unsigned int HasExpansion(unsigned char expansion_mask);
 

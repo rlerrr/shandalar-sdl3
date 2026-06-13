@@ -85,8 +85,69 @@ int LoadVersionedSmallArt(card_id_t id, int version, int width, int height);
 int DrawVersionedSmallArt(HDC hdc, RECT *rect, card_id_t id, int version);
 bool ReloadVersionedSmallArtIfWrongSize(card_id_t id, int version, int width, int height);
 
+int CardArtLib_InitializeFromRoot(const char *asset_root)
+{
+  char cards_dat_path[0x208];
+  card_ptr_t records[2000];
+  int card_count = 0;
+  int unused_header_value;
+  int idx;
+  int i;
+  FILE *cards_file;
+
+  if (!asset_root || !asset_root[0])
+    return 0;
+
+  strncpy(global_base_directory, asset_root, sizeof(global_base_directory) - 1);
+  global_base_directory[sizeof(global_base_directory) - 1] = '\0';
+  strncpy(global_cartart_directory, asset_root, sizeof(global_cartart_directory) - 1);
+  global_cartart_directory[sizeof(global_cartart_directory) - 1] = '\0';
+  strncat(global_cartart_directory, "/CardArt",
+          sizeof(global_cartart_directory) - strlen(global_cartart_directory) - 1);
+
+  InitializeCriticalSection(&global_critical_section_for_small_art);
+  InitializeCriticalSection(&global_critical_section_for_big_art);
+  InitializeCriticalSection(&global_critical_section_for_catalog);
+
+  if (!InitCardArtGdiResources())
+    return 0;
+
+  snprintf(cards_dat_path, sizeof(cards_dat_path), "%s/CARDS.DAT", asset_root);
+  cards_file = fopen(cards_dat_path, "rb");
+  if (cards_file) {
+    if (fread(&card_count, sizeof(card_count), 1, cards_file) != 1 ||
+        fread(&unused_header_value, sizeof(unused_header_value), 1, cards_file) != 1) {
+      fclose(cards_file);
+      return 0;
+    }
+    if (card_count < 0)
+      card_count = 0;
+    if (card_count > 2000)
+      card_count = 2000;
+    if (fread(records, sizeof(records[0]), (size_t)card_count, cards_file) != (size_t)card_count) {
+      fclose(cards_file);
+      return 0;
+    }
+    fclose(cards_file);
+  }
+
+  for (idx = 0; idx < 2000; ++idx)
+    g_cardPicCounts[idx] = idx < card_count && records[idx].num_pics > 0 ? records[idx].num_pics : 1;
+  for (i = 0; i < 2000; ++i)
+    g_SmallArtCache[i].hbm = 0;
+  for (i = 0; i < 100; ++i)
+    g_versionedSmallArtCache[i].hbm = 0;
+  for (i = 0; i < 0x14; ++i)
+    g_versionedBigArtCache[i].hbm = 0;
+  g_versionedSmallArtCount = 0;
+  g_versionedBigArtCount = 0;
+  global_dither_kernel_id = 3;
+  return 1;
+}
+
 // MATCHING
 // FUNCTION: CARDARTLIB 0x100030f0
+#ifndef SHANDALAR_STATIC_LIB
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
 {
   uint uVar1;
@@ -107,6 +168,7 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
     return 1;
   }
 }
+#endif
 
 // MATCHING
 // FUNCTION: CARDARTLIB 0x10003175

@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 enum ObjectKind {
   OBJECT_BITMAP = 0x424d,
@@ -21,6 +23,7 @@ struct ShandalarBitmap {
   int height;
   int pitch;
   int bits_per_pixel;
+  int top_down;
   unsigned char *pixels;
   int owns_pixels;
 };
@@ -35,6 +38,30 @@ struct ShandalarFont {
   TTF_Font *font;
   int size;
 };
+
+typedef struct DCState {
+  HBITMAP bitmap;
+  HPALETTE palette;
+  HFONT font;
+  COLORREF text_color;
+  COLORREF background_color;
+  int background_mode;
+  int cursor_x;
+  int cursor_y;
+  HPEN pen;
+  HBRUSH brush;
+  int map_mode;
+  int window_ext_x;
+  int window_ext_y;
+  int viewport_ext_x;
+  int viewport_ext_y;
+  int window_org_x;
+  int window_org_y;
+  int viewport_org_x;
+  int viewport_org_y;
+  int has_clip;
+  RECT clip;
+} DCState;
 
 typedef struct PaintObject {
   ObjectHeader header;
@@ -52,9 +79,21 @@ struct ShandalarDC {
   int cursor_y;
   HPEN pen;
   HBRUSH brush;
+  int map_mode;
+  int window_ext_x;
+  int window_ext_y;
+  int viewport_ext_x;
+  int viewport_ext_y;
+  int window_org_x;
+  int window_org_y;
+  int viewport_org_x;
+  int viewport_org_y;
+  int has_clip;
+  RECT clip;
+  DCState saved[16];
+  int saved_count;
 };
 
-static char g_last_font_path[512];
 static char g_font_root[512];
 
 static unsigned char color_to_index(HDC dc, COLORREF color)
@@ -88,13 +127,60 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
   return (unsigned char)best;
 }
 
+static void apply_rop(unsigned char *dst, unsigned char src, DWORD rop);
+
 static unsigned char *pixel_at(HBITMAP bitmap, int x, int y)
 {
   int row;
   if (!bitmap || x < 0 || y < 0 || x >= bitmap->width || y >= bitmap->height)
     return NULL;
-  row = bitmap->height - 1 - y;
+  row = bitmap->top_down ? y : bitmap->height - 1 - y;
   return bitmap->pixels + row * bitmap->pitch + x * (bitmap->bits_per_pixel / 8);
+}
+
+static COLORREF read_pixel_color(HDC dc, int x, int y)
+{
+  unsigned char *pixel = dc && dc->bitmap ? pixel_at(dc->bitmap, x, y) : NULL;
+  if (!pixel)
+    return UINT32_MAX;
+  if (dc->bitmap->bits_per_pixel == 24)
+    return RGB(pixel[2], pixel[1], pixel[0]);
+  if (dc->palette) {
+    PALETTEENTRY *entry = &dc->palette->entries[*pixel];
+    return RGB(entry->peRed, entry->peGreen, entry->peBlue);
+  }
+  return RGB(*pixel, *pixel, *pixel);
+}
+
+static COLORREF resolve_color(HDC dc, COLORREF color)
+{
+  if ((color & 0xff000000u) == 0x01000000u && dc && dc->palette) {
+    PALETTEENTRY *entry = &dc->palette->entries[color & 0xff];
+    return RGB(entry->peRed, entry->peGreen, entry->peBlue);
+  }
+  return color & 0x00ffffffu;
+}
+
+static void write_pixel_color(HDC dc, int x, int y, COLORREF color, DWORD rop)
+{
+  unsigned char *pixel = dc && dc->bitmap ? pixel_at(dc->bitmap, x, y) : NULL;
+  if (dc && dc->has_clip &&
+      (x < dc->clip.left || x >= dc->clip.right || y < dc->clip.top || y >= dc->clip.bottom))
+    return;
+  if (!pixel)
+    return;
+  if (dc->bitmap->bits_per_pixel == 24) {
+    unsigned char bgr[3] = {
+      (unsigned char)((color >> 16) & 0xff),
+      (unsigned char)((color >> 8) & 0xff),
+      (unsigned char)(color & 0xff)
+    };
+    int i;
+    for (i = 0; i < 3; ++i)
+      apply_rop(&pixel[i], bgr[i], rop);
+  } else {
+    apply_rop(pixel, color_to_index(dc, color), rop);
+  }
 }
 
 HDC CreateCompatibleDC(HDC unused)
@@ -104,8 +190,69 @@ HDC CreateCompatibleDC(HDC unused)
     dc->text_color = PALETTEINDEX(255);
     dc->background_color = PALETTEINDEX(0);
     dc->background_mode = OPAQUE;
+    dc->window_ext_x = dc->viewport_ext_x = 1;
+    dc->window_ext_y = dc->viewport_ext_y = 1;
   }
   return dc;
+}
+
+static int map_x(HDC dc, int x)
+{
+  if (!dc || dc->map_mode == MM_TEXT)
+    return x;
+  return dc->viewport_org_x +
+         (x - dc->window_org_x) * dc->viewport_ext_x / dc->window_ext_x;
+}
+
+static int map_y(HDC dc, int y)
+{
+  if (!dc || dc->map_mode == MM_TEXT)
+    return y;
+  return dc->viewport_org_y +
+         (y - dc->window_org_y) * dc->viewport_ext_y / dc->window_ext_y;
+}
+
+static double device_scale_x(HDC dc)
+{
+  if (!dc || dc->map_mode == MM_TEXT || !dc->window_ext_x)
+    return 1.0;
+  return fabs((double)dc->viewport_ext_x / (double)dc->window_ext_x);
+}
+
+static double device_scale_y(HDC dc)
+{
+  if (!dc || dc->map_mode == MM_TEXT || !dc->window_ext_y)
+    return 1.0;
+  return fabs((double)dc->viewport_ext_y / (double)dc->window_ext_y);
+}
+
+static int logical_from_device(int value, double scale)
+{
+  if (scale <= 0.0)
+    return value;
+  return (int)lround((double)value / scale);
+}
+
+static float prepare_font_for_dc(HDC dc)
+{
+  float old_size;
+  float device_size;
+  if (!dc || !dc->font || !dc->font->font)
+    return 0.0f;
+  old_size = TTF_GetFontSize(dc->font->font);
+  device_size = (float)((double)dc->font->size * device_scale_y(dc));
+  if (device_size < 1.0f)
+    device_size = 1.0f;
+  if (fabsf(old_size - device_size) > 0.01f)
+    TTF_SetFontSize(dc->font->font, device_size);
+  return old_size;
+}
+
+static void restore_font_size(HDC dc, float old_size)
+{
+  if (dc && dc->font && dc->font->font && old_size > 0.0f &&
+      fabsf(TTF_GetFontSize(dc->font->font) - old_size) > 0.01f)
+    TTF_SetFontSize(dc->font->font, old_size);
 }
 
 HDC GetDC(HWND window)
@@ -139,6 +286,7 @@ HBITMAP CreateDIBSection(HDC dc, const BITMAPINFO *info, UINT usage, void **bits
   bitmap->header.kind = OBJECT_BITMAP;
   bitmap->width = info->bmiHeader.biWidth;
   bitmap->height = abs(info->bmiHeader.biHeight);
+  bitmap->top_down = info->bmiHeader.biHeight < 0;
   bitmap->bits_per_pixel = info->bmiHeader.biBitCount;
   bytes_per_pixel = bitmap->bits_per_pixel / 8;
   if (bytes_per_pixel < 1)
@@ -212,15 +360,31 @@ int GetObjectA(HGDIOBJ object, int size, void *out)
     return 0;
   if (header->kind == OBJECT_BITMAP && size >= (int)sizeof(BITMAP)) {
     HBITMAP bitmap = (HBITMAP)object;
-    BITMAP *result = (BITMAP *)out;
-    memset(result, 0, sizeof(*result));
-    result->bmWidth = bitmap->width;
-    result->bmHeight = bitmap->height;
-    result->bmWidthBytes = bitmap->pitch;
-    result->bmPlanes = 1;
-    result->bmBitsPixel = (WORD)bitmap->bits_per_pixel;
-    result->bmBits = bitmap->pixels;
-    return sizeof(*result);
+    if (size >= (int)sizeof(DIBSECTION)) {
+      DIBSECTION *result = (DIBSECTION *)out;
+      memset(result, 0, sizeof(*result));
+      result->dsBm.bmWidth = bitmap->width;
+      result->dsBm.bmHeight = bitmap->height;
+      result->dsBm.bmWidthBytes = bitmap->pitch;
+      result->dsBm.bmPlanes = 1;
+      result->dsBm.bmBitsPixel = (WORD)bitmap->bits_per_pixel;
+      result->dsBm.bmBits = bitmap->pixels;
+      result->dsBmih.biSize = sizeof(result->dsBmih);
+      result->dsBmih.biWidth = bitmap->width;
+      result->dsBmih.biHeight = bitmap->height;
+      result->dsBmih.biBitCount = (WORD)bitmap->bits_per_pixel;
+      return sizeof(*result);
+    } else {
+      BITMAP *result = (BITMAP *)out;
+      memset(result, 0, sizeof(*result));
+      result->bmWidth = bitmap->width;
+      result->bmHeight = bitmap->height;
+      result->bmWidthBytes = bitmap->pitch;
+      result->bmPlanes = 1;
+      result->bmBitsPixel = (WORD)bitmap->bits_per_pixel;
+      result->bmBits = bitmap->pixels;
+      return sizeof(*result);
+    }
   }
   return 0;
 }
@@ -238,22 +402,19 @@ static void apply_rop(unsigned char *dst, unsigned char src, DWORD rop)
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop)
 {
   int x, y;
-  unsigned char *temp;
+  COLORREF *temp;
   if (!dst || !src || !dst->bitmap || !src->bitmap || width <= 0 || height <= 0)
     return FALSE;
-  temp = (unsigned char *)malloc((size_t)width * (size_t)height);
+  temp = (COLORREF *)malloc((size_t)width * (size_t)height * sizeof(*temp));
   if (!temp)
     return FALSE;
   for (y = 0; y < height; ++y)
     for (x = 0; x < width; ++x) {
-      unsigned char *pixel = pixel_at(src->bitmap, sx + x, sy + y);
-      temp[y * width + x] = pixel ? *pixel : 0;
+      temp[y * width + x] = read_pixel_color(src, sx + x, sy + y);
     }
   for (y = 0; y < height; ++y)
     for (x = 0; x < width; ++x) {
-      unsigned char *pixel = pixel_at(dst->bitmap, dx + x, dy + y);
-      if (pixel)
-        apply_rop(pixel, temp[y * width + x], rop);
+      write_pixel_color(dst, dx + x, dy + y, temp[y * width + x], rop);
     }
   free(temp);
   return TRUE;
@@ -262,28 +423,30 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
 BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy, int sw, int sh, DWORD rop)
 {
   int x, y;
+  int right;
+  int bottom;
+  int logical_dx = dx;
+  int logical_dy = dy;
+  right = map_x(dst, logical_dx + dw);
+  bottom = map_y(dst, logical_dy + dh);
+  dx = map_x(dst, logical_dx);
+  dy = map_y(dst, logical_dy);
+  dw = right - dx;
+  dh = bottom - dy;
   if (!dst || !src || !dst->bitmap || !src->bitmap || dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0)
     return FALSE;
   for (y = 0; y < dh; ++y)
     for (x = 0; x < dw; ++x) {
-      unsigned char *source = pixel_at(src->bitmap, sx + x * sw / dw, sy + y * sh / dh);
-      unsigned char *target = pixel_at(dst->bitmap, dx + x, dy + y);
-      if (source && target)
-        apply_rop(target, *source, rop);
+      COLORREF color = read_pixel_color(src, sx + x * sw / dw, sy + y * sh / dh);
+      if (color != UINT32_MAX)
+        write_pixel_color(dst, dx + x, dy + y, color, rop);
     }
   return TRUE;
 }
 
 COLORREF GetPixel(HDC dc, int x, int y)
 {
-  unsigned char *pixel = dc ? pixel_at(dc->bitmap, x, y) : NULL;
-  if (!pixel)
-    return UINT32_MAX;
-  if (dc->palette) {
-    PALETTEENTRY *entry = &dc->palette->entries[*pixel];
-    return RGB(entry->peRed, entry->peGreen, entry->peBlue);
-  }
-  return RGB(*pixel, *pixel, *pixel);
+  return read_pixel_color(dc, x, y);
 }
 
 BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
@@ -291,7 +454,13 @@ BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
   unsigned char *pixel = dc ? pixel_at(dc->bitmap, x, y) : NULL;
   if (!pixel)
     return FALSE;
-  *pixel = color_to_index(dc, color);
+  if (dc->bitmap->bits_per_pixel == 24) {
+    pixel[0] = (unsigned char)((color >> 16) & 0xff);
+    pixel[1] = (unsigned char)((color >> 8) & 0xff);
+    pixel[2] = (unsigned char)(color & 0xff);
+  } else {
+    *pixel = color_to_index(dc, color);
+  }
   return TRUE;
 }
 
@@ -313,12 +482,20 @@ HPEN CreatePenIndirect(const LOGPEN *pen) { return CreatePen(0, 1, pen ? pen->lo
 int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
 {
   int x, y;
+  int left;
+  int top;
+  int right;
+  int bottom;
   PaintObject *paint = (PaintObject *)brush;
   unsigned char index = color_to_index(dc, paint ? paint->color : 0);
   if (!dc || !dc->bitmap || !rect)
     return 0;
-  for (y = rect->top; y < rect->bottom; ++y)
-    for (x = rect->left; x < rect->right; ++x) {
+  left = map_x(dc, rect->left);
+  top = map_y(dc, rect->top);
+  right = map_x(dc, rect->right);
+  bottom = map_y(dc, rect->bottom);
+  for (y = top; y < bottom; ++y)
+    for (x = left; x < right; ++x) {
       unsigned char *pixel = pixel_at(dc->bitmap, x, y);
       if (pixel) *pixel = index;
     }
@@ -354,6 +531,10 @@ BOOL LineTo(HDC dc, int x1, int y1)
 
 BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
 {
+  left = map_x(dc, left);
+  top = map_y(dc, top);
+  right = map_x(dc, right);
+  bottom = map_y(dc, bottom);
   MoveToEx(dc, left, top, NULL); LineTo(dc, right - 1, top);
   LineTo(dc, right - 1, bottom - 1); LineTo(dc, left, bottom - 1); LineTo(dc, left, top);
   return TRUE;
@@ -370,6 +551,166 @@ BOOL Ellipse(HDC dc, int left, int top, int right, int bottom)
               dc && dc->pen ? ((PaintObject *)dc->pen)->color : PALETTEINDEX(255));
   return TRUE;
 }
+
+BOOL RoundRect(HDC dc, int left, int top, int right, int bottom, int ellipse_width, int ellipse_height)
+{
+  (void)ellipse_width;
+  (void)ellipse_height;
+  return Rectangle(dc, left, top, right, bottom);
+}
+
+static void copy_dc_to_state(DCState *state, const HDC dc)
+{
+  state->bitmap = dc->bitmap;
+  state->palette = dc->palette;
+  state->font = dc->font;
+  state->text_color = dc->text_color;
+  state->background_color = dc->background_color;
+  state->background_mode = dc->background_mode;
+  state->cursor_x = dc->cursor_x;
+  state->cursor_y = dc->cursor_y;
+  state->pen = dc->pen;
+  state->brush = dc->brush;
+  state->map_mode = dc->map_mode;
+  state->window_ext_x = dc->window_ext_x;
+  state->window_ext_y = dc->window_ext_y;
+  state->viewport_ext_x = dc->viewport_ext_x;
+  state->viewport_ext_y = dc->viewport_ext_y;
+  state->window_org_x = dc->window_org_x;
+  state->window_org_y = dc->window_org_y;
+  state->viewport_org_x = dc->viewport_org_x;
+  state->viewport_org_y = dc->viewport_org_y;
+  state->has_clip = dc->has_clip;
+  state->clip = dc->clip;
+}
+
+static void copy_state_to_dc(HDC dc, const DCState *state)
+{
+  dc->bitmap = state->bitmap;
+  dc->palette = state->palette;
+  dc->font = state->font;
+  dc->text_color = state->text_color;
+  dc->background_color = state->background_color;
+  dc->background_mode = state->background_mode;
+  dc->cursor_x = state->cursor_x;
+  dc->cursor_y = state->cursor_y;
+  dc->pen = state->pen;
+  dc->brush = state->brush;
+  dc->map_mode = state->map_mode;
+  dc->window_ext_x = state->window_ext_x;
+  dc->window_ext_y = state->window_ext_y;
+  dc->viewport_ext_x = state->viewport_ext_x;
+  dc->viewport_ext_y = state->viewport_ext_y;
+  dc->window_org_x = state->window_org_x;
+  dc->window_org_y = state->window_org_y;
+  dc->viewport_org_x = state->viewport_org_x;
+  dc->viewport_org_y = state->viewport_org_y;
+  dc->has_clip = state->has_clip;
+  dc->clip = state->clip;
+}
+
+int SaveDC(HDC dc)
+{
+  if (!dc || dc->saved_count >= (int)(sizeof(dc->saved) / sizeof(dc->saved[0])))
+    return 0;
+  copy_dc_to_state(&dc->saved[dc->saved_count], dc);
+  ++dc->saved_count;
+  return dc->saved_count;
+}
+
+BOOL RestoreDC(HDC dc, int saved)
+{
+  int index;
+  if (!dc || !dc->saved_count || saved == 0)
+    return FALSE;
+  index = saved < 0 ? dc->saved_count + saved : saved - 1;
+  if (index < 0 || index >= dc->saved_count)
+    return FALSE;
+  copy_state_to_dc(dc, &dc->saved[index]);
+  dc->saved_count = index;
+  return TRUE;
+}
+
+int IntersectClipRect(HDC dc, int left, int top, int right, int bottom)
+{
+  RECT incoming;
+  if (!dc)
+    return 0;
+  incoming.left = map_x(dc, left);
+  incoming.top = map_y(dc, top);
+  incoming.right = map_x(dc, right);
+  incoming.bottom = map_y(dc, bottom);
+  if (!dc->has_clip) {
+    dc->clip = incoming;
+    dc->has_clip = 1;
+  } else {
+    dc->clip.left = max(dc->clip.left, incoming.left);
+    dc->clip.top = max(dc->clip.top, incoming.top);
+    dc->clip.right = min(dc->clip.right, incoming.right);
+    dc->clip.bottom = min(dc->clip.bottom, incoming.bottom);
+  }
+  return 1;
+}
+
+BOOL SetRect(RECT *rect, int left, int top, int right, int bottom)
+{
+  if (!rect) return FALSE;
+  rect->left = left;
+  rect->top = top;
+  rect->right = right;
+  rect->bottom = bottom;
+  return TRUE;
+}
+
+BOOL CopyRect(RECT *dst, const RECT *src)
+{
+  if (!dst || !src) return FALSE;
+  *dst = *src;
+  return TRUE;
+}
+
+BOOL OffsetRect(RECT *rect, int dx, int dy)
+{
+  if (!rect) return FALSE;
+  rect->left += dx;
+  rect->right += dx;
+  rect->top += dy;
+  rect->bottom += dy;
+  return TRUE;
+}
+
+BOOL DrawFocusRect(HDC dc, const RECT *rect)
+{
+  if (!dc || !rect) return FALSE;
+  return Rectangle(dc, rect->left, rect->top, rect->right, rect->bottom);
+}
+
+int SetMapMode(HDC dc, int mode) { int old = dc ? dc->map_mode : 0; if (dc) dc->map_mode = mode; return old; }
+BOOL SetWindowExtEx(HDC dc, int x, int y, LPSIZE old) { if (!dc || !x || !y) return FALSE; if (old) { old->cx = dc->window_ext_x; old->cy = dc->window_ext_y; } dc->window_ext_x = x; dc->window_ext_y = y; return TRUE; }
+BOOL SetViewportExtEx(HDC dc, int x, int y, LPSIZE old) { if (!dc) return FALSE; if (old) { old->cx = dc->viewport_ext_x; old->cy = dc->viewport_ext_y; } dc->viewport_ext_x = x; dc->viewport_ext_y = y; return TRUE; }
+BOOL SetWindowOrgEx(HDC dc, int x, int y, LPPOINT old) { if (!dc) return FALSE; if (old) { old->x = dc->window_org_x; old->y = dc->window_org_y; } dc->window_org_x = x; dc->window_org_y = y; return TRUE; }
+BOOL SetViewportOrgEx(HDC dc, int x, int y, LPPOINT old) { if (!dc) return FALSE; if (old) { old->x = dc->viewport_org_x; old->y = dc->viewport_org_y; } dc->viewport_org_x = x; dc->viewport_org_y = y; return TRUE; }
+BOOL LPtoDP(HDC dc, LPPOINT points, int count) { int i; if (!dc || !points) return FALSE; for (i = 0; i < count; ++i) { points[i].x = map_x(dc, points[i].x); points[i].y = map_y(dc, points[i].y); } return TRUE; }
+BOOL DPtoLP(HDC dc, LPPOINT points, int count)
+{
+  int i;
+  if (!dc || !points)
+    return FALSE;
+  if (dc->map_mode == MM_TEXT)
+    return TRUE;
+  if (!dc->viewport_ext_x || !dc->viewport_ext_y)
+    return FALSE;
+  for (i = 0; i < count; ++i) {
+    points[i].x = dc->window_org_x +
+                  (points[i].x - dc->viewport_org_x) * dc->window_ext_x /
+                    dc->viewport_ext_x;
+    points[i].y = dc->window_org_y +
+                  (points[i].y - dc->viewport_org_y) * dc->window_ext_y /
+                    dc->viewport_ext_y;
+  }
+  return TRUE;
+}
+UINT SetTextAlign(HDC dc, UINT align) { (void)dc; return align; }
 
 HGDIOBJ GetStockObject(int object)
 {
@@ -422,7 +763,18 @@ UINT SetPaletteEntries(HPALETTE palette, UINT start, UINT count, const PALETTEEN
 UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
 {
   UINT i;
-  if (!dc || !dc->palette || !colors) return 0;
+  if (!dc || !colors) return 0;
+  if (!dc->palette) {
+    LOGPALETTE *log_palette = (LOGPALETTE *)calloc(1, sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
+    if (!log_palette)
+      return 0;
+    log_palette->palVersion = 0x300;
+    log_palette->palNumEntries = 256;
+    dc->palette = CreatePalette(log_palette);
+    free(log_palette);
+    if (!dc->palette)
+      return 0;
+  }
   if (count > 256 - start) count = 256 - start;
   for (i = 0; i < count; ++i) {
     dc->palette->entries[start + i].peRed = colors[i].rgbRed;
@@ -439,23 +791,40 @@ int SetBkMode(HDC dc, int mode) { int old = dc ? dc->background_mode : 0; if (dc
 
 BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size)
 {
+  float old_size;
+  int width;
+  int height;
   if (!size) return FALSE;
   if (length < 0) length = (int)strlen(text);
-  if (dc && dc->font && dc->font->font)
-    return TTF_GetStringSize(dc->font->font, text, (size_t)length, (int *)&size->cx, (int *)&size->cy);
+  if (dc && dc->font && dc->font->font) {
+    old_size = prepare_font_for_dc(dc);
+    if (!TTF_GetStringSize(dc->font->font, text, (size_t)length, &width, &height)) {
+      restore_font_size(dc, old_size);
+      return FALSE;
+    }
+    size->cx = logical_from_device(width, device_scale_x(dc));
+    size->cy = logical_from_device(height, device_scale_y(dc));
+    restore_font_size(dc, old_size);
+    return TRUE;
+  }
   size->cx = length * 8; size->cy = 12;
   return TRUE;
 }
 
 BOOL GetTextMetricsA(HDC dc, TEXTMETRICA *metrics)
 {
+  float old_size;
+  double scale;
   if (!metrics) return FALSE;
   memset(metrics, 0, sizeof(*metrics));
   if (dc && dc->font && dc->font->font) {
-    metrics->tmHeight = TTF_GetFontHeight(dc->font->font);
-    metrics->tmAscent = TTF_GetFontAscent(dc->font->font);
-    metrics->tmDescent = -TTF_GetFontDescent(dc->font->font);
+    old_size = prepare_font_for_dc(dc);
+    scale = device_scale_y(dc);
+    metrics->tmHeight = logical_from_device(TTF_GetFontHeight(dc->font->font), scale);
+    metrics->tmAscent = logical_from_device(TTF_GetFontAscent(dc->font->font), scale);
+    metrics->tmDescent = logical_from_device(-TTF_GetFontDescent(dc->font->font), scale);
     metrics->tmInternalLeading = metrics->tmHeight - metrics->tmAscent - metrics->tmDescent;
+    restore_font_size(dc, old_size);
   } else {
     metrics->tmHeight = 12; metrics->tmAscent = 10; metrics->tmDescent = 2;
   }
@@ -475,47 +844,165 @@ BOOL GetCharABCWidthsA(HDC dc, UINT first, UINT last, ABC *widths)
   return TRUE;
 }
 
+static void blend_text_pixel(HDC dc, int x, int y, unsigned char alpha)
+{
+  COLORREF foreground;
+  COLORREF background;
+  int fr, fg, fb;
+  int br, bg, bb;
+  if (!alpha)
+    return;
+  foreground = resolve_color(dc, dc->text_color);
+  background = read_pixel_color(dc, x, y);
+  if (background == UINT32_MAX)
+    return;
+  fr = foreground & 0xff;
+  fg = (foreground >> 8) & 0xff;
+  fb = (foreground >> 16) & 0xff;
+  br = background & 0xff;
+  bg = (background >> 8) & 0xff;
+  bb = (background >> 16) & 0xff;
+  write_pixel_color(dc, x, y,
+                    RGB((fr * alpha + br * (255 - alpha)) / 255,
+                        (fg * alpha + bg * (255 - alpha)) / 255,
+                        (fb * alpha + bb * (255 - alpha)) / 255),
+                    SRCCOPY);
+}
+
+static void draw_text_surface(HDC dc, SDL_Surface *surface, int draw_x, int draw_y,
+                              int clip_right, int clip_bottom)
+{
+  int x;
+  int y;
+  for (y = 0; y < surface->h && draw_y + y < clip_bottom; ++y) {
+    for (x = 0; x < surface->w && draw_x + x < clip_right; ++x) {
+      uint32_t pixel = ((uint32_t *)((unsigned char *)surface->pixels +
+                                     y * surface->pitch))[x];
+      blend_text_pixel(dc, draw_x + x, draw_y + y, (unsigned char)(pixel >> 24));
+    }
+  }
+}
+
 BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
 {
   SDL_Surface *surface;
   SDL_Color white = {255,255,255,255};
-  int px, py;
-  unsigned char index;
+  float old_size;
   if (!dc || !dc->bitmap || !dc->font || !dc->font->font || !text) return FALSE;
+  x = map_x(dc, x);
+  y = map_y(dc, y);
   if (length < 0) length = (int)strlen(text);
+  old_size = prepare_font_for_dc(dc);
   surface = TTF_RenderText_Blended(dc->font->font, text, (size_t)length, white);
-  if (!surface) return FALSE;
-  index = color_to_index(dc, dc->text_color);
-  for (py = 0; py < surface->h; ++py)
-    for (px = 0; px < surface->w; ++px) {
-      uint32_t pixel = ((uint32_t *)((unsigned char *)surface->pixels + py * surface->pitch))[px];
-      if ((pixel >> 24) > 32) {
-        unsigned char *target = pixel_at(dc->bitmap, x + px, y + py);
-        if (target) *target = index;
-      }
-    }
+  if (!surface) {
+    restore_font_size(dc, old_size);
+    return FALSE;
+  }
+  draw_text_surface(dc, surface, x, y, dc->bitmap->width, dc->bitmap->height);
   SDL_DestroySurface(surface);
+  restore_font_size(dc, old_size);
   return TRUE;
 }
 
 int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
 {
-  (void)format;
-  if (!rect) return 0;
-  return TextOutA(dc, rect->left, rect->top, text, length);
+  SDL_Surface *surface;
+  SDL_Color white = {255,255,255,255};
+  int max_width;
+  int draw_x;
+  int draw_y;
+  int rect_right;
+  int rect_bottom;
+  int single_line;
+  float old_size;
+  double scale_x;
+  double scale_y;
+  if (!dc || !dc->bitmap || !dc->font || !dc->font->font || !text || !rect)
+    return 0;
+  if (length < 0)
+    length = (int)strlen(text);
+  draw_x = map_x(dc, rect->left);
+  draw_y = map_y(dc, rect->top);
+  rect_right = map_x(dc, rect->right);
+  rect_bottom = map_y(dc, rect->bottom);
+  max_width = rect_right - draw_x;
+  single_line = (format & DT_SINGLELINE) != 0;
+  if (max_width <= 0 || rect_bottom <= draw_y)
+    return 0;
+  old_size = prepare_font_for_dc(dc);
+  surface = single_line
+              ? TTF_RenderText_Blended(dc->font->font, text, (size_t)length, white)
+              : TTF_RenderText_Blended_Wrapped(dc->font->font, text, (size_t)length,
+                                               white, max_width);
+  if (!surface) {
+    restore_font_size(dc, old_size);
+    return 0;
+  }
+  if (format & DT_CALCRECT) {
+    scale_x = device_scale_x(dc);
+    scale_y = device_scale_y(dc);
+    rect->right = rect->left + logical_from_device(surface->w, scale_x);
+    rect->bottom = rect->top + logical_from_device(surface->h, scale_y);
+    SDL_DestroySurface(surface);
+    restore_font_size(dc, old_size);
+    return rect->bottom - rect->top;
+  }
+  if (format & DT_RIGHT)
+    draw_x = rect_right - surface->w;
+  else if (format & DT_CENTER)
+    draw_x += (max_width - surface->w) / 2;
+  if (single_line && (format & DT_VCENTER))
+    draw_y += (rect_bottom - draw_y - surface->h) / 2;
+  else if (single_line && (format & DT_BOTTOM))
+    draw_y = rect_bottom - surface->h;
+  draw_text_surface(dc, surface, draw_x, draw_y, rect_right, rect_bottom);
+  max_width = surface->h;
+  SDL_DestroySurface(surface);
+  restore_font_size(dc, old_size);
+  return logical_from_device(max_width, device_scale_y(dc));
 }
 
 int AddFontResourceA(LPCSTR path)
 {
-  if (!path) return 0;
-  SDL_strlcpy(g_last_font_path, path, sizeof(g_last_font_path));
-  return 1;
+  return path && path[0];
 }
 
-static HFONT open_font(int size)
+BOOL RemoveFontResourceA(LPCSTR path)
+{
+  (void)path;
+  return TRUE;
+}
+
+static const char *font_filename_for_face(const char *face, int bold, int italic)
+{
+  if (!face)
+    return "TT0298M_.TTF";
+  if (SDL_strcasecmp(face, "Benguiat BkCn Bt") == 0)
+    return "TT0530M_.TTF";
+  if (SDL_strcasecmp(face, "Benguiat Bk BT") == 0)
+    return "TT0127M_.TTF";
+  if (SDL_strcasecmp(face, "CentSchbook BT") == 0)
+    return "TT0085M_.TTF";
+  if (SDL_strcasecmp(face, "MPZurich Cn BT") == 0 ||
+      SDL_strcasecmp(face, "Zurich Cn BT") == 0) {
+    if (bold)
+      return "TT0300M_.TTF";
+    if (italic)
+      return "TT0299M_.TTF";
+    return "TT0298M_.TTF";
+  }
+  return "TT0298M_.TTF";
+}
+
+static HFONT open_font(const LOGFONTA *description)
 {
   HFONT result = (HFONT)calloc(1, sizeof(*result));
   char path[1024];
+  int style = TTF_STYLE_NORMAL;
+  int size = description ? abs(description->lfHeight) : 12;
+  const char *filename = font_filename_for_face(description ? description->lfFaceName : NULL,
+                                                description && description->lfWeight >= FW_BOLD,
+                                                description && description->lfItalic);
   if (!result) return NULL;
   if (!TTF_Init()) {
     free(result);
@@ -523,12 +1010,21 @@ static HFONT open_font(int size)
   }
   result->header.kind = OBJECT_FONT;
   result->size = size > 0 ? size : 12;
-  if (g_last_font_path[0] && g_font_root[0] && !strchr(g_last_font_path, '/') && !strchr(g_last_font_path, '\\')) {
-    SDL_snprintf(path, sizeof(path), "%s/%s", g_font_root, g_last_font_path);
-    result->font = TTF_OpenFont(path, (float)result->size);
+  SDL_snprintf(path, sizeof(path), "%s/%s", g_font_root, filename);
+  result->font = TTF_OpenFont(path, (float)result->size);
+  if (result->font) {
+    if (description && description->lfWeight >= FW_BOLD &&
+        SDL_strcasecmp(filename, "TT0300M_.TTF") != 0)
+      style |= TTF_STYLE_BOLD;
+    if (description && description->lfItalic &&
+        SDL_strcasecmp(filename, "TT0299M_.TTF") != 0)
+      style |= TTF_STYLE_ITALIC;
+    TTF_SetFontStyle(result->font, style);
   }
-  if (!result->font && g_last_font_path[0])
-    result->font = TTF_OpenFont(g_last_font_path, (float)result->size);
+  if (!result->font) {
+    free(result);
+    return NULL;
+  }
   return result;
 }
 
@@ -537,13 +1033,20 @@ HFONT CreateFontA(int height, int width, int escapement, int orientation, int we
                   DWORD out_precision, DWORD clip_precision, DWORD quality,
                   DWORD pitch_family, LPCSTR face)
 {
-  (void)width; (void)escapement; (void)orientation; (void)weight; (void)italic;
-  (void)underline; (void)strikeout; (void)charset; (void)out_precision;
-  (void)clip_precision; (void)quality; (void)pitch_family; (void)face;
-  return open_font(abs(height));
+  LOGFONTA description;
+  (void)width; (void)escapement; (void)orientation; (void)charset;
+  (void)out_precision; (void)clip_precision; (void)quality; (void)pitch_family;
+  memset(&description, 0, sizeof(description));
+  description.lfHeight = height;
+  description.lfWeight = weight;
+  description.lfItalic = (BYTE)italic;
+  description.lfUnderline = (BYTE)underline;
+  description.lfStrikeOut = (BYTE)strikeout;
+  SDL_strlcpy(description.lfFaceName, face ? face : "", sizeof(description.lfFaceName));
+  return open_font(&description);
 }
 
-HFONT CreateFontIndirectA(const LOGFONTA *font) { return open_font(font ? abs(font->lfHeight) : 12); }
+HFONT CreateFontIndirectA(const LOGFONTA *font) { return open_font(font); }
 
 int SetDIBitsToDevice(HDC dc, int x, int y, DWORD width, DWORD height,
                       int src_x, int src_y, UINT start_scan, UINT scan_lines,
@@ -573,6 +1076,134 @@ int MessageBoxA(HWND window, LPCSTR message, LPCSTR title, UINT flags)
   return 1;
 }
 
+HWND GetDesktopWindow(void) { return (HWND)0; }
+
+UINT GetModuleFileNameA(HMODULE module, LPSTR buffer, UINT size)
+{
+  (void)module;
+  if (!buffer || !size)
+    return 0;
+  SDL_strlcpy(buffer, ".", size);
+  return (UINT)strlen(buffer);
+}
+
+int GetPrivateProfileIntA(LPCSTR section, LPCSTR key, int default_value, LPCSTR filename)
+{
+  char value[64];
+  char *end;
+  long parsed;
+  if (!GetPrivateProfileStringA(section, key, "", value, sizeof(value), filename) || !value[0])
+    return default_value;
+  parsed = strtol(value, &end, 10);
+  return end == value ? default_value : (int)parsed;
+}
+
+DWORD GetPrivateProfileStringA(LPCSTR section, LPCSTR key, LPCSTR default_value,
+                               LPSTR returned_string, DWORD size, LPCSTR filename)
+{
+  FILE *file;
+  char path[1024];
+  char line[512];
+  int in_section = 0;
+  if (!returned_string || !size)
+    return 0;
+  SDL_strlcpy(path, filename ? filename : "", sizeof(path));
+  for (char *cursor = path; *cursor; ++cursor)
+    if (*cursor == '\\')
+      *cursor = '/';
+  file = fopen(path, "rb");
+  if (file) {
+    while (fgets(line, sizeof(line), file)) {
+      char *cursor = line;
+      char *equals;
+      char *value;
+      char *end;
+      while (*cursor == ' ' || *cursor == '\t')
+        ++cursor;
+      if (*cursor == '[') {
+        char *close = strchr(cursor + 1, ']');
+        if (close) {
+          *close = '\0';
+          in_section = SDL_strcasecmp(cursor + 1, section ? section : "") == 0;
+        }
+        continue;
+      }
+      if (!in_section || *cursor == ';' || *cursor == '#' || !*cursor)
+        continue;
+      equals = strchr(cursor, '=');
+      if (!equals)
+        continue;
+      *equals = '\0';
+      end = equals - 1;
+      while (end >= cursor && (*end == ' ' || *end == '\t'))
+        *end-- = '\0';
+      if (SDL_strcasecmp(cursor, key ? key : "") != 0)
+        continue;
+      value = equals + 1;
+      while (*value == ' ' || *value == '\t')
+        ++value;
+      end = value + strlen(value);
+      while (end > value && (end[-1] == '\r' || end[-1] == '\n' ||
+                             end[-1] == ' ' || end[-1] == '\t'))
+        *--end = '\0';
+      if (end - value >= 2 && value[0] == '"' && end[-1] == '"') {
+        ++value;
+        end[-1] = '\0';
+      }
+      SDL_strlcpy(returned_string, value, size);
+      fclose(file);
+      return (DWORD)strlen(returned_string);
+    }
+    fclose(file);
+  }
+  SDL_strlcpy(returned_string, default_value ? default_value : "", size);
+  return (DWORD)strlen(returned_string);
+}
+
+BOOL GetVersionExA(OSVERSIONINFOA *version_info)
+{
+  if (!version_info)
+    return FALSE;
+  version_info->dwMajorVersion = 10;
+  version_info->dwMinorVersion = 0;
+  version_info->dwBuildNumber = 0;
+  version_info->dwPlatformId = 2;
+  return TRUE;
+}
+
+void OutputDebugStringA(LPCSTR message)
+{
+  if (message)
+    SDL_Log("%s", message);
+}
+
+int wsprintfA(LPSTR buffer, LPCSTR format, ...)
+{
+  int result;
+  va_list args;
+  va_start(args, format);
+  result = vsprintf(buffer, format, args);
+  va_end(args);
+  return result;
+}
+
+int GetWindowTextA(HWND window, LPSTR text, int max_count)
+{
+  (void)window;
+  if (text && max_count > 0)
+    text[0] = '\0';
+  return 0;
+}
+
+LRESULT SendMessageA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
+{
+  (void)window;
+  (void)message;
+  (void)wparam;
+  (void)lparam;
+  return 0;
+}
+
 BOOL CloseHandle(HANDLE handle) { (void)handle; return TRUE; }
 void *GlobalAlloc(UINT flags, size_t size) { (void)flags; return malloc(size); }
 void *GlobalLock(void *memory) { return memory; }
@@ -584,6 +1215,8 @@ int GetDeviceCaps(HDC dc, int index)
 {
   if (index == BITSPIXEL)
     return 8;
+  if (index == PLANES)
+    return 1;
   if (!dc || !dc->bitmap)
     return 0;
   if (index == HORZRES)
@@ -592,6 +1225,11 @@ int GetDeviceCaps(HDC dc, int index)
     return dc->bitmap->height;
   return 0;
 }
+
+void InitializeCriticalSection(CRITICAL_SECTION *section) { if (section) section->unused = 0; }
+void DeleteCriticalSection(CRITICAL_SECTION *section) { (void)section; }
+void EnterCriticalSection(CRITICAL_SECTION *section) { (void)section; }
+void LeaveCriticalSection(CRITICAL_SECTION *section) { (void)section; }
 
 HDC shandalar_create_screen_dc(int width, int height)
 {

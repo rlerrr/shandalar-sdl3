@@ -1,4 +1,5 @@
 add_library(shandalar_platform STATIC
+  asset_manager.c
   gdi_compat.c
   legacy_io.c
 )

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <STDDEF.H>
 #include <string.h>
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include "haar.h"
 #include "catalog.h"
 #include "assert.h"

@@ -1,10 +1,49 @@
 #include "defs.h"
-#include "deckdll.h"
 #include "card_db.h"
-#include <WINDOWS.H>
-#include <STDIO.H>
+#include "platform/legacy_io.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 char *CsvParseNextField(char **txt);
+
+static char *read_whole_file(const char *filename, size_t *out_size)
+{
+  FILE *file;
+  long size;
+  char *buffer;
+
+  if (out_size)
+    *out_size = 0;
+  file = fopen(filename, "rb");
+  if (!file)
+    return NULL;
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return NULL;
+  }
+  size = ftell(file);
+  if (size < 0) {
+    fclose(file);
+    return NULL;
+  }
+  rewind(file);
+  buffer = (char *)malloc((size_t)size + 1);
+  if (!buffer) {
+    fclose(file);
+    return NULL;
+  }
+  if (fread(buffer, 1, (size_t)size, file) != (size_t)size) {
+    free(buffer);
+    fclose(file);
+    return NULL;
+  }
+  fclose(file);
+  buffer[size] = '\0';
+  if (out_size)
+    *out_size = (size_t)size;
+  return buffer;
+}
 
 // GLOBAL: DECKDLL 0x100355d8
 // GLOBAL: MAGIC 0x0056eab4
@@ -382,10 +421,8 @@ int read_db_guts(char *cards_dat_filename)
 int ReadLegacyCsv(const char *filename)
 {
   char *next;
-  HANDLE file;
   int result;
-  DWORD bytes_read;
-  DWORD size;
+  size_t size;
   int card_index;
   char *line;
 
@@ -400,60 +437,47 @@ int ReadLegacyCsv(const char *filename)
     global_legacy_names[card_index].legacy_text = "";
   }
 
-  file = CreateFileA(filename,
-                     GENERIC_READ,
-                     FILE_SHARE_READ,
-                     NULL,
-                     OPEN_EXISTING,
-                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                     NULL);
-  if (file != INVALID_HANDLE_VALUE)
+  global_rarities_csv_raw = read_whole_file(filename, &size);
+  if (global_rarities_csv_raw != NULL)
   {
-    size = GetFileSize(file, NULL);
-    global_rarities_csv_raw = malloc(size + 1);
-    if (global_rarities_csv_raw != NULL)
+    line = global_rarities_csv_raw;
+    line = strchr(line, '\n') + 1;
+
+    for (card_index = 0; card_index < global_available_slots; ++card_index)
     {
-      ReadFile(file, global_rarities_csv_raw, size, &bytes_read, NULL);
-      line = global_rarities_csv_raw;
-      line = strchr(line, '\n') + 1;
+      next = line;
 
-      for (card_index = 0; card_index < global_available_slots; ++card_index)
-      {
-        next = line;
+      next = CsvParseNextField(&line);
+      line = next;
 
-        next = CsvParseNextField(&line);
-        line = next;
+      next = CsvParseNextField(&line);
+      line = next;
 
-        next = CsvParseNextField(&line);
-        line = next;
+      next = CsvParseNextField(&line);
+      global_legacy_names[card_index].damage_text = line;
+      line = next;
 
-        next = CsvParseNextField(&line);
-        global_legacy_names[card_index].damage_text = line;
-        line = next;
+      next = CsvParseNextField(&line);
+      global_legacy_names[card_index].effect_title = line;
+      line = next;
 
-        next = CsvParseNextField(&line);
-        global_legacy_names[card_index].effect_title = line;
-        line = next;
+      next = CsvParseNextField(&line);
+      global_legacy_names[card_index].effect_text = line;
+      line = next;
 
-        next = CsvParseNextField(&line);
-        global_legacy_names[card_index].effect_text = line;
-        line = next;
+      next = CsvParseNextField(&line);
+      global_legacy_names[card_index].legacy_title = line;
+      line = next;
 
-        next = CsvParseNextField(&line);
-        global_legacy_names[card_index].legacy_title = line;
-        line = next;
-
-        next = CsvParseNextField(&line);
-        global_legacy_names[card_index].legacy_text = line;
-        line = next;
-      }
-
-      result = 1;
+      next = CsvParseNextField(&line);
+      global_legacy_names[card_index].legacy_text = line;
+      line = next;
     }
 
-    CloseHandle(file);
+    result = 1;
   }
 
+  (void)size;
   return result;
 }
 
@@ -517,10 +541,8 @@ void FreeRaritiesCsvRaw(void)
 // FUNCTION: MAGIC 0x00453d68
 int ReadDeckbuilderCsv(const char *filename, OrigRarities *orig_rarities)
 {
-  HANDLE hfile;     /* ebp - 0x8c */
   int rval;         /* ebp - 0x88 */
-  DWORD bytes_read; /* ebp - 0x84 */
-  DWORD size;       /* ebp - 0x80 */
+  size_t size;      /* ebp - 0x80 */
   char *next;       /* ebp - 0x7c */
   char set_id;      /* ebp - 0x78 */
   int i;            /* ebp - 0x74 */
@@ -542,76 +564,68 @@ int ReadDeckbuilderCsv(const char *filename, OrigRarities *orig_rarities)
     orig_rarities[i].set = SET_INVALID;
   }
 
-  hfile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
-  if (hfile != INVALID_HANDLE_VALUE)
+  global_rarities_csv_raw = read_whole_file(filename, &size);
+  if (global_rarities_csv_raw)
   {
-    size = GetFileSize(hfile, NULL);
-    global_rarities_csv_raw = (char *)malloc(size + 1);
-    if (global_rarities_csv_raw)
+    line = global_rarities_csv_raw;
+    line = strchr(line, '\n') + 1;
+    line = strchr(line, '\n') + 1;
+
+    for (i = 0; i < global_available_slots; i = i + 1)
     {
-      ReadFile(hfile, global_rarities_csv_raw, size, &bytes_read, NULL);
-      line = global_rarities_csv_raw;
-      line = strchr(line, '\n') + 1;
-      line = strchr(line, '\n') + 1;
+      next = line;
+      next = CsvParseNextField(&line);
+      line = next;
+      next = CsvParseNextField(&line);
+      line = next;
+      next = CsvParseNextField(&line);
 
-      for (i = 0; i < global_available_slots; i = i + 1)
+      for (set_id = '\0'; set_id < '\a'; set_id++)
       {
-        next = line;
-        next = CsvParseNextField(&line);
-        line = next;
-        next = CsvParseNextField(&line);
-        line = next;
-        next = CsvParseNextField(&line);
-
-        for (set_id = '\0'; set_id < '\a'; set_id++)
-        {
-          if (!strcmp(set_names[set_id], line))
-            break;
-        }
-
-        if (set_id != '\a')
-        {
-          orig_rarities[i].set = set_id;
-
-          line = next;
-          next = CsvParseNextField(&line);
-          orig_rarities[i].rarity = *line;
-
-          line = next;
-          next = CsvParseNextField(&line);
-          orig_rarities[i].exp_rarities[0] = *line;
-
-          line = next;
-          next = CsvParseNextField(&line);
-          orig_rarities[i].exp_rarities[1] = *line;
-
-          line = next;
-          next = CsvParseNextField(&line);
-          orig_rarities[i].exp_rarities[2] = *line;
-
-          line = next;
-          next = CsvParseNextField(&line);
-          orig_rarities[i].exp_rarities[3] = *line;
-        }
-        else
-        {
-          orig_rarities[i].set = SET_INVALID;
-          orig_rarities[i].exp_rarities[0] = '-';
-          orig_rarities[i].exp_rarities[1] = '-';
-          orig_rarities[i].exp_rarities[2] = '-';
-          orig_rarities[i].exp_rarities[3] = '-';
-        }
-
-        line = next;
-        line = strchr(line, '\n') + 1;
+        if (!strcmp(set_names[set_id], line))
+          break;
       }
 
-      rval = 1;
+      if (set_id != '\a')
+      {
+        orig_rarities[i].set = set_id;
+
+        line = next;
+        next = CsvParseNextField(&line);
+        orig_rarities[i].rarity = *line;
+
+        line = next;
+        next = CsvParseNextField(&line);
+        orig_rarities[i].exp_rarities[0] = *line;
+
+        line = next;
+        next = CsvParseNextField(&line);
+        orig_rarities[i].exp_rarities[1] = *line;
+
+        line = next;
+        next = CsvParseNextField(&line);
+        orig_rarities[i].exp_rarities[2] = *line;
+
+        line = next;
+        next = CsvParseNextField(&line);
+        orig_rarities[i].exp_rarities[3] = *line;
+      }
+      else
+      {
+        orig_rarities[i].set = SET_INVALID;
+        orig_rarities[i].exp_rarities[0] = '-';
+        orig_rarities[i].exp_rarities[1] = '-';
+        orig_rarities[i].exp_rarities[2] = '-';
+        orig_rarities[i].exp_rarities[3] = '-';
+      }
+
+      line = next;
+      line = strchr(line, '\n') + 1;
     }
 
-    CloseHandle(hfile);
+    rval = 1;
   }
 
+  (void)size;
   return rval;
 }

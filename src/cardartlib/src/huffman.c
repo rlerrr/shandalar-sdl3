@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include "inttypes.h"
 #include "mystdbool.h"
 #include "defs.h"

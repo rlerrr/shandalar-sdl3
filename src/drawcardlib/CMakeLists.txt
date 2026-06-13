@@ -13,3 +13,21 @@ target_link_libraries(drawcard_facemaker PUBLIC
   shandalar_platform
 )
 target_compile_definitions(drawcard_facemaker PRIVATE FACEMAKER)
+
+add_library(drawcard_static STATIC
+  src/drawing.c
+  src/main.c
+  src/pcxw.c
+  src/pic.c
+)
+
+target_include_directories(drawcard_static PUBLIC
+  "${SHANDALAR_SRC_ROOT}"
+  "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+target_link_libraries(drawcard_static PUBLIC
+  cardart_static
+  rpbits
+  shandalar_platform
+)
+target_compile_definitions(drawcard_static PRIVATE DRAWCARDLIB MODERN_FIXES SHANDALAR_STATIC_LIB)

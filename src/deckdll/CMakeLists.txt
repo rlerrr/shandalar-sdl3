@@ -1,56 +1,19 @@
-file(GLOB deckdll_c_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
-
-set(cardartlib_c_sources 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cardartlib/src/assert.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cardartlib/src/catalog.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cardartlib/src/palette.c"
+add_library(deck_core STATIC
+  src/card_db.c
+  src/deck_file.c
+  src/deck_core.c
+  src/drm.c
 )
 
-set(drawcardlib_c_sources 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../drawcardlib/src/pic.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../drawcardlib/src/pcxw.c" 
-  "${CMAKE_CURRENT_SOURCE_DIR}/../drawcardlib/src/drawing.c" 
+target_include_directories(deck_core PUBLIC
+  "${SHANDALAR_SRC_ROOT}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-set(deckdll_sources
-  ${deckdll_c_sources}
-  ${drawcardlib_c_sources}
-  ${cardartlib_c_sources}
-  deckdll.rc
+target_compile_definitions(deck_core PRIVATE MODERN_FIXES)
+
+target_link_libraries(deck_core PUBLIC
+  drawcard_static
+  magsnd_static
+  shandalar_platform
 )
-
-add_library(deckdll SHARED ${deckdll_sources})
-
-target_include_directories(deckdll PRIVATE
-  "${PROJECT_SOURCE_DIR}/src"
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
-target_link_libraries(deckdll PRIVATE comctl32 gdi32)
-
-if (TARGET drawcardlib)
-  target_link_libraries(deckdll PRIVATE drawcardlib)
-endif()
-
-if (TARGET rpbits)
-  target_link_libraries(deckdll PRIVATE rpbits)
-endif()
-
-if (MSVC)
-  target_compile_options(deckdll PRIVATE /Od /Ob1 /Zi /DDECKDLL)
-
-  set_property(TARGET deckdll PROPERTY LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/DeckDll.def\"")
-  set_property(TARGET deckdll APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/DeckDll.def")
-endif()
-
-set_target_properties(deckdll PROPERTIES
-  OUTPUT_NAME "DeckDll"
-  PREFIX ""
-  SUFFIX ".dll"
-)
-
-if (MSVC_FOR_DECOMP)
-  set_property(TARGET deckdll PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
-endif()
-
-reccmp_add_target(deckdll ID DECKDLL)

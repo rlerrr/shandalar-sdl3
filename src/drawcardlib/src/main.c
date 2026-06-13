@@ -1,11 +1,11 @@
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <io.h>
+#include "platform/legacy_io.h"
 #include "mystdbool.h"
 #include "defs.h"
 #include "pcxw.h"
@@ -284,7 +284,7 @@ LOGFONTA *LoadFontFromIni(char *fontKeySuffix, int italic)
   return &global_temp_font;
 }
 
-void __inline DestroyAllCardBackgrounds_impl(void)
+static void DestroyAllCardBackgrounds_impl(void)
 {
   if (global_CARDBK_Green != 0)
   {
@@ -1721,6 +1721,7 @@ void ReplaceSubstring(char *inOutStr, char *needle, int caseSensitive, char *rep
 }
 
 // FUNCTION: DRAWCARDLIB 0x1000bd90
+#ifndef SHANDALAR_STATIC_LIB
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved)
 {
   undefined4 result;
@@ -1743,6 +1744,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved)
     return (BOOL)1;
   }
 }
+#endif
 
 // FUNCTION: DRAWCARDLIB 0x1000be22
 int read_cfg(HINSTANCE hinst)
@@ -1818,6 +1820,26 @@ int read_cfg(HINSTANCE hinst)
     }
   }
   return result;
+}
+
+int DrawCardLib_InitializeFromRoot(const char *asset_root)
+{
+  if (!asset_root || !asset_root[0])
+    return 0;
+  strncpy(global_base_directory, asset_root, sizeof(global_base_directory) - 1);
+  global_base_directory[sizeof(global_base_directory) - 1] = '\0';
+  strcpy(global_cardart_directory, global_base_directory);
+  strcat(global_cardart_directory, "\\CardArt");
+  global_dither_kernel_id = 3;
+  global_color_depth = 0x10;
+  InitializeCriticalSection(&global_critical_section_for_catalog);
+  if (!InitCardArtGdiResources())
+    return 0;
+  if (!prepare_fonts_and_imgs()) {
+    DrawCardLib_Shutdown();
+    return 0;
+  }
+  return 1;
 }
 
 // FUNCTION: DRAWCARDLIB 0x1000c0ca
