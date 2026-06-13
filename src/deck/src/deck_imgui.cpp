@@ -43,6 +43,64 @@ uint64_t g_frame_number = 0;
 int g_browser_first = 0;
 int g_active_deck_index = -1;
 
+ImVec4 rgb(unsigned char r, unsigned char g, unsigned char b)
+{
+  return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
+}
+
+void apply_windows98_style()
+{
+  ImGuiStyle &style = ImGui::GetStyle();
+  style.WindowRounding = 0.0f;
+  style.ChildRounding = 0.0f;
+  style.FrameRounding = 0.0f;
+  style.PopupRounding = 0.0f;
+  style.ScrollbarRounding = 0.0f;
+  style.GrabRounding = 0.0f;
+  style.TabRounding = 0.0f;
+  style.WindowBorderSize = 1.0f;
+  style.FrameBorderSize = 1.0f;
+  style.PopupBorderSize = 1.0f;
+  style.WindowPadding = ImVec2(4.0f, 4.0f);
+  style.FramePadding = ImVec2(4.0f, 2.0f);
+  style.ItemSpacing = ImVec2(4.0f, 4.0f);
+  style.ScrollbarSize = 16.0f;
+  style.GrabMinSize = 12.0f;
+
+  ImVec4 *colors = style.Colors;
+  colors[ImGuiCol_Text] = rgb(0, 0, 0);
+  colors[ImGuiCol_TextDisabled] = rgb(128, 128, 128);
+  colors[ImGuiCol_WindowBg] = rgb(192, 192, 192);
+  colors[ImGuiCol_ChildBg] = rgb(192, 192, 192);
+  colors[ImGuiCol_PopupBg] = rgb(192, 192, 192);
+  colors[ImGuiCol_Border] = rgb(0, 0, 0);
+  colors[ImGuiCol_FrameBg] = rgb(192, 192, 192);
+  colors[ImGuiCol_FrameBgHovered] = rgb(210, 210, 210);
+  colors[ImGuiCol_FrameBgActive] = rgb(160, 160, 160);
+  colors[ImGuiCol_TitleBg] = rgb(0, 0, 128);
+  colors[ImGuiCol_TitleBgActive] = rgb(0, 0, 128);
+  colors[ImGuiCol_TitleBgCollapsed] = rgb(128, 128, 128);
+  colors[ImGuiCol_MenuBarBg] = rgb(192, 192, 192);
+  colors[ImGuiCol_ScrollbarBg] = rgb(192, 192, 192);
+  colors[ImGuiCol_ScrollbarGrab] = rgb(160, 160, 160);
+  colors[ImGuiCol_ScrollbarGrabHovered] = rgb(128, 128, 128);
+  colors[ImGuiCol_ScrollbarGrabActive] = rgb(96, 96, 96);
+  colors[ImGuiCol_CheckMark] = rgb(0, 0, 0);
+  colors[ImGuiCol_SliderGrab] = rgb(160, 160, 160);
+  colors[ImGuiCol_SliderGrabActive] = rgb(96, 96, 96);
+  colors[ImGuiCol_Button] = rgb(192, 192, 192);
+  colors[ImGuiCol_ButtonHovered] = rgb(210, 210, 210);
+  colors[ImGuiCol_ButtonActive] = rgb(160, 160, 160);
+  colors[ImGuiCol_Header] = rgb(0, 0, 128);
+  colors[ImGuiCol_HeaderHovered] = rgb(0, 0, 160);
+  colors[ImGuiCol_HeaderActive] = rgb(0, 0, 128);
+  colors[ImGuiCol_Separator] = rgb(128, 128, 128);
+  colors[ImGuiCol_ResizeGrip] = rgb(192, 192, 192);
+  colors[ImGuiCol_ResizeGripHovered] = rgb(160, 160, 160);
+  colors[ImGuiCol_ResizeGripActive] = rgb(128, 128, 128);
+  colors[ImGuiCol_DragDropTarget] = rgb(0, 0, 128);
+}
+
 void destroy_card_textures()
 {
   for (CachedCardTexture &entry : g_card_textures) {
@@ -347,7 +405,8 @@ extern "C" int deck_imgui_init(SDL_Window *window, SDL_Renderer *renderer)
 {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImGui::StyleColorsDark();
+  ImGui::StyleColorsLight();
+  apply_windows98_style();
   ImGuiIO &io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
   io.IniFilename = nullptr;

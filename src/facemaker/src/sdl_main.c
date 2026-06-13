@@ -4,20 +4,43 @@
 
 #include "facemaker_core.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 typedef struct FacemakerApp {
   SDL_Window *window;
   SDL_Renderer *renderer;
   SDL_Texture *texture;
   uint32_t *rgba;
   uint64_t presented_generation;
+  uint64_t rendered_generation;
+  int exit_notified;
 } FacemakerApp;
+
+static void notify_host_exit(FacemakerApp *app, int status)
+{
+  if (app && app->exit_notified)
+    return;
+  if (app)
+    app->exit_notified = 1;
+#ifdef __EMSCRIPTEN__
+  EM_ASM({
+    if (typeof window !== 'undefined' && window.parent) {
+      window.parent.postMessage({ type: 'shandalar:exit', status: $0 }, window.location.origin);
+    }
+  }, status);
+#else
+  (void)status;
+#endif
+}
 
 static void convert_frame(FacemakerApp *app, const FacemakerFrame *frame)
 {
   int x;
   int y;
   for (y = 0; y < frame->height; ++y) {
-    const unsigned char *source = frame->pixels + (frame->height - 1 - y) * frame->pitch;
+    const unsigned char *source = frame->pixels + y * frame->pitch;
     uint32_t *target = app->rgba + y * frame->width;
     for (x = 0; x < frame->width; ++x) {
       const unsigned char *rgb = frame->rgb_palette + source[x] * 3;
@@ -65,6 +88,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
   float y;
   switch (event->type) {
   case SDL_EVENT_QUIT:
+    notify_host_exit(app, 0);
     return SDL_APP_SUCCESS;
   case SDL_EVENT_MOUSE_MOTION:
     x = event->motion.x;
@@ -98,14 +122,19 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_UpdateTexture(app->texture, NULL, app->rgba, frame.width * (int)sizeof(uint32_t));
     app->presented_generation = frame.generation;
   }
-  SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
-  SDL_RenderClear(app->renderer);
-  SDL_RenderTexture(app->renderer, app->texture, NULL, NULL);
-  SDL_RenderPresent(app->renderer);
+  if (app->presented_generation != app->rendered_generation) {
+    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
+    SDL_RenderClear(app->renderer);
+    SDL_RenderTexture(app->renderer, app->texture, NULL, NULL);
+    SDL_RenderPresent(app->renderer);
+    app->rendered_generation = app->presented_generation;
+  }
   if (status == FACEMAKER_FAILED)
     return SDL_APP_FAILURE;
-  if (status == FACEMAKER_COMPLETED || status == FACEMAKER_CANCELLED)
+  if (status == FACEMAKER_COMPLETED || status == FACEMAKER_CANCELLED) {
+    notify_host_exit(app, status == FACEMAKER_COMPLETED ? 0 : 1);
     return SDL_APP_SUCCESS;
+  }
   return SDL_APP_CONTINUE;
 }
 

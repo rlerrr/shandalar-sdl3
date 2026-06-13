@@ -48,6 +48,7 @@
 #define DECK_CARD_W 99
 #define DECK_CARD_H 99
 #define DECK_BROWSER_PAGE_SIZE 7
+#define DECK_SURFACE_CARD_CACHE_SIZE 96
 
 typedef enum DeckFilterCommand {
   DECK_FILTER_ALL,
@@ -172,7 +173,15 @@ typedef struct DeckCore {
   OrigRarities orig_rarities[2000];
 } DeckCore;
 
+typedef struct DeckSurfaceCardCacheEntry {
+  int csvid;
+  uint64_t last_used;
+  uint32_t pixels[DECK_CARD_W * DECK_CARD_H];
+} DeckSurfaceCardCacheEntry;
+
 static DeckCore g_deck;
+static DeckSurfaceCardCacheEntry g_surface_card_cache[DECK_SURFACE_CARD_CACHE_SIZE];
+static uint64_t g_surface_card_cache_clock;
 
 extern int global_available_slots;
 extern card_ptr_t global_raw_cards_storage[2000];
@@ -925,6 +934,52 @@ static void draw_gdi_card_to_frame(int csvid, int dst_left, int dst_top, int car
   SDL_free(pixels);
 }
 
+static const uint32_t *cached_surface_card_pixels(int csvid)
+{
+  DeckSurfaceCardCacheEntry *slot = NULL;
+  int i;
+  if (csvid < 0)
+    return NULL;
+  ++g_surface_card_cache_clock;
+  for (i = 0; i < DECK_SURFACE_CARD_CACHE_SIZE; ++i) {
+    DeckSurfaceCardCacheEntry *entry = &g_surface_card_cache[i];
+    if (entry->csvid == csvid) {
+      entry->last_used = g_surface_card_cache_clock;
+      return entry->pixels;
+    }
+    if (!slot || entry->csvid < 0 || entry->last_used < slot->last_used)
+      slot = entry;
+  }
+  if (!slot || !deck_ui_render_small_card(csvid, slot->pixels, DECK_CARD_W, DECK_CARD_H))
+    return NULL;
+  slot->csvid = csvid;
+  slot->last_used = g_surface_card_cache_clock;
+  return slot->pixels;
+}
+
+static void draw_cached_surface_card_to_frame(int csvid, int dst_left, int dst_top)
+{
+  const uint32_t *pixels = cached_surface_card_pixels(csvid);
+  int x;
+  int y;
+  if (!pixels) {
+    draw_gdi_card_to_frame(csvid, dst_left, dst_top, DECK_CARD_W, DECK_CARD_H);
+    return;
+  }
+  fill_rect_rgba(dst_left - 4, dst_top - 4, dst_left + DECK_CARD_W + 4,
+                 dst_top + DECK_CARD_H + 4, 0xff120b0bu);
+  fill_rect_rgba(dst_left - 2, dst_top - 2, dst_left + DECK_CARD_W + 2,
+                 dst_top + DECK_CARD_H + 2, 0xff6b4a2cu);
+  for (y = 0; y < DECK_CARD_H; ++y) {
+    for (x = 0; x < DECK_CARD_W; ++x) {
+      int dst_x = dst_left + x;
+      int dst_y = dst_top + y;
+      if (dst_x >= 0 && dst_x < g_deck.width && dst_y >= 0 && dst_y < g_deck.height)
+        g_deck.rgba[dst_y * g_deck.width + dst_x] = pixels[y * DECK_CARD_W + x];
+    }
+  }
+}
+
 int deck_ui_render_small_card(int csvid, uint32_t *pixels, int width, int height)
 {
   HDC dc;
@@ -1185,7 +1240,7 @@ static void draw_deck_surface(void)
     }
     if (x + DECK_CARD_W > DECK_SURFACE_X + DECK_SURFACE_W - 8)
       break;
-    draw_gdi_card_to_frame(g_deck.main_deck[i].csvid, x, y, DECK_CARD_W, DECK_CARD_H);
+    draw_cached_surface_card_to_frame(g_deck.main_deck[i].csvid, x, y);
     SDL_snprintf(amount_text, sizeof(amount_text), "X%d", g_deck.main_deck[i].amount);
     fill_rect_rgba(x + DECK_CARD_W - 34, y + 4, x + DECK_CARD_W - 4, y + 18, 0xff201000u);
     draw_text_rgba(x + DECK_CARD_W - 30, y + 7, amount_text, 0xffffe080u, 1, 4);
@@ -1224,6 +1279,9 @@ int deck_create(const DeckConfig *config)
   if (g_deck.rgba)
     deck_destroy();
   memset(&g_deck, 0, sizeof(g_deck));
+  for (int i = 0; i < DECK_SURFACE_CARD_CACHE_SIZE; ++i)
+    g_surface_card_cache[i].csvid = -1;
+  g_surface_card_cache_clock = 0;
   g_deck.set_filters = DECK_SET_ALL;
   SDL_strlcpy(g_deck.asset_root, config->asset_root, sizeof(g_deck.asset_root));
   SDL_strlcpy(g_deck.writable_root, config->writable_root ? config->writable_root : ".",

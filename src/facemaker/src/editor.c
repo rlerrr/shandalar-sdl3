@@ -25,6 +25,7 @@
 #define BUTTON_ATLAS_HEIGHT 439
 #define SLOT_ATLAS_WIDTH 138
 #define SLOT_ATLAS_HEIGHT 172
+#define FACEMAKER_UI_FONT_FACE "Benguiat BkCn Bt"
 
 typedef struct FaceControl {
   int x;
@@ -133,7 +134,7 @@ static unsigned char *visual_pixel(DIBSurface *page, int x, int y)
   if (!page || x < 0 || y < 0 || x >= page->width || y >= page->height)
     return NULL;
   pitch = page->width + page->rowPadding;
-  return (unsigned char *)page->pBits + (page->height - 1 - y) * pitch + x;
+  return (unsigned char *)page->pBits + y * pitch + x;
 }
 
 static unsigned char *raw_pixel(DIBSurface *page, int x, int y)
@@ -592,11 +593,12 @@ int facemaker_editor_create(const char *asset_root, const char *writable_root,
     return 0;
   SDL_snprintf(font_path, sizeof(font_path), "%s/TT0530M_.TTF", asset_root);
   AddFontResourceA(font_path);
-  g_editor.font = CreateFontA(-scale_y(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, "");
+  g_editor.font = CreateFontA(-scale_y(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0,
+                              FACEMAKER_UI_FONT_FACE);
   for (font_index = 0; font_index < 4; ++font_index)
     g_editor.button_fonts[font_index] =
         CreateFontA(-scale_y(g_editor.button_text_sizes[font_index]), 0, 0, 0, 400,
-                    0, 0, 0, 0, 0, 0, 0, 0, "");
+                    0, 0, 0, 0, 0, 0, 0, 0, FACEMAKER_UI_FONT_FACE);
   return 1;
 }
 

@@ -5,12 +5,34 @@
 #include "deck_core.h"
 #include "deck_imgui.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 typedef struct DeckApp {
   SDL_Window *window;
   SDL_Renderer *renderer;
   SDL_Texture *texture;
   uint64_t presented_generation;
+  int exit_notified;
 } DeckApp;
+
+static void notify_host_exit(DeckApp *app, int status)
+{
+  if (app && app->exit_notified)
+    return;
+  if (app)
+    app->exit_notified = 1;
+#ifdef __EMSCRIPTEN__
+  EM_ASM({
+    if (typeof window !== 'undefined' && window.parent) {
+      window.parent.postMessage({ type: 'shandalar:exit', status: $0 }, window.location.origin);
+    }
+  }, status);
+#else
+  (void)status;
+#endif
+}
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
@@ -60,6 +82,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
   }
   switch (event->type) {
   case SDL_EVENT_QUIT:
+    notify_host_exit(app, 0);
     return SDL_APP_SUCCESS;
   case SDL_EVENT_MOUSE_MOTION:
     x = event->motion.x;
@@ -104,8 +127,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   SDL_RenderPresent(app->renderer);
   if (status == DECK_FAILED)
     return SDL_APP_FAILURE;
-  if (status == DECK_COMPLETED)
+  if (status == DECK_COMPLETED) {
+    notify_host_exit(app, 0);
     return SDL_APP_SUCCESS;
+  }
   return SDL_APP_CONTINUE;
 }
 

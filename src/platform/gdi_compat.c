@@ -106,7 +106,8 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
   int b;
 
   if ((color & 0xff000000u) == 0x01000000u)
-    return (unsigned char)color;
+    return (unsigned char)(color & 0xffu);
+  color &= 0x00ffffffu;
 
   r = color & 0xff;
   g = (color >> 8) & 0xff;
@@ -1239,7 +1240,7 @@ HDC shandalar_create_screen_dc(int width, int height)
   void *bits;
   memset(&info, 0, sizeof(info));
   info.bmiHeader.biWidth = width;
-  info.bmiHeader.biHeight = height;
+  info.bmiHeader.biHeight = -height;
   info.bmiHeader.biBitCount = 8;
   bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &bits, NULL, 0);
   SelectObject(dc, bitmap);
