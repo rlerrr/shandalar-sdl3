@@ -1,0 +1,35 @@
+#ifndef SHANDALAR_SIDLIB_PIC_H
+#define SHANDALAR_SIDLIB_PIC_H
+
+#include <windows.h>
+
+typedef struct DIBSurface
+{
+  HANDLE hMapping;         // 0x00
+  HDC hTempDC;             // 0x04 (used only during creation)
+  HBITMAP hBitmap;         // 0x08
+  HGDIOBJ hPreviousBitmap; // 0x0c
+  BITMAPINFO *pBitmapInfo; // 0x10
+  HPALETTE hPalette;       // 0x14
+  void *pBits;             // 0x18
+  DWORD imageSizeBytes;    // 0x1C
+  int width;               // 0x20
+  int height;              // 0x24
+  int bitsPerPixel;        // 0x28
+  int rowPadding;          // 0x2C
+} DIBSurface;
+
+typedef struct RpBitsPalettePacket
+{
+  unsigned short signature;
+  unsigned short block_size;
+  unsigned char first_index;
+  unsigned char last_index;
+  unsigned char entry_data[0x320 - 6];
+} RpBitsPalettePacket;
+
+HBITMAP load_pic(char *filename);
+BITMAPINFO *CreateBitmapInfo(int width, int height, int bitsPerPixel);
+void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data);
+
+#endif

@@ -1,0 +1,17 @@
+
+#if 0
+
+// LIBRARY: DECKDLL 0x1002f280 SYMBOL
+// __allshl
+
+// LIBRARY: DECKDLL 0x1002f300 SYMBOL
+// __allmul
+
+// LIBRARY: DECKDLL 0x1002f340 SYMBOL
+// __CRT_INIT@12
+
+// AKA MSVC_StackProbe
+// LIBRARY: DECKDLL 0x1002f2a0 SYMBOL
+// __chkstk
+
+#endif

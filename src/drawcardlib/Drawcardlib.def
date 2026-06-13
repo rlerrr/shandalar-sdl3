@@ -1,0 +1,11 @@
+LIBRARY "DrawCardlib.dll" BASE=268435456
+
+EXPORTS
+DrawSmallCardTitle
+DrawSmallCard
+CalcDrawManaText
+DrawManaText
+DrawCardBack
+DestroyAllCardBackgrounds
+DrawFullCard
+
