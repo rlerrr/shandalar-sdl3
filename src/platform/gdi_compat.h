@@ -268,6 +268,7 @@ HDC shandalar_create_screen_dc(int width, int height);
 void shandalar_destroy_screen_dc(HDC dc);
 const void *shandalar_dc_pixels(HDC dc, int *pitch);
 void shandalar_set_default_font_root(const char *root);
+double shandalar_set_font_device_scale(double scale);
 
 #ifdef __cplusplus
 }

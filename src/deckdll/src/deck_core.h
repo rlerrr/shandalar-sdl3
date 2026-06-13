@@ -30,6 +30,7 @@ typedef struct DeckFrame {
 } DeckFrame;
 
 int deck_create(const DeckConfig *config);
+int deck_resize(int width, int height);
 void deck_destroy(void);
 DeckStatus deck_step(uint64_t now_ns);
 int deck_get_frame(DeckFrame *frame);
@@ -40,6 +41,12 @@ void deck_key(int key, int pressed, int repeat);
 void deck_prefetch_cardart(void);
 
 int deck_ui_is_interactive(void);
+int deck_ui_width(void);
+int deck_ui_height(void);
+int deck_ui_scale_x(int logical_x);
+int deck_ui_scale_y(int logical_y);
+int deck_ui_scale_width(int logical_left, int logical_right);
+int deck_ui_scale_height(int logical_top, int logical_bottom);
 int deck_ui_available_count(void);
 int deck_ui_available_csvid(int index);
 int deck_ui_selected_index(void);

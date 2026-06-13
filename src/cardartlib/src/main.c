@@ -88,7 +88,7 @@ bool ReloadVersionedSmallArtIfWrongSize(card_id_t id, int version, int width, in
 int CardArtLib_InitializeFromRoot(const char *asset_root)
 {
   char cards_dat_path[0x208];
-  card_ptr_t records[2000];
+  card_ptr_t *records;
   int card_count = 0;
   int unused_header_value;
   int idx;
@@ -112,12 +112,17 @@ int CardArtLib_InitializeFromRoot(const char *asset_root)
   if (!InitCardArtGdiResources())
     return 0;
 
+  records = (card_ptr_t *)calloc(2000, sizeof(*records));
+  if (!records)
+    return 0;
+
   snprintf(cards_dat_path, sizeof(cards_dat_path), "%s/CARDS.DAT", asset_root);
   cards_file = fopen(cards_dat_path, "rb");
   if (cards_file) {
     if (fread(&card_count, sizeof(card_count), 1, cards_file) != 1 ||
         fread(&unused_header_value, sizeof(unused_header_value), 1, cards_file) != 1) {
       fclose(cards_file);
+      free(records);
       return 0;
     }
     if (card_count < 0)
@@ -126,6 +131,7 @@ int CardArtLib_InitializeFromRoot(const char *asset_root)
       card_count = 2000;
     if (fread(records, sizeof(records[0]), (size_t)card_count, cards_file) != (size_t)card_count) {
       fclose(cards_file);
+      free(records);
       return 0;
     }
     fclose(cards_file);
@@ -133,6 +139,7 @@ int CardArtLib_InitializeFromRoot(const char *asset_root)
 
   for (idx = 0; idx < 2000; ++idx)
     g_cardPicCounts[idx] = idx < card_count && records[idx].num_pics > 0 ? records[idx].num_pics : 1;
+  free(records);
   for (i = 0; i < 2000; ++i)
     g_SmallArtCache[i].hbm = 0;
   for (i = 0; i < 100; ++i)

@@ -13,7 +13,6 @@
 namespace {
 
 constexpr int kLogicalWidth = 1024;
-constexpr int kLogicalHeight = 768;
 constexpr int kBrowserX = 8;
 constexpr int kBrowserY = 610;
 constexpr int kBrowserWidth = 1008;
@@ -33,6 +32,8 @@ constexpr const char *kDeckCardPayload = "DECK_SURFACE_CARD";
 
 struct CachedCardTexture {
   int csvid = -1;
+  int width = 0;
+  int height = 0;
   uint64_t last_used = 0;
   SDL_Texture *texture = nullptr;
 };
@@ -43,6 +44,31 @@ uint64_t g_frame_number = 0;
 int g_browser_first = 0;
 int g_active_deck_index = -1;
 
+float ui_scale()
+{
+  return (float)deck_ui_width() / (float)kLogicalWidth;
+}
+
+float sx(int logical_x)
+{
+  return (float)deck_ui_scale_x(logical_x);
+}
+
+float sy(int logical_y)
+{
+  return (float)deck_ui_scale_y(logical_y);
+}
+
+float sw(int logical_left, int logical_right)
+{
+  return (float)deck_ui_scale_width(logical_left, logical_right);
+}
+
+float sh(int logical_top, int logical_bottom)
+{
+  return (float)deck_ui_scale_height(logical_top, logical_bottom);
+}
+
 ImVec4 rgb(unsigned char r, unsigned char g, unsigned char b)
 {
   return ImVec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
@@ -51,6 +77,7 @@ ImVec4 rgb(unsigned char r, unsigned char g, unsigned char b)
 void apply_windows98_style()
 {
   ImGuiStyle &style = ImGui::GetStyle();
+  const float scale = ui_scale();
   style.WindowRounding = 0.0f;
   style.ChildRounding = 0.0f;
   style.FrameRounding = 0.0f;
@@ -61,11 +88,11 @@ void apply_windows98_style()
   style.WindowBorderSize = 1.0f;
   style.FrameBorderSize = 1.0f;
   style.PopupBorderSize = 1.0f;
-  style.WindowPadding = ImVec2(4.0f, 4.0f);
-  style.FramePadding = ImVec2(4.0f, 2.0f);
-  style.ItemSpacing = ImVec2(4.0f, 4.0f);
-  style.ScrollbarSize = 16.0f;
-  style.GrabMinSize = 12.0f;
+  style.WindowPadding = ImVec2(4.0f * scale, 4.0f * scale);
+  style.FramePadding = ImVec2(6.0f * scale, 4.0f * scale);
+  style.ItemSpacing = ImVec2(4.0f * scale, 4.0f * scale);
+  style.ScrollbarSize = 16.0f * scale;
+  style.GrabMinSize = 12.0f * scale;
 
   ImVec4 *colors = style.Colors;
   colors[ImGuiCol_Text] = rgb(0, 0, 0);
@@ -109,13 +136,16 @@ void destroy_card_textures()
   }
 }
 
-SDL_Texture *card_texture(int csvid)
+SDL_Texture *card_texture(int csvid, int width, int height)
 {
   CachedCardTexture *slot = nullptr;
-  uint32_t pixels[kCardWidth * kCardHeight];
+  uint32_t *pixels;
 
+  if (width <= 0 || height <= 0)
+    return nullptr;
   for (CachedCardTexture &entry : g_card_textures) {
-    if (entry.csvid == csvid && entry.texture) {
+    if (entry.csvid == csvid && entry.width == width && entry.height == height &&
+        entry.texture) {
       entry.last_used = g_frame_number;
       return entry.texture;
     }
@@ -123,18 +153,33 @@ SDL_Texture *card_texture(int csvid)
       slot = &entry;
   }
 
-  if (!slot || !deck_ui_render_small_card(csvid, pixels, kCardWidth, kCardHeight))
+  if (!slot)
     return nullptr;
-  if (!slot->texture) {
-    slot->texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_ARGB8888,
-                                      SDL_TEXTUREACCESS_STATIC, kCardWidth, kCardHeight);
-    if (!slot->texture)
-      return nullptr;
-    SDL_SetTextureScaleMode(slot->texture, SDL_SCALEMODE_LINEAR);
+  pixels = (uint32_t *)SDL_malloc((size_t)width * (size_t)height * sizeof(*pixels));
+  if (!pixels)
+    return nullptr;
+  if (!deck_ui_render_small_card(csvid, pixels, width, height)) {
+    SDL_free(pixels);
+    return nullptr;
   }
-  if (!SDL_UpdateTexture(slot->texture, nullptr, pixels, kCardWidth * sizeof(uint32_t)))
+  if (!slot->texture || slot->width != width || slot->height != height) {
+    SDL_DestroyTexture(slot->texture);
+    slot->texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_ARGB8888,
+                                      SDL_TEXTUREACCESS_STATIC, width, height);
+    if (!slot->texture) {
+      SDL_free(pixels);
+      return nullptr;
+    }
+    SDL_SetTextureScaleMode(slot->texture, SDL_SCALEMODE_NEAREST);
+  }
+  if (!SDL_UpdateTexture(slot->texture, nullptr, pixels, width * sizeof(uint32_t))) {
+    SDL_free(pixels);
     return nullptr;
+  }
+  SDL_free(pixels);
   slot->csvid = csvid;
+  slot->width = width;
+  slot->height = height;
   slot->last_used = g_frame_number;
   return slot->texture;
 }
@@ -185,9 +230,14 @@ void draw_browser()
     g_browser_first = max_first;
   if (g_browser_first < 0)
     g_browser_first = 0;
-  ImGui::SetNextWindowPos(ImVec2((float)kBrowserX, (float)kBrowserY));
-  ImGui::SetNextWindowSize(ImVec2((float)kBrowserWidth, (float)kBrowserHeight));
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4.0f, 2.0f));
+  const float scale = ui_scale();
+  const int card_width = deck_ui_scale_width(0, kCardWidth);
+  const int card_height = deck_ui_scale_height(0, kCardHeight);
+  const int cell_width = deck_ui_scale_width(0, kCellWidth);
+  ImGui::SetNextWindowPos(ImVec2(sx(kBrowserX), sy(kBrowserY)));
+  ImGui::SetNextWindowSize(ImVec2(sw(kBrowserX, kBrowserX + kBrowserWidth),
+                                  sh(kBrowserY, kBrowserY + kBrowserHeight)));
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4.0f * scale, 2.0f * scale));
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
   if (ImGui::Begin("Card Browser", nullptr, flags)) {
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
@@ -212,16 +262,14 @@ void draw_browser()
     for (int index = g_browser_first; index < last; ++index) {
       const int slot = index - g_browser_first;
       const int csvid = deck_ui_available_csvid(index);
-      SDL_Texture *texture = card_texture(csvid);
-      ImGui::SetCursorPos(ImVec2((float)(slot * kCellWidth), 0.0f));
+      SDL_Texture *texture = card_texture(csvid, card_width, card_height);
+      ImGui::SetCursorPos(ImVec2((float)(slot * cell_width), 0.0f));
       ImGui::PushID(index);
-      ImGui::TextUnformatted(deck_ui_card_name(csvid));
-      ImGui::SetCursorPosX((float)(slot * kCellWidth));
       if (index == selected)
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.78f, 0.55f, 0.18f, 1.0f));
       const bool clicked = texture &&
           ImGui::ImageButton("card", (ImTextureID)(intptr_t)texture,
-                             ImVec2((float)kCardWidth, (float)kCardHeight));
+                             ImVec2((float)card_width, (float)card_height));
       if (index == selected)
         ImGui::PopStyleColor();
       if (clicked) {
@@ -236,14 +284,14 @@ void draw_browser()
       if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
         ImGui::SetDragDropPayload(kBrowserCardPayload, &csvid, sizeof(csvid));
         ImGui::Image((ImTextureID)(intptr_t)texture,
-                     ImVec2((float)kCardWidth, (float)kCardHeight));
+                     ImVec2((float)card_width, (float)card_height));
         ImGui::EndDragDropSource();
       }
       ImGui::PopID();
     }
     if (max_first > 0) {
-      ImGui::SetCursorPos(ImVec2(8.0f, 136.0f));
-      ImGui::SetNextItemWidth((float)kBrowserWidth - 24.0f);
+      ImGui::SetCursorPos(ImVec2(8.0f * scale, sy(746) - sy(kBrowserY)));
+      ImGui::SetNextItemWidth(sw(0, kBrowserWidth) - 24.0f * scale);
       ImGui::SliderInt("##card_scroll", &g_browser_first, 0, max_first, "",
                        ImGuiSliderFlags_AlwaysClamp);
     }
@@ -266,8 +314,9 @@ void draw_browser_drop_target()
       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
       ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings;
-  ImGui::SetNextWindowPos(ImVec2((float)kBrowserX, (float)kBrowserY));
-  ImGui::SetNextWindowSize(ImVec2((float)kBrowserWidth, (float)kBrowserHeight));
+  ImGui::SetNextWindowPos(ImVec2(sx(kBrowserX), sy(kBrowserY)));
+  ImGui::SetNextWindowSize(ImVec2(sw(kBrowserX, kBrowserX + kBrowserWidth),
+                                  sh(kBrowserY, kBrowserY + kBrowserHeight)));
   ImGui::Begin("Browser Drop Target", nullptr, flags);
   ImGui::InvisibleButton("browser_drop_target", ImGui::GetContentRegionAvail());
   if (ImGui::BeginDragDropTarget()) {
@@ -291,8 +340,11 @@ void draw_deck_surface_interactions()
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
       ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings;
 
-  ImGui::SetNextWindowPos(ImVec2((float)surface_x, (float)surface_y));
-  ImGui::SetNextWindowSize(ImVec2((float)surface_width, (float)surface_height));
+  const float scaled_surface_x = sx(surface_x);
+  const float scaled_surface_y = sy(surface_y);
+  ImGui::SetNextWindowPos(ImVec2(scaled_surface_x, scaled_surface_y));
+  ImGui::SetNextWindowSize(ImVec2(sw(surface_x, surface_x + surface_width),
+                                  sh(surface_y, surface_y + surface_height)));
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
   ImGui::Begin("Deck Surface Actions", nullptr, flags);
 
@@ -345,7 +397,8 @@ void draw_deck_surface_interactions()
     int height = hovered_h;
     if (item_index >= 0 &&
         deck_ui_deck_entry(item_index, &csvid, &amount, &x, &y, &width, &height)) {
-      ImGui::SetCursorPos(ImVec2((float)(x - surface_x), (float)(y - surface_y)));
+      ImGui::SetCursorPos(ImVec2((float)x - scaled_surface_x,
+                                 (float)y - scaled_surface_y));
       ImGui::PushID(item_index);
       ImGui::InvisibleButton("deck_card", ImVec2((float)width, (float)height));
       if (ImGui::IsItemHovered())
@@ -356,7 +409,7 @@ void draw_deck_surface_interactions()
       if (ImGui::IsItemActive())
         g_active_deck_index = item_index;
       if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-        SDL_Texture *texture = card_texture(csvid);
+        SDL_Texture *texture = card_texture(csvid, width, height);
         ImGui::SetDragDropPayload(kDeckCardPayload, &csvid, sizeof(csvid));
         if (texture)
           ImGui::Image((ImTextureID)(intptr_t)texture,
@@ -379,8 +432,9 @@ void draw_full_card_context_menu()
       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
       ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings;
-  ImGui::SetNextWindowPos(ImVec2((float)kFullCardX, (float)kFullCardY));
-  ImGui::SetNextWindowSize(ImVec2((float)kFullCardWidth, (float)kFullCardHeight));
+  ImGui::SetNextWindowPos(ImVec2(sx(kFullCardX), sy(kFullCardY)));
+  ImGui::SetNextWindowSize(ImVec2(sw(kFullCardX, kFullCardX + kFullCardWidth),
+                                  sh(kFullCardY, kFullCardY + kFullCardHeight)));
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
   ImGui::Begin("Full Card Actions", nullptr, flags);
   ImGui::InvisibleButton("full_card", ImGui::GetContentRegionAvail());
@@ -389,12 +443,16 @@ void draw_full_card_context_menu()
     if (selected >= 0)
       deck_ui_add_card(deck_ui_available_csvid(selected));
   }
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * ui_scale(), 8.0f * ui_scale()));
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f * ui_scale(), 5.0f * ui_scale()));
+  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f * ui_scale(), 6.0f * ui_scale()));
   if (ImGui::BeginPopupContextItem("full_card_actions")) {
     bool expanded = deck_ui_expanded_text() != 0;
     if (ImGui::MenuItem("Expand text box", nullptr, expanded))
       deck_ui_set_expanded_text(!expanded);
     ImGui::EndPopup();
   }
+  ImGui::PopStyleVar(3);
   ImGui::End();
   ImGui::PopStyleVar();
 }
@@ -464,8 +522,9 @@ extern "C" void deck_imgui_begin_frame(void)
   ImGui_ImplSDLRenderer3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGuiIO &io = ImGui::GetIO();
-  io.DisplaySize = ImVec2((float)kLogicalWidth, (float)kLogicalHeight);
+  io.DisplaySize = ImVec2((float)deck_ui_width(), (float)deck_ui_height());
   io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+  io.FontGlobalScale = ui_scale();
   SDL_GetMouseState(&mouse_x, &mouse_y);
   SDL_RenderCoordinatesFromWindow(g_renderer, mouse_x, mouse_y, &mouse_x, &mouse_y);
   io.AddMousePosEvent(mouse_x, mouse_y);

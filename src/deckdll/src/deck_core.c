@@ -15,6 +15,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/html5.h>
+#endif
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -49,6 +52,32 @@
 #define DECK_CARD_H 99
 #define DECK_BROWSER_PAGE_SIZE 7
 #define DECK_SURFACE_CARD_CACHE_SIZE 96
+
+static const char *const k_required_assets[] = {
+  "CARDS.DAT",
+  "DeckBuilder.csv",
+  "DUELPALall.TR",
+  "DUEL.plogpal",
+  "TT0085M_.TTF",
+  "TT0127M_.TTF",
+  "TT0298M_.TTF",
+  "TT0299M_.TTF",
+  "TT0300M_.TTF",
+  "TT0530M_.TTF",
+  "CardArt/SmallArt.cat",
+  "CardArt/MedArt.cat",
+  "CardArt/ManaSymbols.pic",
+  "CardArt/CardSets.pic",
+  "CardArt/CardBack.pic",
+  "DBArt/DEKTILE4.PIC",
+  "DBArt/DEKBAR1.PIC",
+  "DBArt/DEKTIT1.PIC",
+  "DBArt/BLDR01C.PIC",
+  "DBArt/BLDR02C.PIC",
+  "DBArt/BLDR03C.PIC",
+  "DBArt/BLDR04C.PIC",
+  "DBArt/BLDR05C.PIC"
+};
 
 typedef enum DeckFilterCommand {
   DECK_FILTER_ALL,
@@ -175,8 +204,10 @@ typedef struct DeckCore {
 
 typedef struct DeckSurfaceCardCacheEntry {
   int csvid;
+  int width;
+  int height;
   uint64_t last_used;
-  uint32_t pixels[DECK_CARD_W * DECK_CARD_H];
+  uint32_t *pixels;
 } DeckSurfaceCardCacheEntry;
 
 static DeckCore g_deck;
@@ -186,11 +217,126 @@ static uint64_t g_surface_card_cache_clock;
 extern int global_available_slots;
 extern card_ptr_t global_raw_cards_storage[2000];
 
-static int capped_dimension(int requested, int maximum)
+static double wasm_full_card_font_scale(void)
 {
-  if (requested <= 0)
-    return maximum;
-  return requested < maximum ? requested : maximum;
+#ifdef __EMSCRIPTEN__
+  double dpr = emscripten_get_device_pixel_ratio();
+  if (dpr > 1.0)
+    return 1.0 / dpr;
+#endif
+  return 1.0;
+}
+
+static double wasm_small_card_font_scale(void)
+{
+#ifdef __EMSCRIPTEN__
+  double dpr = emscripten_get_device_pixel_ratio();
+  if (dpr > 1.0)
+    return dpr;
+#endif
+  return 1.0;
+}
+
+static void fill_rect_rgba(int left, int top, int right, int bottom, uint32_t color);
+static int blit_pic_scaled(HBITMAP bitmap, int dst_left, int dst_top, int dst_w, int dst_h);
+static void draw_text_rgba(int x, int y, const char *text, uint32_t color,
+                           int scale, int max_chars);
+
+static int normalize_width(int requested_width, int requested_height)
+{
+  int width = requested_width;
+  if (width <= 0 && requested_height > 0)
+    width = requested_height * DECK_BASE_WIDTH / DECK_BASE_HEIGHT;
+  if (width < DECK_BASE_WIDTH)
+    width = DECK_BASE_WIDTH;
+  return width;
+}
+
+static int scaled_coord(int value, int source_extent, int target_extent)
+{
+  int64_t numerator = (int64_t)value * target_extent;
+  if (numerator >= 0)
+    return (int)((numerator + source_extent / 2) / source_extent);
+  return -(int)((-numerator + source_extent / 2) / source_extent);
+}
+
+static int scale_x(int x)
+{
+  return scaled_coord(x, DECK_BASE_WIDTH, g_deck.width);
+}
+
+static int scale_y(int y)
+{
+  return scaled_coord(y, DECK_BASE_HEIGHT, g_deck.height);
+}
+
+static int scale_w(int left, int right)
+{
+  return scale_x(right) - scale_x(left);
+}
+
+static int scale_h(int top, int bottom)
+{
+  return scale_y(bottom) - scale_y(top);
+}
+
+static int scale_len_x(int length)
+{
+  int result = scale_w(0, length);
+  return result > 0 ? result : 1;
+}
+
+static int scale_len_y(int length)
+{
+  int result = scale_h(0, length);
+  return result > 0 ? result : 1;
+}
+
+static int scale_text_size(int scale)
+{
+  int result = scale_len_y(scale);
+  return result > 0 ? result : 1;
+}
+
+static int unscale_x(float x)
+{
+  return scaled_coord((int)(x + 0.5f), g_deck.width, DECK_BASE_WIDTH);
+}
+
+static int unscale_y(float y)
+{
+  return scaled_coord((int)(y + 0.5f), g_deck.height, DECK_BASE_HEIGHT);
+}
+
+static void fill_rect_logical(int left, int top, int right, int bottom, uint32_t color)
+{
+  fill_rect_rgba(scale_x(left), scale_y(top), scale_x(right), scale_y(bottom), color);
+}
+
+static int blit_pic_logical(HBITMAP bitmap, int left, int top, int right, int bottom)
+{
+  return blit_pic_scaled(bitmap, scale_x(left), scale_y(top),
+                         scale_w(left, right), scale_h(top, bottom));
+}
+
+static void draw_text_logical(int x, int y, const char *text, uint32_t color,
+                              int scale, int max_chars)
+{
+  draw_text_rgba(scale_x(x), scale_y(y), text, color,
+                 scale_text_size(scale), max_chars);
+}
+
+static void reset_surface_card_cache(void)
+{
+  int i;
+  for (i = 0; i < DECK_SURFACE_CARD_CACHE_SIZE; ++i) {
+    SDL_free(g_surface_card_cache[i].pixels);
+    g_surface_card_cache[i].pixels = NULL;
+    g_surface_card_cache[i].csvid = -1;
+    g_surface_card_cache[i].width = 0;
+    g_surface_card_cache[i].height = 0;
+    g_surface_card_cache[i].last_used = 0;
+  }
 }
 
 static void make_asset_path(char *out, size_t size, const char *relative_path)
@@ -327,16 +473,19 @@ static void draw_text_rgba(int x, int y, const char *text, uint32_t color, int s
 static void draw_placeholder_text_bar(const char *message)
 {
   int len = message ? (int)strlen(message) : 0;
-  int bar_width = 320 + len * 4;
+  int bar_width = scale_len_x(320 + len * 4);
   int left = (g_deck.width - bar_width) / 2;
-  int top = g_deck.height - 116;
+  int top = g_deck.height - scale_len_y(116);
   int i;
-  fill_rect_rgba(left, top, left + bar_width, top + 54, 0xff201010u);
-  fill_rect_rgba(left + 2, top + 2, left + bar_width - 2, top + 52, 0xff5b2d16u);
-  fill_rect_rgba(left + 8, top + 8, left + bar_width - 8, top + 46, 0xff1b1111u);
+  fill_rect_rgba(left, top, left + bar_width, top + scale_len_y(54), 0xff201010u);
+  fill_rect_rgba(left + scale_len_x(2), top + scale_len_y(2),
+                 left + bar_width - scale_len_x(2), top + scale_len_y(52), 0xff5b2d16u);
+  fill_rect_rgba(left + scale_len_x(8), top + scale_len_y(8),
+                 left + bar_width - scale_len_x(8), top + scale_len_y(46), 0xff1b1111u);
   for (i = 0; i < len && i < 80; ++i) {
     uint32_t color = (message[i] == ' ') ? 0xff1b1111u : 0xffd4c080u;
-    fill_rect_rgba(left + 18 + i * 7, top + 22, left + 22 + i * 7, top + 30, color);
+    fill_rect_rgba(left + scale_len_x(18 + i * 7), top + scale_len_y(22),
+                   left + scale_len_x(22 + i * 7), top + scale_len_y(30), color);
   }
 }
 
@@ -390,9 +539,10 @@ static int draw_deck_tile_background(void)
   if (!g_deck.dektile4 || !GetObjectA(g_deck.dektile4, sizeof(info), &info) || !info.bmBits)
     return draw_menubak();
   fill_rect_rgba(0, 0, g_deck.width, g_deck.height, 0xff100808u);
-  for (tile_x = 0; tile_x < g_deck.width; tile_x += 32) {
-    for (tile_y = g_deck.height; tile_y > -29; tile_y -= 29)
-      blit_pic_scaled(g_deck.dektile4, tile_x, tile_y, info.bmWidth, info.bmHeight);
+  for (tile_x = 0; tile_x < DECK_BASE_WIDTH; tile_x += 32) {
+    for (tile_y = DECK_BASE_HEIGHT; tile_y > -29; tile_y -= 29)
+      blit_pic_logical(g_deck.dektile4, tile_x, tile_y,
+                       tile_x + info.bmWidth, tile_y + info.bmHeight);
   }
   return 1;
 }
@@ -447,10 +597,34 @@ static int draw_menubak(void)
   return 1;
 }
 
+static int required_asset_ready(const char *relative_path)
+{
+  ShandalarAssetState state = shandalar_assets_state(relative_path);
+  return state == SHANDALAR_ASSET_READY;
+}
+
+static int asset_list_ready(const char *const *assets, size_t count)
+{
+  size_t i;
+  for (i = 0; i < count; ++i) {
+    if (!required_asset_ready(assets[i]))
+      return 0;
+  }
+  return 1;
+}
+
+static int asset_list_failed(const char *const *assets, size_t count)
+{
+  size_t i;
+  for (i = 0; i < count; ++i) {
+    if (shandalar_assets_state(assets[i]) == SHANDALAR_ASSET_ERROR)
+      return 1;
+  }
+  return 0;
+}
+
 static void draw_loading_screen(void)
 {
-  ShandalarAssetState small_state = shandalar_assets_state("CardArt/SmallArt.cat");
-  ShandalarAssetState med_state = shandalar_assets_state("CardArt/MedArt.cat");
   const char *message = g_deck.status_text[0] ? g_deck.status_text : "Loading deck builder";
   int x;
   int y;
@@ -466,78 +640,20 @@ static void draw_loading_screen(void)
     }
   }
 
-  if (small_state == SHANDALAR_ASSET_ERROR || med_state == SHANDALAR_ASSET_ERROR)
+  if (asset_list_failed(k_required_assets, sizeof(k_required_assets) / sizeof(k_required_assets[0])))
     message = shandalar_assets_last_error();
 
   draw_placeholder_text_bar(message);
 }
 
-static int required_asset_ready(const char *relative_path)
-{
-  ShandalarAssetState state = shandalar_assets_state(relative_path);
-  return state == SHANDALAR_ASSET_READY;
-}
-
 static int required_assets_ready(void)
 {
-  return required_asset_ready("CARDS.DAT") &&
-         required_asset_ready("DeckBuilder.csv") &&
-         required_asset_ready("DUELPALall.TR") &&
-         required_asset_ready("DUEL.plogpal") &&
-         required_asset_ready("TT0085M_.TTF") &&
-         required_asset_ready("TT0127M_.TTF") &&
-         required_asset_ready("TT0298M_.TTF") &&
-         required_asset_ready("TT0299M_.TTF") &&
-         required_asset_ready("TT0300M_.TTF") &&
-         required_asset_ready("TT0530M_.TTF") &&
-         required_asset_ready("CardArt/SmallArt.cat") &&
-         required_asset_ready("CardArt/MedArt.cat") &&
-         required_asset_ready("CardArt/ManaSymbols.pic") &&
-         required_asset_ready("CardArt/CardSets.pic") &&
-         required_asset_ready("CardArt/CardBack.pic") &&
-         required_asset_ready("DBArt/DEKTILE4.PIC") &&
-         required_asset_ready("DBArt/DEKBAR1.PIC") &&
-         required_asset_ready("DBArt/DEKTIT1.PIC") &&
-         required_asset_ready("DBArt/BLDR01C.PIC") &&
-         required_asset_ready("DBArt/BLDR02C.PIC") &&
-         required_asset_ready("DBArt/BLDR03C.PIC") &&
-         required_asset_ready("DBArt/BLDR04C.PIC") &&
-         required_asset_ready("DBArt/BLDR05C.PIC");
+  return asset_list_ready(k_required_assets, sizeof(k_required_assets) / sizeof(k_required_assets[0]));
 }
 
 static int required_assets_failed(void)
 {
-  const char *required[] = {
-    "CARDS.DAT",
-    "DeckBuilder.csv",
-    "DUELPALall.TR",
-    "DUEL.plogpal",
-    "TT0085M_.TTF",
-    "TT0127M_.TTF",
-    "TT0298M_.TTF",
-    "TT0299M_.TTF",
-    "TT0300M_.TTF",
-    "TT0530M_.TTF",
-    "CardArt/SmallArt.cat",
-    "CardArt/MedArt.cat",
-    "CardArt/ManaSymbols.pic",
-    "CardArt/CardSets.pic",
-    "CardArt/CardBack.pic",
-    "DBArt/DEKTILE4.PIC",
-    "DBArt/DEKBAR1.PIC",
-    "DBArt/DEKTIT1.PIC",
-    "DBArt/BLDR01C.PIC",
-    "DBArt/BLDR02C.PIC",
-    "DBArt/BLDR03C.PIC",
-    "DBArt/BLDR04C.PIC",
-    "DBArt/BLDR05C.PIC"
-  };
-  int i;
-  for (i = 0; i < (int)(sizeof(required) / sizeof(required[0])); ++i) {
-    if (shandalar_assets_state(required[i]) == SHANDALAR_ASSET_ERROR)
-      return 1;
-  }
-  return 0;
+  return asset_list_failed(k_required_assets, sizeof(k_required_assets) / sizeof(k_required_assets[0]));
 }
 
 static int choose_sample_card(void)
@@ -934,48 +1050,64 @@ static void draw_gdi_card_to_frame(int csvid, int dst_left, int dst_top, int car
   SDL_free(pixels);
 }
 
-static const uint32_t *cached_surface_card_pixels(int csvid)
+static const uint32_t *cached_surface_card_pixels(int csvid, int width, int height)
 {
   DeckSurfaceCardCacheEntry *slot = NULL;
   int i;
-  if (csvid < 0)
+  if (csvid < 0 || width <= 0 || height <= 0)
     return NULL;
   ++g_surface_card_cache_clock;
   for (i = 0; i < DECK_SURFACE_CARD_CACHE_SIZE; ++i) {
     DeckSurfaceCardCacheEntry *entry = &g_surface_card_cache[i];
-    if (entry->csvid == csvid) {
+    if (entry->csvid == csvid && entry->width == width && entry->height == height &&
+        entry->pixels) {
       entry->last_used = g_surface_card_cache_clock;
       return entry->pixels;
     }
     if (!slot || entry->csvid < 0 || entry->last_used < slot->last_used)
       slot = entry;
   }
-  if (!slot || !deck_ui_render_small_card(csvid, slot->pixels, DECK_CARD_W, DECK_CARD_H))
+  if (!slot)
+    return NULL;
+  if (slot->width != width || slot->height != height || !slot->pixels) {
+    uint32_t *pixels = (uint32_t *)SDL_realloc(slot->pixels,
+                                               (size_t)width * (size_t)height * sizeof(*pixels));
+    if (!pixels)
+      return NULL;
+    slot->pixels = pixels;
+  }
+  slot->csvid = -1;
+  slot->width = width;
+  slot->height = height;
+  if (!deck_ui_render_small_card(csvid, slot->pixels, width, height))
     return NULL;
   slot->csvid = csvid;
   slot->last_used = g_surface_card_cache_clock;
   return slot->pixels;
 }
 
-static void draw_cached_surface_card_to_frame(int csvid, int dst_left, int dst_top)
+static void draw_cached_surface_card_to_frame(int csvid, int dst_left, int dst_top,
+                                              int card_w, int card_h)
 {
-  const uint32_t *pixels = cached_surface_card_pixels(csvid);
+  const uint32_t *pixels = cached_surface_card_pixels(csvid, card_w, card_h);
   int x;
   int y;
   if (!pixels) {
-    draw_gdi_card_to_frame(csvid, dst_left, dst_top, DECK_CARD_W, DECK_CARD_H);
+    draw_gdi_card_to_frame(csvid, dst_left, dst_top, card_w, card_h);
     return;
   }
-  fill_rect_rgba(dst_left - 4, dst_top - 4, dst_left + DECK_CARD_W + 4,
-                 dst_top + DECK_CARD_H + 4, 0xff120b0bu);
-  fill_rect_rgba(dst_left - 2, dst_top - 2, dst_left + DECK_CARD_W + 2,
-                 dst_top + DECK_CARD_H + 2, 0xff6b4a2cu);
-  for (y = 0; y < DECK_CARD_H; ++y) {
-    for (x = 0; x < DECK_CARD_W; ++x) {
+  fill_rect_rgba(dst_left - scale_len_x(4), dst_top - scale_len_y(4),
+                 dst_left + card_w + scale_len_x(4),
+                 dst_top + card_h + scale_len_y(4), 0xff120b0bu);
+  fill_rect_rgba(dst_left - scale_len_x(2), dst_top - scale_len_y(2),
+                 dst_left + card_w + scale_len_x(2),
+                 dst_top + card_h + scale_len_y(2), 0xff6b4a2cu);
+  for (y = 0; y < card_h; ++y) {
+    for (x = 0; x < card_w; ++x) {
       int dst_x = dst_left + x;
       int dst_y = dst_top + y;
       if (dst_x >= 0 && dst_x < g_deck.width && dst_y >= 0 && dst_y < g_deck.height)
-        g_deck.rgba[dst_y * g_deck.width + dst_x] = pixels[y * DECK_CARD_W + x];
+        g_deck.rgba[dst_y * g_deck.width + dst_x] = pixels[y * card_w + x];
     }
   }
 }
@@ -988,14 +1120,15 @@ int deck_ui_render_small_card(int csvid, uint32_t *pixels, int width, int height
   uint8_t *bits;
   RECT rect;
   HBRUSH brush;
+  double old_font_scale;
   int x;
   int y;
   if (!pixels || csvid < 0 || csvid >= global_available_slots || width <= 0 || height <= 0)
     return 0;
 
   memset(&info, 0, sizeof(info));
-  info.bmiHeader.biWidth = 200;
-  info.bmiHeader.biHeight = -300;
+  info.bmiHeader.biWidth = width;
+  info.bmiHeader.biHeight = -height;
   info.bmiHeader.biPlanes = 1;
   info.bmiHeader.biBitCount = 8;
   dc = CreateCompatibleDC(NULL);
@@ -1009,16 +1142,17 @@ int deck_ui_render_small_card(int csvid, uint32_t *pixels, int width, int height
   }
   SelectObject(dc, bitmap);
   ApplyCardArtPaletteToDc(dc);
-  SetRect(&rect, 0, 0, 200, 300);
+  SetRect(&rect, 0, 0, width, height);
   brush = CreateSolidBrush(PALETTEINDEX(0));
   FillRect(dc, &rect, brush);
   DeleteObject(brush);
+  old_font_scale = shandalar_set_font_device_scale(wasm_small_card_font_scale());
   DrawSmallCard(dc, &rect, &global_raw_cards_storage[csvid], 1, 1);
+  shandalar_set_font_device_scale(old_font_scale);
 
   for (y = 0; y < height; ++y)
     for (x = 0; x < width; ++x)
-      pixels[y * width + x] =
-        palette_index_to_rgba(bits[(y * 300 / height) * 200 + x * 200 / width]);
+      pixels[y * width + x] = palette_index_to_rgba(bits[y * ((width + 3) & ~3) + x]);
   DeleteObject(bitmap);
   DeleteDC(dc);
   return 1;
@@ -1032,6 +1166,7 @@ static void draw_gdi_full_card_to_frame(int csvid, int dst_left, int dst_top, in
   uint8_t *bits;
   RECT rect;
   HBRUSH brush;
+  double old_font_scale;
   int x;
   int y;
   if (csvid < 0 || csvid >= global_available_slots || card_w <= 0 || card_h <= 0)
@@ -1057,8 +1192,10 @@ static void draw_gdi_full_card_to_frame(int csvid, int dst_left, int dst_top, in
   brush = CreateSolidBrush(PALETTEINDEX(0));
   FillRect(dc, &rect, brush);
   DeleteObject(brush);
+  old_font_scale = shandalar_set_font_device_scale(wasm_full_card_font_scale());
   DrawFullCard(dc, &rect, &global_raw_cards_storage[csvid], 0, 1,
                g_deck.expanded_text, "%s");
+  shandalar_set_font_device_scale(old_font_scale);
 
   for (y = 0; y < card_h; ++y) {
     for (x = 0; x < card_w; ++x) {
@@ -1075,10 +1212,10 @@ static void draw_gdi_full_card_to_frame(int csvid, int dst_left, int dst_top, in
 
 static void draw_panel(int left, int top, int right, int bottom, const char *title)
 {
-  fill_rect_rgba(left, top, right, bottom, 0xff100b0bu);
-  fill_rect_rgba(left + 2, top + 2, right - 2, bottom - 2, 0xff2b1a14u);
-  fill_rect_rgba(left + 6, top + 22, right - 6, bottom - 6, 0xff181414u);
-  draw_text_rgba(left + 10, top + 7, title, 0xffe4d28cu, 1, 40);
+  fill_rect_logical(left, top, right, bottom, 0xff100b0bu);
+  fill_rect_logical(left + 2, top + 2, right - 2, bottom - 2, 0xff2b1a14u);
+  fill_rect_logical(left + 6, top + 22, right - 6, bottom - 6, 0xff181414u);
+  draw_text_logical(left + 10, top + 7, title, 0xffe4d28cu, 1, 40);
 }
 
 static int filter_command_active(DeckFilterCommand command)
@@ -1129,18 +1266,19 @@ static int filter_command_active(DeckFilterCommand command)
 
 static void draw_button_rect(int left, int top, int right, int bottom, const char *text, int active)
 {
-  fill_rect_rgba(left, top, right, bottom, active ? 0xff6c4418u : 0xff262018u);
-  fill_rect_rgba(left + 1, top + 1, right - 1, bottom - 1, active ? 0xffe0b050u : 0xff847048u);
-  fill_rect_rgba(left + 3, top + 3, right - 3, bottom - 3, active ? 0xff4a3014u : 0xff2c251du);
-  draw_text_rgba(left + 12, top + (bottom - top - 7) / 2, text, 0xfff0d890u, 1, 24);
+  fill_rect_logical(left, top, right, bottom, active ? 0xff6c4418u : 0xff262018u);
+  fill_rect_logical(left + 1, top + 1, right - 1, bottom - 1, active ? 0xffe0b050u : 0xff847048u);
+  fill_rect_logical(left + 3, top + 3, right - 3, bottom - 3, active ? 0xff4a3014u : 0xff2c251du);
+  draw_text_logical(left + 12, top + (bottom - top - 7) / 2, text, 0xfff0d890u, 1, 24);
 }
 
 static void draw_title_panel(void)
 {
-  if (!blit_pic_scaled(g_deck.dektit1, DECK_TITLE_X, DECK_TITLE_Y, DECK_TITLE_W, DECK_TITLE_H))
+  if (!blit_pic_logical(g_deck.dektit1, DECK_TITLE_X, DECK_TITLE_Y,
+                        DECK_TITLE_X + DECK_TITLE_W, DECK_TITLE_Y + DECK_TITLE_H))
     draw_panel(DECK_TITLE_X, DECK_TITLE_Y, DECK_TITLE_X + DECK_TITLE_W, DECK_TITLE_Y + DECK_TITLE_H, "");
-  draw_text_rgba(DECK_TITLE_X + 28, DECK_TITLE_Y + 19, "New Deck", 0xffffe8a0u, 2, 16);
-  draw_text_rgba(DECK_TITLE_X + 32, DECK_TITLE_Y + 46, g_deck.status_text, 0xffe4d28cu, 1, 34);
+  draw_text_logical(DECK_TITLE_X + 28, DECK_TITLE_Y + 19, "New Deck", 0xffffe8a0u, 2, 16);
+  draw_text_logical(DECK_TITLE_X + 32, DECK_TITLE_Y + 46, g_deck.status_text, 0xffe4d28cu, 1, 34);
 }
 
 static void draw_fullcard_preview(void)
@@ -1149,21 +1287,24 @@ static void draw_fullcard_preview(void)
   int card_h = DECK_FULLCARD_H - 8;
   int card_w = card_h * 2 / 3;
   int card_x = DECK_FULLCARD_X + (DECK_FULLCARD_W - card_w) / 2;
-  fill_rect_rgba(DECK_FULLCARD_X - 2, DECK_FULLCARD_Y - 2,
-                 DECK_FULLCARD_X + DECK_FULLCARD_W + 2, DECK_FULLCARD_Y + DECK_FULLCARD_H + 2,
-                 0xff070404u);
-  fill_rect_rgba(DECK_FULLCARD_X, DECK_FULLCARD_Y,
-                 DECK_FULLCARD_X + DECK_FULLCARD_W, DECK_FULLCARD_Y + DECK_FULLCARD_H,
-                 0xff161111u);
+  fill_rect_logical(DECK_FULLCARD_X - 2, DECK_FULLCARD_Y - 2,
+                    DECK_FULLCARD_X + DECK_FULLCARD_W + 2,
+                    DECK_FULLCARD_Y + DECK_FULLCARD_H + 2, 0xff070404u);
+  fill_rect_logical(DECK_FULLCARD_X, DECK_FULLCARD_Y,
+                    DECK_FULLCARD_X + DECK_FULLCARD_W,
+                    DECK_FULLCARD_Y + DECK_FULLCARD_H, 0xff161111u);
   if (csvid >= 0)
-    draw_gdi_full_card_to_frame(csvid, card_x, DECK_FULLCARD_Y + 4, card_w, card_h);
+    draw_gdi_full_card_to_frame(csvid, scale_x(card_x), scale_y(DECK_FULLCARD_Y + 4),
+                                scale_w(card_x, card_x + card_w),
+                                scale_h(DECK_FULLCARD_Y + 4, DECK_FULLCARD_Y + 4 + card_h));
 }
 
 static void draw_filter_strip(void)
 {
   int i;
   int x = DECK_FILTER_X + 8;
-  if (!blit_pic_scaled(g_deck.dekbar1, DECK_FILTER_X, DECK_FILTER_Y, DECK_FILTER_W, DECK_FILTER_H))
+  if (!blit_pic_logical(g_deck.dekbar1, DECK_FILTER_X, DECK_FILTER_Y,
+                        DECK_FILTER_X + DECK_FILTER_W, DECK_FILTER_Y + DECK_FILTER_H))
     draw_panel(DECK_FILTER_X, DECK_FILTER_Y, DECK_FILTER_X + DECK_FILTER_W, DECK_FILTER_Y + DECK_FILTER_H, "");
   for (i = 0; i < (int)(sizeof(k_filter_buttons) / sizeof(k_filter_buttons[0])); ++i) {
     const DeckFilterButton *button = &k_filter_buttons[i];
@@ -1171,12 +1312,12 @@ static void draw_filter_strip(void)
       continue;
     {
       int active = filter_command_active(button->command);
-      fill_rect_rgba(x, DECK_FILTER_Y + 5, x + button->width, DECK_FILTER_Y + 39,
-                     active ? 0xffffffffu : 0xff303030u);
-      fill_rect_rgba(x + 2, DECK_FILTER_Y + 7, x + button->width - 2, DECK_FILTER_Y + 37,
-                     active ? 0xff606060u : 0xffb0b0b0u);
-      blit_pic_scaled(g_deck.filter_art[i], x + 4, DECK_FILTER_Y + 9,
-                      button->width - 8, 26);
+      fill_rect_logical(x, DECK_FILTER_Y + 5, x + button->width, DECK_FILTER_Y + 39,
+                        active ? 0xffffffffu : 0xff303030u);
+      fill_rect_logical(x + 2, DECK_FILTER_Y + 7, x + button->width - 2, DECK_FILTER_Y + 37,
+                        active ? 0xff606060u : 0xffb0b0b0u);
+      blit_pic_logical(g_deck.filter_art[i], x + 4, DECK_FILTER_Y + 9,
+                       x + button->width - 4, DECK_FILTER_Y + 35);
     }
     x += button->width + 6;
   }
@@ -1193,7 +1334,9 @@ static void draw_filter_strip(void)
 
 static void draw_browser_backdrop(void)
 {
-  if (!blit_pic_scaled(g_deck.dekbar1, DECK_HORZLIST_X, DECK_HORZLIST_Y, DECK_HORZLIST_W, DECK_HORZLIST_H))
+  if (!blit_pic_logical(g_deck.dekbar1, DECK_HORZLIST_X, DECK_HORZLIST_Y,
+                        DECK_HORZLIST_X + DECK_HORZLIST_W,
+                        DECK_HORZLIST_Y + DECK_HORZLIST_H))
     draw_panel(DECK_HORZLIST_X, DECK_HORZLIST_Y, DECK_HORZLIST_X + DECK_HORZLIST_W, DECK_HORZLIST_Y + DECK_HORZLIST_H, "");
 }
 
@@ -1206,13 +1349,13 @@ static void draw_main_buttons(void)
     int right = button->right;
     int top = DECK_BUTTON_Y;
     int bottom = DECK_BUTTON_Y + DECK_BUTTON_H;
-    fill_rect_rgba(left, top, right, bottom, 0xff404040u);
-    fill_rect_rgba(left + 1, top + 1, right - 1, bottom - 1, 0xffe0e0e0u);
-    fill_rect_rgba(left + 3, top + 3, right - 3, bottom - 3, 0xffa8a8a8u);
-    fill_rect_rgba(right - 3, top + 3, right - 1, bottom - 1, 0xff505050u);
-    fill_rect_rgba(left + 3, bottom - 3, right - 1, bottom - 1, 0xff505050u);
-    draw_text_rgba(left + (right - left - (int)strlen(button->label) * 12) / 2,
-                   top + 11, button->label, 0xff202020u, 2, 24);
+    fill_rect_logical(left, top, right, bottom, 0xff404040u);
+    fill_rect_logical(left + 1, top + 1, right - 1, bottom - 1, 0xffe0e0e0u);
+    fill_rect_logical(left + 3, top + 3, right - 3, bottom - 3, 0xffa8a8a8u);
+    fill_rect_logical(right - 3, top + 3, right - 1, bottom - 1, 0xff505050u);
+    fill_rect_logical(left + 3, bottom - 3, right - 1, bottom - 1, 0xff505050u);
+    draw_text_logical(left + (right - left - (int)strlen(button->label) * 12) / 2,
+                      top + 11, button->label, 0xff202020u, 2, 24);
   }
 }
 
@@ -1222,16 +1365,22 @@ static void draw_deck_surface(void)
   int y = DECK_SURFACE_Y + 10;
   int y_step = (DECK_CARD_H * 18) / 100;
   int i;
-  if (!draw_builder_mosaic(DECK_SURFACE_X, DECK_SURFACE_Y,
-                           DECK_SURFACE_X + DECK_SURFACE_W, DECK_SURFACE_Y + DECK_SURFACE_H))
-    fill_rect_rgba(DECK_SURFACE_X, DECK_SURFACE_Y,
-                   DECK_SURFACE_X + DECK_SURFACE_W, DECK_SURFACE_Y + DECK_SURFACE_H, 0xff181414u);
-  fill_rect_rgba(DECK_SURFACE_X, DECK_SURFACE_Y, DECK_SURFACE_X + DECK_SURFACE_W, DECK_SURFACE_Y + 2, 0xff080404u);
-  fill_rect_rgba(DECK_SURFACE_X, DECK_SURFACE_Y, DECK_SURFACE_X + 2, DECK_SURFACE_Y + DECK_SURFACE_H, 0xff080404u);
-  fill_rect_rgba(DECK_SURFACE_X, DECK_SURFACE_Y + DECK_SURFACE_H - 2,
-                 DECK_SURFACE_X + DECK_SURFACE_W, DECK_SURFACE_Y + DECK_SURFACE_H, 0xff403020u);
-  fill_rect_rgba(DECK_SURFACE_X + DECK_SURFACE_W - 2, DECK_SURFACE_Y,
-                 DECK_SURFACE_X + DECK_SURFACE_W, DECK_SURFACE_Y + DECK_SURFACE_H, 0xff403020u);
+  if (!draw_builder_mosaic(scale_x(DECK_SURFACE_X), scale_y(DECK_SURFACE_Y),
+                           scale_x(DECK_SURFACE_X + DECK_SURFACE_W),
+                           scale_y(DECK_SURFACE_Y + DECK_SURFACE_H)))
+    fill_rect_logical(DECK_SURFACE_X, DECK_SURFACE_Y,
+                      DECK_SURFACE_X + DECK_SURFACE_W,
+                      DECK_SURFACE_Y + DECK_SURFACE_H, 0xff181414u);
+  fill_rect_logical(DECK_SURFACE_X, DECK_SURFACE_Y,
+                    DECK_SURFACE_X + DECK_SURFACE_W, DECK_SURFACE_Y + 2, 0xff080404u);
+  fill_rect_logical(DECK_SURFACE_X, DECK_SURFACE_Y,
+                    DECK_SURFACE_X + 2, DECK_SURFACE_Y + DECK_SURFACE_H, 0xff080404u);
+  fill_rect_logical(DECK_SURFACE_X, DECK_SURFACE_Y + DECK_SURFACE_H - 2,
+                    DECK_SURFACE_X + DECK_SURFACE_W,
+                    DECK_SURFACE_Y + DECK_SURFACE_H, 0xff403020u);
+  fill_rect_logical(DECK_SURFACE_X + DECK_SURFACE_W - 2, DECK_SURFACE_Y,
+                    DECK_SURFACE_X + DECK_SURFACE_W,
+                    DECK_SURFACE_Y + DECK_SURFACE_H, 0xff403020u);
   for (i = 0; i < g_deck.main_deck_total; ++i) {
     char amount_text[16];
     if (y + DECK_CARD_H > DECK_SURFACE_Y + DECK_SURFACE_H - 10) {
@@ -1240,15 +1389,18 @@ static void draw_deck_surface(void)
     }
     if (x + DECK_CARD_W > DECK_SURFACE_X + DECK_SURFACE_W - 8)
       break;
-    draw_cached_surface_card_to_frame(g_deck.main_deck[i].csvid, x, y);
+    draw_cached_surface_card_to_frame(g_deck.main_deck[i].csvid, scale_x(x), scale_y(y),
+                                      scale_w(x, x + DECK_CARD_W),
+                                      scale_h(y, y + DECK_CARD_H));
     SDL_snprintf(amount_text, sizeof(amount_text), "X%d", g_deck.main_deck[i].amount);
-    fill_rect_rgba(x + DECK_CARD_W - 34, y + 4, x + DECK_CARD_W - 4, y + 18, 0xff201000u);
-    draw_text_rgba(x + DECK_CARD_W - 30, y + 7, amount_text, 0xffffe080u, 1, 4);
+    fill_rect_logical(x + DECK_CARD_W - 34, y + 4,
+                      x + DECK_CARD_W - 4, y + 18, 0xff201000u);
+    draw_text_logical(x + DECK_CARD_W - 30, y + 7, amount_text, 0xffffe080u, 1, 4);
     y += y_step;
   }
   if (!g_deck.main_deck_total)
-    draw_text_rgba(DECK_SURFACE_X + 36, DECK_SURFACE_Y + 60,
-                   "CLICK A CARD BELOW OR PRESS ENTER TO ADD TO DECK", 0xffc0b080u, 1, 55);
+    draw_text_logical(DECK_SURFACE_X + 36, DECK_SURFACE_Y + 60,
+                      "CLICK A CARD BELOW OR PRESS ENTER TO ADD TO DECK", 0xffc0b080u, 1, 55);
 }
 
 static void draw_ready_screen(void)
@@ -1288,8 +1440,8 @@ int deck_create(const DeckConfig *config)
               sizeof(g_deck.writable_root));
   g_deck.preview_csvid = -1;
   make_writable_path(g_deck.deck_path, sizeof(g_deck.deck_path), "PlayDeck/new.dck");
-  g_deck.width = capped_dimension(config->width, DECK_BASE_WIDTH);
-  g_deck.height = capped_dimension(config->height, DECK_BASE_HEIGHT);
+  g_deck.width = normalize_width(config->width, config->height);
+  g_deck.height = g_deck.width * DECK_BASE_HEIGHT / DECK_BASE_WIDTH;
   g_deck.rgba = (uint32_t *)SDL_calloc((size_t)g_deck.width * (size_t)g_deck.height, sizeof(uint32_t));
   if (!g_deck.rgba)
     goto fail;
@@ -1307,9 +1459,34 @@ fail:
   return 0;
 }
 
+int deck_resize(int width, int height)
+{
+  uint32_t *rgba;
+  int normalized_width;
+  int normalized_height;
+  if (!g_deck.rgba)
+    return 0;
+  normalized_width = normalize_width(width, height);
+  normalized_height = normalized_width * DECK_BASE_HEIGHT / DECK_BASE_WIDTH;
+  if (normalized_width == g_deck.width && normalized_height == g_deck.height)
+    return 1;
+  rgba = (uint32_t *)SDL_calloc((size_t)normalized_width * (size_t)normalized_height,
+                                sizeof(uint32_t));
+  if (!rgba)
+    return 0;
+  SDL_free(g_deck.rgba);
+  g_deck.rgba = rgba;
+  g_deck.width = normalized_width;
+  g_deck.height = normalized_height;
+  reset_surface_card_cache();
+  render();
+  return 1;
+}
+
 void deck_destroy(void)
 {
   int i;
+  reset_surface_card_cache();
   if (g_deck.drawcard_initialized)
     DrawCardLib_Shutdown();
   if (g_deck.cardart_initialized)
@@ -1386,6 +1563,36 @@ int deck_ui_is_interactive(void)
   return core_is_interactive();
 }
 
+int deck_ui_width(void)
+{
+  return g_deck.width > 0 ? g_deck.width : DECK_BASE_WIDTH;
+}
+
+int deck_ui_height(void)
+{
+  return g_deck.height > 0 ? g_deck.height : DECK_BASE_HEIGHT;
+}
+
+int deck_ui_scale_x(int logical_x)
+{
+  return scale_x(logical_x);
+}
+
+int deck_ui_scale_y(int logical_y)
+{
+  return scale_y(logical_y);
+}
+
+int deck_ui_scale_width(int logical_left, int logical_right)
+{
+  return scale_w(logical_left, logical_right);
+}
+
+int deck_ui_scale_height(int logical_top, int logical_bottom)
+{
+  return scale_h(logical_top, logical_bottom);
+}
+
 int deck_ui_available_count(void)
 {
   return core_is_interactive() ? g_deck.available_count : 0;
@@ -1443,13 +1650,13 @@ int deck_ui_deck_entry(int index, int *csvid, int *amount,
   if (amount)
     *amount = g_deck.main_deck[index].amount;
   if (x)
-    *x = DECK_SURFACE_X + 10 + column * (DECK_CARD_W + 8);
+    *x = scale_x(DECK_SURFACE_X + 10 + column * (DECK_CARD_W + 8));
   if (y)
-    *y = DECK_SURFACE_Y + 10 + row * y_step;
+    *y = scale_y(DECK_SURFACE_Y + 10 + row * y_step);
   if (width)
-    *width = DECK_CARD_W;
+    *width = scale_w(0, DECK_CARD_W);
   if (height)
-    *height = DECK_CARD_H;
+    *height = scale_h(0, DECK_CARD_H);
   return 1;
 }
 
@@ -1497,7 +1704,12 @@ int deck_ui_expanded_text(void)
 
 void deck_ui_set_expanded_text(int expanded)
 {
-  g_deck.expanded_text = expanded != 0;
+  expanded = expanded != 0;
+  if (g_deck.expanded_text == expanded)
+    return;
+  g_deck.expanded_text = expanded;
+  if (core_is_interactive())
+    render();
 }
 
 static void show_deck_stats(void)
@@ -1710,8 +1922,8 @@ static void select_available_index(int index)
 
 void deck_pointer_move(float x, float y)
 {
-  g_deck.pointer_x = x;
-  g_deck.pointer_y = y;
+  g_deck.pointer_x = (float)unscale_x(x);
+  g_deck.pointer_y = (float)unscale_y(y);
 }
 
 void deck_pointer_button(int button, int pressed, int clicks)
@@ -1865,30 +2077,10 @@ void deck_key(int key, int pressed, int repeat)
 void deck_prefetch_cardart(void)
 {
   int i;
+  for (i = 0; i < (int)(sizeof(k_required_assets) / sizeof(k_required_assets[0])); ++i)
+    shandalar_assets_prefetch(k_required_assets[i]);
+
   shandalar_assets_prefetch("MENUBAK.PIC");
-  shandalar_assets_prefetch("CARDS.DAT");
-  shandalar_assets_prefetch("DeckBuilder.csv");
-  shandalar_assets_prefetch("DUELPALall.TR");
-  shandalar_assets_prefetch("DUEL.plogpal");
-  shandalar_assets_prefetch("TT0085M_.TTF");
-  shandalar_assets_prefetch("TT0127M_.TTF");
-  shandalar_assets_prefetch("TT0298M_.TTF");
-  shandalar_assets_prefetch("TT0299M_.TTF");
-  shandalar_assets_prefetch("TT0300M_.TTF");
-  shandalar_assets_prefetch("TT0530M_.TTF");
-  shandalar_assets_prefetch("CardArt/ManaSymbols.pic");
-  shandalar_assets_prefetch("CardArt/CardSets.pic");
-  shandalar_assets_prefetch("CardArt/CardBack.pic");
-  shandalar_assets_prefetch("DBArt/DEKTILE4.PIC");
-  shandalar_assets_prefetch("DBArt/DEKBAR1.PIC");
-  shandalar_assets_prefetch("DBArt/DEKTIT1.PIC");
-  shandalar_assets_prefetch("DBArt/BLDR01C.PIC");
-  shandalar_assets_prefetch("DBArt/BLDR02C.PIC");
-  shandalar_assets_prefetch("DBArt/BLDR03C.PIC");
-  shandalar_assets_prefetch("DBArt/BLDR04C.PIC");
-  shandalar_assets_prefetch("DBArt/BLDR05C.PIC");
-  shandalar_assets_prefetch_small_art_cat();
-  shandalar_assets_prefetch_med_art_cat();
   for (i = 0; i < DECK_ICON_FILTER_COUNT; ++i)
     shandalar_assets_prefetch(k_filter_buttons[i].asset_name);
 }

@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #endif
 
-#define ASSET_REQUEST_LIMIT 64
+#define ASSET_REQUEST_LIMIT 256
 
 typedef struct AssetRequest {
   char relative_path[260];

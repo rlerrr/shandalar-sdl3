@@ -35,4 +35,33 @@ if(EMSCRIPTEN)
     "-sFETCH=1"
     "-sALLOW_MEMORY_GROWTH=1"
   )
+  if(SHANDALAR_ASSET_DIR)
+    set(DECK_CARD_BACKGROUND_ASSETS
+      CARDBK_Green.pic
+      CARDBK_White.pic
+      CARDBK_Blue.pic
+      CARDBK_Black.pic
+      CARDBK_Red.pic
+      CARDBK_Gold.pic
+      CARDBK_Artifact.pic
+      CARDBK_GreenLand.pic
+      CARDBK_WhiteLand.pic
+      CARDBK_BlueLand.pic
+      CARDBK_BlackLand.pic
+      CARDBK_RedLand.pic
+      CARDBK_DarklandsLand.pic
+      CARDBK_FallenEmpiresLand.pic
+      CARDBK_AntiquitiesLand.pic
+      CARDBK_LegendsLand.pic
+      CARDBK_ArabianNightsLand.pic
+      CARDBK_Special.pic
+      CARDBK_IceAgeLand.pic
+      CARDBK_Legends.pic
+    )
+    foreach(asset IN LISTS DECK_CARD_BACKGROUND_ASSETS)
+      target_link_options(deck PRIVATE
+        "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/CardArt/${asset}@/assets/CardArt/${asset}"
+      )
+    endforeach()
+  endif()
 endif()

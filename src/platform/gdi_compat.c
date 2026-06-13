@@ -95,6 +95,70 @@ struct ShandalarDC {
 };
 
 static char g_font_root[512];
+static double g_font_device_scale = 1.0;
+
+static unsigned int cp1252_codepoint(unsigned char ch)
+{
+  static const unsigned short map[32] = {
+    0x20ac, 0x0081, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
+    0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0x008d, 0x017d, 0x008f,
+    0x0090, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
+    0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0x009d, 0x017e, 0x0178
+  };
+  if (ch >= 0x80 && ch <= 0x9f)
+    return map[ch - 0x80];
+  return ch;
+}
+
+static int utf8_length_for_codepoint(unsigned int codepoint)
+{
+  if (codepoint < 0x80)
+    return 1;
+  if (codepoint < 0x800)
+    return 2;
+  if (codepoint < 0x10000)
+    return 3;
+  return 4;
+}
+
+static char *utf8_from_windows_text(LPCSTR text, int length, int *out_length)
+{
+  int i;
+  int needed = 0;
+  int pos = 0;
+  char *utf8;
+  if (!text)
+    return NULL;
+  if (length < 0)
+    length = (int)strlen(text);
+  for (i = 0; i < length; ++i)
+    needed += utf8_length_for_codepoint(cp1252_codepoint((unsigned char)text[i]));
+  utf8 = (char *)malloc((size_t)needed + 1);
+  if (!utf8)
+    return NULL;
+  for (i = 0; i < length; ++i) {
+    unsigned int cp = cp1252_codepoint((unsigned char)text[i]);
+    if (cp < 0x80) {
+      utf8[pos++] = (char)cp;
+    } else if (cp < 0x800) {
+      utf8[pos++] = (char)(0xc0 | (cp >> 6));
+      utf8[pos++] = (char)(0x80 | (cp & 0x3f));
+    } else if (cp < 0x10000) {
+      utf8[pos++] = (char)(0xe0 | (cp >> 12));
+      utf8[pos++] = (char)(0x80 | ((cp >> 6) & 0x3f));
+      utf8[pos++] = (char)(0x80 | (cp & 0x3f));
+    } else {
+      utf8[pos++] = (char)(0xf0 | (cp >> 18));
+      utf8[pos++] = (char)(0x80 | ((cp >> 12) & 0x3f));
+      utf8[pos++] = (char)(0x80 | ((cp >> 6) & 0x3f));
+      utf8[pos++] = (char)(0x80 | (cp & 0x3f));
+    }
+  }
+  utf8[pos] = '\0';
+  if (out_length)
+    *out_length = pos;
+  return utf8;
+}
 
 static unsigned char color_to_index(HDC dc, COLORREF color)
 {
@@ -241,7 +305,7 @@ static float prepare_font_for_dc(HDC dc)
   if (!dc || !dc->font || !dc->font->font)
     return 0.0f;
   old_size = TTF_GetFontSize(dc->font->font);
-  device_size = (float)((double)dc->font->size * device_scale_y(dc));
+  device_size = (float)((double)dc->font->size * device_scale_y(dc) * g_font_device_scale);
   if (device_size < 1.0f)
     device_size = 1.0f;
   if (fabsf(old_size - device_size) > 0.01f)
@@ -824,14 +888,21 @@ BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size)
   float old_size;
   int width;
   int height;
+  char *utf8;
+  int utf8_length;
   if (!size) return FALSE;
   if (length < 0) length = (int)strlen(text);
   if (dc && dc->font && dc->font->font) {
+    utf8 = utf8_from_windows_text(text, length, &utf8_length);
+    if (!utf8)
+      return FALSE;
     old_size = prepare_font_for_dc(dc);
-    if (!TTF_GetStringSize(dc->font->font, text, (size_t)length, &width, &height)) {
+    if (!TTF_GetStringSize(dc->font->font, utf8, (size_t)utf8_length, &width, &height)) {
+      free(utf8);
       restore_font_size(dc, old_size);
       return FALSE;
     }
+    free(utf8);
     size->cx = logical_from_device(width, device_scale_x(dc));
     size->cy = logical_from_device(height, device_scale_y(dc));
     restore_font_size(dc, old_size);
@@ -918,16 +989,23 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
   SDL_Surface *surface;
   SDL_Color white = {255,255,255,255};
   float old_size;
+  char *utf8;
+  int utf8_length;
   if (!dc || !dc->bitmap || !dc->font || !dc->font->font || !text) return FALSE;
   x = map_x(dc, x);
   y = map_y(dc, y);
   if (length < 0) length = (int)strlen(text);
+  utf8 = utf8_from_windows_text(text, length, &utf8_length);
+  if (!utf8)
+    return FALSE;
   old_size = prepare_font_for_dc(dc);
-  surface = TTF_RenderText_Blended(dc->font->font, text, (size_t)length, white);
+  surface = TTF_RenderText_Blended(dc->font->font, utf8, (size_t)utf8_length, white);
   if (!surface) {
+    free(utf8);
     restore_font_size(dc, old_size);
     return FALSE;
   }
+  free(utf8);
   draw_text_surface(dc, surface, x, y, dc->bitmap->width, dc->bitmap->height);
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
@@ -947,6 +1025,8 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   float old_size;
   double scale_x;
   double scale_y;
+  char *utf8;
+  int utf8_length;
   if (!dc || !dc->bitmap || !dc->font || !dc->font->font || !text || !rect)
     return 0;
   if (length < 0)
@@ -959,15 +1039,20 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   single_line = (format & DT_SINGLELINE) != 0;
   if (max_width <= 0 || rect_bottom <= draw_y)
     return 0;
+  utf8 = utf8_from_windows_text(text, length, &utf8_length);
+  if (!utf8)
+    return 0;
   old_size = prepare_font_for_dc(dc);
   surface = single_line
-              ? TTF_RenderText_Blended(dc->font->font, text, (size_t)length, white)
-              : TTF_RenderText_Blended_Wrapped(dc->font->font, text, (size_t)length,
+              ? TTF_RenderText_Blended(dc->font->font, utf8, (size_t)utf8_length, white)
+              : TTF_RenderText_Blended_Wrapped(dc->font->font, utf8, (size_t)utf8_length,
                                                white, max_width);
   if (!surface) {
+    free(utf8);
     restore_font_size(dc, old_size);
     return 0;
   }
+  free(utf8);
   if (format & DT_CALCRECT) {
     scale_x = device_scale_x(dc);
     scale_y = device_scale_y(dc);
@@ -1294,4 +1379,11 @@ const void *shandalar_dc_pixels(HDC dc, int *pitch)
 void shandalar_set_default_font_root(const char *root)
 {
   SDL_strlcpy(g_font_root, root ? root : "", sizeof(g_font_root));
+}
+
+double shandalar_set_font_device_scale(double scale)
+{
+  double old = g_font_device_scale;
+  g_font_device_scale = scale > 0.0 ? scale : 1.0;
+  return old;
 }
