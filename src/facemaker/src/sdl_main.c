@@ -14,7 +14,6 @@ typedef struct FacemakerApp {
   SDL_Texture *texture;
   uint32_t *rgba;
   uint64_t presented_generation;
-  uint64_t rendered_generation;
   int exit_notified;
 } FacemakerApp;
 
@@ -122,13 +121,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_UpdateTexture(app->texture, NULL, app->rgba, frame.width * (int)sizeof(uint32_t));
     app->presented_generation = frame.generation;
   }
-  if (app->presented_generation != app->rendered_generation) {
-    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
-    SDL_RenderClear(app->renderer);
-    SDL_RenderTexture(app->renderer, app->texture, NULL, NULL);
-    SDL_RenderPresent(app->renderer);
-    app->rendered_generation = app->presented_generation;
-  }
+  SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
+  SDL_RenderClear(app->renderer);
+  SDL_RenderTexture(app->renderer, app->texture, NULL, NULL);
+  SDL_RenderPresent(app->renderer);
   if (status == FACEMAKER_FAILED)
     return SDL_APP_FAILURE;
   if (status == FACEMAKER_COMPLETED || status == FACEMAKER_CANCELLED) {

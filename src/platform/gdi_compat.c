@@ -406,6 +406,22 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
   COLORREF *temp;
   if (!dst || !src || !dst->bitmap || !src->bitmap || width <= 0 || height <= 0)
     return FALSE;
+  if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
+      (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
+    for (y = 0; y < height; ++y) {
+      unsigned char *target = pixel_at(dst->bitmap, dx, dy + y);
+      unsigned char *source = pixel_at(src->bitmap, sx, sy + y);
+      if (!target || !source)
+        continue;
+      if (rop == SRCCOPY) {
+        memmove(target, source, (size_t)width);
+      } else {
+        for (x = 0; x < width; ++x)
+          apply_rop(&target[x], source[x], rop);
+      }
+    }
+    return TRUE;
+  }
   temp = (COLORREF *)malloc((size_t)width * (size_t)height * sizeof(*temp));
   if (!temp)
     return FALSE;
@@ -436,6 +452,19 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
   dh = bottom - dy;
   if (!dst || !src || !dst->bitmap || !src->bitmap || dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0)
     return FALSE;
+  if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
+      (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
+    for (y = 0; y < dh; ++y) {
+      int source_y = sy + y * sh / dh;
+      for (x = 0; x < dw; ++x) {
+        unsigned char *source = pixel_at(src->bitmap, sx + x * sw / dw, source_y);
+        unsigned char *target = pixel_at(dst->bitmap, dx + x, dy + y);
+        if (source && target)
+          apply_rop(target, *source, rop);
+      }
+    }
+    return TRUE;
+  }
   for (y = 0; y < dh; ++y)
     for (x = 0; x < dw; ++x) {
       COLORREF color = read_pixel_color(src, sx + x * sw / dw, sy + y * sh / dh);
