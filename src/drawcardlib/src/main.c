@@ -1543,6 +1543,7 @@ void DrawSmallCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version, int
   status = DrawSmallArt(dc, &artRect, card->id, version);
   if (status == 0)
   {
+    LoadBigArt(card->id, version, artWidth, artHeight);
     DrawBigArt(dc, &artRect, card->id, version);
   }
   RestoreDC(dc, nSavedDC);

@@ -705,7 +705,7 @@ int DrawSmallArt(HDC hdc, RECT *rect, card_id_t id, int version)
 
   if (g_cardPicCounts[id] > 1)
   {
-    DrawVersionedSmallArt(hdc, rect, id, version);
+    return DrawVersionedSmallArt(hdc, rect, id, version);
   }
   else
   {

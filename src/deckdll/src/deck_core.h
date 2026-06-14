@@ -29,6 +29,17 @@ typedef struct DeckFrame {
   uint64_t generation;
 } DeckFrame;
 
+enum {
+  DECK_STATS_ROW_COUNT = 9,
+  DECK_STATS_COLUMN_COUNT = 7
+};
+
+typedef struct DeckStatsSnapshot {
+  int card_count;
+  int unique_count;
+  int values[DECK_STATS_ROW_COUNT][DECK_STATS_COLUMN_COUNT];
+} DeckStatsSnapshot;
+
 int deck_create(const DeckConfig *config);
 int deck_resize(int width, int height);
 void deck_destroy(void);
@@ -63,6 +74,10 @@ void deck_ui_remove_card(int csvid);
 int deck_ui_render_small_card(int csvid, uint32_t *pixels, int width, int height);
 int deck_ui_expanded_text(void);
 void deck_ui_set_expanded_text(int expanded);
+int deck_ui_stats_popup_visible(void);
+void deck_ui_close_stats_popup(void);
+int deck_ui_get_stats(DeckStatsSnapshot *stats);
+int deck_ui_pressed_main_button(void);
 
 #ifdef __cplusplus
 }

@@ -8,6 +8,7 @@
 #include <imgui_impl_sdlrenderer3.h>
 
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 namespace {
@@ -16,14 +17,18 @@ constexpr int kLogicalWidth = 1024;
 constexpr int kBrowserX = 8;
 constexpr int kBrowserY = 610;
 constexpr int kBrowserWidth = 1008;
-constexpr int kBrowserHeight = 158;
+constexpr int kBrowserHeight = 148;
 constexpr int kFullCardX = 8;
 constexpr int kFullCardY = 92;
 constexpr int kFullCardWidth = 288;
 constexpr int kFullCardHeight = 432;
+constexpr int kButtonY = 527;
+constexpr int kButtonHeight = 36;
+constexpr int kButtonLefts[] = {304, 544, 784};
+constexpr int kButtonRights[] = {544, 784, 1024};
 constexpr int kCardWidth = 120;
 constexpr int kCardHeight = 120;
-constexpr int kCellWidth = 144;
+constexpr int kCellWidth = 128;
 constexpr int kVisibleCards = 7;
 constexpr int kWheelCards = 3;
 constexpr int kTextureCacheSize = 32;
@@ -298,7 +303,7 @@ void draw_browser()
       ImGui::PopID();
     }
     if (max_first > 0) {
-      ImGui::SetCursorPos(ImVec2(8.0f * scale, sy(746) - sy(kBrowserY)));
+      ImGui::SetCursorPos(ImVec2(8.0f * scale, sy(734) - sy(kBrowserY)));
       ImGui::SetNextItemWidth(sw(0, kBrowserWidth) - 24.0f * scale);
       ImGui::SliderInt("##card_scroll", &g_browser_first, 0, max_first, "",
                        ImGuiSliderFlags_AlwaysClamp);
@@ -463,6 +468,121 @@ void draw_full_card_context_menu()
   ImGui::PopStyleVar();
 }
 
+void draw_main_button_labels()
+{
+  DeckStatsSnapshot stats;
+  char stats_label[32];
+  const char *labels[] = {stats_label, "DECK INFO", "EXIT"};
+  const float scale = ui_scale();
+  ImDrawList *draw_list = ImGui::GetBackgroundDrawList();
+  ImFont *font = ImGui::GetFont();
+  const float font_size = 16.0f * scale;
+  const ImU32 color = IM_COL32(32, 32, 32, 255);
+  const int pressed_button = deck_ui_pressed_main_button();
+
+  if (!deck_ui_get_stats(&stats))
+    stats.card_count = 0;
+  snprintf(stats_label, sizeof(stats_label), "Stats (%d cards)", stats.card_count);
+
+  for (int i = 0; i < 3; ++i) {
+    const float left = sx(kButtonLefts[i]);
+    const float right = sx(kButtonRights[i]);
+    const float top = sy(kButtonY);
+    const float bottom = sy(kButtonY + kButtonHeight);
+    const ImVec2 text_size =
+        font->CalcTextSizeA(font_size, 10000.0f, 0.0f, labels[i]);
+    ImVec2 pos(left + (right - left - text_size.x) * 0.5f,
+               top + (bottom - top - text_size.y) * 0.5f - 1.0f * scale);
+    if (pressed_button == i) {
+      pos.x += 1.0f * scale;
+      pos.y += 1.0f * scale;
+    }
+    draw_list->AddText(font, font_size, pos, color, labels[i]);
+  }
+}
+
+void format_stats_cell(char *out, size_t out_size, const DeckStatsSnapshot &stats,
+                       int row, int column)
+{
+  const int value = stats.values[row][column];
+  int base;
+  int percent;
+
+  if (value == 0) {
+    snprintf(out, out_size, "-");
+    return;
+  }
+
+  if (row == DECK_STATS_ROW_COUNT - 1 || column == DECK_STATS_COLUMN_COUNT - 1)
+    base = stats.values[DECK_STATS_ROW_COUNT - 1][DECK_STATS_COLUMN_COUNT - 1];
+  else
+    base = stats.values[row][DECK_STATS_COLUMN_COUNT - 1];
+
+  percent = base > 0 ? (value * 100 + (base >> 1)) / base : 0;
+  snprintf(out, out_size, "(%d) %d%%", value, percent);
+}
+
+void draw_stats_popup()
+{
+  static const char *const k_columns[DECK_STATS_COLUMN_COUNT] = {
+      "Black", "Blue", "Green", "Red", "White", "Other", "Total"
+  };
+  static const char *const k_rows[DECK_STATS_ROW_COUNT] = {
+      "Mana Sources", "Creatures", "Enchantments", "Sorceries", "Instants",
+      "Interrupts", "Land", "Artifacts", "Total"
+  };
+  DeckStatsSnapshot stats;
+  const float scale = ui_scale();
+  bool open = true;
+
+  if (!deck_ui_stats_popup_visible())
+    return;
+  if (!deck_ui_get_stats(&stats)) {
+    deck_ui_close_stats_popup();
+    return;
+  }
+
+  ImGui::OpenPopup("Deck Statistics");
+  ImGui::SetNextWindowSize(ImVec2(760.0f * scale, 500.0f * scale), ImGuiCond_Always);
+  if (ImGui::BeginPopupModal("Deck Statistics", &open,
+                             ImGuiWindowFlags_NoSavedSettings |
+                             ImGuiWindowFlags_NoResize)) {
+    ImGui::Text("%d cards, %d unique", stats.card_count, stats.unique_count);
+    ImGui::Separator();
+    if (ImGui::BeginTable("stats_table", DECK_STATS_COLUMN_COUNT + 1,
+                          ImGuiTableFlags_BordersInnerV |
+                          ImGuiTableFlags_RowBg |
+                          ImGuiTableFlags_SizingStretchProp)) {
+      ImGui::TableSetupColumn("");
+      for (const char *column : k_columns)
+        ImGui::TableSetupColumn(column);
+      ImGui::TableHeadersRow();
+      for (int row = 0; row < DECK_STATS_ROW_COUNT; ++row) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(k_rows[row]);
+        for (int column = 0; column < DECK_STATS_COLUMN_COUNT; ++column) {
+          char cell[32];
+          format_stats_cell(cell, sizeof(cell), stats, row, column);
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(cell);
+        }
+      }
+      ImGui::EndTable();
+    }
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 36.0f * scale);
+    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 92.0f * scale);
+    if (ImGui::Button("OK", ImVec2(72.0f * scale, 24.0f * scale))) {
+      deck_ui_close_stats_popup();
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+
+  if (!open)
+    deck_ui_close_stats_popup();
+}
+
 } // namespace
 
 extern "C" int deck_imgui_init(SDL_Window *window, SDL_Renderer *renderer)
@@ -536,7 +656,9 @@ extern "C" void deck_imgui_begin_frame(void)
   io.AddMousePosEvent(mouse_x, mouse_y);
   ImGui::NewFrame();
   if (deck_ui_is_interactive()) {
+    draw_main_button_labels();
     draw_full_card_context_menu();
+    draw_stats_popup();
     draw_browser();
     draw_deck_surface_interactions();
     draw_browser_drop_target();

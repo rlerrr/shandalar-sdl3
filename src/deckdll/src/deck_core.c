@@ -212,6 +212,8 @@ typedef struct DeckCore {
   DeckFileEntry main_deck[300];
   int main_deck_total;
   int main_deck_cards;
+  int stats_popup_visible;
+  int pressed_main_button;
   OrigRarities orig_rarities[2000];
 } DeckCore;
 
@@ -254,6 +256,9 @@ static void fill_rect_rgba(int left, int top, int right, int bottom, uint32_t co
 static int blit_pic_scaled(HBITMAP bitmap, int dst_left, int dst_top, int dst_w, int dst_h);
 static void draw_text_rgba(int x, int y, const char *text, uint32_t color,
                            int scale, int max_chars);
+static void draw_gdi_text_rgba(int x, int y, const char *text, uint32_t color,
+                               int font_height, int max_chars);
+static int measure_text_rgba(const char *text, int font_height, int max_chars);
 
 static int normalize_width(int requested_width, int requested_height)
 {
@@ -335,8 +340,23 @@ static int blit_pic_logical(HBITMAP bitmap, int left, int top, int right, int bo
 static void draw_text_logical(int x, int y, const char *text, uint32_t color,
                               int scale, int max_chars)
 {
-  draw_text_rgba(scale_x(x), scale_y(y), text, color,
-                 scale_text_size(scale), max_chars);
+  draw_gdi_text_rgba(scale_x(x), scale_y(y), text, color,
+                     scale_text_size(scale * 8), max_chars);
+}
+
+static void draw_gdi_text_logical_sized(int x, int y, const char *text,
+                                        uint32_t color, int font_height,
+                                        int max_chars)
+{
+  draw_gdi_text_rgba(scale_x(x), scale_y(y), text, color,
+                     scale_len_y(font_height), max_chars);
+}
+
+static int measure_gdi_text_logical_sized(const char *text, int font_height,
+                                          int max_chars)
+{
+  int pixels = measure_text_rgba(text, scale_len_y(font_height), max_chars);
+  return scaled_coord(pixels, g_deck.width, DECK_BASE_WIDTH);
 }
 
 static void reset_surface_card_cache(void)
@@ -456,7 +476,172 @@ static const unsigned char *glyph_bits(char ch)
     return glyphs[26 + ch - '0'];
   if (ch == ' ')
     return space;
+  if (ch == '(') {
+    static const unsigned char open_paren[7] = {0x02,0x04,0x08,0x08,0x08,0x04,0x02};
+    return open_paren;
+  }
+  if (ch == ')') {
+    static const unsigned char close_paren[7] = {0x08,0x04,0x02,0x02,0x02,0x04,0x08};
+    return close_paren;
+  }
   return unknown;
+}
+
+static int clipped_text(char *out, size_t out_size, const char *text, int max_chars)
+{
+  int length;
+  if (!out || out_size == 0)
+    return 0;
+  out[0] = '\0';
+  if (!text)
+    return 0;
+  length = (int)strlen(text);
+  if (max_chars > 0 && length > max_chars)
+    length = max_chars;
+  if (length >= (int)out_size)
+    length = (int)out_size - 1;
+  memcpy(out, text, (size_t)length);
+  out[length] = '\0';
+  return length;
+}
+
+static HFONT create_ui_text_font(int font_height)
+{
+  if (font_height < 1)
+    font_height = 1;
+  return CreateFontA(font_height, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0,
+                     "MPZurich Cn BT");
+}
+
+static int measure_text_rgba(const char *text, int font_height, int max_chars)
+{
+  HDC dc;
+  HFONT font;
+  HGDIOBJ old_font;
+  SIZE size;
+  char buffer[256];
+  int length = clipped_text(buffer, sizeof(buffer), text, max_chars);
+  if (length <= 0)
+    return 0;
+  dc = CreateCompatibleDC(NULL);
+  font = create_ui_text_font(font_height);
+  if (!dc || !font) {
+    if (font)
+      DeleteObject(font);
+    if (dc)
+      DeleteDC(dc);
+    return length * font_height;
+  }
+  old_font = SelectObject(dc, font);
+  if (!GetTextExtentPoint32A(dc, buffer, length, &size))
+    size.cx = length * font_height;
+  SelectObject(dc, old_font);
+  DeleteObject(font);
+  DeleteDC(dc);
+  return size.cx;
+}
+
+static void draw_gdi_text_rgba(int x, int y, const char *text, uint32_t color,
+                               int font_height, int max_chars)
+{
+  static const unsigned char marker_b = 3;
+  static const unsigned char marker_g = 2;
+  static const unsigned char marker_r = 1;
+  HDC dc;
+  HBITMAP bitmap;
+  HFONT font;
+  HGDIOBJ old_bitmap;
+  HGDIOBJ old_font;
+  BITMAPINFO info;
+  unsigned char *bits;
+  RECT rect;
+  SIZE size;
+  int width;
+  int height;
+  int pitch;
+  int row;
+  char buffer[256];
+  int length = clipped_text(buffer, sizeof(buffer), text, max_chars);
+  if (length <= 0)
+    return;
+
+  dc = CreateCompatibleDC(NULL);
+  font = create_ui_text_font(font_height);
+  if (!dc || !font)
+    goto fallback;
+
+  old_font = SelectObject(dc, font);
+  if (!GetTextExtentPoint32A(dc, buffer, length, &size)) {
+    size.cx = length * font_height;
+    size.cy = font_height;
+  }
+  width = size.cx + 4;
+  height = size.cy + 4;
+  if (width <= 0 || height <= 0)
+    goto cleanup_measure;
+
+  memset(&info, 0, sizeof(info));
+  info.bmiHeader.biSize = sizeof(info.bmiHeader);
+  info.bmiHeader.biWidth = width;
+  info.bmiHeader.biHeight = -height;
+  info.bmiHeader.biPlanes = 1;
+  info.bmiHeader.biBitCount = 24;
+  info.bmiHeader.biCompression = BI_RGB;
+  bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, (void **)&bits, NULL, 0);
+  if (!bitmap || !bits)
+    goto cleanup_measure;
+
+  pitch = (width * 3 + 3) & ~3;
+  for (row = 0; row < height; ++row) {
+    int col;
+    unsigned char *dst = bits + row * pitch;
+    for (col = 0; col < width; ++col) {
+      dst[col * 3 + 0] = marker_b;
+      dst[col * 3 + 1] = marker_g;
+      dst[col * 3 + 2] = marker_r;
+    }
+  }
+
+  old_bitmap = SelectObject(dc, bitmap);
+  SelectObject(dc, font);
+  SetBkMode(dc, TRANSPARENT);
+  SetTextColor(dc, RGB((color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff));
+  SetRect(&rect, 0, 0, width, height);
+  DrawTextA(dc, buffer, length, &rect, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
+  for (row = 0; row < height; ++row) {
+    int col;
+    unsigned char *src = bits + row * pitch;
+    int dst_y = y + row;
+    if (dst_y < 0 || dst_y >= g_deck.height)
+      continue;
+    for (col = 0; col < width; ++col) {
+      unsigned char b = src[col * 3 + 0];
+      unsigned char g = src[col * 3 + 1];
+      unsigned char r = src[col * 3 + 2];
+      int dst_x = x + col;
+      if (b == marker_b && g == marker_g && r == marker_r)
+        continue;
+      if (dst_x >= 0 && dst_x < g_deck.width)
+        g_deck.rgba[dst_y * g_deck.width + dst_x] =
+            0xff000000u | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+    }
+  }
+
+  SelectObject(dc, old_bitmap);
+  DeleteObject(bitmap);
+cleanup_measure:
+  SelectObject(dc, old_font);
+  DeleteObject(font);
+  DeleteDC(dc);
+  return;
+
+fallback:
+  if (font)
+    DeleteObject(font);
+  if (dc)
+    DeleteDC(dc);
+  draw_text_rgba(x, y, text, color, scale_text_size(1), max_chars);
 }
 
 static void draw_text_rgba(int x, int y, const char *text, uint32_t color, int scale, int max_chars)
@@ -1164,8 +1349,6 @@ static void draw_gdi_card_to_frame(int csvid, int dst_left, int dst_top, int car
     return;
   }
 
-  fill_rect_rgba(dst_left - 4, dst_top - 4, dst_left + card_w + 4, dst_top + card_h + 4, 0xff120b0bu);
-  fill_rect_rgba(dst_left - 2, dst_top - 2, dst_left + card_w + 2, dst_top + card_h + 2, 0xff6b4a2cu);
   for (y = 0; y < card_h; ++y) {
     for (x = 0; x < card_w; ++x) {
       int dst_x = dst_left + x;
@@ -1223,12 +1406,6 @@ static void draw_cached_surface_card_to_frame(int csvid, int dst_left, int dst_t
     draw_gdi_card_to_frame(csvid, dst_left, dst_top, card_w, card_h);
     return;
   }
-  fill_rect_rgba(dst_left - scale_len_x(4), dst_top - scale_len_y(4),
-                 dst_left + card_w + scale_len_x(4),
-                 dst_top + card_h + scale_len_y(4), 0xff120b0bu);
-  fill_rect_rgba(dst_left - scale_len_x(2), dst_top - scale_len_y(2),
-                 dst_left + card_w + scale_len_x(2),
-                 dst_top + card_h + scale_len_y(2), 0xff6b4a2cu);
   for (y = 0; y < card_h; ++y) {
     for (x = 0; x < card_w; ++x) {
       int dst_x = dst_left + x;
@@ -1274,7 +1451,7 @@ int deck_ui_render_small_card(int csvid, uint32_t *pixels, int width, int height
   FillRect(dc, &rect, brush);
   DeleteObject(brush);
   old_font_scale = shandalar_set_font_device_scale(wasm_small_card_font_scale());
-  DrawSmallCard(dc, &rect, &global_raw_cards_storage[csvid], 1, 1);
+  DrawSmallCard(dc, &rect, &global_raw_cards_storage[csvid], 0, 1);
   shandalar_set_font_device_scale(old_font_scale);
 
   for (y = 0; y < height; ++y)
@@ -1452,17 +1629,20 @@ static void draw_main_buttons(void)
   int i;
   for (i = 0; i < (int)(sizeof(k_main_buttons) / sizeof(k_main_buttons[0])); ++i) {
     const DeckMainButton *button = &k_main_buttons[i];
+    int pressed = g_deck.pressed_main_button == i;
     int left = button->left;
     int right = button->right;
     int top = DECK_BUTTON_Y;
     int bottom = DECK_BUTTON_Y + DECK_BUTTON_H;
     fill_rect_logical(left, top, right, bottom, 0xff404040u);
-    fill_rect_logical(left + 1, top + 1, right - 1, bottom - 1, 0xffe0e0e0u);
-    fill_rect_logical(left + 3, top + 3, right - 3, bottom - 3, 0xffa8a8a8u);
-    fill_rect_logical(right - 3, top + 3, right - 1, bottom - 1, 0xff505050u);
-    fill_rect_logical(left + 3, bottom - 3, right - 1, bottom - 1, 0xff505050u);
-    draw_text_logical(left + (right - left - (int)strlen(button->label) * 12) / 2,
-                      top + 11, button->label, 0xff202020u, 2, 24);
+    fill_rect_logical(left + 1, top + 1, right - 1, bottom - 1,
+                      pressed ? 0xff505050u : 0xffe0e0e0u);
+    fill_rect_logical(left + 3, top + 3, right - 3, bottom - 3,
+                      pressed ? 0xff909090u : 0xffa8a8a8u);
+    fill_rect_logical(right - 3, top + 3, right - 1, bottom - 1,
+                      pressed ? 0xffe0e0e0u : 0xff505050u);
+    fill_rect_logical(left + 3, bottom - 3, right - 1, bottom - 1,
+                      pressed ? 0xffe0e0e0u : 0xff505050u);
   }
 }
 
@@ -1489,7 +1669,6 @@ static void draw_deck_surface(void)
                     DECK_SURFACE_X + DECK_SURFACE_W,
                     DECK_SURFACE_Y + DECK_SURFACE_H, 0xff403020u);
   for (i = 0; i < g_deck.main_deck_total; ++i) {
-    char amount_text[16];
     if (y + DECK_CARD_H > DECK_SURFACE_Y + DECK_SURFACE_H - 10) {
       x += DECK_CARD_W + 8;
       y = DECK_SURFACE_Y + 10;
@@ -1499,10 +1678,14 @@ static void draw_deck_surface(void)
     draw_cached_surface_card_to_frame(g_deck.main_deck[i].csvid, scale_x(x), scale_y(y),
                                       scale_w(x, x + DECK_CARD_W),
                                       scale_h(y, y + DECK_CARD_H));
-    SDL_snprintf(amount_text, sizeof(amount_text), "X%d", g_deck.main_deck[i].amount);
-    fill_rect_logical(x + DECK_CARD_W - 34, y + 4,
-                      x + DECK_CARD_W - 4, y + 18, 0xff201000u);
-    draw_text_logical(x + DECK_CARD_W - 30, y + 7, amount_text, 0xffffe080u, 1, 4);
+    if (g_deck.main_deck[i].amount > 1) {
+      char amount_text[16];
+      int count_font_height = 11;
+      SDL_snprintf(amount_text, sizeof(amount_text), "%d", g_deck.main_deck[i].amount);
+      draw_gdi_text_logical_sized(
+          x + DECK_CARD_W - 4 - measure_gdi_text_logical_sized(amount_text, count_font_height, 3),
+          y + 2, amount_text, 0xffffe080u, count_font_height, 3);
+    }
     y += y_step;
   }
 }
@@ -1539,6 +1722,7 @@ int deck_create(const DeckConfig *config)
     g_surface_card_cache[i].csvid = -1;
   g_surface_card_cache_clock = 0;
   g_deck.set_filters = DECK_SET_ALL;
+  g_deck.pressed_main_button = -1;
   SDL_strlcpy(g_deck.asset_root, config->asset_root, sizeof(g_deck.asset_root));
   SDL_strlcpy(g_deck.writable_root, config->writable_root ? config->writable_root : ".",
               sizeof(g_deck.writable_root));
@@ -1845,43 +2029,163 @@ void deck_ui_set_expanded_text(int expanded)
     render();
 }
 
-static void show_deck_stats(void)
+static int stats_color_column(int csvid, const card_ptr_t *card, int row)
+{
+  switch (card->color) {
+  case CP_COLOR_BLACK: return 0;
+  case CP_COLOR_BLUE: return 1;
+  case CP_COLOR_GREEN: return 2;
+  case CP_COLOR_RED: return 3;
+  case CP_COLOR_WHITE: return 4;
+  }
+
+  if (row == 6) {
+    if (csvid == 0xa4) return 3; /* Mountain */
+    if (csvid == 0x5b) return 2; /* Forest */
+    if (csvid == 0x7e) return 1; /* Island */
+    if (csvid == 0xbc) return 4; /* Plains */
+    if (csvid == 0xef) return 0; /* Swamp */
+  }
+
+  return 5;
+}
+
+static void add_stats_mana_sources(int csvid, int amount, int column,
+                                   int values[DECK_STATS_ROW_COUNT][DECK_STATS_COLUMN_COUNT],
+                                   int *five_color_lands)
+{
+  if (csvid == 0xf || csvid == 0x11 || csvid == 0x193 || csvid == 0x1b9) {
+    int i;
+    *five_color_lands += amount;
+    for (i = 0; i < 5; ++i)
+      values[0][i] += amount;
+  } else if (csvid == 0xa5) {
+    values[0][2] += amount;
+  } else if (csvid == 0xa6) {
+    values[0][0] += amount;
+  } else if (csvid == 0xa7) {
+    values[0][4] += amount;
+  } else if (csvid == 0xa8) {
+    values[0][3] += amount;
+  } else if (csvid == 0xa9) {
+    values[0][1] += amount;
+  } else if (csvid == 9) {
+    values[0][0] += amount;
+    values[0][3] += amount;
+  } else if (csvid == 0xc) {
+    values[0][0] += amount;
+    values[0][2] += amount;
+  } else if (csvid == 0xbd) {
+    values[0][3] += amount;
+    values[0][4] += amount;
+  } else if (csvid == 0xd4) {
+    values[0][4] += amount;
+    values[0][2] += amount;
+  } else if (csvid == 0xd8) {
+    values[0][4] += amount;
+    values[0][0] += amount;
+  } else if (csvid == 0xf1) {
+    values[0][3] += amount;
+    values[0][2] += amount;
+  } else if (csvid == 0xfc) {
+    values[0][1] += amount;
+    values[0][2] += amount;
+  } else if (csvid == 0xfe) {
+    values[0][4] += amount;
+    values[0][1] += amount;
+  } else if (csvid == 0x102) {
+    values[0][1] += amount;
+    values[0][0] += amount;
+  } else if (csvid == 0x10a) {
+    values[0][1] += amount;
+    values[0][3] += amount;
+  } else {
+    values[0][column] += amount;
+  }
+}
+
+static void build_stats_snapshot(DeckStatsSnapshot *stats)
 {
   int i;
-  int black = 0;
-  int blue = 0;
-  int green = 0;
-  int red = 0;
-  int white = 0;
-  int land = 0;
-  int creature = 0;
-  int spell = 0;
-  int artifact = 0;
+  int row;
+  int col;
+  int five_color_lands = 0;
+
+  memset(stats, 0, sizeof(*stats));
+  stats->card_count = g_deck.main_deck_cards;
+  stats->unique_count = g_deck.main_deck_total;
+
   for (i = 0; i < g_deck.main_deck_total; ++i) {
+    int csvid = g_deck.main_deck[i].csvid;
     int amount = g_deck.main_deck[i].amount;
-    const card_ptr_t *card = &global_raw_cards_storage[g_deck.main_deck[i].csvid];
-    switch (card->color) {
-    case CP_COLOR_BLACK: black += amount; break;
-    case CP_COLOR_BLUE: blue += amount; break;
-    case CP_COLOR_GREEN: green += amount; break;
-    case CP_COLOR_RED: red += amount; break;
-    case CP_COLOR_WHITE: white += amount; break;
-    }
+    const card_ptr_t *card = &global_raw_cards_storage[csvid];
+
     switch (card->card_type) {
-    case CP_TYPE_LAND: land += amount; break;
-    case CP_TYPE_CREATURE: creature += amount; break;
-    case CP_TYPE_ARTIFACT: artifact += amount; break;
-    case CP_TYPE_INSTANT:
-    case CP_TYPE_INTERRUPT:
-    case CP_TYPE_SORCERY:
-      spell += amount;
-      break;
+    case CP_TYPE_CREATURE: row = 1; break;
+    case CP_TYPE_ENCHANTMENT: row = 2; break;
+    case CP_TYPE_SORCERY: row = 3; break;
+    case CP_TYPE_INSTANT: row = 4; break;
+    case CP_TYPE_INTERRUPT: row = 5; break;
+    case CP_TYPE_LAND: row = 6; break;
+    case CP_TYPE_ARTIFACT: row = 7; break;
+    default: continue;
     }
+
+    col = stats_color_column(csvid, card, row);
+    if (row == 7) {
+      col = 5;
+      if (card->subtype == 0x2c)
+        row = 1;
+    }
+
+    if (card->db_card_type_2 == 10)
+      add_stats_mana_sources(csvid, amount, col, stats->values, &five_color_lands);
+
+    stats->values[row][col] += amount;
   }
-  set_status_text("%d cards | B%d U%d G%d R%d W%d | Land%d Creature%d Spell%d Artifact%d",
-                  g_deck.main_deck_cards, black, blue, green, red, white,
-                  land, creature, spell, artifact);
-  hold_status_for_frames(300);
+
+  for (row = 0; row < 8; ++row) {
+    for (col = 0; col < 6; ++col)
+      stats->values[row][6] += stats->values[row][col];
+  }
+  stats->values[0][6] -= five_color_lands * 4;
+
+  for (col = 0; col < 6; ++col) {
+    for (row = 1; row < 8; ++row)
+      stats->values[8][col] += stats->values[row][col];
+  }
+  for (row = 1; row < 8; ++row)
+    stats->values[8][6] += stats->values[row][6];
+}
+
+int deck_ui_stats_popup_visible(void)
+{
+  return core_is_interactive() ? g_deck.stats_popup_visible : 0;
+}
+
+void deck_ui_close_stats_popup(void)
+{
+  g_deck.stats_popup_visible = 0;
+}
+
+int deck_ui_get_stats(DeckStatsSnapshot *stats)
+{
+  if (!core_is_interactive() || !stats)
+    return 0;
+  build_stats_snapshot(stats);
+  return 1;
+}
+
+int deck_ui_pressed_main_button(void)
+{
+  return core_is_interactive() ? g_deck.pressed_main_button : -1;
+}
+
+static void show_deck_stats(void)
+{
+  g_deck.stats_popup_visible = 1;
+  set_status_text("Showing stats for %d cards", g_deck.main_deck_cards);
+  hold_status_for_frames(60);
 }
 
 static void show_deck_info(void)
@@ -2053,13 +2357,27 @@ void deck_pointer_button(int button, int pressed, int clicks)
   int y = (int)g_deck.pointer_y;
   DeckFilterCommand command;
   DeckMainCommand main_command;
+  int was_pressed_main_button;
   if (!core_is_interactive())
     return;
-  if (!pressed)
+
+  if (button == 1 && !pressed && g_deck.pressed_main_button >= 0) {
+    was_pressed_main_button = g_deck.pressed_main_button;
+    g_deck.pressed_main_button = -1;
+    if (hit_main_button(x, y, &main_command) &&
+        (int)main_command == was_pressed_main_button)
+      apply_main_command(main_command);
     return;
+  }
+
+  if (!pressed) {
+    g_deck.pressed_main_button = -1;
+    return;
+  }
 
   if (hit_main_button(x, y, &main_command)) {
-    apply_main_command(main_command);
+    if (button == 1)
+      g_deck.pressed_main_button = (int)main_command;
     return;
   }
 
