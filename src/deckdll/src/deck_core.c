@@ -92,7 +92,6 @@ HBITMAP LoadPicFile(int loadFlags, uint32_t unused_arg2, uint32_t unused_arg3,
                     char *pcxFilename, unsigned char *palette);
 
 typedef enum DeckFilterCommand {
-  DECK_FILTER_ALL,
   DECK_FILTER_BLACK,
   DECK_FILTER_BLUE,
   DECK_FILTER_GREEN,
@@ -111,6 +110,7 @@ typedef enum DeckFilterCommand {
   DECK_FILTER_ANTIQUITIES,
   DECK_FILTER_LEGENDS,
   DECK_FILTER_DARK,
+  DECK_FILTER_ALL,
   DECK_FILTER_SAVE,
   DECK_FILTER_LOAD,
   DECK_FILTER_CLEAR
@@ -137,31 +137,27 @@ typedef struct DeckMainButton {
 } DeckMainButton;
 
 static const DeckFilterButton k_filter_buttons[] = {
-  { "ALL", 34, DECK_FILTER_ALL, "DBArt/all-butn.pic" },
-  { "BLACK", 34, DECK_FILTER_BLACK, "DBArt/GREY.PIC" },
-  { "BLUE", 34, DECK_FILTER_BLUE, "DBArt/BLUE.PIC" },
-  { "GREEN", 34, DECK_FILTER_GREEN, "DBArt/GREEN.PIC" },
-  { "RED", 34, DECK_FILTER_RED, "DBArt/RED.PIC" },
+  { "FOURTH", 34, DECK_FILTER_FOURTH, "DBArt/all-butn.pic" },
+  { "ASTRAL", 34, DECK_FILTER_ASTRAL, "DBArt/ASTRAL.PIC" },
+  { "ARABIAN", 34, DECK_FILTER_ARABIAN, "DBArt/arabnite.pic" },
+  { "ANTIQUITIES", 34, DECK_FILTER_ANTIQUITIES, "DBArt/antiquit.pic" },
+  { "LEGENDS", 34, DECK_FILTER_LEGENDS, "DBArt/legends.pic" },
+  { "DARK", 34, DECK_FILTER_DARK, "DBArt/dark.pic" },
   { "WHITE", 34, DECK_FILTER_WHITE, "DBArt/YELLOW.PIC" },
+  { "BLUE", 34, DECK_FILTER_BLUE, "DBArt/BLUE.PIC" },
+  { "BLACK", 34, DECK_FILTER_BLACK, "DBArt/GREY.PIC" },
+  { "RED", 34, DECK_FILTER_RED, "DBArt/RED.PIC" },
+  { "GREEN", 34, DECK_FILTER_GREEN, "DBArt/GREEN.PIC" },
   { "LAND", 34, DECK_FILTER_LAND, "DBArt/LAND.PIC" },
   { "ARTIFACT", 34, DECK_FILTER_ARTIFACT, "DBArt/ARTIFACT.PIC" },
   { "CREATURE", 34, DECK_FILTER_CREATURE, "DBArt/CREATURE.PIC" },
   { "ENCHANT", 34, DECK_FILTER_ENCHANTMENT, "DBArt/ENCHANT.PIC" },
   { "INSTANT", 34, DECK_FILTER_INSTANT, "DBArt/INSTANT.PIC" },
   { "INTERRUPT", 34, DECK_FILTER_INTERRUPT, "DBArt/INTERRUPT.pic" },
-  { "SORCERY", 34, DECK_FILTER_SORCERY, "DBArt/SORCERY.PIC" },
-  { "FOURTH", 34, DECK_FILTER_FOURTH, "DBArt/FOURTH.PIC" },
-  { "ASTRAL", 34, DECK_FILTER_ASTRAL, "DBArt/ASTRAL.PIC" },
-  { "ARABIAN", 34, DECK_FILTER_ARABIAN, "DBArt/arabnite.pic" },
-  { "ANTIQUITIES", 34, DECK_FILTER_ANTIQUITIES, "DBArt/antiquit.pic" },
-  { "LEGENDS", 34, DECK_FILTER_LEGENDS, "DBArt/legends.pic" },
-  { "DARK", 34, DECK_FILTER_DARK, "DBArt/dark.pic" },
-  { "SAVE", 58, DECK_FILTER_SAVE, NULL },
-  { "LOAD", 58, DECK_FILTER_LOAD, NULL },
-  { "CLEAR", 58, DECK_FILTER_CLEAR, NULL }
+  { "SORCERY", 34, DECK_FILTER_SORCERY, "DBArt/SORCERY.PIC" }
 };
 
-#define DECK_ICON_FILTER_COUNT 19
+#define DECK_ICON_FILTER_COUNT 18
 #define DECK_SET_FOURTH (1u << 0)
 #define DECK_SET_ASTRAL (1u << 1)
 #define DECK_SET_ARABIAN (1u << 2)
@@ -1395,21 +1391,12 @@ static int filter_command_active(DeckFilterCommand command)
   }
 }
 
-static void draw_button_rect(int left, int top, int right, int bottom, const char *text, int active)
-{
-  fill_rect_logical(left, top, right, bottom, active ? 0xff6c4418u : 0xff262018u);
-  fill_rect_logical(left + 1, top + 1, right - 1, bottom - 1, active ? 0xffe0b050u : 0xff847048u);
-  fill_rect_logical(left + 3, top + 3, right - 3, bottom - 3, active ? 0xff4a3014u : 0xff2c251du);
-  draw_text_logical(left + 12, top + (bottom - top - 7) / 2, text, 0xfff0d890u, 1, 24);
-}
-
 static void draw_title_panel(void)
 {
   if (!blit_pic_logical(g_deck.dektit1, DECK_TITLE_X, DECK_TITLE_Y,
                         DECK_TITLE_X + DECK_TITLE_W, DECK_TITLE_Y + DECK_TITLE_H))
     draw_panel(DECK_TITLE_X, DECK_TITLE_Y, DECK_TITLE_X + DECK_TITLE_W, DECK_TITLE_Y + DECK_TITLE_H, "");
   draw_text_logical(DECK_TITLE_X + 28, DECK_TITLE_Y + 19, "New Deck", 0xffffe8a0u, 2, 16);
-  draw_text_logical(DECK_TITLE_X + 32, DECK_TITLE_Y + 46, g_deck.status_text, 0xffe4d28cu, 1, 34);
 }
 
 static void draw_fullcard_preview(void)
@@ -1439,27 +1426,16 @@ static void draw_filter_strip(void)
     draw_panel(DECK_FILTER_X, DECK_FILTER_Y, DECK_FILTER_X + DECK_FILTER_W, DECK_FILTER_Y + DECK_FILTER_H, "");
   for (i = 0; i < (int)(sizeof(k_filter_buttons) / sizeof(k_filter_buttons[0])); ++i) {
     const DeckFilterButton *button = &k_filter_buttons[i];
-    if (!button->asset_name)
-      continue;
-    {
-      int active = filter_command_active(button->command);
-      fill_rect_logical(x, DECK_FILTER_Y + 5, x + button->width, DECK_FILTER_Y + 39,
-                        active ? 0xffffffffu : 0xff303030u);
-      fill_rect_logical(x + 2, DECK_FILTER_Y + 7, x + button->width - 2, DECK_FILTER_Y + 37,
-                        active ? 0xff606060u : 0xffb0b0b0u);
-      blit_pic_logical(g_deck.filter_art[i], x + 4, DECK_FILTER_Y + 9,
-                       x + button->width - 4, DECK_FILTER_Y + 35);
-    }
+    int active = filter_command_active(button->command);
+    fill_rect_logical(x, DECK_FILTER_Y + 5, x + button->width, DECK_FILTER_Y + 39,
+                      active ? 0xffffffffu : 0xff303030u);
+    fill_rect_logical(x + 2, DECK_FILTER_Y + 7, x + button->width - 2, DECK_FILTER_Y + 37,
+                      active ? 0xff606060u : 0xffb0b0b0u);
+    blit_pic_logical(g_deck.filter_art[i], x + 4, DECK_FILTER_Y + 9,
+                     x + button->width - 4, DECK_FILTER_Y + 35);
     x += button->width + 6;
-  }
-  x = DECK_FILTER_X + DECK_FILTER_W - 204;
-  for (i = 0; i < (int)(sizeof(k_filter_buttons) / sizeof(k_filter_buttons[0])); ++i) {
-    const DeckFilterButton *button = &k_filter_buttons[i];
-    if (button->asset_name)
-      continue;
-    draw_button_rect(x, DECK_FILTER_Y + 8, x + button->width, DECK_FILTER_Y + 36,
-                     button->label, 0);
-    x += button->width + 8;
+    if (i == 5 || i == 10)
+      x += 18;
   }
 }
 
@@ -1529,9 +1505,6 @@ static void draw_deck_surface(void)
     draw_text_logical(x + DECK_CARD_W - 30, y + 7, amount_text, 0xffffe080u, 1, 4);
     y += y_step;
   }
-  if (!g_deck.main_deck_total)
-    draw_text_logical(DECK_SURFACE_X + 36, DECK_SURFACE_Y + 60,
-                      "CLICK A CARD BELOW OR PRESS ENTER TO ADD TO DECK", 0xffc0b080u, 1, 55);
 }
 
 static void draw_ready_screen(void)
@@ -2030,26 +2003,14 @@ static int hit_filter_button(int x, int y, DeckFilterCommand *command)
     return 0;
   for (i = 0; i < (int)(sizeof(k_filter_buttons) / sizeof(k_filter_buttons[0])); ++i) {
     const DeckFilterButton *button = &k_filter_buttons[i];
-    if (!button->asset_name)
-      continue;
     if (x >= button_x && x < button_x + button->width) {
       if (command)
         *command = button->command;
       return 1;
     }
     button_x += button->width + 6;
-  }
-  button_x = DECK_FILTER_X + DECK_FILTER_W - 204;
-  for (i = 0; i < (int)(sizeof(k_filter_buttons) / sizeof(k_filter_buttons[0])); ++i) {
-    const DeckFilterButton *button = &k_filter_buttons[i];
-    if (button->asset_name)
-      continue;
-    if (x >= button_x && x < button_x + button->width) {
-      if (command)
-        *command = button->command;
-      return 1;
-    }
-    button_x += button->width + 8;
+    if (i == 5 || i == 10)
+      button_x += 18;
   }
   return 0;
 }

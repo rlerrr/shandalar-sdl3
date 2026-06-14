@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-project(shandalar_wasm LANGUAGES C CXX)
+project(shandalar_sdl3 LANGUAGES C CXX)
 
 include(FetchContent)
 
