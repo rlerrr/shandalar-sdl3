@@ -545,6 +545,8 @@ undefined4 DrawFullCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version
   int cornerHeight;
   RECT castingCostRect;
   RECT setIconRect;
+  int flavorTextHeight;
+  int flavorTextSpacing;
 
   if (((dc == (HDC)0x0) || (rect == (RECT *)0x0)) || (card == (card_ptr_t *)0x0))
   {
@@ -747,11 +749,16 @@ undefined4 DrawFullCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version
     manaTextHeight = (unsigned short)((CalcDrawManaText(dc, &rulesTextRect, rules_text) >> 0x10) & 0xffff);
     GetTextMetricsA(dc, &textMetrics);
     CopyRect(&flavorRect, &rulesTextRect);
-    flavorRect.top += manaTextHeight;
-    flavorRect.top += textMetrics.tmHeight / 2;
-    SelectObject(dc, g_bigCardTextItalicFont);
-    DrawTextA(dc, card->flavor_text, -1, &flavorRect, 0x410);
-    textBlockHeight = flavorRect.bottom - rulesTextRect.top;
+    textBlockHeight = manaTextHeight;
+    if (card->flavor_text != (char *)0x0 && card->flavor_text[0] != '\0')
+    {
+      flavorTextSpacing = textMetrics.tmHeight / 2;
+      flavorRect.top += manaTextHeight + flavorTextSpacing;
+      SelectObject(dc, g_bigCardTextItalicFont);
+      DrawTextA(dc, card->flavor_text, -1, &flavorRect, 0x410);
+      flavorTextHeight = flavorRect.bottom - flavorRect.top;
+      textBlockHeight += flavorTextSpacing + flavorTextHeight;
+    }
     if (rulesTextRect.bottom - rulesTextRect.top < textBlockHeight)
     {
       rulesBackgroundTopInset = rulesTextRect.top - rulesBackgroundRect.top;
@@ -1439,17 +1446,8 @@ uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
         for (idx = 0; temp > idx; idx = idx + 1)
         {
           if (drawSymbols != 0)
-          {
             DrawManaSymbol(dc, buf[idx], left + (symbol_step - symbol_width) / 2,
                            top + (font_height - symbol_height) / 2, symbol_width, symbol_height);
-          }
-          else
-          {
-            Ellipse(dc, left + (symbol_step - symbol_width) / 2,
-                    top + (font_height - symbol_height) / 2,
-                    symbol_width + (symbol_step - symbol_width) / 2 + left,
-                    symbol_height + (font_height - symbol_height) / 2 + top);
-          }
           left = left + symbol_step;
         }
         if ((*text == ':') || (*text == ','))
@@ -1460,7 +1458,8 @@ uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
           idx = idx + 1;
           buf[idx] = '\0';
           GetTextExtentPoint32A(dc, buf, idx, &size);
-          TextOutA(dc, left, top, buf, strlen(buf));
+          if (drawSymbols != 0)
+            TextOutA(dc, left, top, buf, strlen(buf));
           left = left + size.cx;
         }
       }
@@ -1484,7 +1483,8 @@ uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
           top = top + line_height;
           left = rect->left;
         }
-        TextOutA(dc, left, top, buf, strlen(buf));
+        if (drawSymbols != 0)
+          TextOutA(dc, left, top, buf, strlen(buf));
         left = left + size.cx;
       }
     }

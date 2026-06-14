@@ -8,6 +8,10 @@
 #include "drawcardlib/src/pic.h"
 #include "facemaker_types.h"
 
+#ifndef _MSC_VER
+#define _vsnprintf vsnprintf
+#endif
+
 #pragma intrinsic(memcpy)
 
 extern int LoadBitmapFontFromFile(int font_id, FILE *file);

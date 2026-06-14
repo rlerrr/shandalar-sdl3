@@ -1043,7 +1043,7 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   rect_bottom = map_y(dc, rect->bottom);
   max_width = rect_right - draw_x;
   single_line = (format & DT_SINGLELINE) != 0;
-  if (max_width <= 0 || rect_bottom <= draw_y)
+  if (max_width <= 0 || (!(format & DT_CALCRECT) && rect_bottom <= draw_y))
     return 0;
   utf8 = utf8_from_windows_text(text, length, &utf8_length);
   if (!utf8)

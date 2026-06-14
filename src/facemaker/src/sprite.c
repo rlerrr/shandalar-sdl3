@@ -31,6 +31,38 @@ extern int *g_sprite_blob_cursor;
 extern DIBSurface *g_graphics_pages[10];
 extern FacemakerWindowBounds *g_face_fullscreen_bounds;
 extern char g_file_read_mode[];
+
+static size_t g_sprite_blob_byte_count;
+
+static void shrink_sprite_blob(size_t byte_count)
+{
+  size_t cursor_offset;
+  void *resized;
+  if (!g_sprite_blob_base)
+    return;
+  cursor_offset = (size_t)((char *)g_sprite_blob_cursor - (char *)g_sprite_blob_base);
+#ifdef _MSC_VER
+  resized = _expand((void *)g_sprite_blob_base, byte_count);
+#else
+  resized = realloc((void *)g_sprite_blob_base, byte_count);
+#endif
+  if (resized) {
+    g_sprite_blob_base = (int *)resized;
+    g_sprite_blob_cursor = (int *)((char *)g_sprite_blob_base + cursor_offset);
+  }
+  g_sprite_blob_byte_count = byte_count;
+}
+
+static size_t sprite_blob_size(void *sprite_blob)
+{
+  if (sprite_blob == (void *)g_sprite_blob_base && g_sprite_blob_byte_count != 0)
+    return g_sprite_blob_byte_count;
+#ifdef _MSC_VER
+  return _msize(sprite_blob);
+#else
+  return 0;
+#endif
+}
 #pragma optimize("gy", on)
 
 // FUNCTION: SHANDALAR 0x0057b650
@@ -39,14 +71,17 @@ void BeginSpriteEncodeSession(void)
 {
   g_sprite_blob_base = malloc(0x200000);
   g_sprite_blob_cursor = g_sprite_blob_base;
+  g_sprite_blob_byte_count = 0x200000;
 }
 
 // FUNCTION: SHANDALAR 0x0057b670
 // FUNCTION: FACEMAKER 0x00408920
 void FinalizeSpriteEncodeSession(void)
 {
+  size_t byte_count;
   *g_sprite_blob_cursor = -1;
-  g_sprite_blob_base = _expand((void *)g_sprite_blob_base, (int)g_sprite_blob_cursor + (0x10 - (int)g_sprite_blob_base));
+  byte_count = (size_t)((char *)g_sprite_blob_cursor - (char *)g_sprite_blob_base) + 0x10;
+  shrink_sprite_blob(byte_count);
 }
 
 // FUNCTION: SHANDALAR 0x0057b6a0
@@ -63,7 +98,9 @@ size_t WriteSpriteBlob(void *sprite_blob, char *output_path)
   size_t byte_count;
   FILE *file;
 
-  byte_count = _msize(sprite_blob);
+  byte_count = sprite_blob_size(sprite_blob);
+  if (byte_count == 0)
+    return 0;
   file = fopen(output_path, "wb");
   fwrite(sprite_blob, 1, byte_count, file);
   fclose(file);
