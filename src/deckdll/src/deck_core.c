@@ -7,6 +7,7 @@
 #include "drawcardlib/Drawcardlib.h"
 #include "drawcardlib/src/pic.h"
 #include "cardartlib/src/palette.h"
+#include "magsnd/magsnd.h"
 #include "platform/asset_manager.h"
 #include "platform/gdi_compat.h"
 
@@ -78,6 +79,14 @@ static const char *const k_required_assets[] = {
   "DBArt/BLDR04C.PIC",
   "DBArt/BLDR05C.PIC"
 };
+
+static const char *const k_sound_assets[] = {
+  "DuelSounds/DRAW.WAV",
+  "DuelSounds/DISCARD.WAV"
+};
+
+#define DECK_SOUND_DRAW 2
+#define DECK_SOUND_DISCARD 3
 
 typedef enum DeckFilterCommand {
   DECK_FILTER_ALL,
@@ -185,6 +194,9 @@ typedef struct DeckCore {
   int database_loaded;
   int drawcard_initialized;
   int cardart_initialized;
+  int sound_initialized;
+  int sounds_loaded;
+  int sound_load_failed;
   int expanded_text;
   int sample_csvid;
   float pointer_x;
@@ -688,6 +700,18 @@ static void hold_status_for_frames(int frames)
   g_deck.status_hold_frames = frames;
 }
 
+static void play_deck_sound(int slot)
+{
+  Sound snd;
+  if (!g_deck.sounds_loaded)
+    return;
+  memset(&snd, 0, sizeof(snd));
+  snd.volume = 400;
+  snd.sampleRate = 0;
+  snd.pan = 0;
+  PlaySnd(slot, &snd);
+}
+
 static int selected_csvid(void);
 static void select_available_index(int index);
 
@@ -825,11 +849,11 @@ static int find_deck_entry(int csvid)
   return -1;
 }
 
-static void add_card_to_main_deck(int csvid, int amount)
+static int add_card_to_main_deck(int csvid, int amount)
 {
   int idx;
   if (csvid < 0 || amount <= 0)
-    return;
+    return 0;
   idx = find_deck_entry(csvid);
   if (idx >= 0) {
     g_deck.main_deck[idx].amount += amount;
@@ -838,20 +862,23 @@ static void add_card_to_main_deck(int csvid, int amount)
     g_deck.main_deck[idx].csvid = csvid;
     g_deck.main_deck[idx].amount = amount;
     g_deck.main_deck[idx].name = global_raw_cards_storage[csvid].full_name;
+  } else {
+    return 0;
   }
   g_deck.main_deck_cards += amount;
   update_ready_status();
+  return 1;
 }
 
-static void remove_card_from_main_deck(int csvid, int amount)
+static int remove_card_from_main_deck(int csvid, int amount)
 {
   int idx;
   int i;
   if (csvid < 0 || amount <= 0)
-    return;
+    return 0;
   idx = find_deck_entry(csvid);
   if (idx < 0)
-    return;
+    return 0;
   if (amount >= g_deck.main_deck[idx].amount) {
     g_deck.main_deck_cards -= g_deck.main_deck[idx].amount;
     for (i = idx; i + 1 < g_deck.main_deck_total; ++i)
@@ -862,6 +889,19 @@ static void remove_card_from_main_deck(int csvid, int amount)
     g_deck.main_deck_cards -= amount;
   }
   update_ready_status();
+  return 1;
+}
+
+static void add_card_from_user(int csvid)
+{
+  if (add_card_to_main_deck(csvid, 1))
+    play_deck_sound(DECK_SOUND_DRAW);
+}
+
+static void remove_card_from_user(int csvid)
+{
+  if (remove_card_from_main_deck(csvid, 1))
+    play_deck_sound(DECK_SOUND_DISCARD);
 }
 
 static void clear_main_deck(void)
@@ -1483,9 +1523,33 @@ int deck_resize(int width, int height)
   return 1;
 }
 
+static void initialize_deck_sounds(void)
+{
+  if (g_deck.sounds_loaded || g_deck.sound_load_failed)
+    return;
+  if (shandalar_assets_state(k_sound_assets[0]) != SHANDALAR_ASSET_READY ||
+      shandalar_assets_state(k_sound_assets[1]) != SHANDALAR_ASSET_READY)
+    return;
+  if (!g_deck.sound_initialized) {
+    if (InitSnd(NULL, 0, 0) != 0) {
+      g_deck.sound_load_failed = 1;
+      return;
+    }
+    g_deck.sound_initialized = 1;
+  }
+  if (LoadSnd((LPSTR)k_sound_assets[0], DECK_SOUND_DRAW, NULL) != 0 ||
+      LoadSnd((LPSTR)k_sound_assets[1], DECK_SOUND_DISCARD, NULL) != 0) {
+    g_deck.sound_load_failed = 1;
+    return;
+  }
+  g_deck.sounds_loaded = 1;
+}
+
 void deck_destroy(void)
 {
   int i;
+  if (g_deck.sound_initialized)
+    ReleaseSnd();
   reset_surface_card_cache();
   if (g_deck.drawcard_initialized)
     DrawCardLib_Shutdown();
@@ -1527,6 +1591,8 @@ DeckStatus deck_step(uint64_t now_ns)
   } else if (!initialize_drawcard()) {
     /* Keep rendering the error text. */
   } else {
+    initialize_deck_sounds();
+    UpdateSnd();
     if (g_deck.status_hold_frames > 0)
       --g_deck.status_hold_frames;
     else
@@ -1688,13 +1754,13 @@ const char *deck_ui_card_rules(int csvid)
 void deck_ui_add_card(int csvid)
 {
   if (core_is_interactive())
-    add_card_to_main_deck(csvid, 1);
+    add_card_from_user(csvid);
 }
 
 void deck_ui_remove_card(int csvid)
 {
   if (core_is_interactive())
-    remove_card_from_main_deck(csvid, 1);
+    remove_card_from_user(csvid);
 }
 
 int deck_ui_expanded_text(void)
@@ -1950,7 +2016,7 @@ void deck_pointer_button(int button, int pressed, int clicks)
   if (x >= DECK_FULLCARD_X && x < DECK_FULLCARD_X + DECK_FULLCARD_W &&
       y >= DECK_FULLCARD_Y && y < DECK_FULLCARD_Y + DECK_FULLCARD_H) {
     if (button == 1 && clicks >= 2)
-      add_card_to_main_deck(selected_csvid(), 1);
+      add_card_from_user(selected_csvid());
     return;
   }
 
@@ -1979,7 +2045,7 @@ void deck_pointer_button(int button, int pressed, int clicks)
       if (x >= card_x[i] && x < card_x[i] + DECK_CARD_W &&
           y >= card_y[i] && y < card_y[i] + DECK_CARD_H) {
         if (button == 1 && clicks >= 2)
-          remove_card_from_main_deck(g_deck.main_deck[i].csvid, 1);
+          remove_card_from_user(g_deck.main_deck[i].csvid);
         return;
       }
     }
@@ -2010,11 +2076,11 @@ void deck_key(int key, int pressed, int repeat)
   case SDLK_RETURN:
   case SDLK_KP_ENTER:
   case SDLK_SPACE:
-    add_card_to_main_deck(selected_csvid(), 1);
+    add_card_from_user(selected_csvid());
     break;
   case SDLK_BACKSPACE:
   case SDLK_DELETE:
-    remove_card_from_main_deck(selected_csvid(), 1);
+    remove_card_from_user(selected_csvid());
     break;
   case SDLK_S:
     if (!save_deck_file(g_deck.deck_path)) {
@@ -2083,4 +2149,6 @@ void deck_prefetch_cardart(void)
   shandalar_assets_prefetch("MENUBAK.PIC");
   for (i = 0; i < DECK_ICON_FILTER_COUNT; ++i)
     shandalar_assets_prefetch(k_filter_buttons[i].asset_name);
+  for (i = 0; i < (int)(sizeof(k_sound_assets) / sizeof(k_sound_assets[0])); ++i)
+    shandalar_assets_prefetch(k_sound_assets[i]);
 }

@@ -1,5 +1,5 @@
 add_library(magsnd_static STATIC
-  src/stub.c
+  src/sdl.c
 )
 
 target_include_directories(magsnd_static PUBLIC

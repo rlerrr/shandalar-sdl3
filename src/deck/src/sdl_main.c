@@ -158,7 +158,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
   choose_canvas_render_size(&render_width, &render_height);
   request_canvas_size(render_width, render_height);
 #endif
-  if (!SDL_Init(SDL_INIT_VIDEO))
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     return SDL_APP_FAILURE;
   app = (DeckApp *)SDL_calloc(1, sizeof(*app));
   if (!app)

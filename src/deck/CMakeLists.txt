@@ -63,5 +63,14 @@ if(EMSCRIPTEN)
         "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/CardArt/${asset}@/assets/CardArt/${asset}"
       )
     endforeach()
+    set(DECK_SOUND_ASSETS
+      DRAW.WAV
+      DISCARD.WAV
+    )
+    foreach(asset IN LISTS DECK_SOUND_ASSETS)
+      target_link_options(deck PRIVATE
+        "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/DuelSounds/${asset}@/assets/DuelSounds/${asset}"
+      )
+    endforeach()
   endif()
 endif()
