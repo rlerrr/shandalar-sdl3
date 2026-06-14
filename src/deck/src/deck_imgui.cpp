@@ -215,10 +215,23 @@ void handle_browser_keyboard()
     deck_ui_add_card(deck_ui_available_csvid(selected));
 }
 
+bool image_card_button(const char *id, SDL_Texture *texture, ImVec2 size)
+{
+  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+  const bool clicked = texture &&
+      ImGui::ImageButton(id, (ImTextureID)(intptr_t)texture, size);
+  ImGui::PopStyleVar(2);
+  ImGui::PopStyleColor(3);
+  return clicked;
+}
+
 void draw_browser()
 {
   const int count = deck_ui_available_count();
-  const int selected = deck_ui_selected_index();
   const int max_first = count > kVisibleCards ? count - kVisibleCards : 0;
   const ImGuiWindowFlags flags =
       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
@@ -265,13 +278,8 @@ void draw_browser()
       SDL_Texture *texture = card_texture(csvid, card_width, card_height);
       ImGui::SetCursorPos(ImVec2((float)(slot * cell_width), 0.0f));
       ImGui::PushID(index);
-      if (index == selected)
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.78f, 0.55f, 0.18f, 1.0f));
-      const bool clicked = texture &&
-          ImGui::ImageButton("card", (ImTextureID)(intptr_t)texture,
-                             ImVec2((float)card_width, (float)card_height));
-      if (index == selected)
-        ImGui::PopStyleColor();
+      const bool clicked = image_card_button("card", texture,
+                                             ImVec2((float)card_width, (float)card_height));
       if (clicked) {
         deck_ui_select_available_index(index);
         ImGui::SetWindowFocus();
@@ -439,9 +447,7 @@ void draw_full_card_context_menu()
   ImGui::Begin("Full Card Actions", nullptr, flags);
   ImGui::InvisibleButton("full_card", ImGui::GetContentRegionAvail());
   if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-    const int selected = deck_ui_selected_index();
-    if (selected >= 0)
-      deck_ui_add_card(deck_ui_available_csvid(selected));
+    deck_ui_set_expanded_text(!deck_ui_expanded_text());
   }
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * ui_scale(), 8.0f * ui_scale()));
   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f * ui_scale(), 5.0f * ui_scale()));
@@ -529,7 +535,6 @@ extern "C" void deck_imgui_begin_frame(void)
   SDL_RenderCoordinatesFromWindow(g_renderer, mouse_x, mouse_y, &mouse_x, &mouse_y);
   io.AddMousePosEvent(mouse_x, mouse_y);
   ImGui::NewFrame();
-  deck_ui_preview_card(-1);
   if (deck_ui_is_interactive()) {
     draw_full_card_context_menu();
     draw_browser();

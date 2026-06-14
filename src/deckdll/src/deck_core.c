@@ -88,6 +88,9 @@ static const char *const k_sound_assets[] = {
 #define DECK_SOUND_DRAW 2
 #define DECK_SOUND_DISCARD 3
 
+HBITMAP LoadPicFile(int loadFlags, uint32_t unused_arg2, uint32_t unused_arg3,
+                    char *pcxFilename, unsigned char *palette);
+
 typedef enum DeckFilterCommand {
   DECK_FILTER_ALL,
   DECK_FILTER_BLACK,
@@ -182,6 +185,8 @@ typedef struct DeckCore {
   int height;
   uint32_t *rgba;
   HBITMAP menubak;
+  uint32_t menubak_palette[256];
+  int menubak_palette_loaded;
   HBITMAP dektile4;
   HBITMAP dekbar1;
   HBITMAP dektit1;
@@ -488,25 +493,62 @@ static void draw_placeholder_text_bar(const char *message)
   int bar_width = scale_len_x(320 + len * 4);
   int left = (g_deck.width - bar_width) / 2;
   int top = g_deck.height - scale_len_y(116);
-  int i;
+  int text_scale = g_deck.width >= 1536 ? 2 : 1;
   fill_rect_rgba(left, top, left + bar_width, top + scale_len_y(54), 0xff201010u);
   fill_rect_rgba(left + scale_len_x(2), top + scale_len_y(2),
                  left + bar_width - scale_len_x(2), top + scale_len_y(52), 0xff5b2d16u);
   fill_rect_rgba(left + scale_len_x(8), top + scale_len_y(8),
                  left + bar_width - scale_len_x(8), top + scale_len_y(46), 0xff1b1111u);
-  for (i = 0; i < len && i < 80; ++i) {
-    uint32_t color = (message[i] == ' ') ? 0xff1b1111u : 0xffd4c080u;
-    fill_rect_rgba(left + scale_len_x(18 + i * 7), top + scale_len_y(22),
-                   left + scale_len_x(22 + i * 7), top + scale_len_y(30), color);
-  }
+  draw_text_rgba(left + scale_len_x(18), top + scale_len_y(20),
+                 message ? message : "", 0xffd4c080u, text_scale, 80);
 }
 
 static uint32_t menubak_color(unsigned char index)
 {
-  uint8_t r = (uint8_t)SDL_min(255, 24 + index);
-  uint8_t g = (uint8_t)SDL_min(255, 8 + (index * 2) / 3);
-  uint8_t b = (uint8_t)SDL_min(255, 8 + index / 3);
-  return 0xff000000u | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+  if (g_deck.menubak_palette_loaded)
+    return g_deck.menubak_palette[index];
+  return 0xff000000u;
+}
+
+static void cache_menubak_palette(const unsigned char *packet)
+{
+  const RpBitsPalettePacket *palette = (const RpBitsPalettePacket *)packet;
+  unsigned int first;
+  unsigned int last;
+  unsigned int index;
+  int is_m0;
+  int is_m1;
+
+  for (index = 0; index < 256; ++index)
+    g_deck.menubak_palette[index] = 0xff000000u;
+  g_deck.menubak_palette[255] = 0xffffffffu;
+  g_deck.menubak_palette_loaded = 0;
+
+  if (!palette)
+    return;
+  is_m0 = palette->signature == (unsigned short)('M' | ('0' << 8));
+  is_m1 = palette->signature == (unsigned short)('M' | ('1' << 8));
+  if (!is_m0 && !is_m1)
+    return;
+
+  first = palette->first_index;
+  last = palette->last_index;
+  if (first > last || last >= 256)
+    return;
+
+  for (index = first; index <= last; ++index) {
+    const unsigned char *entry = palette->entry_data + index * 3;
+    uint8_t r = is_m0 ? (uint8_t)((entry[0] * 255) / 63) : entry[0];
+    uint8_t g = is_m0 ? (uint8_t)((entry[1] * 255) / 63) : entry[1];
+    uint8_t b = is_m0 ? (uint8_t)((entry[2] * 255) / 63) : entry[2];
+    if (index != 255 && r == 255 && g == 255 && b == 255)
+      r = g = b = 254;
+    g_deck.menubak_palette[index] = 0xff000000u |
+        ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+  }
+  g_deck.menubak_palette[0] = 0xff000000u;
+  g_deck.menubak_palette[255] = 0xffffffffu;
+  g_deck.menubak_palette_loaded = 1;
 }
 
 static int draw_menubak(void);
@@ -635,12 +677,53 @@ static int asset_list_failed(const char *const *assets, size_t count)
   return 0;
 }
 
+static const char *asset_list_first_failed(const char *const *assets, size_t count)
+{
+  size_t i;
+  for (i = 0; i < count; ++i) {
+    if (shandalar_assets_state(assets[i]) == SHANDALAR_ASSET_ERROR)
+      return assets[i];
+  }
+  return NULL;
+}
+
+static int load_menubak_if_ready(void)
+{
+  char path[1024];
+  unsigned char palette[1024];
+  if (g_deck.menubak)
+    return 1;
+  if (shandalar_assets_state("MENUBAK.PIC") != SHANDALAR_ASSET_READY)
+    return 0;
+  SDL_memset(palette, 0, sizeof(palette));
+  make_asset_path(path, sizeof(path), "MENUBAK.PIC");
+  g_deck.menubak = LoadPicFile(0, 0, 0, path, palette);
+  if (g_deck.menubak)
+    cache_menubak_palette(palette);
+  return g_deck.menubak != NULL;
+}
+
+static const char *required_assets_error_text(char *buffer, size_t size)
+{
+  const char *failed = asset_list_first_failed(k_required_assets,
+      sizeof(k_required_assets) / sizeof(k_required_assets[0]));
+  if (!buffer || !size)
+    return "";
+  if (failed) {
+    SDL_snprintf(buffer, size, "asset not found: %s", failed);
+    return buffer;
+  }
+  return shandalar_assets_last_error();
+}
+
 static void draw_loading_screen(void)
 {
   const char *message = g_deck.status_text[0] ? g_deck.status_text : "Loading deck builder";
+  char error_text[512];
   int x;
   int y;
 
+  load_menubak_if_ready();
   if (!draw_menubak()) {
     for (y = 0; y < g_deck.height; ++y) {
       uint32_t *row = g_deck.rgba + y * g_deck.width;
@@ -653,7 +736,7 @@ static void draw_loading_screen(void)
   }
 
   if (asset_list_failed(k_required_assets, sizeof(k_required_assets) / sizeof(k_required_assets[0])))
-    message = shandalar_assets_last_error();
+    message = required_assets_error_text(error_text, sizeof(error_text));
 
   draw_placeholder_text_bar(message);
 }
@@ -681,6 +764,7 @@ static int choose_sample_card(void)
 }
 
 static const char *active_filter_name(void);
+static void render(void);
 
 static void update_ready_status(void)
 {
@@ -698,6 +782,13 @@ static void update_ready_status(void)
 static void hold_status_for_frames(int frames)
 {
   g_deck.status_hold_frames = frames;
+}
+
+static void toggle_expanded_text(void)
+{
+  g_deck.expanded_text = !g_deck.expanded_text;
+  if (g_deck.database_loaded && g_deck.drawcard_initialized)
+    render();
 }
 
 static void play_deck_sound(int slot)
@@ -970,6 +1061,7 @@ static int load_database(void)
   FreeRaritiesCsvRaw();
 
   g_deck.sample_csvid = choose_sample_card();
+  g_deck.preview_csvid = g_deck.sample_csvid;
   build_available_cards();
   g_deck.database_loaded = 1;
   set_status_text("Loaded %d cards", global_available_slots);
@@ -984,8 +1076,7 @@ static int load_ui_art(void)
     return 1;
 
   if (!g_deck.menubak) {
-    make_asset_path(path, sizeof(path), "MENUBAK.PIC");
-    g_deck.menubak = load_pic(path);
+    load_menubak_if_ready();
   }
   if (!g_deck.dektile4) {
     make_asset_path(path, sizeof(path), "DBArt/DEKTILE4.PIC");
@@ -1323,7 +1414,7 @@ static void draw_title_panel(void)
 
 static void draw_fullcard_preview(void)
 {
-  int csvid = g_deck.preview_csvid >= 0 ? g_deck.preview_csvid : selected_csvid();
+  int csvid = g_deck.preview_csvid;
   int card_h = DECK_FULLCARD_H - 8;
   int card_w = card_h * 2 / 3;
   int card_x = DECK_FULLCARD_X + (DECK_FULLCARD_W - card_w) / 2;
@@ -1581,7 +1672,10 @@ DeckStatus deck_step(uint64_t now_ns)
   shandalar_assets_update();
   if (!required_assets_ready()) {
     if (required_assets_failed())
-      set_status_text("%s", shandalar_assets_last_error());
+    {
+      char error_text[512];
+      set_status_text("%s", required_assets_error_text(error_text, sizeof(error_text)));
+    }
     else
       set_status_text("Loading deck builder assets");
   } else if (!load_ui_art()) {
@@ -1686,8 +1780,8 @@ void deck_ui_preview_card(int csvid)
 {
   if (!core_is_interactive())
     return;
-  g_deck.preview_csvid =
-      csvid >= 0 && csvid < global_available_slots ? csvid : -1;
+  if (csvid >= 0 && csvid < global_available_slots)
+    g_deck.preview_csvid = csvid;
 }
 
 int deck_ui_deck_count(void)
@@ -2016,7 +2110,7 @@ void deck_pointer_button(int button, int pressed, int clicks)
   if (x >= DECK_FULLCARD_X && x < DECK_FULLCARD_X + DECK_FULLCARD_W &&
       y >= DECK_FULLCARD_Y && y < DECK_FULLCARD_Y + DECK_FULLCARD_H) {
     if (button == 1 && clicks >= 2)
-      add_card_from_user(selected_csvid());
+      toggle_expanded_text();
     return;
   }
 

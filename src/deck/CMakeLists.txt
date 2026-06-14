@@ -36,6 +36,9 @@ if(EMSCRIPTEN)
     "-sALLOW_MEMORY_GROWTH=1"
   )
   if(SHANDALAR_ASSET_DIR)
+    target_link_options(deck PRIVATE
+      "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/MENUBAK.PIC@/assets/MENUBAK.PIC"
+    )
     set(DECK_CARD_BACKGROUND_ASSETS
       CARDBK_Green.pic
       CARDBK_White.pic

@@ -97,8 +97,11 @@ static void request_canvas_size(int width, int height)
     if (canvas) {
       canvas.width = $2;
       canvas.height = $3;
+      canvas.style.display = 'block';
       canvas.style.width = $0 + 'px';
       canvas.style.height = $1 + 'px';
+      canvas.style.marginLeft = 'auto';
+      canvas.style.marginRight = 'auto';
     }
   }, width, height, pixel_width, pixel_height);
 }
