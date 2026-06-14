@@ -49,9 +49,10 @@ typedef struct FacemakerEditor {
   char status_message[128];
   char button_labels[4][32];
   int button_text_sizes[4];
+  int button_font_slot;
+  int status_font_slot;
+  FacemakerWindowBounds canvas_bounds;
   FacemakerFaceSpriteSet sprites;
-  HFONT font;
-  HFONT button_fonts[4];
 } FacemakerEditor;
 
 extern DIBSurface *g_graphics_pages[10];
@@ -60,6 +61,17 @@ extern DIBSurface *CreateGraphicsPage(int page_number, int width, int height, in
 extern void LoadPcxResource(int page_number, int x, int y, char *path, void *palette);
 extern int ExportEncodedImage(int page_number, int x, int y, int width, int height,
                               int write_palette, char *path);
+extern void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y,
+                                     EncodedImage *encoded_image);
+extern void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y,
+                                      int width, int height,
+                                      EncodedImage *encoded_image);
+extern int LoadSystemFont(int font_id, unsigned int point_size, char *font_file,
+                          char *font_name, int weight, DWORD italic);
+extern int SetFontStyleSize(int font_id, unsigned int style);
+extern int DrawTextLine(FacemakerWindowBounds *window_bounds, int x, int y,
+                        char *text);
+extern FontSlot g_font_slots[0x10];
 
 static FacemakerEditor g_editor;
 
@@ -108,6 +120,19 @@ static int scale_x(int value)
 static int scale_y(int value)
 {
   return value * g_editor.height / BASE_HEIGHT;
+}
+
+static void update_canvas_bounds(void)
+{
+  g_editor.canvas_bounds.page_number = 2;
+  g_editor.canvas_bounds.clip_left = 0;
+  g_editor.canvas_bounds.clip_top = 0;
+  g_editor.canvas_bounds.max_x = g_editor.width;
+  g_editor.canvas_bounds.max_y = g_editor.height;
+  g_editor.canvas_bounds.draw_shadow_enabled = 1;
+  g_editor.canvas_bounds.text_color = 0xf;
+  g_editor.canvas_bounds.unk_1c = 4;
+  g_editor.canvas_bounds.font_slot = g_editor.status_font_slot;
 }
 
 static unsigned char nearest_palette_index(int red, int green, int blue)
@@ -181,89 +206,37 @@ static void draw_atlas_region(int page_number, int src_x, int src_y, int src_wid
 
 static void draw_sprite_scaled(const EncodedImage *sprite, int x, int y)
 {
-  const unsigned char *cursor;
-  unsigned char *decoded;
-  int source_width;
-  int source_height;
-  int row;
   int draw_width;
   int draw_height;
-  int draw_x;
-  int draw_y;
 
   if (!sprite || !facemaker_face_sprite_is_valid(&g_editor.sprites, sprite))
     return;
-  source_width = sprite->width;
-  source_height = sprite->height;
-  if (source_width <= 0 || source_height <= 0)
+  if (sprite->width <= 0 || sprite->height <= 0)
     return;
-  decoded = (unsigned char *)calloc((size_t)source_width, (size_t)source_height);
-  if (!decoded)
+  draw_width = scale_x(sprite->width);
+  draw_height = scale_y(sprite->height);
+  if (draw_width == sprite->width && draw_height == sprite->height)
+    DrawEncodedImageUnscaled(&g_editor.canvas_bounds, x, y, (EncodedImage *)sprite);
+  else
+    DrawEncodedImageResampled(&g_editor.canvas_bounds, scale_x(x), scale_y(y),
+                              draw_width, draw_height, (EncodedImage *)sprite);
+}
+
+static void destroy_font_slot(int font_slot)
+{
+  if (font_slot <= 0 || font_slot >= 0x10)
     return;
-
-  cursor = sprite->spans;
-  for (row = 0; row < sprite->row_count; ++row) {
-    unsigned int offset = *cursor++;
-    int target_row = sprite->first_row + row;
-    if (offset != 0xff) {
-      unsigned int length = *cursor++;
-      if (length == 0xfe)
-        length = *cursor++;
-      if (target_row >= 0 && target_row < source_height && offset < (unsigned int)source_width) {
-        unsigned int copy_length = length;
-        if (copy_length > (unsigned int)source_width - offset)
-          copy_length = (unsigned int)source_width - offset;
-        memcpy(decoded + target_row * source_width + offset, cursor, copy_length);
-      }
-      cursor += length;
-    }
-  }
-
-  draw_width = scale_x(source_width);
-  draw_height = scale_y(source_height);
-  for (draw_y = 0; draw_y < draw_height; ++draw_y) {
-    int source_y = draw_y * source_height / draw_height;
-    for (draw_x = 0; draw_x < draw_width; ++draw_x) {
-      int source_x = draw_x * source_width / draw_width;
-      unsigned char color = decoded[source_y * source_width + source_x];
-      if (color) {
-        unsigned char *pixel = visual_pixel(g_graphics_pages[2], scale_x(x) + draw_x,
-                                             scale_y(y) + draw_y);
-        if (pixel)
-          *pixel = color;
-      }
-    }
-  }
-  free(decoded);
+  if (g_font_slots[font_slot].hfont)
+    DeleteObject(g_font_slots[font_slot].hfont);
+  g_font_slots[font_slot].hfont = NULL;
+  g_font_slots[font_slot].font_loaded = 0;
 }
 
 static void draw_sprite_unscaled_legacy(const EncodedImage *sprite, int x, int y)
 {
-  const unsigned char *cursor;
-  DIBSurface *page = g_graphics_pages[2];
-  int pitch;
-  int row;
   if (!sprite || !facemaker_face_sprite_is_valid(&g_editor.sprites, sprite))
     return;
-  pitch = page->width + page->rowPadding;
-  cursor = sprite->spans;
-  for (row = 0; row < sprite->row_count; ++row) {
-    unsigned int offset = *cursor++;
-    int target_y = y + sprite->first_row + row;
-    if (offset != 0xff) {
-      unsigned int length = *cursor++;
-      unsigned int index;
-      if (length == 0xfe)
-        length = *cursor++;
-      for (index = 0; index < length; ++index) {
-        int target_x = x + (int)offset + (int)index;
-        if (cursor[index] && target_x >= 0 && target_x < page->width &&
-            target_y >= 0 && target_y < page->height)
-          ((unsigned char *)page->pBits)[target_y * pitch + target_x] = cursor[index];
-      }
-      cursor += length;
-    }
-  }
+  DrawEncodedImageUnscaled(&g_editor.canvas_bounds, x, y, (EncodedImage *)sprite);
 }
 
 static void compose_preview(int x, int y)
@@ -279,40 +252,59 @@ static void compose_preview(int x, int y)
 
 static void draw_text(int x, int y, const char *text, unsigned char color)
 {
-  HDC dc = g_graphics_pages[2]->hTempDC;
-  SelectObject(dc, g_editor.font);
-  SetTextColor(dc, PALETTEINDEX(color));
-  SetBkMode(dc, TRANSPARENT);
-  TextOutA(dc, scale_x(x), scale_y(y), text, -1);
+  FacemakerWindowBounds bounds = g_editor.canvas_bounds;
+  char buffer[256];
+  int draw_y;
+  if (!text)
+    return;
+  SDL_strlcpy(buffer, text, sizeof(buffer));
+  SetFontStyleSize(g_editor.status_font_slot, (unsigned int)scale_y(14));
+  bounds.text_color = color;
+  bounds.font_slot = g_editor.status_font_slot;
+  draw_y = scale_y(y) + g_font_slots[g_editor.status_font_slot].tm_leading;
+  DrawTextLine(&bounds, scale_x(x), draw_y, buffer);
 }
 
 static void draw_text_with_font(int x, int y, const char *text, unsigned char color,
-                                HFONT font)
+                                int font_slot, int point_size)
 {
-  HDC dc = g_graphics_pages[2]->hTempDC;
-  SelectObject(dc, font ? font : g_editor.font);
-  SetTextColor(dc, PALETTEINDEX(color));
-  SetBkMode(dc, TRANSPARENT);
-  TextOutA(dc, scale_x(x), scale_y(y), text, -1);
+  FacemakerWindowBounds bounds = g_editor.canvas_bounds;
+  char buffer[256];
+  int draw_y;
+  if (!text)
+    return;
+  SDL_strlcpy(buffer, text, sizeof(buffer));
+  SetFontStyleSize(font_slot, (unsigned int)scale_y(point_size));
+  bounds.text_color = color;
+  bounds.font_slot = font_slot;
+  draw_y = scale_y(y) + g_font_slots[font_slot].tm_leading;
+  DrawTextLine(&bounds, scale_x(x), draw_y, buffer);
 }
 
 static void draw_text_centered_at(int center_x, int center_y, const char *text,
-                                  unsigned char color, HFONT font)
+                                  unsigned char color, int font_slot,
+                                  int point_size)
 {
   HDC dc = g_graphics_pages[2]->hTempDC;
+  FacemakerWindowBounds bounds = g_editor.canvas_bounds;
   SIZE size;
   int draw_x;
   int draw_y;
-  SelectObject(dc, font ? font : g_editor.font);
-  SetTextColor(dc, PALETTEINDEX(color));
-  SetBkMode(dc, TRANSPARENT);
+  char buffer[256];
+  if (!text)
+    return;
+  SDL_strlcpy(buffer, text, sizeof(buffer));
+  SetFontStyleSize(font_slot, (unsigned int)scale_y(point_size));
+  SelectObject(dc, g_font_slots[font_slot].hfont);
   if (!GetTextExtentPoint32A(dc, text, -1, &size)) {
-    draw_text_with_font(center_x, center_y, text, color, font);
+    draw_text_with_font(center_x, center_y, text, color, font_slot, point_size);
     return;
   }
   draw_x = scale_x(center_x) - size.cx / 2;
-  draw_y = scale_y(center_y) - size.cy / 2;
-  TextOutA(dc, draw_x, draw_y, text, -1);
+  draw_y = scale_y(center_y) - size.cy / 2 + g_font_slots[font_slot].tm_leading;
+  bounds.text_color = color;
+  bounds.font_slot = font_slot;
+  DrawTextLine(&bounds, draw_x, draw_y, buffer);
 }
 
 static int control_enabled(int control_index)
@@ -381,7 +373,8 @@ static void draw_control(int index)
     unsigned char color = mode == 0 ? 0xce : 0x3b;
     draw_text_centered_at(label_center_x, label_center_y,
                           g_editor.button_labels[index - 1],
-                          color, g_editor.button_fonts[mode]);
+                          color, g_editor.button_font_slot,
+                          g_editor.button_text_sizes[mode]);
   }
 }
 
@@ -437,6 +430,7 @@ static void load_button_labels(void)
   g_editor.button_text_sizes[1] = 10;
   g_editor.button_text_sizes[2] = 8;
   g_editor.button_text_sizes[3] = 10;
+  g_editor.button_font_slot = 4;
   SDL_strlcpy(g_editor.button_labels[0], "Save", sizeof(g_editor.button_labels[0]));
   SDL_strlcpy(g_editor.button_labels[1], "Leave", sizeof(g_editor.button_labels[1]));
   SDL_strlcpy(g_editor.button_labels[2], "Wizards", sizeof(g_editor.button_labels[2]));
@@ -454,11 +448,12 @@ static void load_button_labels(void)
     fclose(file);
     return;
   }
-  fscanf(file, "%d %d,%d,%d,%d", &font_slot, &g_editor.button_text_sizes[0],
-         &g_editor.button_text_sizes[1], &g_editor.button_text_sizes[2],
-         &g_editor.button_text_sizes[3]);
+  if (fscanf(file, "%d %d,%d,%d,%d", &font_slot, &g_editor.button_text_sizes[0],
+             &g_editor.button_text_sizes[1], &g_editor.button_text_sizes[2],
+             &g_editor.button_text_sizes[3]) == 5 &&
+      font_slot > 0 && font_slot < 0x10)
+    g_editor.button_font_slot = font_slot;
   fclose(file);
-  (void)font_slot;
   leave_label[strcspn(leave_label, "\r\n")] = '\0';
   save_label[strcspn(save_label, "\r\n")] = '\0';
   SDL_strlcpy(g_editor.button_labels[0], save_label, sizeof(g_editor.button_labels[0]));
@@ -563,7 +558,6 @@ static FacemakerEditorAction activate_control(int control_index)
 int facemaker_editor_create(const char *asset_root, const char *writable_root,
                             int width, int height)
 {
-  char font_path[1024];
   char recent_path[1024];
   FILE *recent;
   int recent_index = 0;
@@ -574,6 +568,9 @@ int facemaker_editor_create(const char *asset_root, const char *writable_root,
               sizeof(g_editor.writable_root));
   g_editor.width = width;
   g_editor.height = height;
+  g_editor.status_font_slot = 4;
+  g_editor.button_font_slot = 4;
+  update_canvas_bounds();
   g_editor.hover_control = -1;
   g_editor.pressed_control = -1;
   load_button_labels();
@@ -591,24 +588,27 @@ int facemaker_editor_create(const char *asset_root, const char *writable_root,
   }
   if (!load_sprite_set(g_editor.selected_set))
     return 0;
-  SDL_snprintf(font_path, sizeof(font_path), "%s/TT0530M_.TTF", asset_root);
-  AddFontResourceA(font_path);
-  g_editor.font = CreateFontA(-scale_y(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0,
-                              FACEMAKER_UI_FONT_FACE);
+  if (!LoadSystemFont(g_editor.status_font_slot, (unsigned int)scale_y(14),
+                      "tt0530m_.ttf", FACEMAKER_UI_FONT_FACE, 100, 0))
+    return 0;
+  if (g_editor.button_font_slot != g_editor.status_font_slot &&
+      !LoadSystemFont(g_editor.button_font_slot,
+                      (unsigned int)scale_y(g_editor.button_text_sizes[0]),
+                      "tt0530m_.ttf", FACEMAKER_UI_FONT_FACE, 100, 0))
+    return 0;
   for (font_index = 0; font_index < 4; ++font_index)
-    g_editor.button_fonts[font_index] =
-        CreateFontA(-scale_y(g_editor.button_text_sizes[font_index]), 0, 0, 0, 400,
-                    0, 0, 0, 0, 0, 0, 0, 0, FACEMAKER_UI_FONT_FACE);
+    SetFontStyleSize(g_editor.button_font_slot,
+                     (unsigned int)scale_y(g_editor.button_text_sizes[font_index]));
+  SetFontStyleSize(g_editor.status_font_slot, (unsigned int)scale_y(14));
   return 1;
 }
 
 void facemaker_editor_destroy(void)
 {
-  int font_index;
   facemaker_face_sprite_set_destroy(&g_editor.sprites);
-  for (font_index = 0; font_index < 4; ++font_index)
-    DeleteObject(g_editor.button_fonts[font_index]);
-  DeleteObject(g_editor.font);
+  destroy_font_slot(g_editor.status_font_slot);
+  if (g_editor.button_font_slot != g_editor.status_font_slot)
+    destroy_font_slot(g_editor.button_font_slot);
   memset(&g_editor, 0, sizeof(g_editor));
 }
 

@@ -37,6 +37,7 @@ struct ShandalarFont {
   ObjectHeader header;
   TTF_Font *font;
   int size;
+  LOGFONTA description;
 };
 
 typedef struct DCState {
@@ -450,6 +451,11 @@ int GetObjectA(HGDIOBJ object, int size, void *out)
       result->bmBits = bitmap->pixels;
       return sizeof(*result);
     }
+  }
+  if (header->kind == OBJECT_FONT && size >= (int)sizeof(LOGFONTA)) {
+    HFONT font = (HFONT)object;
+    memcpy(out, &font->description, sizeof(font->description));
+    return sizeof(font->description);
   }
   return 0;
 }
@@ -1124,7 +1130,12 @@ static HFONT open_font(const LOGFONTA *description)
     return NULL;
   }
   result->header.kind = OBJECT_FONT;
+  if (description)
+    result->description = *description;
   result->size = size > 0 ? size : 12;
+  result->description.lfHeight = result->description.lfHeight < 0
+                                   ? -result->size
+                                   : result->size;
   SDL_snprintf(path, sizeof(path), "%s/%s", g_font_root, filename);
   result->font = TTF_OpenFont(path, (float)result->size);
   if (result->font) {

@@ -30,6 +30,7 @@ typedef char CHAR;
 typedef const char *LPCSTR;
 typedef char *LPSTR;
 typedef void *LPVOID;
+typedef void *FARPROC;
 typedef void *LPSECURITY_ATTRIBUTES;
 typedef void *HANDLE;
 typedef void *HINSTANCE;

@@ -21,7 +21,6 @@ extern DIBSurface *g_graphics_pages[10];
 HDC global_main_hdc;
 int global_screen_width = 1024;
 int global_screen_height = 768;
-char g_file_read_mode[] = "rb";
 
 static FacemakerStatus g_status = FACEMAKER_FAILED;
 static uint64_t g_generation;
@@ -33,12 +32,6 @@ static int capped_dimension(int requested, int maximum)
   if (requested <= 0)
     return maximum;
   return requested < maximum ? requested : maximum;
-}
-
-int LoadFontCollection(char *path)
-{
-  (void)path;
-  return 0;
 }
 
 static void make_asset_path(char *out, size_t size, const char *relative)

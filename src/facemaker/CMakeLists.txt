@@ -4,6 +4,8 @@ add_library(facemaker_core STATIC
   src/face_assets.c
   src/fileio.c
   src/lib.c
+  src/sprite.c
+  src/text.c
 )
 
 target_compile_definitions(facemaker_core PRIVATE FACEMAKER MODERN_FIXES)
