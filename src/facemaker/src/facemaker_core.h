@@ -15,6 +15,7 @@ typedef struct FacemakerConfig {
   const char *writable_root;
   int width;
   int height;
+  int download_on_save;
 } FacemakerConfig;
 
 typedef struct FacemakerFrame {

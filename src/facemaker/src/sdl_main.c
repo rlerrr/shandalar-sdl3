@@ -74,6 +74,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
   config.writable_root = ".";
   config.width = 1024;
   config.height = 768;
+  config.download_on_save = 1;
   if (!app->texture || !app->rgba || !facemaker_create(&config))
     return SDL_APP_FAILURE;
   *appstate = app;

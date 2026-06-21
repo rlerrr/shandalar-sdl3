@@ -61,7 +61,8 @@ int facemaker_create(const FacemakerConfig *config)
   make_asset_path(background_path, sizeof(background_path), "FaceArt/Facebk0New.pcx");
   LoadPcxResource(1, 0, 0, background_path, (void *)1);
   if (!facemaker_editor_create(g_asset_root, g_writable_root,
-                               global_screen_width, global_screen_height))
+                               global_screen_width, global_screen_height,
+                               config->download_on_save))
     goto fail;
   facemaker_editor_render();
   PresentGraphicsPage(2);

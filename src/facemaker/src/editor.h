@@ -9,7 +9,7 @@ typedef enum FacemakerEditorAction {
 } FacemakerEditorAction;
 
 int facemaker_editor_create(const char *asset_root, const char *writable_root,
-                            int width, int height);
+                            int width, int height, int download_on_save);
 void facemaker_editor_destroy(void);
 void facemaker_editor_render(void);
 FacemakerEditorAction facemaker_editor_pointer_move(float x, float y);

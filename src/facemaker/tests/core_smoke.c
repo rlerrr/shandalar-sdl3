@@ -80,6 +80,7 @@ int main(int argc, char **argv)
   config.writable_root = ".";
   config.width = 1024;
   config.height = 768;
+  config.download_on_save = 0;
   if (!facemaker_create(&config)) {
     fprintf(stderr, "facemaker_create failed\n");
     return 1;

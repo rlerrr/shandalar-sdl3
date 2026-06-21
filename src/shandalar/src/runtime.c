@@ -47,6 +47,8 @@ void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data);
 void FillGraphicsRect(FacemakerWindowBounds *window_bounds, int x, int y,
                       int width, int height, unsigned int color_index);
+void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y,
+                               int width, int height, EncodedImage *encoded_image);
 int LoadSystemFont(int font_id, unsigned int point_size, char *font_file,
                    char *font_name, int weight, int italic);
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
@@ -64,8 +66,13 @@ int HasQueuedKeyInput(void);
 int PopQueuedKeyInput(void);
 void PutGraphicsPixel(FacemakerWindowBounds *window_bounds, int x, int y, int color_index);
 int RunNameEntryDialog(char *name_buffer);
+void BeginSpriteEncodeSession(void);
+EncodedImage *EncodeSpriteFromPage(int page_number, int x, int y, int width, int height);
+void FinalizeSpriteEncodeSession(void);
+void FreeSpriteBlob(void *memory);
 void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
 int ResetMenuContext(int context_index);
+void ShandalarLoadPcxIntoPageNoPalette(char *path);
 
 void shandalar_host_pump(void);
 int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root);
@@ -85,12 +92,30 @@ int g_mouse_x;
 int g_menu_render_guard;
 int g_ui_tick_count;
 extern int g_name_entry_cursor;
+extern int g_menu_selection_value;
+extern int g_color_menu_selection_to_deck_color[5];
 EncodedImage *g_face_preview_sprite_group[6];
 EncodedImage *g_face_preview_sprite_selected;
 extern DIBSurface *g_facemaker_page4_dib;
 extern HBITMAP g_facemaker_page4_bitmap;
+static EncodedImage *g_name_entry_portrait_sprite;
 
 extern char global_base_directory[0x105];
+
+static void free_detached_facemaker_page4(void)
+{
+  if (!g_facemaker_page4_dib)
+    return;
+  if (g_graphics_pages[4] == g_facemaker_page4_dib)
+    g_graphics_pages[4] = NULL;
+  SelectObject(g_facemaker_page4_dib->hTempDC, g_facemaker_page4_dib->hPreviousBitmap);
+  DeleteObject(g_facemaker_page4_dib->hBitmap);
+  DeleteDC(g_facemaker_page4_dib->hTempDC);
+  free(g_facemaker_page4_dib->pBitmapInfo);
+  free(g_facemaker_page4_dib);
+  g_facemaker_page4_dib = NULL;
+  g_facemaker_page4_bitmap = NULL;
+}
 
 FacemakerWindowBounds g_page0_window_bounds_storage = {0, 0, 0, 0x27f, 0x1df, 1, 0x0f, 4, 0};
 FacemakerWindowBounds *g_page0_window_bounds = &g_page0_window_bounds_storage;
@@ -437,7 +462,7 @@ void DrawFormattedTextNoShadowCentered(FacemakerWindowBounds *window, int color,
 {
   va_list args;
   va_start(args, format);
-  DrawTextFormattedVa(window, color, 0, 1, 1, 0, x, y, format, args);
+  DrawTextFormattedVa(window, color, 0, 0, 1, 1, x, y, format, args);
   va_end(args);
 }
 
@@ -539,21 +564,58 @@ static int load_facemaker_portrait_output(void)
   if (!FileExists("face.pic"))
     return 0;
 
-  if (g_facemaker_page4_dib)
-    g_graphics_pages[4] = g_facemaker_page4_dib;
-  else if (!CreateGraphicsPage(4, 276, 170, 8))
+  free_detached_facemaker_page4();
+  if (!CreateGraphicsPage(4, 276, 170, 8))
     return 0;
 
   FillGraphicsRect(&page4_bounds, 0, 0, 276, 170, 0);
   LoadPcxIntoPage(4, "face.pic");
   BuildFacemakerPortraitSprites(&page4_bounds);
   LoadPcxIntoPage(4, "face.pic");
+  if (g_name_entry_portrait_sprite)
+    FreeSpriteBlob(g_name_entry_portrait_sprite);
+  BeginSpriteEncodeSession();
+  g_name_entry_portrait_sprite = EncodeSpriteFromPage(4, 0, 0, 0x89, 0xa9);
+  FinalizeSpriteEncodeSession();
 
   g_facemaker_page4_bitmap = g_graphics_pages[4]->hBitmap;
   g_facemaker_page4_dib = g_graphics_pages[4];
   SelectObject(g_graphics_pages[4]->hTempDC, g_graphics_pages[4]->hPreviousBitmap);
   g_graphics_pages[4] = NULL;
   return 1;
+}
+
+static void prepare_name_entry_background(void)
+{
+  static char *pedestal_images[6] = {
+      NULL, "prdblk.pic", "prdblu.pic", "prdgrn.pic", "prdrd.pic", "prdwt.pic"};
+  int selected_color;
+  char *pedestal_path;
+
+  selected_color = g_selected_wizard_color;
+  if ((selected_color < 1 || selected_color > 5) &&
+      g_menu_selection_value >= 1 && g_menu_selection_value <= 5)
+    selected_color = g_color_menu_selection_to_deck_color[g_menu_selection_value - 1];
+  if (selected_color < 1 || selected_color > 5)
+    selected_color = 1;
+
+  pedestal_path = pedestal_images[selected_color];
+  ShandalarLoadPcxIntoPageNoPalette("pedstls.pic");
+  LoadPcxResource(1, global_screen_width - 0x280, global_screen_height - 0x1e0,
+                  pedestal_path, (g_graphics_bpp == 8) ? &g_palette_data_words : (void *)1);
+  StretchBlitGraphicsRect(g_page1_window_bounds, global_screen_width - 0x280,
+                          global_screen_height - 0x1e0, 0x280, 0x1e0,
+                          g_page1_window_bounds, 0, 0, global_screen_width,
+                          global_screen_height);
+  if (g_name_entry_portrait_sprite)
+    DrawEncodedImageResampled(g_page1_window_bounds,
+                              global_screen_width / 2 - ScaleUiCoordinate(0x89),
+                              ScaleUiCoordinate(0x14),
+                              ScaleUiCoordinate(0x112),
+                              ScaleUiCoordinate(0x152),
+                              g_name_entry_portrait_sprite);
+  BlitGraphicsRect(g_page1_window_bounds, 0, 0, global_screen_width,
+                   global_screen_height, g_page0_window_bounds, 0, 0);
 }
 
 int shandalar_run_facemaker_flow(void)
@@ -563,10 +625,14 @@ int shandalar_run_facemaker_flow(void)
   SDL_strlcpy(asset_root, global_base_directory, sizeof(asset_root));
   shandalar_runtime_shutdown();
   completed = shandalar_host_run_facemaker(asset_root, asset_root);
-  if (!shandalar_runtime_init(asset_root) || !completed)
+  if (!shandalar_runtime_init(asset_root))
+    return -1;
+  if (!completed)
     return -1;
   load_facemaker_portrait_output();
   g_name_entry_cursor = (int)strlen(g_name_entry_buffer);
+  prepare_name_entry_background();
+  g_page0_window_bounds->font_slot = 1;
   if (RunNameEntryDialog(g_name_entry_buffer) == -1)
     return -1;
   strcpy(g_player_name, g_name_entry_buffer);

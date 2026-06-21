@@ -306,6 +306,7 @@ int LoadSystemFont(int font_id, unsigned int point_size, char *font_file, char *
     }
 
     font->font_loaded = 1;
+    font->point_size = 0;
 
     hdc = GetDC((HWND)0);
     SelectObject(hdc, font->hfont);

@@ -51,6 +51,7 @@ typedef struct FacemakerEditor {
   int button_text_sizes[4];
   int button_font_slot;
   int status_font_slot;
+  int download_on_save;
   FacemakerWindowBounds canvas_bounds;
   FacemakerFaceSpriteSet sprites;
 } FacemakerEditor;
@@ -597,7 +598,7 @@ static FacemakerEditorAction activate_control(int control_index)
 }
 
 int facemaker_editor_create(const char *asset_root, const char *writable_root,
-                            int width, int height)
+                            int width, int height, int download_on_save)
 {
   char recent_path[1024];
   FILE *recent;
@@ -609,6 +610,7 @@ int facemaker_editor_create(const char *asset_root, const char *writable_root,
               sizeof(g_editor.writable_root));
   g_editor.width = width;
   g_editor.height = height;
+  g_editor.download_on_save = download_on_save;
   g_editor.status_font_slot = 4;
   g_editor.button_font_slot = 4;
   update_canvas_bounds();
@@ -746,9 +748,13 @@ int facemaker_editor_save(const char *path)
   }
   result = ExportEncodedImage(2, 0, 0, 276, 170, 0, (char *)path) == 0;
   if (result) {
-    set_status_message(facemaker_download_saved_file(path)
-                           ? "Saved face.pic"
-                           : "Saved face.pic; download failed");
+    if (g_editor.download_on_save) {
+      set_status_message(facemaker_download_saved_file(path)
+                             ? "Saved face.pic"
+                             : "Saved face.pic; download failed");
+    } else {
+      set_status_message("Saved face.pic");
+    }
   } else {
     set_status_message("Save failed");
   }

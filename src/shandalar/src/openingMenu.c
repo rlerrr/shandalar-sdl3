@@ -1011,6 +1011,7 @@ int RunNameEntryDialog(char *name_buffer)
   BlitTransparentRuns(g_page1_window_bounds, 0, 200, 0x114, 0x6a, g_page0_window_bounds, (global_screen_width - 0x114) / 2, ScaleUiCoordinate(dialog_top));
   do
   {
+    DelayUiTicks(1);
     key_code = PopQueuedKeyInput();
     if (key_code == 0x1c0d)
     {
@@ -1169,7 +1170,9 @@ int BlitTransparentRuns(FacemakerWindowBounds *src, int src_x, int src_y, unsign
       {
         if (run_length != 0)
         {
-          WriteGraphicsScanline(run_start, dst->page_number, ((int)run_start - (int)scanline_buffer) + dst_x, dst_y + row, run_length);
+          WriteGraphicsScanline(run_start, dst->page_number,
+                                (int)((char *)run_start - (char *)scanline_buffer) + dst_x,
+                                dst_y + row, run_length);
           run_length = 0;
           run_start = (unsigned int *)((char *)scanline_buffer + x);
         }
@@ -1186,7 +1189,9 @@ int BlitTransparentRuns(FacemakerWindowBounds *src, int src_x, int src_y, unsign
 
     if (run_length != 0)
     {
-      WriteGraphicsScanline(run_start, dst->page_number, ((int)run_start - (int)scanline_buffer) + dst_x, dst_y + row, run_length);
+      WriteGraphicsScanline(run_start, dst->page_number,
+                            (int)((char *)run_start - (char *)scanline_buffer) + dst_x,
+                            dst_y + row, run_length);
     }
   }
 
@@ -1305,41 +1310,41 @@ int ActivateLoadSaveEscControl(AdvMenuControl *control)
 // FUNCTION: SHANDALAR 0x004a84c7
 int DrawBlinkingNameCaret(FacemakerWindowBounds *window, int color_index, int caret_x, int caret_y, char *name_buffer, int cursor_pos)
 {
-  size_t string_len;
   int i;
   int caret_width;
+  int line_height;
 
-  string_len = strlen(name_buffer);
   if ((GetUiTickCount() & 7) == 0)
   {
     return 0;
   }
 
+  if (cursor_pos < 0)
+    cursor_pos = 0;
+  if (cursor_pos > 0x19)
+    cursor_pos = 0x19;
   for (i = 0; i < cursor_pos; i = i + 1)
   {
-    if (i < (int)string_len)
-    {
-      caret_x = caret_x + GetFontCharWidth(window->font_slot, name_buffer[i]);
-    }
-    else
-    {
-      caret_x = caret_x + GetFontCharWidth(window->font_slot, ' ');
-    }
+    caret_x = caret_x + 8;
+    if (caret_x > window->max_x + 0x80)
+      break;
   }
 
-  if (i < (int)string_len)
-  {
-    caret_width = GetFontCharWidth(window->font_slot, name_buffer[cursor_pos]);
-  }
-  else
-  {
-    caret_width = GetFontCharWidth(window->font_slot, ' ');
-  }
+  caret_width = 8;
 
-  caret_y = caret_y + GetFontLineHeight(window->font_slot) / 2;
+  line_height = 12;
+  caret_y = caret_y + line_height / 2;
   caret_y = caret_y - 1;
+  if (caret_x > window->max_x || caret_x + caret_width < window->clip_left ||
+      caret_y > window->max_y || caret_y + 1 < window->clip_top)
+    return 0;
+  if (caret_x < window->clip_left)
+    caret_x = window->clip_left;
+  if (caret_x + caret_width > window->max_x)
+    caret_width = window->max_x - caret_x;
   DrawGraphicsLine(window, caret_x, caret_y, caret_x + caret_width, caret_y, color_index);
   DrawGraphicsLine(window, caret_x, caret_y + 1, caret_x + caret_width, caret_y + 1, color_index);
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004a85fc
