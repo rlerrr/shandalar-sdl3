@@ -16,11 +16,19 @@ if /I "%APP%"=="deck" (
   set "BUILD_DIR=out\build\deck-wasm"
   set "BIN_DIR=deck-wasm"
   set "BUILD_FACEMAKER=OFF"
+  set "BUILD_SHANDALAR=OFF"
   set "BUILD_DECK=ON"
+) else if /I "%APP%"=="shandalar" (
+  set "BUILD_DIR=out\build\shandalar-wasm"
+  set "BIN_DIR=shandalar-wasm"
+  set "BUILD_FACEMAKER=OFF"
+  set "BUILD_SHANDALAR=ON"
+  set "BUILD_DECK=OFF"
 ) else (
   set "BUILD_DIR=out\build\facemaker-wasm"
   set "BIN_DIR=facemaker-wasm"
   set "BUILD_FACEMAKER=ON"
+  set "BUILD_SHANDALAR=OFF"
   set "BUILD_DECK=OFF"
 )
 
@@ -29,6 +37,7 @@ call emcmake cmake -S . -B "%BUILD_DIR%" -G Ninja ^
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="%CD%/out/bin/%BIN_DIR%" ^
   -DSHANDALAR_ASSET_DIR="%SHANDALAR_ASSET_DIR%" ^
   -DSHANDALAR_BUILD_FACEMAKER=%BUILD_FACEMAKER% ^
+  -DSHANDALAR_BUILD_SHANDALAR=%BUILD_SHANDALAR% ^
   -DSHANDALAR_BUILD_DECK=%BUILD_DECK% ^
   -DSHANDALAR_BUILD_TESTS=OFF
 if errorlevel 1 exit /b %errorlevel%

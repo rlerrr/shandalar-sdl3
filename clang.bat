@@ -12,12 +12,21 @@ if /I "%APP%"=="deck" (
   set "BUILD_DIR=out\build\deck-clang-x86"
   set "BIN_DIR=deck-clang-x86"
   set "BUILD_FACEMAKER=OFF"
+  set "BUILD_SHANDALAR=OFF"
   set "BUILD_DECK=ON"
+  set "BUILD_TESTS=OFF"
+) else if /I "%APP%"=="shandalar" (
+  set "BUILD_DIR=out\build\shandalar-clang-x86"
+  set "BIN_DIR=shandalar-clang-x86"
+  set "BUILD_FACEMAKER=OFF"
+  set "BUILD_SHANDALAR=ON"
+  set "BUILD_DECK=OFF"
   set "BUILD_TESTS=OFF"
 ) else (
   set "BUILD_DIR=out\build\facemaker-clang-x86"
   set "BIN_DIR=facemaker-clang-x86"
   set "BUILD_FACEMAKER=ON"
+  set "BUILD_SHANDALAR=OFF"
   set "BUILD_DECK=OFF"
   set "BUILD_TESTS=ON"
 )
@@ -29,6 +38,7 @@ cmake -S . -B "%BUILD_DIR%" -G Ninja ^
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="%CD%/out/bin/%BIN_DIR%" ^
   -DSHANDALAR_ASSET_DIR="C:/Magic/Program" ^
   -DSHANDALAR_BUILD_FACEMAKER=%BUILD_FACEMAKER% ^
+  -DSHANDALAR_BUILD_SHANDALAR=%BUILD_SHANDALAR% ^
   -DSHANDALAR_BUILD_DECK=%BUILD_DECK% ^
   -DSHANDALAR_BUILD_TESTS=%BUILD_TESTS%
 if errorlevel 1 exit /b %errorlevel%

@@ -664,121 +664,47 @@ void BlitGraphicsRect(FacemakerWindowBounds *dst, unsigned int dst_x, int dst_y,
                       FacemakerWindowBounds *src, int src_x, int src_y)
 {
   int i;
-  int src_bits_per_row;
-  int dst_bits_per_row;
-  int src_x_bits;
-  int dst_x_bits;
-  int copy_bits;
-  int src_stride_bytes;
-  int dst_stride_bytes;
-  int copy_bytes;
   int src_page_number;
   int dst_page_number;
   DIBSurface *src_page;
   DIBSurface *dst_page;
-  double *top_row;
-  double *bottom_row;
-  int half_height;
 
   src_page_number = dst->page_number;
   dst_page_number = src->page_number;
   src_page = g_graphics_pages[src_page_number];
   dst_page = g_graphics_pages[dst_page_number];
-
-  if (g_blit_bitmap_info_initialized == 0)
+  if (!src_page || !dst_page)
+    return;
+  if (!src_page->pBits || !dst_page->pBits)
   {
-    g_blit_bitmap_info = CreateBitmapInfo(1, 1, 8);
-    g_blit_bitmap_info_initialized = 1;
+    BitBlt(dst_page->hTempDC, src_x, src_y, width, height,
+           src_page->hTempDC, dst_x, dst_y, SRCCOPY);
+    return;
   }
+  if (src_page->bitsPerPixel != 8 || dst_page->bitsPerPixel != 8)
+    return;
 
-  g_blit_bitmap_info->bmiHeader.biWidth = src_page->width;
-  if (dst_y == 0)
+  if (src_page == dst_page && src_y > dst_y)
   {
-    g_blit_bitmap_info->bmiHeader.biHeight = src_page->height;
-  }
-  else
-  {
-    g_blit_bitmap_info->bmiHeader.biHeight = src_page->height;
-  }
-
-  if (dst_page_number == 0)
-  {
-    if (((dst_x & 7) == 0) && g_frontbuffer_direct_blit_enabled != 0)
+    for (i = (int)height - 1; i >= 0; --i)
     {
-      if (g_graphics_bpp != 8)
-      {
-        memcpy(g_blit_bitmap_info->bmiColors, g_palette_rgb, 0x400);
-      }
-
-      top_row = (double *)(dst_y * src_page->width + dst_x + (int)src_page->pBits);
-      bottom_row = (double *)((dst_y + height - 1) * src_page->width + dst_x + (int)src_page->pBits);
-      half_height = (int)height / 2;
-      while (half_height > 0)
-      {
-        CopyBytesAsmCompat((double *)g_copy_scratch_buffer_ptr, top_row, width);
-        CopyBytesAsmCompat(top_row, bottom_row, width);
-        CopyBytesAsmCompat(bottom_row, (double *)g_copy_scratch_buffer_ptr, width);
-        top_row = (double *)((int)top_row + src_page->width);
-        bottom_row = (double *)((int)bottom_row - src_page->width);
-        half_height--;
-      }
-
-      SetDIBitsToDevice(dst_page->hTempDC, src_x, src_y, width, height, dst_x, dst_y, 0, src_page->height,
-                        src_page->pBits, g_blit_bitmap_info, (unsigned int)(g_graphics_bpp == 8));
-      return;
-    }
-  }
-  else if (src_page_number != 0 && src_page->bitsPerPixel == dst_page->bitsPerPixel)
-  {
-    if (src_page == dst_page && src_y < dst_y)
-    {
-      if ((int)height < 1)
-      {
-        return;
-      }
-      for (i = 0; i < (int)height; i++)
-      {
-        src_bits_per_row = src_page->width * src_page->bitsPerPixel;
-        src_x_bits = dst_x * src_page->bitsPerPixel;
-        dst_bits_per_row = dst_page->width * dst_page->bitsPerPixel;
-        dst_x_bits = src_x * dst_page->bitsPerPixel;
-        copy_bits = width * dst_page->bitsPerPixel;
-        memmove((void *)((dst_page->rowPadding + ((dst_bits_per_row + ((dst_bits_per_row >> 0x1f) & 7U)) >> 3)) *
-                             (src_y + i) +
-                         ((dst_x_bits + ((dst_x_bits >> 0x1f) & 7U)) >> 3) + (int)dst_page->pBits),
-                (void *)((src_page->rowPadding + ((src_bits_per_row + ((src_bits_per_row >> 0x1f) & 7U)) >> 3)) *
-                             (dst_y + i) +
-                         ((src_x_bits + ((src_x_bits >> 0x1f) & 7U)) >> 3) + (int)src_page->pBits),
-                (int)(copy_bits + ((copy_bits >> 0x1f) & 7U)) >> 3);
-      }
-      return;
-    }
-
-    for (i = (int)height - 1; i >= 0; i--)
-    {
-      src_bits_per_row = src_page->width * src_page->bitsPerPixel;
-      src_x_bits = dst_x * src_page->bitsPerPixel;
-      dst_bits_per_row = dst_page->width * dst_page->bitsPerPixel;
-      dst_x_bits = src_x * dst_page->bitsPerPixel;
-      copy_bits = width * dst_page->bitsPerPixel;
-      memmove((void *)((dst_page->rowPadding + ((dst_bits_per_row + ((dst_bits_per_row >> 0x1f) & 7U)) >> 3)) *
-                           (src_y + i) +
-                       ((dst_x_bits + ((dst_x_bits >> 0x1f) & 7U)) >> 3) + (int)dst_page->pBits),
-              (void *)((src_page->rowPadding + ((src_bits_per_row + ((src_bits_per_row >> 0x1f) & 7U)) >> 3)) *
-                           (dst_y + i) +
-                       ((src_x_bits + ((src_x_bits >> 0x1f) & 7U)) >> 3) + (int)src_page->pBits),
-              (int)(copy_bits + ((copy_bits >> 0x1f) & 7U)) >> 3);
+      unsigned char *src_row = (unsigned char *)src_page->pBits +
+                               (dst_y + i) * (src_page->width + src_page->rowPadding) + dst_x;
+      unsigned char *dst_row = (unsigned char *)dst_page->pBits +
+                               (src_y + i) * (dst_page->width + dst_page->rowPadding) + src_x;
+      memmove(dst_row, src_row, (size_t)width);
     }
     return;
   }
 
-  src_stride_bytes = src_page->width;
-  dst_stride_bytes = dst_page->width;
-  copy_bytes = width;
-  (void)src_stride_bytes;
-  (void)dst_stride_bytes;
-  (void)copy_bytes;
-  BitBlt(dst_page->hTempDC, src_x, src_y, width, height, src_page->hTempDC, dst_x, dst_y, SRCCOPY);
+  for (i = 0; i < (int)height; ++i)
+  {
+    unsigned char *src_row = (unsigned char *)src_page->pBits +
+                             (dst_y + i) * (src_page->width + src_page->rowPadding) + dst_x;
+    unsigned char *dst_row = (unsigned char *)dst_page->pBits +
+                             (src_y + i) * (dst_page->width + dst_page->rowPadding) + src_x;
+    memmove(dst_row, src_row, (size_t)width);
+  }
 }
 
 // FUNCTION: SHANDALAR 0x00579e40
@@ -1122,6 +1048,11 @@ int AnimatePaletteToColor(int gray, int steps)
   value_step = 0x4000 / steps;
 
   if (g_graphics_bpp != 8)
+  {
+    return 0;
+  }
+  if (g_palette_data_words.signature != *(unsigned short *)"M0" &&
+      g_palette_data_words.signature != *(unsigned short *)"M1")
   {
     return 0;
   }

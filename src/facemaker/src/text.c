@@ -971,15 +971,12 @@ int DrawTextLine(FacemakerWindowBounds *window_bounds, int x, int y, char *text)
     return 0;
 }
 
-/* Matching note: callers pass `&format` from their own variadic frame, so this
- * intentionally takes a stack-pack pointer instead of a C `...` signature. */
-// FUNCTION: SHANDALAR 0x0057b230
-// FUNCTION: FACEMAKER 0x004086c0
-int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow, int scale_to_screen, int center_x, int center_y,
-                      int x, int y, int *format_and_args)
+static int DrawTextFormattedString(FacemakerWindowBounds *dst, int text_color,
+                                   int draw_shadow, int scale_to_screen,
+                                   int center_x, int center_y, int x, int y,
+                                   char *formatted_text, int formatted_length)
 {
     char current_char;
-    int formatted_length;
     char *scan_ptr;
     int line_x;
     int line_has_more;
@@ -988,14 +985,7 @@ int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shado
     int line_count;
     int saved_color;
     volatile int stack_layout_pad;
-    char formatted_text[1024];
-    char *format_string;
-    va_list args;
 
-    format_string = (char *)*format_and_args;
-    args = (va_list)(format_and_args + 1);
-    formatted_length = _vsnprintf(formatted_text, sizeof(formatted_text) - 1, format_string, args);
-    formatted_text[sizeof(formatted_text) - 1] = '\0';
     stack_layout_pad = formatted_length;
 
     scan_ptr = formatted_text;
@@ -1075,14 +1065,53 @@ int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shado
     return formatted_length;
 }
 
+/* Matching note: legacy callers pass `&format` from their own variadic frame,
+ * so this entry point still accepts that old stack-pack pointer. New code
+ * should use DrawTextFormattedVa instead. */
+// FUNCTION: SHANDALAR 0x0057b230
+// FUNCTION: FACEMAKER 0x004086c0
+int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow, int scale_to_screen, int center_x, int center_y,
+                      int x, int y, int *format_and_args)
+{
+    int formatted_length;
+    char formatted_text[1024];
+    char *format_string;
+    va_list args;
+
+    format_string = (char *)*format_and_args;
+    args = (va_list)(format_and_args + 1);
+    formatted_length = _vsnprintf(formatted_text, sizeof(formatted_text) - 1, format_string, args);
+    formatted_text[sizeof(formatted_text) - 1] = '\0';
+    return DrawTextFormattedString(dst, text_color, draw_shadow, scale_to_screen,
+                                   center_x, center_y, x, y, formatted_text,
+                                   formatted_length);
+}
+
+int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
+                        int scale_to_screen, int center_x, int center_y,
+                        int x, int y, char *format, va_list args)
+{
+    int formatted_length;
+    char formatted_text[1024];
+
+    formatted_length = _vsnprintf(formatted_text, sizeof(formatted_text) - 1, format, args);
+    formatted_text[sizeof(formatted_text) - 1] = '\0';
+    return DrawTextFormattedString(dst, text_color, draw_shadow, scale_to_screen,
+                                   center_x, center_y, x, y, formatted_text,
+                                   formatted_length);
+}
+
 // FUNCTION: FACEMAKER 0x004088d0
 // FUNCTION: SHANDALAR 0x0057b620
 void DrawTextAt(FacemakerWindowBounds *dst, int text_id, int x, int y, char *text, ...)
 {
+    va_list args;
+    va_start(args, text);
 #ifdef SHANDALAR
-    DrawTextFormatted(dst, text_id, 1, 1, 1, 1, x, y, (int *)&text);
+    DrawTextFormattedVa(dst, text_id, 1, 1, 1, 1, x, y, text, args);
 #else
-    DrawTextFormatted(dst, text_id, 0, 0, 1, 1, x, y, (int *)&text);
+    DrawTextFormattedVa(dst, text_id, 0, 0, 1, 1, x, y, text, args);
 #endif
+    va_end(args);
 }
 #pragma optimize("", off)

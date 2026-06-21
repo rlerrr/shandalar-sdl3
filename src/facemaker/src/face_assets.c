@@ -1,5 +1,7 @@
 #include "face_assets.h"
 
+#include "platform/legacy_io.h"
+
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>

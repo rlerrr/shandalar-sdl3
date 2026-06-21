@@ -251,6 +251,7 @@ int wsprintfA(LPSTR buffer, LPCSTR format, ...);
 int GetWindowTextA(HWND window, LPSTR text, int max_count);
 #define GetWindowText GetWindowTextA
 LRESULT SendMessageA(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
+int ShowCursor(BOOL show);
 BOOL CloseHandle(HANDLE handle);
 void *GlobalAlloc(UINT flags, size_t size);
 void *GlobalLock(void *memory);

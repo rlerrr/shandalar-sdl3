@@ -1,7 +1,6 @@
-#include <windows.h>
+#include "platform/gdi_compat.h"
 #include <stdio.h>
 #include <string.h>
-#include <process.h>
 
 #include "defs.h"
 #include "shandalar.h"
@@ -37,14 +36,15 @@ extern FacemakerWindowBounds *g_page2_window_bounds;
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
 int MeasureMultilineTextWidth(FacemakerWindowBounds *window, char *text);
 int SetFontStyleSize(int font_id, unsigned int style);
+int GetFontStyleSize(int font_id);
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_id, int draw_shadow, int scale_to_screen, int center_x, int center_y, int x,
                       int y, int *format_and_args);
 int LoadTextSectionLines(const char *filename, const char *section);
 int PopQueuedKeyInput(void);
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void LoadPcxIntoPage(int page_number, char *path);
-void LoadPcxIntoPageNoPalette(char *path);
-void ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
+void ShandalarLoadPcxIntoPageNoPalette(char *path);
+int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
 void CopyGraphicsRect(FacemakerWindowBounds *src, int src_x, int src_y, unsigned int width, int height,
                       FacemakerWindowBounds *dst, int dst_x, int dst_y);
 AdvMenuRect *PushGraphicsClipRect(AdvMenuRect *out_rect, FacemakerWindowBounds *page, int x, int y, int width, int height);
@@ -60,7 +60,7 @@ void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, i
 int FileExists(const char *filename);
 int ReadSpriteEntryPointers(EncodedImage **out_sprite_entries, char *sprite_table_name);
 void FreeSpriteBlob(void *memory);
-void AnimatePaletteToColor(int color_index, int palette_id);
+int AnimatePaletteToColor(int color_index, int palette_id);
 void set_global_base_directory(char *path);
 int BeginMenuContext(void);
 int ResetMenuContext(int context_index);
@@ -116,6 +116,7 @@ int HandleDifficultyMenuControlActivate(AdvMenuControl *control);
 int DrawColorMenuEntry(int color_index, int visual_state);
 int HandleColorMenuControlEvent(AdvMenuControl *control, int event_type);
 int HandleColorMenuControlActivate(AdvMenuControl *control);
+int shandalar_run_facemaker_flow(void);
 
 // GLOBAL: SHANDALAR 0x005aa0c8
 EncodedImage *g_opening_menu_unused_sprite_group_d[2];
@@ -832,12 +833,9 @@ int RunColorMenu(void)
 {
   int restore_rect_buffer[4];
   int temp_rect_buffer[4];
+  AdvMenuRect restore_rect;
   int menu_context;
   int color_index;
-  int restore_rect_x;
-  int restore_rect_y;
-  int restore_rect_width;
-  int restore_rect_height;
 
   if (g_color_menu_strings_loaded == 0)
   {
@@ -854,7 +852,7 @@ int RunColorMenu(void)
   }
 
   LoadPcxResource(1, 0, 0, "menu3.pic", (g_graphics_bpp == 8) ? &g_palette_data_words : (RpBitsPalettePacket *)1);
-  LoadPcxIntoPageNoPalette("menu3.pic");
+  ShandalarLoadPcxIntoPageNoPalette("menu3.pic");
   StretchBlitGraphicsRect(g_page1_window_bounds, 0, 0, 0x280, 0x1e0, g_page2_window_bounds, 0, 0, global_screen_width, global_screen_height);
   BlitGraphicsRect(g_page2_window_bounds, 0, 0, global_screen_width, global_screen_height, g_page1_window_bounds, 0, 0);
 
@@ -882,7 +880,7 @@ int RunColorMenu(void)
   LoadPcxResource(-1, 0, 0, "menu3.pic", &g_palette_data_words);
   FadeInPaletteFromGray(0, g_default_palette_fade_steps);
 
-  *(AdvMenuRect *)&restore_rect_x = *PushGraphicsClipRect((AdvMenuRect *)temp_rect_buffer, g_page2_window_bounds, 0, 0, global_screen_width, global_screen_height);
+  restore_rect = *PushGraphicsClipRect((AdvMenuRect *)temp_rect_buffer, g_page2_window_bounds, 0, 0, global_screen_width, global_screen_height);
 
   BeginSpriteEncodeSession();
   LoadPcxIntoPageOpaque(1, "menu3-but1.pic");
@@ -930,7 +928,7 @@ int RunColorMenu(void)
   EndMenuContext();
   ResetMenuContext(menu_context);
   FreeSpriteBlob(g_color_menu_normal_swatch_sprites[0]);
-  PushGraphicsClipRect((AdvMenuRect *)restore_rect_buffer, g_page2_window_bounds, restore_rect_x, restore_rect_y, restore_rect_width, restore_rect_height);
+  PushGraphicsClipRect((AdvMenuRect *)restore_rect_buffer, g_page2_window_bounds, restore_rect.x, restore_rect.y, restore_rect.width, restore_rect.height);
 
   if (g_menu_selection_value == 0)
   {
@@ -992,119 +990,7 @@ int HandleColorMenuControlActivate(AdvMenuControl *control)
 // FUNCTION: SHANDALAR 0x004a21ad
 int RunFacemakerFlow(void)
 {
-  int old_page_rect[3];
-  char *pedestal_images[6];
-  int parse_result;
-  FacemakerWindowBounds page4_bounds;
-  FacemakerWindowBounds *page4_bounds_ptr;
-  int y;
-  DIBSurface *page4_dib;
-  int x;
-  int image_height;
-  int image_width;
-  char *pixel;
-  EncodedImage *selected_menu_entry;
-  char facemaker_path[MAX_PATH];
-  int spawn_result;
-  EncodedImage *page2_sprite;
-  unsigned int is_topmost_window;
-
-  DelayUiTicks(0x14);
-  set_global_base_directory(facemaker_path);
-  strcat(facemaker_path, "\\Facemaker.exe");
-
-  do
-  {
-    is_topmost_window = (unsigned int)((GetWindowLongA(g_main_window_hwnd, -0x14) & 8) != 0);
-    if (is_topmost_window != 0)
-    {
-      SetWindowPos(g_main_window_hwnd, (HWND)-2, 0, 0, 0, 0, 3);
-    }
-
-    spawn_result = (int)_spawnl(0, facemaker_path, facemaker_path, "/S", 0);
-    BringWindowToTop(g_main_window_hwnd);
-    SetForegroundWindow(g_main_window_hwnd);
-    SetFocus(g_main_window_hwnd);
-    if (spawn_result == -1)
-    {
-      return -1;
-    }
-
-    page4_bounds.page_number = 4;
-    page4_bounds.clip_left = 0;
-    page4_bounds.clip_top = 0;
-    page4_bounds.max_x = 800;
-    page4_bounds.max_y = 600;
-    page4_bounds.draw_shadow_enabled = 1;
-    page4_bounds.text_color = 0x0f;
-    page4_bounds.unk_1c = 4;
-    page4_bounds.font_slot = 0;
-    page4_bounds_ptr = &page4_bounds;
-
-    selected_menu_entry = g_face_preview_sprite_group[g_menu_selection_value];
-    (void)selected_menu_entry;
-
-    BeginSpriteEncodeSession();
-    page2_sprite = EncodeSpriteFromPage(2, 0, 0, 0x89, 0xa9);
-    FinalizeSpriteEncodeSession();
-
-    image_width = 0x89;
-    image_height = 0xa9;
-    page4_dib = (DIBSurface *)CreateGraphicsPage(4, image_width * 2, image_height, 8);
-    SetGraphicsPage(4, page4_dib);
-    PushGraphicsClipRect((AdvMenuRect *)old_page_rect, page4_bounds_ptr, 0, 0, image_width * 2, image_height);
-    LoadPcxIntoPageNoPalette("menu4.pic");
-    FillGraphicsRect(page4_bounds_ptr, 0, 0, image_width, image_height, 0);
-    BlitGraphicsRect(g_page2_window_bounds, 0, 0, 0x8a, 0xaa, page4_bounds_ptr, 0, 0);
-
-    for (y = 0; y < image_height; y = y + 1)
-    {
-      pixel = (char *)g_graphics_pages[4]->pBits + (g_graphics_pages[4]->width + g_graphics_pages[4]->rowPadding) * y;
-      for (x = 0; image_width > x; x = x + 1, pixel = pixel + 1)
-      {
-        if ((unsigned char)*pixel == '\0')
-        {
-          pixel[image_width] = (char)0xff;
-        }
-      }
-    }
-
-    g_facemaker_page4_bitmap = g_graphics_pages[4]->hBitmap;
-    g_facemaker_page4_dib = g_graphics_pages[4];
-    SelectObject(g_graphics_pages[4]->hTempDC, g_graphics_pages[4]->hPreviousBitmap);
-    BuildFacemakerPortraitSprites(g_page2_window_bounds);
-    g_graphics_pages[4] = (DIBSurface *)0;
-
-    pedestal_images[1] = "prdblk.pic";
-    pedestal_images[2] = "prdblu.pic";
-    pedestal_images[3] = "prdgrn.pic";
-    pedestal_images[4] = "prdrd.pic";
-    pedestal_images[5] = "prdwt.pic";
-
-    LoadPcxIntoPageNoPalette("pedstls.pic");
-    LoadPcxResource(1, global_screen_width - 0x280, global_screen_height - 0x1e0,
-                    pedestal_images[((int *)g_color_menu_selection_to_deck_color - 1)[g_menu_selection_value]],
-                    (g_graphics_bpp == 8) ? &g_palette_data_words : 1);
-    StretchBlitGraphicsRect(g_page1_window_bounds, global_screen_width - 0x280, global_screen_height - 0x1e0, 0x280, 0x1e0,
-                            g_page1_window_bounds, 0, 0, global_screen_width, global_screen_height);
-
-    DrawEncodedImageResampled(g_page1_window_bounds, global_screen_width / 2 - ScaleUiCoordinate(0x89), ScaleUiCoordinate(0x14),
-                              ScaleUiCoordinate(0x112), ScaleUiCoordinate(0x152), page2_sprite);
-    BlitGraphicsRect(g_page1_window_bounds, 0, 0, global_screen_width, global_screen_height, g_page0_window_bounds, 0, 0);
-
-    memset(g_name_entry_buffer, 0, 0x40);
-    ReadGraphicsScanline((unsigned int *)g_name_entry_buffer, 2, 0, 200, 0x40);
-    g_player_is_male = (g_name_entry_buffer[0] == 'm');
-    strcpy(g_name_entry_buffer, g_name_entry_buffer + 1);
-    g_name_entry_cursor = (int)strlen(g_name_entry_buffer);
-    g_page0_window_bounds->font_slot = 1;
-    ReadGraphicsScanline((unsigned int *)g_name_entry_buffer, 2, 1, 200, 0x3f);
-
-    parse_result = RunNameEntryDialog(g_name_entry_buffer);
-  } while (parse_result == -1);
-
-  strcpy(g_player_name, g_name_entry_buffer);
-  return g_player_is_male;
+  return shandalar_run_facemaker_flow();
 }
 
 // FUNCTION: SHANDALAR 0x004a288d
@@ -1158,7 +1044,7 @@ void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page)
     FreeSpriteBlob((void *)g_face_preview_sprite_group[0]);
   }
   ApplyPortraitPaletteMap(page, 0, 0, 0x89, 0xa9, "pedstls.pic", "advfac64.pic");
-  LoadPcxIntoPageNoPalette("advfac64.pic");
+  ShandalarLoadPcxIntoPageNoPalette("advfac64.pic");
   BeginSpriteEncodeSession();
   g_face_preview_sprite_group[0] = EncodeSpriteFromPage(page->page_number, 0, 0, 0x89, 0xa9);
   ApplyPortraitTintMap(page, 0, 0, 0x89, 0xa9, 0, 1);

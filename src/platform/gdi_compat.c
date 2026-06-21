@@ -1357,6 +1357,13 @@ void DeleteCriticalSection(CRITICAL_SECTION *section) { (void)section; }
 void EnterCriticalSection(CRITICAL_SECTION *section) { (void)section; }
 void LeaveCriticalSection(CRITICAL_SECTION *section) { (void)section; }
 
+int ShowCursor(BOOL show)
+{
+  static int cursor_display_count;
+  cursor_display_count += show ? 1 : -1;
+  return cursor_display_count;
+}
+
 HDC shandalar_create_screen_dc(int width, int height)
 {
   BITMAPINFO info;

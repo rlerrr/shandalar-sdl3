@@ -4,6 +4,12 @@
 
 #include "cardartlib/src/assert.h"
 
+#ifndef _MSC_VER
+#include <strings.h>
+#define _stricmp strcasecmp
+#define _strnicmp strncasecmp
+#endif
+
 // FUNCTION: SHANDALAR 0x004c8381
 int IniHexDigitToInt(int ch)
 {
@@ -28,7 +34,11 @@ int TrimIniTrailingWhitespace(char *line, int line_len)
     return 0;
   }
 
-  while (line[(line_len - 1) - trimmed_count] == ' ' || line[(line_len - 1) - trimmed_count] == '\t')
+  while (trimmed_count < line_len &&
+         (line[(line_len - 1) - trimmed_count] == ' ' ||
+          line[(line_len - 1) - trimmed_count] == '\t' ||
+          line[(line_len - 1) - trimmed_count] == '\r' ||
+          line[(line_len - 1) - trimmed_count] == '\n'))
   {
     trimmed_count = trimmed_count + 1;
   }
@@ -55,12 +65,18 @@ size_t StripIniCommentSuffix(char *line, size_t line_len)
     return line_len;
   }
 
-  while ((comment_pos = strcspn(line + comment_pos, ";")) != line_len)
+  while (comment_pos < line_len)
   {
-    if (line[comment_pos - 1] == '\\')
+    comment_pos += strcspn(line + comment_pos, ";");
+    if (comment_pos >= line_len)
+    {
+      break;
+    }
+    if (comment_pos != 0 && line[comment_pos - 1] == '\\')
     {
       strcpy(line + (comment_pos - 1), line + comment_pos);
       removed_count = removed_count + 1;
+      line_len = line_len - 1;
     }
     else
     {
@@ -87,10 +103,16 @@ int ReadIniTrimmedLine(FILE *file, char *line_out)
       return 0;
     }
 
-    trimmed_len = strlen(line_out);
-    assert(line_out[trimmed_len] != '\n', "D:\\Newmagic\\multiplayer\\sid\\iniFile.c", 0xc0,
+    trimmed_len = (int)strlen(line_out);
+    assert(trimmed_len < 0x1ff || line_out[trimmed_len - 1] == '\n',
+           "D:\\Newmagic\\multiplayer\\sid\\iniFile.c", 0xc0,
            "Line too long in input file\n");
-    line_out[--trimmed_len] = '\0';
+    while (trimmed_len > 0 &&
+           (line_out[trimmed_len - 1] == '\n' ||
+            line_out[trimmed_len - 1] == '\r'))
+    {
+      line_out[--trimmed_len] = '\0';
+    }
     if (trimmed_len == 0)
     {
       continue;

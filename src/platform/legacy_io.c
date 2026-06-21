@@ -26,10 +26,86 @@ static void normalize_path_copy(char *out, size_t out_size, const char *path)
   }
 }
 
+static int resolve_case_insensitive_path(const char *path, char *out, size_t out_size)
+{
+  char normalized[1024];
+  char current[1024];
+  const char *cursor;
+
+  normalize_path_copy(normalized, sizeof(normalized), path);
+  if (access(normalized, F_OK) == 0) {
+    snprintf(out, out_size, "%s", normalized);
+    return 1;
+  }
+
+  cursor = normalized;
+  if (*cursor == '/') {
+    snprintf(current, sizeof(current), "/");
+    while (*cursor == '/')
+      ++cursor;
+  } else {
+    snprintf(current, sizeof(current), ".");
+  }
+
+  while (*cursor) {
+    char component[260];
+    char directory[1024];
+    const char *slash;
+    struct dirent *entry;
+    DIR *dir;
+    size_t component_len;
+    int found = 0;
+
+    slash = strchr(cursor, '/');
+    component_len = slash ? (size_t)(slash - cursor) : strlen(cursor);
+    if (component_len >= sizeof(component))
+      return 0;
+    memcpy(component, cursor, component_len);
+    component[component_len] = '\0';
+
+    if (component[0] == '\0' || strcmp(component, ".") == 0) {
+      cursor += component_len;
+      while (*cursor == '/')
+        ++cursor;
+      continue;
+    }
+
+    snprintf(directory, sizeof(directory), "%s", current);
+    dir = opendir(directory);
+    if (!dir)
+      return 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+      if (strcasecmp(entry->d_name, component) == 0) {
+        size_t len = strlen(current);
+        if (strcmp(current, "/") == 0)
+          snprintf(current, sizeof(current), "/%s", entry->d_name);
+        else
+          snprintf(current + len, sizeof(current) - len, "/%s", entry->d_name);
+        found = 1;
+        break;
+      }
+    }
+    closedir(dir);
+
+    if (!found)
+      return 0;
+
+    cursor += component_len;
+    while (*cursor == '/')
+      ++cursor;
+  }
+
+  snprintf(out, out_size, "%s", current);
+  return 1;
+}
+
 FILE *shandalar_fopen(const char *path, const char *mode)
 {
   char normalized[1024];
   normalize_path_copy(normalized, sizeof(normalized), path);
+  if (mode && mode[0] == 'r')
+    resolve_case_insensitive_path(normalized, normalized, sizeof(normalized));
   return fopen(normalized, mode);
 }
 
@@ -44,6 +120,8 @@ int shandalar_open(const char *path, int flags, ...)
     va_end(args);
   }
   normalize_path_copy(normalized, sizeof(normalized), path);
+  if ((flags & O_CREAT) == 0)
+    resolve_case_insensitive_path(normalized, normalized, sizeof(normalized));
   return open(normalized, flags, mode);
 }
 

@@ -9,6 +9,13 @@ if(SHANDALAR_BUILD_FACEMAKER)
   add_subdirectory(facemaker)
 endif()
 
+if(SHANDALAR_BUILD_SHANDALAR)
+  if(NOT SHANDALAR_BUILD_FACEMAKER)
+    add_subdirectory(facemaker)
+  endif()
+  add_subdirectory(shandalar)
+endif()
+
 if(SHANDALAR_BUILD_DECK)
   add_subdirectory(magsnd)
   add_subdirectory(deckdll)

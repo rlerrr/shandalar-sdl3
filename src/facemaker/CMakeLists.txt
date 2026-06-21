@@ -20,32 +20,37 @@ target_link_libraries(facemaker_core PUBLIC
   shandalar_platform
 )
 
-add_executable(facemaker src/sdl_main.c)
-target_link_libraries(facemaker PRIVATE
-  facemaker_core
-  SDL3::SDL3
-  SDL3_ttf::SDL3_ttf
-)
-
-if(EMSCRIPTEN)
-  set_target_properties(facemaker PROPERTIES SUFFIX ".html")
-  target_link_options(facemaker PRIVATE
-    "-sALLOW_MEMORY_GROWTH=1"
-    "-sFORCE_FILESYSTEM=1"
-    "-sMAXIMUM_MEMORY=1GB"
+if(SHANDALAR_BUILD_FACEMAKER)
+  add_executable(facemaker src/sdl_main.c)
+  target_link_libraries(facemaker PRIVATE
+    facemaker_core
+    SDL3::SDL3
+    SDL3_ttf::SDL3_ttf
   )
-  if(SHANDALAR_ASSET_DIR)
+
+  if(EMSCRIPTEN)
+    set_target_properties(facemaker PROPERTIES SUFFIX ".html")
     target_link_options(facemaker PRIVATE
-      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceArt@/assets/FaceArt"
-      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceData.txt@/assets/FaceData.txt"
-      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceMostRecent.txt@/assets/FaceMostRecent.txt"
-      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0530M_.TTF@/assets/TT0530M_.TTF"
+      "-sALLOW_MEMORY_GROWTH=1"
+      "-sFORCE_FILESYSTEM=1"
+      "-sMAXIMUM_MEMORY=1GB"
     )
+    if(SHANDALAR_ASSET_DIR)
+      target_link_options(facemaker PRIVATE
+        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceArt@/assets/FaceArt"
+        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceData.txt@/assets/FaceData.txt"
+        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceMostRecent.txt@/assets/FaceMostRecent.txt"
+        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0530M_.TTF@/assets/TT0530M_.TTF"
+      )
+    endif()
   endif()
+
+  install(TARGETS facemaker
+    RUNTIME DESTINATION .
+  )
 endif()
 
-install(TARGETS facemaker facemaker_core
-  RUNTIME DESTINATION .
+install(TARGETS facemaker_core
   ARCHIVE DESTINATION lib
 )
 
