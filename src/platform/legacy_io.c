@@ -100,6 +100,56 @@ static int resolve_case_insensitive_path(const char *path, char *out, size_t out
   return 1;
 }
 
+static int translate_legacy_open_flags(int flags)
+{
+  int translated;
+
+  switch (flags & 0x0003) {
+  case 0x0001:
+    translated = O_WRONLY;
+    break;
+  case 0x0002:
+    translated = O_RDWR;
+    break;
+  default:
+    translated = O_RDONLY;
+    break;
+  }
+
+  if ((flags & 0x0100) != 0 || (flags & O_CREAT) != 0)
+    translated |= O_CREAT;
+  if ((flags & 0x0200) != 0 || (flags & O_TRUNC) != 0)
+    translated |= O_TRUNC;
+#ifdef O_EXCL
+  if ((flags & 0x0400) != 0 || (flags & O_EXCL) != 0)
+    translated |= O_EXCL;
+#endif
+#ifdef O_APPEND
+  if ((flags & 0x0008) != 0 || (flags & O_APPEND) != 0)
+    translated |= O_APPEND;
+#endif
+
+  return translated;
+}
+
+static mode_t translate_legacy_open_mode(int flags, mode_t mode)
+{
+  mode_t translated = 0;
+
+  if ((mode & 0x0100) != 0)
+    translated |= S_IRUSR;
+  if ((mode & 0x0080) != 0)
+    translated |= S_IWUSR;
+  if ((mode & 0x0020) != 0)
+    translated |= S_IXUSR;
+
+  if ((flags & 0x0003) != O_RDONLY)
+    translated |= S_IRUSR | S_IWUSR;
+  if (translated == 0)
+    translated = S_IRUSR | S_IWUSR;
+  return translated;
+}
+
 FILE *shandalar_fopen(const char *path, const char *mode)
 {
   char normalized[1024];
@@ -112,17 +162,19 @@ FILE *shandalar_fopen(const char *path, const char *mode)
 int shandalar_open(const char *path, int flags, ...)
 {
   char normalized[1024];
+  int translated_flags;
   mode_t mode = 0;
-  if (flags & O_CREAT) {
+  translated_flags = translate_legacy_open_flags(flags);
+  if (translated_flags & O_CREAT) {
     va_list args;
     va_start(args, flags);
-    mode = (mode_t)va_arg(args, int);
+    mode = translate_legacy_open_mode(flags, (mode_t)va_arg(args, int));
     va_end(args);
   }
   normalize_path_copy(normalized, sizeof(normalized), path);
-  if ((flags & O_CREAT) == 0)
+  if ((translated_flags & O_CREAT) == 0)
     resolve_case_insensitive_path(normalized, normalized, sizeof(normalized));
-  return open(normalized, flags, mode);
+  return open(normalized, translated_flags, mode);
 }
 
 static int find_next_match(FindState *state, struct _finddata_t *data)

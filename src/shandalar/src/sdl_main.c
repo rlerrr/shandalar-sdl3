@@ -132,12 +132,17 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   FacemakerConfig config;
   FacemakerFrame frame;
   FacemakerStatus status;
+  char save_path[1024];
   int completed = 0;
 
   config.asset_root = asset_root;
   config.writable_root = writable_root ? writable_root : ".";
+#ifdef __EMSCRIPTEN__
+  config.writable_root = ".";
+#endif
   config.width = global_screen_width;
   config.height = global_screen_height;
+  SDL_snprintf(save_path, sizeof(save_path), "%s/face.pic", config.writable_root);
   SDL_SetWindowTitle(g_window, "Magic: Facemaker");
   SDL_SetRenderLogicalPresentation(g_renderer, config.width, config.height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -181,7 +186,7 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
       present_indexed_frame(frame.pixels, frame.width, frame.height, frame.pitch,
                             frame.rgb_palette);
     if (status == FACEMAKER_COMPLETED) {
-      facemaker_save("face.pic");
+      facemaker_save(save_path);
       completed = 1;
       break;
     }

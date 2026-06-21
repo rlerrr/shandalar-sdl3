@@ -83,10 +83,13 @@ static const FaceControl g_controls[CONTROL_COUNT] = {
 #undef FACE_CONTROL_GEOMETRY
 
 #ifdef __EMSCRIPTEN__
-EM_JS(void, facemaker_browser_download_file, (const char *path), {
+EM_JS(int, facemaker_browser_download_bytes,
+      (const char *path, const unsigned char *bytes, int byte_count), {
   var filePath = UTF8ToString(path);
   try {
-    var data = FS.readFile(filePath);
+    if (byte_count <= 0)
+      throw new Error('Saved file is empty');
+    var data = HEAPU8.slice(bytes, bytes + byte_count);
     var blob = new Blob([data], {type: 'application/octet-stream'});
     var url = URL.createObjectURL(blob);
     var link = document.createElement('a');
@@ -95,22 +98,60 @@ EM_JS(void, facemaker_browser_download_file, (const char *path), {
     link.download = slash >= 0 ? filePath.substring(slash + 1) : filePath;
     if (!link.download)
       link.download = 'face.pic';
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     setTimeout(function() {
       URL.revokeObjectURL(url);
       link.remove();
-    }, 0);
+    }, 60000);
+    return 1;
   } catch (error) {
     console.error('Facemaker could not download ' + filePath, error);
+    return 0;
   }
 });
 #else
-static void facemaker_browser_download_file(const char *path)
+static int facemaker_browser_download_bytes(const char *path, const unsigned char *bytes,
+                                            int byte_count)
 {
   (void)path;
+  (void)bytes;
+  (void)byte_count;
+  return 1;
 }
 #endif
+
+static int facemaker_download_saved_file(const char *path)
+{
+  FILE *file;
+  unsigned char *bytes;
+  long byte_count;
+  int result;
+
+  file = fopen(path, "rb");
+  if (!file)
+    return 0;
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return 0;
+  }
+  byte_count = ftell(file);
+  if (byte_count <= 0 || fseek(file, 0, SEEK_SET) != 0) {
+    fclose(file);
+    return 0;
+  }
+  bytes = (unsigned char *)malloc((size_t)byte_count);
+  if (!bytes) {
+    fclose(file);
+    return 0;
+  }
+  result = fread(bytes, 1, (size_t)byte_count, file) == (size_t)byte_count &&
+           facemaker_browser_download_bytes(path, bytes, (int)byte_count);
+  free(bytes);
+  fclose(file);
+  return result;
+}
 
 static int scale_x(int value)
 {
@@ -705,8 +746,9 @@ int facemaker_editor_save(const char *path)
   }
   result = ExportEncodedImage(2, 0, 0, 276, 170, 0, (char *)path) == 0;
   if (result) {
-    set_status_message("Saved face.pic");
-    facemaker_browser_download_file(path);
+    set_status_message(facemaker_download_saved_file(path)
+                           ? "Saved face.pic"
+                           : "Saved face.pic; download failed");
   } else {
     set_status_message("Save failed");
   }
