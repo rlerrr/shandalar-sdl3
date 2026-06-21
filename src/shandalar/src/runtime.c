@@ -2,6 +2,8 @@
 #include "platform/legacy_io.h"
 #include "drawcardlib/src/pic.h"
 #include "facemaker/src/facemaker_types.h"
+#include "magic/src/global_state.h"
+#include "magic/src/global_strings.h"
 #include "shandalar.h"
 
 #include <SDL3/SDL.h>
@@ -43,6 +45,8 @@ void LoadPcxIntoPage(int page_number, char *path);
 void LoadPcxIntoPageOpaque(int page_number, char *path);
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data);
+void FillGraphicsRect(FacemakerWindowBounds *window_bounds, int x, int y,
+                      int width, int height, unsigned int color_index);
 int LoadSystemFont(int font_id, unsigned int point_size, char *font_file,
                    char *font_name, int weight, int italic);
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
@@ -60,6 +64,7 @@ int HasQueuedKeyInput(void);
 int PopQueuedKeyInput(void);
 void PutGraphicsPixel(FacemakerWindowBounds *window_bounds, int x, int y, int color_index);
 int RunNameEntryDialog(char *name_buffer);
+void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
 int ResetMenuContext(int context_index);
 
 void shandalar_host_pump(void);
@@ -69,7 +74,6 @@ void shandalar_runtime_shutdown(void);
 
 int g_default_palette_fade_steps = 8;
 FILE *g_advbuttons_ini_file;
-char g_ui_message_buffer[0x1000];
 char g_ini_string_scratch[0x28];
 int g_mouse_x_snapshot;
 int g_mouse_y_snapshot;
@@ -79,15 +83,12 @@ int g_mouse_button_released_mask;
 int g_mouse_y;
 int g_mouse_x;
 int g_menu_render_guard;
-HWND g_main_window_hwnd;
-char g_text_lines[249][300];
 int g_ui_tick_count;
-char g_name_entry_buffer[0x40] = "Shandalar";
-char g_player_name[0x32];
-int g_player_is_male = 1;
 extern int g_name_entry_cursor;
 EncodedImage *g_face_preview_sprite_group[6];
 EncodedImage *g_face_preview_sprite_selected;
+extern DIBSurface *g_facemaker_page4_dib;
+extern HBITMAP g_facemaker_page4_bitmap;
 
 extern char global_base_directory[0x105];
 
@@ -531,6 +532,30 @@ int LoadTextSectionLines(const char *filename, const char *section)
   return count;
 }
 
+static int load_facemaker_portrait_output(void)
+{
+  FacemakerWindowBounds page4_bounds = {4, 0, 0, 275, 169, 1, 0x0f, 4, 0};
+
+  if (!FileExists("face.pic"))
+    return 0;
+
+  if (g_facemaker_page4_dib)
+    g_graphics_pages[4] = g_facemaker_page4_dib;
+  else if (!CreateGraphicsPage(4, 276, 170, 8))
+    return 0;
+
+  FillGraphicsRect(&page4_bounds, 0, 0, 276, 170, 0);
+  LoadPcxIntoPage(4, "face.pic");
+  BuildFacemakerPortraitSprites(&page4_bounds);
+  LoadPcxIntoPage(4, "face.pic");
+
+  g_facemaker_page4_bitmap = g_graphics_pages[4]->hBitmap;
+  g_facemaker_page4_dib = g_graphics_pages[4];
+  SelectObject(g_graphics_pages[4]->hTempDC, g_graphics_pages[4]->hPreviousBitmap);
+  g_graphics_pages[4] = NULL;
+  return 1;
+}
+
 int shandalar_run_facemaker_flow(void)
 {
   char asset_root[sizeof(global_base_directory)];
@@ -540,6 +565,7 @@ int shandalar_run_facemaker_flow(void)
   completed = shandalar_host_run_facemaker(asset_root, asset_root);
   if (!shandalar_runtime_init(asset_root) || !completed)
     return -1;
+  load_facemaker_portrait_output();
   g_name_entry_cursor = (int)strlen(g_name_entry_buffer);
   if (RunNameEntryDialog(g_name_entry_buffer) == -1)
     return -1;

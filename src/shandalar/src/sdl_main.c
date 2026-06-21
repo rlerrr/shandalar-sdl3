@@ -6,6 +6,7 @@
 #include "drawcardlib/src/pic.h"
 #include "facemaker/src/facemaker_core.h"
 #include "facemaker/src/facemaker_types.h"
+#include "magic/src/global_state.h"
 #include "platform/gdi_compat.h"
 
 #ifdef __EMSCRIPTEN__
@@ -287,9 +288,20 @@ static int run_setup_flow(void)
         color = RunColorMenu();
         if (color < 0 || g_quit_requested)
           break;
+        g_selected_wizard_color = color;
+        g_starting_color = color;
         male = RunFacemakerFlow();
-        if (male >= 0 || g_quit_requested)
+        if (male >= 0 || g_quit_requested) {
+          if (male >= 0) {
+            g_shandalar_difficulty = difficulty;
+            g_deck_color_bitmap = 1 << ((unsigned char)g_selected_wizard_color & 0xff);
+            g_skip_new_game_state_initialization = 0;
+            g_world_scene_reveal_effect_pending = 1;
+            Gold = (5 - g_shandalar_difficulty) * 0x32;
+            DAT_00591214 = 0;
+          }
           return 0;
+        }
       }
     }
   }

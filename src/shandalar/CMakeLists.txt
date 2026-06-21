@@ -4,9 +4,10 @@ add_executable(shandalar
   src/opt57_shandalar_core.c
   src/openingMenu.c
   src/iniFile.c
+  ../magic/src/shandalar_opening_globals.c
 )
 
-target_compile_definitions(shandalar PRIVATE MODERN_FIXES)
+target_compile_definitions(shandalar PRIVATE MODERN_FIXES SHANDALAR)
 target_include_directories(shandalar PRIVATE
   "${SHANDALAR_SRC_ROOT}"
   "${CMAKE_CURRENT_SOURCE_DIR}"

@@ -39,6 +39,7 @@ typedef void *HWND;
 typedef void *HMENU;
 typedef void *HCURSOR;
 typedef void *HICON;
+typedef void *HACCEL;
 typedef uint16_t ATOM;
 typedef void *HBRUSH;
 typedef void *HPEN;
