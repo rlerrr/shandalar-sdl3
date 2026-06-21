@@ -6,11 +6,15 @@
 #include <math.h>
 #include <stdio.h>
 
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#endif
 
-#include "../defs.h"
+#include "defs.h"
 #include "resources.h"
 #include "card_db.h"
 
@@ -307,6 +311,9 @@ extern "C" {
   BOOL WINAPI DllEntryPoint(HINSTANCE dll, DWORD reason, LPVOID reserved);
   BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved);
   WPARAM WINAPI DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  void deck_register_dialog_resources(void);
+#endif
   WPARAM deckbuilder_main(HWND parent_hwnd, int db_flags_1, int db_flags_2);
   void delete_and_close_object(HANDLE obj);
 #ifdef __cplusplus

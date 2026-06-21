@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <time.h>
-#include <direct.h>
+#include "platform/legacy_io.h"
 
 #include "deckdll.h"
 #include "full_deck.h"
@@ -33,6 +33,11 @@ typedef ptrdiff_t INT_PTR;
 
 typedef int (*Int_fn_int)(int);
 void change_buttonclass_wndproc(HWND hwnd);
+static int read_deck_line(FILE *file, char *dest);
+static int is_deck_card_line(char *line);
+static int is_deck_version_line(char *line);
+void draw_item(DRAWITEMSTRUCT *item, HBRUSH brush, HANDLE background,
+               HPEN pen1, HPEN pen2, COLORREF color, int focus, UINT format);
 extern int global_num_artists;
 
 // GLOBAL: DECKDLL 0x10030030

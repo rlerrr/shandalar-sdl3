@@ -1,6 +1,7 @@
 #include "deckdll.h"
 #include "full_deck.h"
 #include "mystdbool.h"
+#include <stdlib.h>
 
 extern HINSTANCE global_hinstance;
 extern DBFlags global_db_flags_1;

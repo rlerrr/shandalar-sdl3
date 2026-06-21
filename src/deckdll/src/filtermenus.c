@@ -1,4 +1,5 @@
 #include <STDDEF.H>
+#include <stdlib.h>
 #include "filtermenus.h"
 #include "mystdbool.h"
 #include "cardartlib/src/palette.h"

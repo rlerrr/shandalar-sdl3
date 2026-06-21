@@ -1,7 +1,12 @@
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include "mystdbool.h"
 #include "cardartlib/src/assert.h"
+#include "cardartlib/src/palette.h"
 #include "drawcardlib/src/pic.h"
 
 #define SHARED_RESOURCES_IMPL

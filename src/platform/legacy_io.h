@@ -31,6 +31,7 @@
 #define _stricmp strcasecmp
 #define _strcmpi strcasecmp
 #define _strnicmp strncasecmp
+#define _vsnprintf vsnprintf
 #define _strlwr shandalar_strlwr
 #define _splitpath shandalar_splitpath
 #define _itoa(value, buffer, radix) (snprintf((buffer), 34, ((radix) == 16 ? "%x" : "%d"), (value)), (buffer))

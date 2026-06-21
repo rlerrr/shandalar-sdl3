@@ -12,7 +12,8 @@ enum ObjectKind {
   OBJECT_PALETTE = 0x504c,
   OBJECT_FONT = 0x464e,
   OBJECT_BRUSH = 0x4252,
-  OBJECT_PEN = 0x504e
+  OBJECT_PEN = 0x504e,
+  OBJECT_REGION = 0x5247
 };
 
 typedef struct ObjectHeader { int kind; } ObjectHeader;
@@ -69,6 +70,11 @@ typedef struct PaintObject {
   COLORREF color;
 } PaintObject;
 
+typedef struct CompatRegion {
+  ObjectHeader header;
+  RECT rect;
+} CompatRegion;
+
 struct ShandalarDC {
   HBITMAP bitmap;
   HPALETTE palette;
@@ -96,6 +102,7 @@ struct ShandalarDC {
 };
 
 static char g_font_root[512];
+static char g_module_path[1024] = ".\\shandalar.exe";
 static double g_font_device_scale = 1.0;
 
 static unsigned int cp1252_codepoint(unsigned char ch)
@@ -321,15 +328,20 @@ static void restore_font_size(HDC dc, float old_size)
     TTF_SetFontSize(dc->font->font, old_size);
 }
 
-HDC GetDC(HWND window)
+HDC WINAPI shandalar_GetDC(HWND window)
 {
-  (void)window;
+  extern HDC shandalar_window_backing_dc(HWND window);
+  HDC window_dc = shandalar_window_backing_dc(window);
+  if (window_dc)
+    return window_dc;
   return CreateCompatibleDC(NULL);
 }
 
 int ReleaseDC(HWND window, HDC dc)
 {
-  (void)window;
+  extern HDC shandalar_window_backing_dc(HWND window);
+  if (window && dc == shandalar_window_backing_dc(window))
+    return 1;
   return DeleteDC(dc);
 }
 
@@ -386,6 +398,14 @@ HBITMAP CreateBitmap(int width, int height, UINT planes, UINT bits_per_pixel, co
   return bitmap;
 }
 
+HBITMAP CreateCompatibleBitmap(HDC dc, int width, int height)
+{
+  UINT bits_per_pixel = 8;
+  if (dc && dc->bitmap && dc->bitmap->bits_per_pixel > 0)
+    bits_per_pixel = (UINT)dc->bitmap->bits_per_pixel;
+  return CreateBitmap(width, height, 1, bits_per_pixel, NULL);
+}
+
 HGDIOBJ SelectObject(HDC dc, HGDIOBJ object)
 {
   ObjectHeader *header = (ObjectHeader *)object;
@@ -419,7 +439,7 @@ BOOL DeleteObject(HGDIOBJ object)
   return TRUE;
 }
 
-int GetObjectA(HGDIOBJ object, int size, void *out)
+int WINAPI shandalar_GetObjectA(HGDIOBJ object, int size, void *out)
 {
   ObjectHeader *header = (ObjectHeader *)object;
   if (!header || !out)
@@ -752,6 +772,36 @@ int IntersectClipRect(HDC dc, int left, int top, int right, int bottom)
   return 1;
 }
 
+void *CreateRectRgn(int left, int top, int right, int bottom)
+{
+  CompatRegion *region = (CompatRegion *)calloc(1, sizeof(*region));
+  if (!region) return NULL;
+  region->header.kind = OBJECT_REGION;
+  SetRect(&region->rect, left, top, right, bottom);
+  return region;
+}
+
+BOOL SetRectRgn(void *handle, int left, int top, int right, int bottom)
+{
+  CompatRegion *region = (CompatRegion *)handle;
+  if (!region || region->header.kind != OBJECT_REGION) return FALSE;
+  return SetRect(&region->rect, left, top, right, bottom);
+}
+
+int SelectClipRgn(HDC dc, void *handle)
+{
+  CompatRegion *region = (CompatRegion *)handle;
+  if (!dc) return 0;
+  if (!region) {
+    dc->has_clip = 0;
+    return 1;
+  }
+  if (region->header.kind != OBJECT_REGION) return 0;
+  dc->clip = region->rect;
+  dc->has_clip = 1;
+  return 1;
+}
+
 BOOL SetRect(RECT *rect, int left, int top, int right, int bottom)
 {
   if (!rect) return FALSE;
@@ -814,7 +864,10 @@ UINT SetTextAlign(HDC dc, UINT align) { (void)dc; return align; }
 
 HGDIOBJ GetStockObject(int object)
 {
-  COLORREF color = object == WHITE_BRUSH ? RGB(255,255,255) : RGB(0,0,0);
+  COLORREF color = object == WHITE_BRUSH ? RGB(255,255,255) :
+                   object == LTGRAY_BRUSH ? RGB(192,192,192) :
+                   object == GRAY_BRUSH ? RGB(128,128,128) :
+                   object == DKGRAY_BRUSH ? RGB(64,64,64) : RGB(0,0,0);
   if (object == DEFAULT_GUI_FONT || object == SYSTEM_FONT)
     return NULL;
   if (object == NULL_PEN)
@@ -843,6 +896,7 @@ HPALETTE SelectPalette(HDC dc, HPALETTE palette, BOOL background)
   return previous;
 }
 UINT RealizePalette(HDC dc) { return dc && dc->palette ? 256 : 0; }
+BOOL UnrealizeObject(HGDIOBJ object) { return object != NULL; }
 
 UINT GetPaletteEntries(HPALETTE palette, UINT start, UINT count, PALETTEENTRY *entries)
 {
@@ -1202,15 +1256,21 @@ int MessageBoxA(HWND window, LPCSTR message, LPCSTR title, UINT flags)
   return 1;
 }
 
-HWND GetDesktopWindow(void) { return (HWND)0; }
-
 UINT GetModuleFileNameA(HMODULE module, LPSTR buffer, UINT size)
 {
   (void)module;
   if (!buffer || !size)
     return 0;
-  SDL_strlcpy(buffer, ".", size);
+  SDL_strlcpy(buffer, g_module_path, size);
   return (UINT)strlen(buffer);
+}
+
+void shandalar_win32_set_module_path(LPCSTR path)
+{
+  size_t i;
+  SDL_strlcpy(g_module_path, path ? path : ".\\shandalar.exe", sizeof(g_module_path));
+  for (i = 0; g_module_path[i]; ++i)
+    if (g_module_path[i] == '/') g_module_path[i] = '\\';
 }
 
 int GetPrivateProfileIntA(LPCSTR section, LPCSTR key, int default_value, LPCSTR filename)
@@ -1313,22 +1373,7 @@ int wsprintfA(LPSTR buffer, LPCSTR format, ...)
   return result;
 }
 
-int GetWindowTextA(HWND window, LPSTR text, int max_count)
-{
-  (void)window;
-  if (text && max_count > 0)
-    text[0] = '\0';
-  return 0;
-}
-
-LRESULT SendMessageA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
-{
-  (void)window;
-  (void)message;
-  (void)wparam;
-  (void)lparam;
-  return 0;
-}
+int lstrlenA(LPCSTR text) { return text ? (int)strlen(text) : 0; }
 
 BOOL CloseHandle(HANDLE handle) { (void)handle; return TRUE; }
 void *GlobalAlloc(UINT flags, size_t size) { (void)flags; return malloc(size); }
@@ -1339,6 +1384,8 @@ void *GlobalFree(void *memory) { free(memory); return NULL; }
 BOOL GdiFlush(void) { return TRUE; }
 int GetDeviceCaps(HDC dc, int index)
 {
+  if (index == RASTERCAPS)
+    return RC_PALETTE;
   if (index == BITSPIXEL)
     return 8;
   if (index == PLANES)
@@ -1397,6 +1444,39 @@ const void *shandalar_dc_pixels(HDC dc, int *pitch)
 void shandalar_set_default_font_root(const char *root)
 {
   SDL_strlcpy(g_font_root, root ? root : "", sizeof(g_font_root));
+}
+
+BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
+{
+  int x;
+  int y;
+  if (!dc || !dc->bitmap || !pixels || pitch_bytes < dc->bitmap->width * 4)
+    return FALSE;
+  for (y = 0; y < dc->bitmap->height; ++y) {
+    uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
+    for (x = 0; x < dc->bitmap->width; ++x) {
+      COLORREF color = read_pixel_color(dc, x, y);
+      dst[x] = 0xff000000u | ((color & 0xffu) << 16) | (color & 0xff00u) |
+               ((color >> 16) & 0xffu);
+    }
+  }
+  return TRUE;
+}
+
+BOOL InflateRect(RECT *rect, int dx, int dy)
+{
+  if (!rect) return FALSE;
+  rect->left -= dx;
+  rect->right += dx;
+  rect->top -= dy;
+  rect->bottom += dy;
+  return TRUE;
+}
+
+BOOL PtInRect(const RECT *rect, POINT point)
+{
+  return rect && point.x >= rect->left && point.x < rect->right &&
+         point.y >= rect->top && point.y < rect->bottom;
 }
 
 double shandalar_set_font_device_scale(double scale)

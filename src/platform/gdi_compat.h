@@ -9,11 +9,14 @@
 extern "C" {
 #endif
 
-#define WINAPI
-#define CALLBACK
-#define APIENTRY
+#if !defined(_WIN32)
 #define __stdcall
 #define __cdecl
+#define __int64 long long
+#endif
+#define WINAPI __stdcall
+#define CALLBACK __stdcall
+#define APIENTRY WINAPI
 #define MAX_PATH 260
 
 typedef uint8_t BYTE;
@@ -35,7 +38,7 @@ typedef void *LPSECURITY_ATTRIBUTES;
 typedef void *HANDLE;
 typedef void *HINSTANCE;
 typedef void *HMODULE;
-typedef void *HWND;
+typedef struct ShandalarWindow *HWND;
 typedef void *HMENU;
 typedef void *HCURSOR;
 typedef void *HICON;
@@ -104,6 +107,7 @@ typedef struct LOGFONTA {
   BYTE lfOutPrecision, lfClipPrecision, lfQuality, lfPitchAndFamily;
   CHAR lfFaceName[32];
 } LOGFONTA;
+typedef LOGFONTA LOGFONT;
 typedef struct TEXTMETRICA {
   LONG tmHeight, tmAscent, tmDescent, tmInternalLeading, tmExternalLeading;
   LONG tmAveCharWidth, tmMaxCharWidth, tmWeight, tmOverhang;
@@ -120,6 +124,21 @@ typedef struct DRAWITEMSTRUCT {
   RECT rcItem;
   uintptr_t itemData;
 } DRAWITEMSTRUCT;
+typedef struct DELETEITEMSTRUCT {
+  UINT CtlType;
+  UINT CtlID;
+  UINT itemID;
+  HWND hwndItem;
+  uintptr_t itemData;
+} DELETEITEMSTRUCT;
+typedef struct MEASUREITEMSTRUCT {
+  UINT CtlType;
+  UINT CtlID;
+  UINT itemID;
+  UINT itemWidth;
+  UINT itemHeight;
+  uintptr_t itemData;
+} MEASUREITEMSTRUCT;
 
 #define TRUE 1
 #define FALSE 0
@@ -138,16 +157,29 @@ typedef struct DRAWITEMSTRUCT {
 #define DEFAULT_GUI_FONT 17
 #define SYSTEM_FONT 13
 #define WHITE_BRUSH 0
+#define LTGRAY_BRUSH 1
+#define GRAY_BRUSH 2
+#define DKGRAY_BRUSH 3
 #define BLACK_BRUSH 4
 #define NULL_BRUSH 5
+#define HOLLOW_BRUSH NULL_BRUSH
 #define NULL_PEN 8
 #define BLACK_PEN 7
 #define HORZRES 8
 #define VERTRES 10
 #define BITSPIXEL 12
 #define PLANES 14
+#define RASTERCAPS 38
+#define RC_PALETTE 0x0100
 #define INVALID_HANDLE_VALUE ((HANDLE)(intptr_t)-1)
 #define FW_BOLD 700
+#define FW_NORMAL 400
+#define ANSI_CHARSET 0
+#define OUT_DEFAULT_PRECIS 0
+#define CLIP_DEFAULT_PRECIS 0
+#define DEFAULT_QUALITY 0
+#define DEFAULT_PITCH 0
+#define FF_DONTCARE 0
 #define DT_TOP 0x0000
 #define DT_LEFT 0x0000
 #define DT_CENTER 0x0001
@@ -161,6 +193,7 @@ typedef struct DRAWITEMSTRUCT {
 #define WM_GETFONT 0x0031
 #define ODS_SELECTED 0x0001
 #define ODS_FOCUS 0x0010
+#define ODT_LISTBOX 2
 
 #define RGB(r,g,b) ((COLORREF)((BYTE)(r) | ((DWORD)(BYTE)(g) << 8) | ((DWORD)(BYTE)(b) << 16)))
 #define PALETTEINDEX(i) ((COLORREF)(0x01000000u | ((DWORD)(i) & 0xffffu)))
@@ -173,14 +206,17 @@ typedef struct DRAWITEMSTRUCT {
 #endif
 
 HDC CreateCompatibleDC(HDC dc);
-HDC GetDC(HWND window);
+HDC WINAPI shandalar_GetDC(HWND window);
+#define GetDC shandalar_GetDC
 int ReleaseDC(HWND window, HDC dc);
 BOOL DeleteDC(HDC dc);
 HBITMAP CreateDIBSection(HDC dc, const BITMAPINFO *info, UINT usage, void **bits, HANDLE section, DWORD offset);
 HBITMAP CreateBitmap(int width, int height, UINT planes, UINT bits_per_pixel, const void *bits);
+HBITMAP CreateCompatibleBitmap(HDC dc, int width, int height);
 HGDIOBJ SelectObject(HDC dc, HGDIOBJ object);
 BOOL DeleteObject(HGDIOBJ object);
-int GetObjectA(HGDIOBJ object, int size, void *out);
+int WINAPI shandalar_GetObjectA(HGDIOBJ object, int size, void *out);
+#define GetObjectA shandalar_GetObjectA
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop);
 BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy, int sw, int sh, DWORD rop);
 COLORREF GetPixel(HDC dc, int x, int y);
@@ -199,9 +235,14 @@ HGDIOBJ GetStockObject(int object);
 int SaveDC(HDC dc);
 BOOL RestoreDC(HDC dc, int saved);
 int IntersectClipRect(HDC dc, int left, int top, int right, int bottom);
+void *CreateRectRgn(int left, int top, int right, int bottom);
+BOOL SetRectRgn(void *region, int left, int top, int right, int bottom);
+int SelectClipRgn(HDC dc, void *region);
 BOOL SetRect(RECT *rect, int left, int top, int right, int bottom);
 BOOL CopyRect(RECT *dst, const RECT *src);
 BOOL OffsetRect(RECT *rect, int dx, int dy);
+BOOL InflateRect(RECT *rect, int dx, int dy);
+BOOL PtInRect(const RECT *rect, POINT point);
 BOOL DrawFocusRect(HDC dc, const RECT *rect);
 int SetMapMode(HDC dc, int mode);
 BOOL SetWindowExtEx(HDC dc, int x, int y, LPSIZE old);
@@ -215,6 +256,7 @@ UINT SetTextAlign(HDC dc, UINT align);
 HPALETTE CreatePalette(const LOGPALETTE *palette);
 HPALETTE SelectPalette(HDC dc, HPALETTE palette, BOOL background);
 UINT RealizePalette(HDC dc);
+BOOL UnrealizeObject(HGDIOBJ object);
 UINT GetPaletteEntries(HPALETTE palette, UINT start, UINT count, PALETTEENTRY *entries);
 UINT SetPaletteEntries(HPALETTE palette, UINT start, UINT count, const PALETTEENTRY *entries);
 UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors);
@@ -226,6 +268,8 @@ int SetBkMode(HDC dc, int mode);
 BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length);
 int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format);
 BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size);
+#define TextOut TextOutA
+#define GetTextExtentPoint32 GetTextExtentPoint32A
 BOOL GetTextMetricsA(HDC dc, TEXTMETRICA *metrics);
 BOOL GetCharABCWidthsA(HDC dc, UINT first, UINT last, ABC *widths);
 int AddFontResourceA(LPCSTR path);
@@ -235,20 +279,29 @@ HFONT CreateFontA(int height, int width, int escapement, int orientation, int we
                   DWORD out_precision, DWORD clip_precision, DWORD quality,
                   DWORD pitch_family, LPCSTR face);
 HFONT CreateFontIndirectA(const LOGFONTA *font);
+#define CreateFontIndirect CreateFontIndirectA
+#define GetObject GetObjectA
+#define GetTextExtentPointA GetTextExtentPoint32A
 
 int SetDIBitsToDevice(HDC dc, int x, int y, DWORD width, DWORD height,
                       int src_x, int src_y, UINT start_scan, UINT scan_lines,
                       const void *bits, const BITMAPINFO *info, UINT usage);
 
 int MessageBoxA(HWND window, LPCSTR message, LPCSTR title, UINT flags);
+#define MessageBox MessageBoxA
 HWND GetDesktopWindow(void);
 UINT GetModuleFileNameA(HMODULE module, LPSTR buffer, UINT size);
+void shandalar_win32_set_module_path(LPCSTR path);
 int GetPrivateProfileIntA(LPCSTR section, LPCSTR key, int default_value, LPCSTR filename);
 DWORD GetPrivateProfileStringA(LPCSTR section, LPCSTR key, LPCSTR default_value,
                                LPSTR returned_string, DWORD size, LPCSTR filename);
+BOOL WritePrivateProfileStringA(LPCSTR section, LPCSTR key, LPCSTR value, LPCSTR filename);
 BOOL GetVersionExA(OSVERSIONINFOA *version_info);
 void OutputDebugStringA(LPCSTR message);
 int wsprintfA(LPSTR buffer, LPCSTR format, ...);
+int lstrlenA(LPCSTR text);
+#define wsprintf wsprintfA
+#define WritePrivateProfileString WritePrivateProfileStringA
 int GetWindowTextA(HWND window, LPSTR text, int max_count);
 #define GetWindowText GetWindowTextA
 LRESULT SendMessageA(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
@@ -270,6 +323,7 @@ void shandalar_set_screen_dc(HDC dc);
 HDC shandalar_create_screen_dc(int width, int height);
 void shandalar_destroy_screen_dc(HDC dc);
 const void *shandalar_dc_pixels(HDC dc, int *pitch);
+BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes);
 void shandalar_set_default_font_root(const char *root);
 double shandalar_set_font_device_scale(double scale);
 

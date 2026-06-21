@@ -14,6 +14,46 @@ target_include_directories(deck_imgui PUBLIC
 
 target_link_libraries(deck_imgui PUBLIC SDL3::SDL3)
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  add_library(deck_win32_imgui_bridge STATIC
+    src/winuser_imgui_bridge.cpp
+  )
+  target_include_directories(deck_win32_imgui_bridge PUBLIC
+    "${SHANDALAR_SRC_ROOT}"
+    "${imgui_SOURCE_DIR}"
+  )
+  target_link_libraries(deck_win32_imgui_bridge PUBLIC
+    deck_imgui
+    shandalar_platform
+  )
+
+  add_executable(deck_legacy
+    src/legacy_sdl_main.c
+  )
+  target_include_directories(deck_legacy PRIVATE
+    "${SHANDALAR_SRC_ROOT}"
+  )
+  target_compile_definitions(deck_legacy PRIVATE SHANDALAR_SDL_WIN32_COMPAT)
+  target_link_libraries(deck_legacy PRIVATE
+    deck_legacy_ui
+    deck_win32_imgui_bridge
+    SDL3::SDL3
+  )
+  if(EMSCRIPTEN)
+    set_target_properties(deck_legacy PROPERTIES SUFFIX ".html")
+    target_link_options(deck_legacy PRIVATE
+      "-sALLOW_MEMORY_GROWTH=1"
+      "-sFORCE_FILESYSTEM=1"
+      "-sASYNCIFY=1"
+    )
+    if(SHANDALAR_ASSET_DIR)
+      target_link_options(deck_legacy PRIVATE
+        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}@/assets"
+      )
+    endif()
+  endif()
+endif()
+
 add_executable(deck
   src/sdl_main.c
   src/deck_imgui.cpp
