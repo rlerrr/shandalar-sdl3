@@ -330,6 +330,7 @@ typedef struct tagWINDOWPOS {
 #define ES_MULTILINE 0x0004L
 #define ES_READONLY 0x0800L
 #define SC_MINIMIZE 0xf020
+#define SC_MOVE 0xf010
 #define LOCALE_SYSTEM_DEFAULT 0x0800
 
 #define SM_CXSCREEN 0
@@ -431,6 +432,12 @@ BOOL RemoveMenu(HMENU menu, UINT item, UINT flags);
 BOOL DestroyMenu(HMENU menu);
 BOOL TrackPopupMenu(HMENU menu, UINT flags, int x, int y, int reserved,
                     HWND window, const RECT *exclude);
+HMENU shandalar_win32_active_popup(HWND *owner, int *x, int *y);
+int shandalar_win32_menu_item_count(HMENU menu);
+BOOL shandalar_win32_menu_item(HMENU menu, int index, UINT *flags,
+                               UINT_PTR *id, LPCSTR *text);
+void shandalar_win32_choose_menu_item(UINT_PTR id);
+void shandalar_win32_dismiss_popup(void);
 BOOL SetScrollRange(HWND window, int bar, int minimum, int maximum, BOOL redraw);
 BOOL GetScrollRange(HWND window, int bar, int *minimum, int *maximum);
 int SetScrollPos(HWND window, int bar, int position, BOOL redraw);
@@ -445,6 +452,7 @@ COLORREF GetSysColor(int index);
 INT_PTR DialogBoxParamA(HINSTANCE instance, LPCSTR template_name, HWND parent,
                         DLGPROC dialog_proc, LPARAM init_param);
 BOOL EndDialog(HWND dialog, INT_PTR result);
+HWND shandalar_win32_active_dialog(void);
 LRESULT SendDlgItemMessageA(HWND dialog, int id, UINT message, WPARAM wparam, LPARAM lparam);
 UINT IsDlgButtonChecked(HWND dialog, int id);
 BOOL CheckDlgButton(HWND dialog, int id, UINT check);
@@ -462,6 +470,8 @@ void Sleep(DWORD milliseconds);
 
 typedef BOOL (*ShandalarWin32PumpProc)(BOOL wait);
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc);
+void shandalar_win32_set_system_drag_endpoint(int x, int y);
+void shandalar_win32_clear_system_drag_endpoint(void);
 void shandalar_win32_set_cursor_position(int x, int y);
 void shandalar_win32_runtime_tick(void);
 void shandalar_win32_runtime_reset(void);

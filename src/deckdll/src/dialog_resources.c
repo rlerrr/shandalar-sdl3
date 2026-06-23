@@ -12,7 +12,8 @@ static HWND add_control(HWND dialog, const char *class_name, int id,
                         int x, int y, int width, int height, DWORD style)
 {
   return CreateWindowExA(0, class_name, "", WS_CHILD | WS_VISIBLE | style,
-                         SX(x), SY(y), SX(width), SY(height), dialog,
+                         SX(x), SY(y) + GetSystemMetrics(SM_CYCAPTION),
+                         SX(width), SY(height), dialog,
                          (HMENU)(intptr_t)id, global_hinstance, NULL);
 }
 
@@ -20,7 +21,7 @@ static HWND make_dialog(HINSTANCE instance, HWND parent, int width, int height)
 {
   RECT desktop;
   int pixel_width = SX(width);
-  int pixel_height = SY(height);
+  int pixel_height = SY(height) + GetSystemMetrics(SM_CYCAPTION);
   GetClientRect(GetDesktopWindow(), &desktop);
   return shandalar_win32_create_dialog(instance, parent, "",
                                        (desktop.right - pixel_width) / 2,

@@ -3684,6 +3684,9 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
   HWND target_hwnd; /* ebp - 0x8 */
   int yoff;         /* ebp - 0x4 */
 
+  xoff = 0;
+  yoff = 0;
+
   wParam = SendMessageA(hwnd, 0x188, 0, 0);
   itemdata = (HANDLE)SendMessageA(hwnd, 0x199, wParam, 0);
 
@@ -4441,10 +4444,12 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     ScreenToClient(global_main_hwnd, &p);
     ScreenToClient(global_horzlist_hwnd, (LPPOINT)&global_horzlist_mouse_pt);
 
+#ifndef SHANDALAR_SDL_WIN32_COMPAT
     j = GetDoubleClickTime();
     Sleep(j);
     if (PeekMessageA(&m, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0))
       return 0;
+#endif
 
     SetFocus(hwnd);
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
@@ -4704,6 +4709,8 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
   csvid_t csvid; /* ebp - 0x8 */
   HWND target;   /* ebp - 0x4 */
 
+  new_hwnd = NULL;
+
   csvid = (csvid_t)GetWindowLongA(hwnd, global_cardclass_csvid_offset);
   amt32 = GetWindowWord(hwnd, global_cardclass_amount_offset);
   parent = GetParent(hwnd);
@@ -4766,23 +4773,27 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
 
       if (global_dlg_result <= 0)
       {
-        SendMessageA(new_hwnd, 0x401, amt32, 0);
+        if (new_hwnd)
+          SendMessageA(new_hwnd, 0x401, amt32, 0);
         *(WORD *)&num = 0;
       }
       else if (global_dlg_result >= amt32)
       {
-        DestroyWindow(new_hwnd);
+        if (new_hwnd)
+          DestroyWindow(new_hwnd);
         *(WORD *)&num = amt32;
       }
       else
       {
-        SendMessageA(new_hwnd, 0x401, amt32 - global_dlg_result, 0);
+        if (new_hwnd)
+          SendMessageA(new_hwnd, 0x401, amt32 - global_dlg_result, 0);
         *(WORD *)&num = (WORD)global_dlg_result;
       }
     }
     else
     {
-      SendMessageA(new_hwnd, 0x401, amt32 - 1, 0);
+      if (new_hwnd)
+        SendMessageA(new_hwnd, 0x401, amt32 - 1, 0);
       *(WORD *)&num = 1;
     }
 
@@ -4996,10 +5007,12 @@ wndproc_CardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     if ((global_db_flags_2 & 1) == 0)
       return 0;
 
+#ifndef SHANDALAR_SDL_WIN32_COMPAT
     i_or_delay_ms = GetDoubleClickTime();
     Sleep(i_or_delay_ms);
     if (PeekMessageA(&dblclick_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0) != 0)
       return 0;
+#endif
 
     card_mouse_pt.x = GET_X_LPARAM(lparam);
     card_mouse_pt.y = GET_Y_LPARAM(lparam);

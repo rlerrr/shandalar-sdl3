@@ -18,6 +18,11 @@ typedef struct CompatMenu {
 
 #define MENU_MAGIC 0x4d454e55u
 
+static CompatMenu *g_active_popup;
+static HWND g_popup_owner;
+static int g_popup_x;
+static int g_popup_y;
+
 static CompatMenu *as_menu(HMENU handle)
 {
   CompatMenu *menu = (CompatMenu *)handle;
@@ -25,6 +30,24 @@ static CompatMenu *as_menu(HMENU handle)
 }
 
 static int find_item(CompatMenu *menu, UINT item, UINT flags);
+
+static CompatMenu *clone_menu(CompatMenu *source)
+{
+  CompatMenu *copy;
+  size_t i;
+  if (!source)
+    return NULL;
+  copy = (CompatMenu *)CreatePopupMenu();
+  if (!copy)
+    return NULL;
+  for (i = 0; i < source->count; ++i)
+    if (!AppendMenuA((HMENU)copy, source->items[i].flags, source->items[i].id,
+                     source->items[i].text)) {
+      DestroyMenu((HMENU)copy);
+      return NULL;
+    }
+  return copy;
+}
 
 HMENU CreatePopupMenu(void)
 {
@@ -150,6 +173,60 @@ BOOL DestroyMenu(HMENU handle)
 BOOL TrackPopupMenu(HMENU handle, UINT flags, int x, int y, int reserved,
                     HWND window, const RECT *exclude)
 {
-  (void)flags; (void)x; (void)y; (void)reserved; (void)window; (void)exclude;
-  return as_menu(handle) != NULL;
+  CompatMenu *menu = as_menu(handle);
+  (void)flags; (void)reserved; (void)exclude;
+  if (!menu || !IsWindow(window))
+    return FALSE;
+  SendMessageA(window, WM_INITMENU, (WPARAM)handle, 0);
+  shandalar_win32_dismiss_popup();
+  g_active_popup = clone_menu(menu);
+  if (!g_active_popup)
+    return FALSE;
+  g_popup_owner = window;
+  g_popup_x = x;
+  g_popup_y = y;
+  return TRUE;
+}
+
+HMENU shandalar_win32_active_popup(HWND *owner, int *x, int *y)
+{
+  if (owner) *owner = g_popup_owner;
+  if (x) *x = g_popup_x;
+  if (y) *y = g_popup_y;
+  return (HMENU)g_active_popup;
+}
+
+int shandalar_win32_menu_item_count(HMENU handle)
+{
+  CompatMenu *menu = as_menu(handle);
+  return menu ? (int)menu->count : 0;
+}
+
+BOOL shandalar_win32_menu_item(HMENU handle, int index, UINT *flags,
+                               UINT_PTR *id, LPCSTR *text)
+{
+  CompatMenu *menu = as_menu(handle);
+  if (!menu || index < 0 || (size_t)index >= menu->count)
+    return FALSE;
+  if (flags) *flags = menu->items[index].flags;
+  if (id) *id = menu->items[index].id;
+  if (text) *text = menu->items[index].text ? menu->items[index].text : "";
+  return TRUE;
+}
+
+void shandalar_win32_dismiss_popup(void)
+{
+  CompatMenu *menu = g_active_popup;
+  g_active_popup = NULL;
+  g_popup_owner = NULL;
+  if (menu)
+    DestroyMenu((HMENU)menu);
+}
+
+void shandalar_win32_choose_menu_item(UINT_PTR id)
+{
+  HWND owner = g_popup_owner;
+  shandalar_win32_dismiss_popup();
+  if (owner)
+    PostMessageA(owner, WM_COMMAND, (WPARAM)id, 0);
 }

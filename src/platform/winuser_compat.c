@@ -55,6 +55,8 @@ static size_t g_queue_count;
 static int g_quit_posted;
 static int g_quit_code;
 static ShandalarWin32PumpProc g_pump_proc;
+static POINT g_system_drag_endpoint;
+static int g_has_system_drag_endpoint;
 
 static char *copy_string(const char *text)
 {
@@ -312,9 +314,18 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
     return GetWindowTextA(window, (LPSTR)lparam, (int)wparam);
   case WM_GETTEXTLENGTH:
     return GetWindowTextLengthA(window);
+  case WM_SYSCOMMAND:
+    if ((wparam & 0xfff0) == SC_MOVE && g_has_system_drag_endpoint) {
+      shandalar_win32_set_cursor_position(g_system_drag_endpoint.x,
+                                         g_system_drag_endpoint.y);
+      g_has_system_drag_endpoint = 0;
+    }
+    return 0;
   case WM_PAINT:
     /* DefWindowProc validates the update region for controls which do not
      * implement their own paint handler.  ImGui renders those controls. */
+    if (window->erase)
+      SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
     window->dirty = 0;
     window->erase = 0;
     return 0;
@@ -591,9 +602,13 @@ DWORD GetWindowThreadProcessId(HWND window, DWORD *process_id)
 
 BOOL GetClientRect(HWND window, RECT *rect)
 {
+  int height;
   if (!valid_window(window) || !rect)
     return FALSE;
-  SetRect(rect, 0, 0, window->width, window->height);
+  height = window->height;
+  if ((window->style & WS_CAPTION) == WS_CAPTION)
+    height -= GetSystemMetrics(SM_CYCAPTION);
+  SetRect(rect, 0, 0, window->width, height > 0 ? height : 0);
   return TRUE;
 }
 
@@ -812,8 +827,6 @@ BOOL UpdateWindow(HWND window)
 {
   if (!valid_window(window) || !window->dirty)
     return FALSE;
-  if (window->erase)
-    SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
   SendMessageA(window, WM_PAINT, 0, 0);
   window->dirty = 0;
   window->erase = 0;
@@ -822,11 +835,15 @@ BOOL UpdateWindow(HWND window)
 
 HDC BeginPaint(HWND window, PAINTSTRUCT *paint)
 {
+  int erase;
   if (!valid_window(window) || !paint)
     return NULL;
+  erase = window->erase;
+  if (erase)
+    SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
   memset(paint, 0, sizeof(*paint));
   paint->hdc = window->backing_dc;
-  paint->fErase = window->erase;
+  paint->fErase = erase;
   SetRect(&paint->rcPaint, 0, 0, window->width, window->height);
   window->dirty = 0;
   window->erase = 0;
@@ -860,10 +877,23 @@ HDC shandalar_window_backing_dc(HWND window)
 
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc) { g_pump_proc = proc; }
 
+void shandalar_win32_set_system_drag_endpoint(int x, int y)
+{
+  g_system_drag_endpoint.x = x;
+  g_system_drag_endpoint.y = y;
+  g_has_system_drag_endpoint = 1;
+}
+
+void shandalar_win32_clear_system_drag_endpoint(void)
+{
+  g_has_system_drag_endpoint = 0;
+}
+
 void shandalar_win32_reset(void)
 {
   RegisteredClass *registered;
   HWND window;
+  shandalar_win32_dismiss_popup();
   while (g_desktop.magic && g_desktop.last_child)
     DestroyWindow(g_desktop.last_child);
   window = g_allocations;
@@ -890,6 +920,7 @@ void shandalar_win32_reset(void)
   g_quit_posted = 0;
   g_quit_code = 0;
   g_pump_proc = NULL;
+  g_has_system_drag_endpoint = 0;
   shandalar_controls_reset();
   shandalar_win32_runtime_reset();
 }

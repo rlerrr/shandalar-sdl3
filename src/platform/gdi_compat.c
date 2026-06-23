@@ -496,6 +496,16 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
   COLORREF *temp;
   if (!dst || !src || !dst->bitmap || !src->bitmap || width <= 0 || height <= 0)
     return FALSE;
+  if (dx < 0) { sx -= dx; width += dx; dx = 0; }
+  if (dy < 0) { sy -= dy; height += dy; dy = 0; }
+  if (sx < 0) { dx -= sx; width += sx; sx = 0; }
+  if (sy < 0) { dy -= sy; height += sy; sy = 0; }
+  if (width > dst->bitmap->width - dx) width = dst->bitmap->width - dx;
+  if (width > src->bitmap->width - sx) width = src->bitmap->width - sx;
+  if (height > dst->bitmap->height - dy) height = dst->bitmap->height - dy;
+  if (height > src->bitmap->height - sy) height = src->bitmap->height - sy;
+  if (width <= 0 || height <= 0)
+    return TRUE;
   if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
       (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
     for (y = 0; y < height; ++y) {

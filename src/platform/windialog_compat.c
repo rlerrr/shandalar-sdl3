@@ -17,9 +17,23 @@ static ShandalarDialogFactory g_factory;
 static LRESULT CALLBACK dialog_window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
   DialogState *state;
-  for (state = g_dialogs; state; state = state->next)
-    if (state->window == window)
-      return state->proc ? state->proc(window, message, wparam, lparam) : 0;
+  for (state = g_dialogs; state; state = state->next) {
+    if (state->window == window) {
+      LRESULT result = state->proc ? state->proc(window, message, wparam, lparam) : 0;
+      if (message == WM_CLOSE && !state->ended) {
+        if (state->proc)
+          state->proc(window, WM_COMMAND, MAKEWPARAM(IDCANCEL, BN_CLICKED), 0);
+        if (!state->ended) {
+          state->result = IDCANCEL;
+          state->ended = TRUE;
+        }
+        return 0;
+      }
+      if (result)
+        return result;
+      break;
+    }
+  }
   return DefWindowProcA(window, message, wparam, lparam);
 }
 
@@ -80,6 +94,11 @@ BOOL EndDialog(HWND dialog, INT_PTR result)
     }
   }
   return FALSE;
+}
+
+HWND shandalar_win32_active_dialog(void)
+{
+  return g_dialogs && IsWindow(g_dialogs->window) ? g_dialogs->window : NULL;
 }
 
 LRESULT SendDlgItemMessageA(HWND dialog, int id, UINT message, WPARAM wparam, LPARAM lparam)
