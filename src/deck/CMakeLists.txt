@@ -27,93 +27,31 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     shandalar_platform
   )
 
-  add_executable(deck_legacy
+  add_executable(deck
     src/legacy_sdl_main.c
   )
-  target_include_directories(deck_legacy PRIVATE
+  target_include_directories(deck PRIVATE
     "${SHANDALAR_SRC_ROOT}"
   )
-  target_compile_definitions(deck_legacy PRIVATE SHANDALAR_SDL_WIN32_COMPAT)
-  target_link_libraries(deck_legacy PRIVATE
+  target_compile_definitions(deck PRIVATE SHANDALAR_SDL_WIN32_COMPAT)
+  target_link_libraries(deck PRIVATE
     deck_legacy_ui
     deck_win32_imgui_bridge
     SDL3::SDL3
   )
   if(EMSCRIPTEN)
-    set_target_properties(deck_legacy PROPERTIES SUFFIX ".html")
-    target_link_options(deck_legacy PRIVATE
+    set_target_properties(deck PROPERTIES SUFFIX ".html")
+    target_link_options(deck PRIVATE
       "-sALLOW_MEMORY_GROWTH=1"
       "-sFORCE_FILESYSTEM=1"
       "-sASYNCIFY=1"
     )
     if(SHANDALAR_ASSET_DIR)
-      target_link_options(deck_legacy PRIVATE
+      target_link_options(deck PRIVATE
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}@/assets"
       )
     endif()
   endif()
-endif()
-
-add_executable(deck
-  src/sdl_main.c
-  src/deck_imgui.cpp
-)
-
-target_include_directories(deck PRIVATE
-  "${SHANDALAR_SRC_ROOT}"
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
-target_link_libraries(deck PRIVATE
-  deck_core
-  deck_imgui
-  SDL3::SDL3
-)
-
-if(EMSCRIPTEN)
-  target_link_options(deck PRIVATE
-    "-sFETCH=1"
-    "-sALLOW_MEMORY_GROWTH=1"
-  )
-  if(SHANDALAR_ASSET_DIR)
-    target_link_options(deck PRIVATE
-      "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/MENUBAK.PIC@/assets/MENUBAK.PIC"
-    )
-    set(DECK_CARD_BACKGROUND_ASSETS
-      CARDBK_Green.pic
-      CARDBK_White.pic
-      CARDBK_Blue.pic
-      CARDBK_Black.pic
-      CARDBK_Red.pic
-      CARDBK_Gold.pic
-      CARDBK_Artifact.pic
-      CARDBK_GreenLand.pic
-      CARDBK_WhiteLand.pic
-      CARDBK_BlueLand.pic
-      CARDBK_BlackLand.pic
-      CARDBK_RedLand.pic
-      CARDBK_DarklandsLand.pic
-      CARDBK_FallenEmpiresLand.pic
-      CARDBK_AntiquitiesLand.pic
-      CARDBK_LegendsLand.pic
-      CARDBK_ArabianNightsLand.pic
-      CARDBK_Special.pic
-      CARDBK_IceAgeLand.pic
-      CARDBK_Legends.pic
-    )
-    foreach(asset IN LISTS DECK_CARD_BACKGROUND_ASSETS)
-      target_link_options(deck PRIVATE
-        "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/CardArt/${asset}@/assets/CardArt/${asset}"
-      )
-    endforeach()
-    set(DECK_SOUND_ASSETS
-      DRAW.WAV
-      DISCARD.WAV
-    )
-    foreach(asset IN LISTS DECK_SOUND_ASSETS)
-      target_link_options(deck PRIVATE
-        "SHELL:--embed-file ${SHANDALAR_ASSET_DIR}/DuelSounds/${asset}@/assets/DuelSounds/${asset}"
-      )
-    endforeach()
-  endif()
+else()
+  message(FATAL_ERROR "The deck target now uses the legacy deck builder and requires a 32-bit build.")
 endif()

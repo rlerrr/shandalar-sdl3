@@ -285,7 +285,7 @@ int main(int argc, char **argv)
   if (!shandalar_win32_imgui_init(g_window, g_renderer))
     return 1;
 
-  SDL_snprintf(module_path, sizeof(module_path), "%s/deck_legacy.exe", asset_root);
+  SDL_snprintf(module_path, sizeof(module_path), "%s/deck.exe", asset_root);
   shandalar_win32_set_module_path(module_path);
   shandalar_set_default_font_root(asset_root);
   shandalar_win32_set_pump_proc(pump_legacy_ui);
