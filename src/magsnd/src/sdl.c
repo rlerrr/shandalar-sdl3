@@ -70,6 +70,8 @@ static int resolve_sound_path(char *out, size_t out_size, const char *path)
   }
   normalize_slashes(out);
 #ifndef _WIN32
+  if (shandalar_assets_state(path) != SHANDALAR_ASSET_READY)
+    shandalar_assets_fetch_blocking(path);
   shandalar_resolve_existing_path(out, out, out_size);
 #endif
   return 1;

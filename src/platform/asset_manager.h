@@ -16,6 +16,7 @@ void shandalar_assets_set_root(const char *root);
 const char *shandalar_assets_root(void);
 int shandalar_assets_join_path(char *out, unsigned int out_size, const char *relative_path);
 ShandalarAssetState shandalar_assets_prefetch(const char *relative_path);
+ShandalarAssetState shandalar_assets_fetch_blocking(const char *relative_path);
 ShandalarAssetState shandalar_assets_state(const char *relative_path);
 int shandalar_assets_is_ready(const char *relative_path);
 void shandalar_assets_update(void);

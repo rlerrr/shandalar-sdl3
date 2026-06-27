@@ -45,10 +45,46 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
       "-sALLOW_MEMORY_GROWTH=1"
       "-sFORCE_FILESYSTEM=1"
       "-sASYNCIFY=1"
+      "-sFETCH=1"
     )
     if(SHANDALAR_ASSET_DIR)
+      set(deck_preload_assets
+        MENUBAK.PIC
+        cards.dat
+        Deckbuilder.csv
+        MENUS.TXT
+        menusx1.txt
+        CUECARDS.TXT
+        UIStrings.txt
+        MP_UIStrings.txt
+        duelpalall.tr
+        duel.plogpal
+        TT0085M_.TTF
+        TT0127M_.TTF
+        TT0298M_.TTF
+        TT0299M_.TTF
+        TT0300M_.TTF
+        TT0530M_.TTF
+        Magis___.TTF
+        Magim___.TTF
+        CardArt
+        DBArt
+        DuelArt
+        DuelSounds/DRAW.WAV
+        DuelSounds/DISCARD.WAV
+        DuelSounds/BUTTON.WAV
+        DuelSounds/CANCEL.WAV
+      )
+      foreach(deck_preload_asset IN LISTS deck_preload_assets)
+        target_link_options(deck PRIVATE
+          "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/${deck_preload_asset}@/assets/${deck_preload_asset}"
+        )
+      endforeach()
       target_link_options(deck PRIVATE
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}@/assets"
+        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/CardArt/SmallArt.cat"
+        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/CardArt/MedArt.cat"
+        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/DuelArt/COINTOSS_Heads.avi"
+        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/DuelArt/COINTOSS_Tails.avi"
       )
     endif()
   endif()

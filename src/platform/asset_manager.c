@@ -4,6 +4,7 @@
 #include <string.h>
 
 #ifdef __EMSCRIPTEN__
+#include <emscripten.h>
 #include <emscripten/fetch.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -28,6 +29,36 @@ static void normalize_slashes(char *path)
     ++path;
   }
 }
+
+#ifdef __EMSCRIPTEN__
+static void set_status(const char *status)
+{
+  char escaped[1024];
+  char script[1200];
+  size_t i;
+  size_t out = 0;
+
+  if (!status)
+    status = "";
+
+  for (i = 0; status[i] && out + 2 < sizeof(escaped); ++i) {
+    if (status[i] == '\\' || status[i] == '\'')
+      escaped[out++] = '\\';
+    escaped[out++] = status[i];
+  }
+  escaped[out] = '\0';
+
+  snprintf(script, sizeof(script),
+           "if (typeof Module !== 'undefined' && Module.setStatus) Module.setStatus('%s');",
+           escaped);
+  emscripten_run_script(script);
+}
+#else
+static void set_status(const char *status)
+{
+  (void)status;
+}
+#endif
 
 static AssetRequest *find_request(const char *relative_path)
 {
@@ -63,6 +94,9 @@ void shandalar_assets_set_root(const char *root)
 {
   snprintf(g_asset_root, sizeof(g_asset_root), "%s", (root && root[0]) ? root : ".");
   normalize_slashes(g_asset_root);
+#ifdef __EMSCRIPTEN__
+  mkdir(g_asset_root, 0777);
+#endif
 }
 
 const char *shandalar_assets_root(void) { return g_asset_root; }
@@ -166,8 +200,11 @@ ShandalarAssetState shandalar_assets_prefetch(const char *relative_path)
 #ifdef __EMSCRIPTEN__
   {
     char url[1024];
+    char status[512];
     emscripten_fetch_attr_t attr;
     shandalar_assets_join_path(url, sizeof(url), request->relative_path);
+    snprintf(status, sizeof(status), "Loading %s", request->relative_path);
+    set_status(status);
     emscripten_fetch_attr_init(&attr);
     strcpy(attr.requestMethod, "GET");
     attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_PERSIST_FILE;
@@ -183,6 +220,20 @@ ShandalarAssetState shandalar_assets_prefetch(const char *relative_path)
   request->state = SHANDALAR_ASSET_ERROR;
   return request->state;
 #endif
+}
+
+ShandalarAssetState shandalar_assets_fetch_blocking(const char *relative_path)
+{
+  ShandalarAssetState state = shandalar_assets_prefetch(relative_path);
+#ifdef __EMSCRIPTEN__
+  while (state == SHANDALAR_ASSET_PENDING) {
+    emscripten_sleep(1);
+    state = shandalar_assets_state(relative_path);
+  }
+#endif
+  if (state != SHANDALAR_ASSET_PENDING)
+    set_status("");
+  return state;
 }
 
 ShandalarAssetState shandalar_assets_state(const char *relative_path)

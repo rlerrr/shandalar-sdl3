@@ -1,5 +1,6 @@
 #define SHANDALAR_LEGACY_IO_IMPLEMENTATION
 #include "platform/legacy_io.h"
+#include "platform/asset_manager.h"
 
 #ifndef _WIN32
 #include <fnmatch.h>
@@ -7,6 +8,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 typedef struct FindState {
   DIR *directory;
@@ -84,6 +89,72 @@ static void normalize_path_copy(char *out, size_t out_size, const char *path)
     if (out[i] == '\\')
       out[i] = '/';
   }
+}
+
+static int make_asset_relative_path(const char *path, char *out, size_t out_size)
+{
+  char normalized[1024];
+  char root[1024];
+  size_t root_len;
+
+  normalize_path_copy(normalized, sizeof(normalized), path);
+  normalize_path_copy(root, sizeof(root), shandalar_assets_root());
+  root_len = strlen(root);
+
+  while (root_len > 1 && root[root_len - 1] == '/')
+    root[--root_len] = '\0';
+
+  if (normalized[0] == '/') {
+    if (strncmp(normalized, root, root_len) != 0)
+      return 0;
+    if (normalized[root_len] != '/' && normalized[root_len] != '\0')
+      return 0;
+    snprintf(out, out_size, "%s", normalized[root_len] == '/' ? normalized + root_len + 1 : "");
+    return out[0] != '\0';
+  }
+
+  snprintf(out, out_size, "%s", normalized);
+  return out[0] != '\0';
+}
+
+static int fetch_asset_for_path(const char *path)
+{
+  char relative[1024];
+  if (!make_asset_relative_path(path, relative, sizeof(relative)))
+    return 0;
+  return shandalar_assets_fetch_blocking(relative) == SHANDALAR_ASSET_READY;
+}
+
+static void log_open_failure(const char *kind, const char *path, const char *mode_or_flags)
+{
+#ifdef __EMSCRIPTEN__
+  char escaped_path[1024];
+  char escaped_extra[128];
+  char script[1400];
+  size_t i;
+  size_t out = 0;
+
+  for (i = 0; path && path[i] && out + 2 < sizeof(escaped_path); ++i) {
+    if (path[i] == '\\' || path[i] == '\'')
+      escaped_path[out++] = '\\';
+    escaped_path[out++] = path[i];
+  }
+  escaped_path[out] = '\0';
+  out = 0;
+  for (i = 0; mode_or_flags && mode_or_flags[i] && out + 2 < sizeof(escaped_extra); ++i) {
+    if (mode_or_flags[i] == '\\' || mode_or_flags[i] == '\'')
+      escaped_extra[out++] = '\\';
+    escaped_extra[out++] = mode_or_flags[i];
+  }
+  escaped_extra[out] = '\0';
+  snprintf(script, sizeof(script), "console.warn('deck: %s failed', '%s', '%s');",
+           kind ? kind : "open", escaped_path, escaped_extra);
+  emscripten_run_script(script);
+#else
+  (void)kind;
+  (void)path;
+  (void)mode_or_flags;
+#endif
 }
 
 static int resolve_case_insensitive_path(const char *path, char *out, size_t out_size)
@@ -225,9 +296,15 @@ FILE *shandalar_fopen(const char *path, const char *mode)
   char normalized[1024];
   FILE *file;
   normalize_path_copy(normalized, sizeof(normalized), path);
-  if (mode && mode[0] == 'r')
-    shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
+  if (mode && mode[0] == 'r') {
+    if (!shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized))) {
+      fetch_asset_for_path(normalized);
+      shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
+    }
+  }
   file = fopen(normalized, mode);
+  if (!file && mode && mode[0] == 'r')
+    log_open_failure("fopen", normalized, mode);
   register_file_mode(file, mode);
   return file;
 }
@@ -266,9 +343,18 @@ int shandalar_open(const char *path, int flags, ...)
     va_end(args);
   }
   normalize_path_copy(normalized, sizeof(normalized), path);
-  if ((translated_flags & O_CREAT) == 0)
-    shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
-  return open(normalized, translated_flags, mode);
+  if ((translated_flags & O_CREAT) == 0) {
+    if (!shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized))) {
+      fetch_asset_for_path(normalized);
+      shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
+    }
+  }
+  {
+    int fd = open(normalized, translated_flags, mode);
+    if (fd < 0 && (translated_flags & O_CREAT) == 0)
+      log_open_failure("open", normalized, "");
+    return fd;
+  }
 }
 
 int shandalar_chdir(const char *path)

@@ -436,6 +436,7 @@ INT_PTR CALLBACK dlgproc_DeckStats(HWND, UINT, WPARAM, LPARAM);
 // FUNCTION: DECKDLL 0x1000d9a3
 static int fatal_err(const char *text, HWND hwnd)
 {
+  printf("deck: fatal: %s\n", text ? text : "");
   MessageBox(hwnd, text, 0, MB_SYSTEMMODAL | MB_ICONERROR);
 
   if (hwnd)

@@ -4,8 +4,11 @@
 #include "cardartlib/CardArtLib.h"
 #include "drawcardlib/Drawcardlib.h"
 #include "platform/gdi_compat.h"
+#include "platform/asset_manager.h"
 #include "platform/winuser_compat.h"
 #include "platform/winuser_imgui_bridge.h"
+
+#include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -110,6 +113,7 @@ static void forward_keyboard_event(const SDL_Event *event)
 static BOOL pump_legacy_ui(BOOL wait)
 {
   SDL_Event event;
+  static int first_frame = 1;
   if (g_smoke_dialog_open && g_smoke_frames_remaining == 3) {
     HWND dialog;
     for (dialog = GetWindow(global_main_hwnd, GW_CHILD); dialog;
@@ -189,6 +193,12 @@ static BOOL pump_legacy_ui(BOOL wait)
   shandalar_win32_imgui_present(g_renderer);
   shandalar_win32_imgui_render(g_renderer);
   SDL_RenderPresent(g_renderer);
+  if (first_frame) {
+#ifdef __EMSCRIPTEN__
+    emscripten_run_script("if (typeof Module !== 'undefined' && Module.setStatus) Module.setStatus('');");
+#endif
+    first_frame = 0;
+  }
 
   if (g_smoke_dialog_open && g_smoke_frames_remaining == 10)
     save_snapshot();
@@ -273,32 +283,53 @@ int main(int argc, char **argv)
     else
       asset_root = argv[i];
   }
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
+  printf("deck: starting with asset root %s\n", asset_root);
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+    printf("deck: SDL_Init failed: %s\n", SDL_GetError());
     return 1;
+  }
   if (!SDL_CreateWindowAndRenderer("Magic: Deck Builder (legacy)", 1024, 768,
                                    SDL_WINDOW_RESIZABLE,
-                                   &g_window, &g_renderer))
+                                   &g_window, &g_renderer)) {
+    printf("deck: SDL_CreateWindowAndRenderer failed: %s\n", SDL_GetError());
     return 1;
+  }
   SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_StartTextInput(g_window);
-  if (!shandalar_win32_imgui_init(g_window, g_renderer))
+  if (!shandalar_win32_imgui_init(g_window, g_renderer)) {
+    printf("deck: imgui init failed\n");
     return 1;
+  }
 
+  shandalar_assets_set_root(asset_root);
   SDL_snprintf(module_path, sizeof(module_path), "%s/deck.exe", asset_root);
   shandalar_win32_set_module_path(module_path);
   shandalar_set_default_font_root(asset_root);
   shandalar_win32_set_pump_proc(pump_legacy_ui);
   deck_register_dialog_resources();
 
-  if (!CardArtLib_InitializeFromRoot(asset_root) ||
-      !DrawCardLib_InitializeFromRoot(asset_root))
+  printf("deck: initializing card art and drawcard\n");
+  if (!CardArtLib_InitializeFromRoot(asset_root)) {
+    printf("deck: card art init failed\n");
     return 1;
+  }
+  printf("deck: card art init ok\n");
+  if (!DrawCardLib_InitializeFromRoot(asset_root)) {
+    printf("deck: drawcard init failed\n");
+    return 1;
+  }
+  printf("deck: drawcard init ok\n");
 
-  if (!DllMain((HINSTANCE)1, DLL_PROCESS_ATTACH, NULL))
+  printf("deck: attaching deck dll\n");
+  if (!DllMain((HINSTANCE)1, DLL_PROCESS_ATTACH, NULL)) {
+    printf("deck: DllMain attach failed\n");
     return 1;
+  }
   /* The standalone executable passes 2 for mode and 1 for editable input. */
+  printf("deck: entering DeckBuilderMain\n");
   result = DeckBuilderMain(NULL, DBFLAGS_STANDALONE, 1);
+  printf("deck: DeckBuilderMain returned %d\n", (int)result);
   DllMain((HINSTANCE)1, DLL_PROCESS_DETACH, NULL);
   DrawCardLib_Shutdown();
   CardArtLib_Shutdown();
