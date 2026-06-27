@@ -26,7 +26,7 @@
 #define _close close
 #define _lseek lseek
 #define _tell(fd) lseek((fd), 0, SEEK_CUR)
-#define _chdir chdir
+#define _chdir shandalar_chdir
 #define _getcwd getcwd
 #define _stricmp strcasecmp
 #define _strcmpi strcasecmp
@@ -47,7 +47,11 @@ int shandalar_findclose(intptr_find_t handle);
 char *shandalar_strlwr(char *str);
 void shandalar_splitpath(const char *path, char *drive, char *dir, char *fname, char *ext);
 FILE *shandalar_fopen(const char *path, const char *mode);
+int shandalar_fclose(FILE *stream);
+char *shandalar_fgets(char *str, int count, FILE *stream);
 int shandalar_open(const char *path, int flags, ...);
+int shandalar_chdir(const char *path);
+int shandalar_resolve_existing_path(const char *path, char *out, size_t out_size);
 
 #define _findfirst shandalar_findfirst
 #define _findnext shandalar_findnext
@@ -55,6 +59,8 @@ int shandalar_open(const char *path, int flags, ...);
 #define _open shandalar_open
 #ifndef SHANDALAR_LEGACY_IO_IMPLEMENTATION
 #define fopen shandalar_fopen
+#define fclose shandalar_fclose
+#define fgets shandalar_fgets
 #endif
 #endif
 

@@ -392,12 +392,15 @@ void draw_popup_menu(void)
             ++source_index;
         }
         label[label_index] = '\0';
+        ImGui::PushID(i);
         if (ImGui::MenuItem(label, nullptr, checked, enabled)) {
           shandalar_win32_choose_menu_item(id);
           opened_menu = nullptr;
           ImGui::CloseCurrentPopup();
+          ImGui::PopID();
           break;
         }
+        ImGui::PopID();
       }
     }
     ImGui::EndPopup();

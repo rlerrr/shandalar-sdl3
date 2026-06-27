@@ -14,6 +14,66 @@ typedef struct FindState {
   char pattern[260];
 } FindState;
 
+typedef struct LegacyFileMode {
+  FILE *file;
+  int text_mode;
+  struct LegacyFileMode *next;
+} LegacyFileMode;
+
+static LegacyFileMode *legacy_file_modes;
+
+static int is_text_mode(const char *mode)
+{
+  return !mode || !strchr(mode, 'b');
+}
+
+static void register_file_mode(FILE *file, const char *mode)
+{
+  LegacyFileMode *entry;
+
+  if (!file)
+    return;
+
+  entry = (LegacyFileMode *)malloc(sizeof(*entry));
+  if (!entry)
+    return;
+
+  entry->file = file;
+  entry->text_mode = is_text_mode(mode);
+  entry->next = legacy_file_modes;
+  legacy_file_modes = entry;
+}
+
+static int unregister_file_mode(FILE *file)
+{
+  LegacyFileMode **entry = &legacy_file_modes;
+
+  while (*entry) {
+    if ((*entry)->file == file) {
+      LegacyFileMode *removed = *entry;
+      int text_mode = removed->text_mode;
+      *entry = removed->next;
+      free(removed);
+      return text_mode;
+    }
+    entry = &(*entry)->next;
+  }
+
+  return 0;
+}
+
+static int file_is_text_mode(FILE *file)
+{
+  LegacyFileMode *entry;
+
+  for (entry = legacy_file_modes; entry; entry = entry->next) {
+    if (entry->file == file)
+      return entry->text_mode;
+  }
+
+  return 0;
+}
+
 static void normalize_path_copy(char *out, size_t out_size, const char *path)
 {
   size_t i;
@@ -100,6 +160,16 @@ static int resolve_case_insensitive_path(const char *path, char *out, size_t out
   return 1;
 }
 
+int shandalar_resolve_existing_path(const char *path, char *out, size_t out_size)
+{
+  char normalized[1024];
+  normalize_path_copy(normalized, sizeof(normalized), path);
+  if (resolve_case_insensitive_path(normalized, out, out_size))
+    return 1;
+  snprintf(out, out_size, "%s", normalized);
+  return 0;
+}
+
 static int translate_legacy_open_flags(int flags)
 {
   int translated;
@@ -153,10 +223,34 @@ static mode_t translate_legacy_open_mode(int flags, mode_t mode)
 FILE *shandalar_fopen(const char *path, const char *mode)
 {
   char normalized[1024];
+  FILE *file;
   normalize_path_copy(normalized, sizeof(normalized), path);
   if (mode && mode[0] == 'r')
-    resolve_case_insensitive_path(normalized, normalized, sizeof(normalized));
-  return fopen(normalized, mode);
+    shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
+  file = fopen(normalized, mode);
+  register_file_mode(file, mode);
+  return file;
+}
+
+int shandalar_fclose(FILE *stream)
+{
+  unregister_file_mode(stream);
+  return fclose(stream);
+}
+
+char *shandalar_fgets(char *str, int count, FILE *stream)
+{
+  char *result = fgets(str, count, stream);
+  char *newline;
+
+  if (!result || !file_is_text_mode(stream))
+    return result;
+
+  newline = strchr(str, '\n');
+  if (newline && newline > str && newline[-1] == '\r')
+    memmove(newline - 1, newline, strlen(newline) + 1);
+
+  return result;
 }
 
 int shandalar_open(const char *path, int flags, ...)
@@ -173,8 +267,15 @@ int shandalar_open(const char *path, int flags, ...)
   }
   normalize_path_copy(normalized, sizeof(normalized), path);
   if ((translated_flags & O_CREAT) == 0)
-    resolve_case_insensitive_path(normalized, normalized, sizeof(normalized));
+    shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
   return open(normalized, translated_flags, mode);
+}
+
+int shandalar_chdir(const char *path)
+{
+  char normalized[1024];
+  shandalar_resolve_existing_path(path, normalized, sizeof(normalized));
+  return chdir(normalized);
 }
 
 static int find_next_match(FindState *state, struct _finddata_t *data)

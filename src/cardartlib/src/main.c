@@ -6,6 +6,7 @@
 #include "inttypes.h"
 #include "mystdbool.h"
 #include "defs.h"
+#include "platform/legacy_io.h"
 #include "catalog.h"
 #include "haar.h"
 #include "assert.h"

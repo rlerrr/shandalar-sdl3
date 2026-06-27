@@ -1,6 +1,7 @@
 #include "magsnd.h"
 
 #include "platform/asset_manager.h"
+#include "platform/legacy_io.h"
 
 #include <SDL3/SDL.h>
 #include <stdint.h>
@@ -68,6 +69,9 @@ static int resolve_sound_path(char *out, size_t out_size, const char *path)
     return 0;
   }
   normalize_slashes(out);
+#ifndef _WIN32
+  shandalar_resolve_existing_path(out, out, out_size);
+#endif
   return 1;
 }
 
