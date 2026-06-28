@@ -389,6 +389,14 @@ intptr_find_t shandalar_findfirst(const char *pattern, struct _finddata_t *data)
   FindState *state;
   const char *slash;
   size_t directory_length;
+  char normalized_pattern[1024];
+  char relative[1024];
+  normalize_path_copy(normalized_pattern, sizeof(normalized_pattern), pattern);
+  if (!strchr(normalized_pattern, '*') && !strchr(normalized_pattern, '?') &&
+      !shandalar_resolve_existing_path(normalized_pattern, normalized_pattern, sizeof(normalized_pattern)) &&
+      make_asset_relative_path(normalized_pattern, relative, sizeof(relative))) {
+    shandalar_assets_fetch_blocking(relative);
+  }
   state = (FindState *)calloc(1, sizeof(*state));
   if (!state)
     return -1;
@@ -401,6 +409,8 @@ intptr_find_t shandalar_findfirst(const char *pattern, struct _finddata_t *data)
       directory_length = sizeof(state->directory_path) - 1;
     memcpy(state->directory_path, pattern, directory_length);
     state->directory_path[directory_length] = '\0';
+    shandalar_resolve_existing_path(state->directory_path, state->directory_path,
+                                    sizeof(state->directory_path));
     snprintf(state->pattern, sizeof(state->pattern), "%s", slash + 1);
   } else {
     snprintf(state->directory_path, sizeof(state->directory_path), ".");

@@ -24,6 +24,7 @@ const char *shandalar_assets_last_error(void);
 
 ShandalarAssetState shandalar_assets_prefetch_small_art_cat(void);
 ShandalarAssetState shandalar_assets_prefetch_med_art_cat(void);
+ShandalarAssetState shandalar_assets_prefetch_facemaker_art(void);
 
 #ifdef __cplusplus
 }
