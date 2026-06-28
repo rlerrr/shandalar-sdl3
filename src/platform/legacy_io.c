@@ -364,6 +364,14 @@ int shandalar_chdir(const char *path)
   return chdir(normalized);
 }
 
+long shandalar_filelength(int fd)
+{
+  struct stat st;
+  if (fstat(fd, &st) != 0)
+    return -1;
+  return (long)st.st_size;
+}
+
 static int find_next_match(FindState *state, struct _finddata_t *data)
 {
   struct dirent *entry;

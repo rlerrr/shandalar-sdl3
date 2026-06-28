@@ -324,7 +324,6 @@ int LoadSystemFont(int font_id, unsigned int point_size, char *font_file, char *
 int SetFontStyleSize(int font_id, unsigned int style)
 {
     FontSlot *font;
-    FARPROC import_proc;
     HFONT current_font;
     HDC hdc;
     TEXTMETRICA text_metrics;
@@ -341,14 +340,16 @@ int SetFontStyleSize(int font_id, unsigned int style)
     }
 
     current_font = font->hfont;
-    import_proc = (FARPROC)GetObjectA;
-    ((int(__stdcall *)(HANDLE, int, LPVOID))import_proc)(current_font, 0x3c, &log_font);
+    memset(&log_font, 0, sizeof(log_font));
+    if (GetObjectA(current_font, 0x3c, &log_font) == 0)
+    {
+        return 0;
+    }
     DeleteObject(current_font);
     font->point_size = (unsigned char)style;
     log_font.lfHeight = (int)(style * 100) / (font->tm_max - font->tm_min);
     font->hfont = CreateFontIndirectA(&log_font);
-    import_proc = (FARPROC)GetDC;
-    hdc = ((HDC(__stdcall *)(HWND))import_proc)((HWND)0);
+    hdc = GetDC((HWND)0);
     SelectObject(hdc, font->hfont);
     GetTextMetricsA(hdc, &text_metrics);
     ReleaseDC((HWND)0, hdc);

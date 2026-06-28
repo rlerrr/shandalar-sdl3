@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
 
 typedef struct ProcEntry {
   struct ProcEntry *next;
@@ -83,7 +88,49 @@ DWORD GetCurrentDirectoryA(DWORD size, LPSTR buffer)
   return needed;
 }
 
+BOOL SetCurrentDirectoryA(LPCSTR path)
+{
+  return path &&
+#ifdef _WIN32
+         _chdir(path) == 0;
+#else
+         chdir(path) == 0;
+#endif
+}
+
 void Sleep(DWORD milliseconds) { SDL_Delay(milliseconds); }
+
+DWORD GetTickCount(void)
+{
+  return (DWORD)SDL_GetTicks();
+}
+
+void ExitThread(DWORD exit_code)
+{
+  (void)exit_code;
+}
+
+LONG ChangeDisplaySettingsA(DEVMODEA *dev_mode, DWORD flags)
+{
+  (void)dev_mode;
+  (void)flags;
+  return 0;
+}
+
+UINT SetSystemPaletteUse(HDC dc, UINT use)
+{
+  (void)dc;
+  return use;
+}
+
+BOOL GetSaveFileNameA(OPENFILENAMEA *open_file)
+{
+  if (!open_file || !open_file->lpstrFile || open_file->nMaxFile == 0)
+    return FALSE;
+  if (open_file->lpstrFile[0] == '\0' || open_file->lpstrFile[0] == '*')
+    SDL_strlcpy(open_file->lpstrFile, "face.pic", open_file->nMaxFile);
+  return TRUE;
+}
 
 int GetDateFormatA(DWORD locale, DWORD flags, const void *date,
                    LPCSTR format, LPSTR output, int output_size)

@@ -870,12 +870,47 @@ HWND GetDesktopWindow(void)
   return &g_desktop;
 }
 
+static int window_matches(HWND window, LPCSTR class_name, LPCSTR window_name)
+{
+  if (!valid_window(window))
+    return 0;
+  if (class_name && strcmp(window->window_class->name, class_name) != 0)
+    return 0;
+  if (window_name && strcmp(window->text ? window->text : "", window_name) != 0)
+    return 0;
+  return 1;
+}
+
+HWND FindWindowExA(HWND parent, HWND child_after, LPCSTR class_name, LPCSTR window_name)
+{
+  HWND child;
+  if (!parent)
+    parent = GetDesktopWindow();
+  if (!valid_window(parent))
+    return NULL;
+  child = child_after ? child_after->next_sibling : parent->first_child;
+  for (; child; child = child->next_sibling)
+    if (window_matches(child, class_name, window_name))
+      return child;
+  return NULL;
+}
+
+HWND FindWindowA(LPCSTR class_name, LPCSTR window_name)
+{
+  return FindWindowExA(NULL, NULL, class_name, window_name);
+}
+
 HDC shandalar_window_backing_dc(HWND window)
 {
   return valid_window(window) ? window->backing_dc : NULL;
 }
 
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc) { g_pump_proc = proc; }
+
+BOOL shandalar_win32_pump(BOOL wait)
+{
+  return !g_pump_proc || g_pump_proc(wait);
+}
 
 void shandalar_win32_set_system_drag_endpoint(int x, int y)
 {

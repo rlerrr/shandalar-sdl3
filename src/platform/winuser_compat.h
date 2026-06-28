@@ -52,6 +52,53 @@ typedef struct tagMSG {
   POINT pt;
 } MSG;
 
+typedef struct tagDEVMODEA {
+  BYTE dmDeviceName[32];
+  WORD dmSpecVersion;
+  WORD dmDriverVersion;
+  WORD dmSize;
+  WORD dmDriverExtra;
+  DWORD dmFields;
+  LONG dmPositionX;
+  LONG dmPositionY;
+  DWORD dmDisplayOrientation;
+  DWORD dmDisplayFixedOutput;
+  short dmColor;
+  short dmDuplex;
+  short dmYResolution;
+  short dmTTOption;
+  short dmCollate;
+  BYTE dmFormName[32];
+  WORD dmLogPixels;
+  DWORD dmBitsPerPel;
+  DWORD dmPelsWidth;
+  DWORD dmPelsHeight;
+} DEVMODEA;
+
+typedef struct tagOFNA {
+  DWORD lStructSize;
+  HWND hwndOwner;
+  HINSTANCE hInstance;
+  LPCSTR lpstrFilter;
+  LPSTR lpstrCustomFilter;
+  DWORD nMaxCustFilter;
+  DWORD nFilterIndex;
+  LPSTR lpstrFile;
+  DWORD nMaxFile;
+  LPSTR lpstrFileTitle;
+  DWORD nMaxFileTitle;
+  LPCSTR lpstrInitialDir;
+  LPCSTR lpstrTitle;
+  DWORD Flags;
+  WORD nFileOffset;
+  WORD nFileExtension;
+  LPCSTR lpstrDefExt;
+  LPARAM lCustData;
+  void *lpfnHook;
+  LPCSTR lpTemplateName;
+} OPENFILENAMEA;
+typedef void *LPOFNHOOKPROC;
+
 typedef struct tagPAINTSTRUCT {
   HDC hdc;
   BOOL fErase;
@@ -187,6 +234,7 @@ typedef struct tagWINDOWPOS {
 #define WM_KEYDOWN 0x0100
 #define WM_KEYUP 0x0101
 #define WM_CHAR 0x0102
+#define WM_SYSKEYDOWN 0x0104
 #define WM_MOUSEMOVE 0x0200
 #define WM_LBUTTONDOWN 0x0201
 #define WM_LBUTTONUP 0x0202
@@ -296,6 +344,7 @@ typedef struct tagWINDOWPOS {
 #define VK_UP 0x26
 #define VK_RIGHT 0x27
 #define VK_DOWN 0x28
+#define VK_ESCAPE 0x1b
 
 #define SB_HORZ 0
 #define SB_VERT 1
@@ -411,6 +460,8 @@ BOOL UpdateWindow(HWND window);
 HDC BeginPaint(HWND window, PAINTSTRUCT *paint);
 BOOL EndPaint(HWND window, const PAINTSTRUCT *paint);
 HWND GetDesktopWindow(void);
+HWND FindWindowA(LPCSTR class_name, LPCSTR window_name);
+HWND FindWindowExA(HWND parent, HWND child_after, LPCSTR class_name, LPCSTR window_name);
 BOOL GetCursorPos(POINT *point);
 HWND WindowFromPoint(POINT point);
 UINT_PTR SetTimer(HWND window, UINT_PTR id, UINT interval_ms, TIMERPROC proc);
@@ -466,10 +517,17 @@ HMODULE GetModuleHandleA(LPCSTR module_name);
 FARPROC GetProcAddress(HMODULE module, LPCSTR proc_name);
 BOOL shandalar_win32_register_proc(LPCSTR proc_name, FARPROC proc);
 DWORD GetCurrentDirectoryA(DWORD size, LPSTR buffer);
+BOOL SetCurrentDirectoryA(LPCSTR path);
 void Sleep(DWORD milliseconds);
+DWORD GetTickCount(void);
+void ExitThread(DWORD exit_code);
+LONG ChangeDisplaySettingsA(DEVMODEA *dev_mode, DWORD flags);
+UINT SetSystemPaletteUse(HDC dc, UINT use);
+BOOL GetSaveFileNameA(OPENFILENAMEA *open_file);
 
 typedef BOOL (*ShandalarWin32PumpProc)(BOOL wait);
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc);
+BOOL shandalar_win32_pump(BOOL wait);
 void shandalar_win32_set_system_drag_endpoint(int x, int y);
 void shandalar_win32_clear_system_drag_endpoint(void);
 void shandalar_win32_set_cursor_position(int x, int y);
@@ -487,6 +545,8 @@ HDC shandalar_window_backing_dc(HWND window);
 #define UnregisterClass UnregisterClassA
 #define CreateWindowEx CreateWindowExA
 #define DefWindowProc DefWindowProcA
+#define FindWindow FindWindowA
+#define FindWindowEx FindWindowExA
 #define SendMessage SendMessageA
 #define PostMessage PostMessageA
 #define PeekMessage PeekMessageA
@@ -500,6 +560,7 @@ HDC shandalar_window_backing_dc(HWND window);
 #define AppendMenu AppendMenuA
 #define InsertMenu InsertMenuA
 #define GetDateFormat GetDateFormatA
+#define SetCurrentDirectory SetCurrentDirectoryA
 #define GetWindowLong GetWindowLongA
 #define SetWindowLong SetWindowLongA
 #define SetWindowText SetWindowTextA

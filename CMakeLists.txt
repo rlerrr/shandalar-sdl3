@@ -64,7 +64,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL3_ttf)
 
-if(SHANDALAR_BUILD_DECK)
+if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR)
   FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git

@@ -26,6 +26,8 @@
 #define _close close
 #define _lseek lseek
 #define _tell(fd) lseek((fd), 0, SEEK_CUR)
+#define _fileno fileno
+#define _filelength shandalar_filelength
 #define _chdir shandalar_chdir
 #define _getcwd getcwd
 #define _stricmp strcasecmp
@@ -51,6 +53,7 @@ int shandalar_fclose(FILE *stream);
 char *shandalar_fgets(char *str, int count, FILE *stream);
 int shandalar_open(const char *path, int flags, ...);
 int shandalar_chdir(const char *path);
+long shandalar_filelength(int fd);
 int shandalar_resolve_existing_path(const char *path, char *out, size_t out_size);
 
 #define _findfirst shandalar_findfirst

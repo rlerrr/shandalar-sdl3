@@ -32,6 +32,7 @@ typedef uint32_t COLORREF;
 typedef char CHAR;
 typedef const char *LPCSTR;
 typedef char *LPSTR;
+typedef char *PSTR;
 typedef void *LPVOID;
 typedef void *FARPROC;
 typedef void *LPSECURITY_ATTRIBUTES;

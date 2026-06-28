@@ -4,10 +4,12 @@
 #include <stdlib.h>
 
 #include "drawcardlib/src/pic.h"
-#include "facemaker/src/facemaker_core.h"
 #include "facemaker/src/facemaker_types.h"
 #include "magic/src/global_state.h"
+#include "platform/asset_manager.h"
 #include "platform/gdi_compat.h"
+#include "platform/winuser_compat.h"
+#include "platform/winuser_imgui_bridge.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -31,6 +33,7 @@ int RunDifficultyMenu(void);
 int RunColorMenu(void);
 int RunFacemakerFlow(void);
 void PushQueuedKeyInput(int key_code);
+extern int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
@@ -39,6 +42,7 @@ static uint32_t *g_rgba;
 static int g_texture_width;
 static int g_texture_height;
 static int g_quit_requested;
+static int g_facemaker_host_active;
 
 static int legacy_key(SDL_Keycode key)
 {
@@ -57,6 +61,67 @@ static int legacy_key(SDL_Keycode key)
   case SDLK_DOWN: return 0x5000;
   default: return 0;
   }
+}
+
+static UINT facemaker_virtual_key(SDL_Keycode key)
+{
+  switch (key) {
+  case SDLK_LEFT: return VK_LEFT;
+  case SDLK_RIGHT: return VK_RIGHT;
+  case SDLK_UP: return VK_UP;
+  case SDLK_DOWN: return VK_DOWN;
+  case SDLK_RETURN: return 0x0d;
+  case SDLK_ESCAPE: return 0x1b;
+  case SDLK_BACKSPACE: return 0x08;
+  default: return key >= 0 && key <= 0xff ? (UINT)key : 0;
+  }
+}
+
+static void forward_facemaker_keyboard_event(const SDL_Event *event)
+{
+  HWND focus = GetFocus();
+  UINT key;
+  if (!focus)
+    return;
+  if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP) {
+    key = facemaker_virtual_key(event->key.key);
+    if (key)
+      PostMessageA(focus, event->type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
+                   key, 0);
+  } else if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
+    const unsigned char *text = (const unsigned char *)event->text.text;
+    while (*text)
+      PostMessageA(focus, WM_CHAR, *text++, 0);
+  }
+}
+
+static BOOL pump_facemaker_ui(BOOL wait)
+{
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    shandalar_win32_imgui_process_event(g_renderer, &event);
+    if (event.type == SDL_EVENT_QUIT) {
+      g_quit_requested = 1;
+      PostQuitMessage(0);
+    } else {
+      forward_facemaker_keyboard_event(&event);
+    }
+  }
+
+  SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+  SDL_RenderClear(g_renderer);
+  shandalar_win32_imgui_begin_frame();
+  shandalar_win32_imgui_present(g_renderer);
+  shandalar_win32_imgui_render(g_renderer);
+  SDL_RenderPresent(g_renderer);
+
+#ifdef __EMSCRIPTEN__
+  emscripten_sleep(wait ? 8 : 0);
+#else
+  if (wait)
+    SDL_Delay(8);
+#endif
+  return !g_quit_requested && g_facemaker_host_active;
 }
 
 static int ensure_framebuffer(int width, int height)
@@ -130,83 +195,36 @@ static void present_frame(void)
 
 int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root)
 {
-  FacemakerConfig config;
-  FacemakerFrame frame;
-  FacemakerStatus status;
-  char save_path[1024];
-  int completed = 0;
+  char module_path[1024];
+  char cmd_line[16] = "/1";
+  int result;
 
-  config.asset_root = asset_root;
-  config.writable_root = writable_root ? writable_root : ".";
-#ifdef __EMSCRIPTEN__
-  config.writable_root = ".";
-#endif
-  config.width = global_screen_width;
-  config.height = global_screen_height;
-  config.download_on_save = 0;
-  SDL_snprintf(save_path, sizeof(save_path), "%s/face.pic", config.writable_root);
+  (void)writable_root;
   SDL_SetWindowTitle(g_window, "Magic: Facemaker");
-  SDL_SetRenderLogicalPresentation(g_renderer, config.width, config.height,
+  SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
-  if (!facemaker_create(&config))
-    goto done;
+  SDL_StartTextInput(g_window);
+  if (!shandalar_win32_imgui_init(g_window, g_renderer))
+    return 0;
 
-  while (!g_quit_requested) {
-    SDL_Event event;
-    float x;
-    float y;
-    while (SDL_PollEvent(&event)) {
-      switch (event.type) {
-      case SDL_EVENT_QUIT:
-        g_quit_requested = 1;
-        break;
-      case SDL_EVENT_MOUSE_MOTION:
-        x = event.motion.x;
-        y = event.motion.y;
-        SDL_RenderCoordinatesFromWindow(g_renderer, x, y, &x, &y);
-        facemaker_pointer_move(x, y);
-        break;
-      case SDL_EVENT_MOUSE_BUTTON_DOWN:
-      case SDL_EVENT_MOUSE_BUTTON_UP:
-        x = event.button.x;
-        y = event.button.y;
-        SDL_RenderCoordinatesFromWindow(g_renderer, x, y, &x, &y);
-        facemaker_pointer_move(x, y);
-        facemaker_pointer_button(event.button.button,
-                                 event.type == SDL_EVENT_MOUSE_BUTTON_DOWN);
-        break;
-      case SDL_EVENT_KEY_DOWN:
-      case SDL_EVENT_KEY_UP:
-        facemaker_key((int)event.key.key, event.type == SDL_EVENT_KEY_DOWN,
-                      event.key.repeat);
-        break;
-      }
-    }
+  shandalar_assets_set_root(asset_root);
+  SDL_snprintf(module_path, sizeof(module_path), "%s/Facemaker.exe", asset_root);
+  shandalar_win32_set_module_path(module_path);
+  shandalar_set_default_font_root(asset_root);
+  shandalar_win32_set_pump_proc(pump_facemaker_ui);
+  g_facemaker_host_active = 1;
 
-    status = facemaker_step(SDL_GetTicksNS());
-    if (facemaker_get_frame(&frame))
-      present_indexed_frame(frame.pixels, frame.width, frame.height, frame.pitch,
-                            frame.rgb_palette);
-    if (status == FACEMAKER_COMPLETED) {
-      facemaker_save(save_path);
-      completed = 1;
-      break;
-    }
-    if (status == FACEMAKER_CANCELLED || status == FACEMAKER_FAILED)
-      break;
-#ifdef __EMSCRIPTEN__
-    emscripten_sleep(0);
-#else
-    SDL_Delay(1);
-#endif
-  }
+  result = WinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
 
-done:
-  facemaker_destroy();
+  g_facemaker_host_active = 0;
+  shandalar_win32_set_pump_proc(NULL);
+  shandalar_win32_imgui_shutdown();
+  shandalar_win32_reset();
+  SDL_StopTextInput(g_window);
   SDL_SetWindowTitle(g_window, "Magic: Shandalar");
   SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
-  return completed;
+  return result == 0 && !g_quit_requested;
 }
 
 void shandalar_host_pump(void)

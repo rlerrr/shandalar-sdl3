@@ -472,10 +472,14 @@ int WINAPI shandalar_GetObjectA(HGDIOBJ object, int size, void *out)
       return sizeof(*result);
     }
   }
-  if (header->kind == OBJECT_FONT && size >= (int)sizeof(LOGFONTA)) {
+  if (header->kind == OBJECT_FONT && size > 0) {
     HFONT font = (HFONT)object;
-    memcpy(out, &font->description, sizeof(font->description));
-    return sizeof(font->description);
+    size_t copy_size = (size_t)size;
+    if (copy_size > sizeof(font->description))
+      copy_size = sizeof(font->description);
+    memset(out, 0, (size_t)size);
+    memcpy(out, &font->description, copy_size);
+    return (int)copy_size;
   }
   return 0;
 }

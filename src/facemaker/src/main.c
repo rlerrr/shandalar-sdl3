@@ -1,6 +1,9 @@
+#ifdef _WIN32
 #include <process.h>
+#endif
 #include "platform/gdi_compat.h"
 #include "platform/legacy_io.h"
+#include "platform/winuser_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -13,13 +16,13 @@
 #include "face_controls.h"
 #include "facemaker_types.h"
 
-#ifdef _fileno
+#if defined(_WIN32) && defined(_fileno)
 #undef _fileno
 #endif
 
 struct FaceControl;
 
-typedef void(__cdecl *FaceControlCallback)(struct FaceControl *control);
+typedef int(__cdecl *FaceControlCallback)(struct FaceControl *control);
 typedef int(__cdecl *FaceControlModeCallback)(struct FaceControl *control, int mode);
 
 typedef struct FaceControl
@@ -109,11 +112,11 @@ extern int ShowSaveFaceDialog(void);
 extern void QueueKeyInputFromMessage(WPARAM wparam, LPARAM lparam);
 extern int DisableFaceControl(FaceControl *control);
 extern int EnableFaceControl(FaceControl *control);
-extern void AcceptFaceSelection(FaceControl *control);
+extern int AcceptFaceSelection(FaceControl *control);
 extern int CycleFaceSet(FaceControl *control);
 extern int ScrollFaceSetList(FaceControl *control);
 extern int AdjustVisibleFaceVariant(FaceControl *control);
-extern void ComposeSelectedFaceImage(FaceControl *control);
+extern int ComposeSelectedFaceImage(FaceControl *control);
 extern void DrawFaceSlotEntry(int index, int selected);
 extern int DrawFaceControl(FaceControl *control, int mode);
 extern void RedrawFaceCompositePreview(void);
@@ -210,7 +213,7 @@ int g_selected_face_set_index = 0;
 
 // GLOBAL: FACEMAKER 0x0040c1e8
 #define LEGACY_FACE_CONTROL(x, y, width, height, callback, value_index, value_delta) \
-  {x, y, width, height, DrawFaceControl, (FaceControlCallback)callback, \
+  {x, y, width, height, DrawFaceControl, callback, \
    value_index, value_delta, 0, {0, 0, 0, 0}},
 FaceControl g_face_controls[0x15] = {
     FACEMAKER_FACE_CONTROL_LIST(LEGACY_FACE_CONTROL)
@@ -332,6 +335,48 @@ extern DIBSurface *g_graphics_pages[10];
 extern int g_graphics_height;
 extern int g_graphics_width;
 
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+extern int g_worker_should_exit;
+int LoadSpriteGroupsFromFile(char *sprite_path, int *group_frame_counts,
+                             EncodedImage **group_entries, EncodedImage **first_sprite_out);
+int IsSpriteTileEmpty(int page_number, int x, int y, unsigned int width, int height);
+
+#ifdef _WIN32
+#define chdir _chdir
+#else
+#define chdir shandalar_chdir
+#endif
+
+static void pump_facemaker_compat_host(int wait)
+{
+  MSG msg;
+  while (PeekMessageA(&msg, (HWND)0, 0, 0, PM_REMOVE))
+  {
+    if (msg.message == WM_QUIT)
+    {
+      g_worker_should_exit = 1;
+      return;
+    }
+    TranslateMessage(&msg);
+    DispatchMessageA(&msg);
+  }
+  if (!shandalar_win32_pump(wait))
+  {
+    g_worker_should_exit = 1;
+  }
+}
+#endif
+
+static void strip_trailing_newline(char *text)
+{
+  size_t length;
+  if (!text)
+    return;
+  length = strlen(text);
+  while (length > 0 && (text[length - 1] == '\r' || text[length - 1] == '\n'))
+    text[--length] = '\0';
+}
+
 // GLOBAL: FACEMAKER 0x00423338
 int g_mouse_y;
 
@@ -446,6 +491,7 @@ int InitializeFaceMakerAssets(void)
     char char_temp;
     char pad_001[3];
     char *scan_ptr;
+    char *line_start;
     int tmp_y;
     int tmp_x;
     char pad_010[0x100];
@@ -470,10 +516,13 @@ int InitializeFaceMakerAssets(void)
 
   local.file = fopen("FaceButtons.txt", "rt");
   fscanf(local.file, "%[^\n]%*c", g_save_dialog_title);
+  strip_trailing_newline(g_save_dialog_title);
   fscanf(local.file, "%[^\n]%*c", g_default_face_filename);
+  strip_trailing_newline(g_default_face_filename);
   for (local.loop_index = 0; local.loop_index < 4; local.loop_index = local.loop_index + 1)
   {
     fscanf(local.file, "%[^\n]%*c", g_face_button_text_buffer + local.loop_index * 0x20);
+    strip_trailing_newline(g_face_button_text_buffer + local.loop_index * 0x20);
   }
 
   fscanf(local.file, "%d %d,%d,%d,%d", local.button_text_ids, local.style_values,
@@ -591,37 +640,53 @@ int InitializeFaceMakerAssets(void)
   g_face_slot_background_sprite = EncodeSpriteFromPage(2, 0, 0, 0x8a, 0xac);
   FinalizeSpriteEncodeSession();
 
-  local.tmp_x = (int)fopen("FaceData.txt", "rt");
-  local.tmp_y = _filelength(_fileno((FILE *)local.tmp_x));
-  g_face_set_display_names[0] = malloc(local.tmp_y);
+  local.file = fopen("FaceData.txt", "rt");
+  local.tmp_y = _filelength(_fileno(local.file));
+  g_face_set_display_names[0] = malloc(local.tmp_y + 1);
   local.scan_ptr = g_face_set_display_names[0];
-  fread(local.scan_ptr, local.tmp_y, 1, (FILE *)local.tmp_x);
-  fclose((FILE *)local.tmp_x);
+  fread(local.scan_ptr, local.tmp_y, 1, local.file);
+  local.scan_ptr[local.tmp_y] = '\0';
+  fclose(local.file);
 
-  g_face_set_total = 1;
-  g_face_set_display_names[0] = local.scan_ptr;
-  local.scan_ptr = local.scan_ptr + 1;
-  for (local.loop_index = 1; local.loop_index < local.tmp_y;
-       local.loop_index = local.loop_index + 1, local.scan_ptr = local.scan_ptr + 1)
+  g_face_set_total = 0;
+  local.line_start = local.scan_ptr;
+  for (local.loop_index = 0; local.loop_index <= local.tmp_y && g_face_set_total < 1000;
+       local.loop_index = local.loop_index + 1)
   {
-    if (*local.scan_ptr == '\n')
+    if (local.scan_ptr[local.loop_index] == '\r' ||
+        local.scan_ptr[local.loop_index] == '\n' ||
+        local.scan_ptr[local.loop_index] == '\0')
     {
-      *local.scan_ptr = '\0';
-      if (local.scan_ptr[1] != '\n')
+      local.char_temp = local.scan_ptr[local.loop_index];
+      local.scan_ptr[local.loop_index] = '\0';
+      if (local.line_start[0] != '\0')
       {
-        g_face_set_display_names[g_face_set_total] = local.scan_ptr + 1;
+        g_face_set_display_names[g_face_set_total] = local.line_start;
         g_face_set_total = g_face_set_total + 1;
       }
+      if (local.char_temp == '\r' &&
+          local.loop_index + 1 < local.tmp_y &&
+          local.scan_ptr[local.loop_index + 1] == '\n')
+      {
+        local.loop_index = local.loop_index + 1;
+        local.scan_ptr[local.loop_index] = '\0';
+      }
+      local.line_start = local.scan_ptr + local.loop_index + 1;
     }
   }
 
-  g_face_set_total = g_face_set_total - 1;
   for (local.loop_index = 0; local.loop_index < g_face_set_total; local.loop_index = local.loop_index + 1)
   {
     local.scan_ptr = g_face_set_display_names[local.loop_index];
-    while (*local.scan_ptr != ',')
+    while (*local.scan_ptr != '\0' && *local.scan_ptr != ',')
     {
       local.scan_ptr = local.scan_ptr + 1;
+    }
+    if (*local.scan_ptr == '\0')
+    {
+      g_face_set_names[local.loop_index] = local.scan_ptr;
+      g_face_set_gender_tags[local.loop_index] = local.scan_ptr;
+      continue;
     }
     *local.scan_ptr = '\0';
     local.scan_ptr = local.scan_ptr + 1;
@@ -630,13 +695,18 @@ int InitializeFaceMakerAssets(void)
       local.scan_ptr = local.scan_ptr + 1;
     }
     g_face_set_names[local.loop_index] = local.scan_ptr;
-    while (*local.scan_ptr != ',' && *local.scan_ptr != ' ' && *local.scan_ptr != '\t')
+    while (*local.scan_ptr != '\0' &&
+           *local.scan_ptr != ',' &&
+           *local.scan_ptr != ' ' &&
+           *local.scan_ptr != '\t')
     {
       local.scan_ptr = local.scan_ptr + 1;
     }
-    local.char_temp = *local.scan_ptr;
-    *local.scan_ptr = '\0';
-    local.scan_ptr = local.scan_ptr + 1;
+    if (*local.scan_ptr != '\0')
+    {
+      *local.scan_ptr = '\0';
+      local.scan_ptr = local.scan_ptr + 1;
+    }
     while (*local.scan_ptr == ' ' || *local.scan_ptr == '\t')
     {
       local.scan_ptr = local.scan_ptr + 1;
@@ -774,7 +844,7 @@ int LoadSelectedFaceSet(int selected_face_index)
 }
 
 // FUNCTION: FACEMAKER 0x00402841
-void AcceptFaceSelection(FaceControl *control)
+int AcceptFaceSelection(FaceControl *control)
 {
   FILE *recent_face_file;
 
@@ -791,6 +861,7 @@ void AcceptFaceSelection(FaceControl *control)
     fclose(recent_face_file);
   }
   g_worker_should_exit = 1;
+  return 0;
 }
 
 // FUNCTION: FACEMAKER 0x00402a42
@@ -925,7 +996,7 @@ int AdjustVisibleFaceVariant(FaceControl *control)
 }
 
 // FUNCTION: FACEMAKER 0x004033c9
-void ComposeSelectedFaceImage(FaceControl *control)
+int ComposeSelectedFaceImage(FaceControl *control)
 {
   int face_index;
 
@@ -965,6 +1036,7 @@ void ComposeSelectedFaceImage(FaceControl *control)
     WriteGraphicsScanline((unsigned int *)g_face_set_display_names[g_selected_face_set_index], 2, 1, 200,
                           (unsigned int)strlen(g_face_set_display_names[g_selected_face_set_index]));
   }
+  return 0;
 }
 
 // FUNCTION: FACEMAKER 0x00402a84
@@ -1040,7 +1112,7 @@ int DrawFaceControl(FaceControl *control, int mode)
 
   if (mode == 2 && control->on_activate != (FaceControlCallback)0)
   {
-    control->on_activate(control);
+    (void)control->on_activate(control);
   }
   return 1;
 }
@@ -1114,7 +1186,6 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   } local;
 
   (void)unused;
-
 #ifdef _DEBUG
   // Allow debugging directly from output directory
   SetCurrentDirectoryA("C:\\Magic\\Program");
@@ -1124,9 +1195,16 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   }
 #else
   GetModuleFileNameA((HMODULE)0, global_base_directory, 0x105);
-  SetCurrentDirectoryA(global_base_directory);
   local.last_backslash = strrchr(global_base_directory, '\\');
-  *local.last_backslash = '\0';
+  if (local.last_backslash == (char *)0)
+  {
+    local.last_backslash = strrchr(global_base_directory, '/');
+  }
+  if (local.last_backslash != (char *)0)
+  {
+    *local.last_backslash = '\0';
+  }
+  SetCurrentDirectoryA(global_base_directory);
 #endif
 
   sprintf(g_face_output_path, "%s\\PlayFace\\*.pic", global_base_directory);
@@ -1277,6 +1355,9 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   local.hover_button_index = -1;
   do
   {
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    pump_facemaker_compat_host(1);
+#endif
     if (local.hover_button_index >= 0)
     {
       if (g_mouse_x <
@@ -1349,6 +1430,9 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
       ConsumeUiTickCount();
       while (g_mouse_button_down != 0)
       {
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+        pump_facemaker_compat_host(1);
+#endif
         if (PeekUiTickCount() >= 5)
         {
           if (local.next_hover_button_index >= 0)
@@ -1384,7 +1468,11 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   }
   chdir(g_original_working_dir);
   SendMessageA(g_main_hwnd, 0x12, g_worker_exit_code, 0);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  return g_worker_exit_code;
+#else
   ExitThread(g_worker_exit_code);
+#endif
 }
 
 // FUNCTION: FACEMAKER 0x00404d70
@@ -1405,6 +1493,7 @@ int LoadFaceSpriteSet(char *base_path, int *group_frame_counts, EncodedImage **g
     long pcx_find_handle;
     unsigned char find_data[0x118];
     EncodedImage *current_sprite;
+    char group_suffix_storage[2];
     char *group_suffix;
     int first_tile;
     unsigned char pcx_find_data[0x118];
@@ -1413,7 +1502,9 @@ int LoadFaceSpriteSet(char *base_path, int *group_frame_counts, EncodedImage **g
   face_loader.group_count = 0;
   face_loader.saw_separator = 0;
   face_loader.frames_in_group = 0;
-  face_loader.group_suffix = "1";
+  face_loader.group_suffix_storage[0] = '1';
+  face_loader.group_suffix_storage[1] = '\0';
+  face_loader.group_suffix = face_loader.group_suffix_storage;
   face_loader.first_tile = 1;
   face_loader.use_pcx_tiles = 0;
   memset(group_entries, 0, 4);
@@ -1850,10 +1941,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
   // lmfao it's a miracle this doesn't crash (nBufferLength == 0 so the write to address 0x100 is elided)
   GetCurrentDirectoryA((DWORD)g_original_working_dir[0], (LPSTR)0x100);
 
-  strcpy(module_path, (*__p___argv())[0]);
+  GetModuleFileNameA((HMODULE)0, module_path, sizeof(module_path));
   slash = strrchr(module_path, '\\');
-  *slash = '\0';
-  if (_chdir(module_path) != 0)
+  if (slash == (char *)0)
+  {
+    slash = strrchr(module_path, '/');
+  }
+  if (slash != (char *)0)
+  {
+    *slash = '\0';
+  }
+  if (slash != (char *)0 && _chdir(module_path) != 0)
   {
     assert_noabort(0, "D:\\NewMagic\\Sources\\1player\\FaceMaker\\code\\test.c", 0xa2,
                    "Path Set FAILED");
@@ -1940,7 +2038,7 @@ LOOP:
     g_face_preview_bounds->max_y = global_screen_height - 1;
   }
 
-  main_hwnd = CreateWindowExA(g_use_desktop_palette ? 0 : 8, "FacemakerMainClass",
+  main_hwnd = CreateWindowExA(g_use_desktop_palette ? 0 : 8, "FaceMakerMainClass",
                               "Magic: Facemaker", 0x80000000, 0, 0, global_screen_width,
                               global_screen_height, (HWND)0, (HMENU)0, hInstance, (LPVOID)0);
   g_main_hwnd = main_hwnd;
@@ -1959,8 +2057,13 @@ LOOP:
 
   SetSystemPaletteUse(global_main_hdc, 2);
   atexit(RestoreSystemPalette);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  (void)thread_id;
+  FaceMakerWorkerThread((LPVOID)0);
+#else
   CreateThread((LPSECURITY_ATTRIBUTES)0, 0, (LPTHREAD_START_ROUTINE)FaceMakerWorkerThread,
                (LPVOID)0, 0, &thread_id);
+#endif
   while (GetMessageA(&msg, (HWND)0, 0, 0) != 0)
   {
     TranslateMessage(&msg);

@@ -13,7 +13,8 @@ target_include_directories(shandalar PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 target_link_libraries(shandalar PRIVATE
-  facemaker_core
+  facemaker_legacy_ui
+  facemaker_win32_imgui_bridge
   SDL3::SDL3
   SDL3_ttf::SDL3_ttf
 )
@@ -25,10 +26,12 @@ if(EMSCRIPTEN)
     "-sFORCE_FILESYSTEM=1"
     "-sMAXIMUM_MEMORY=1GB"
     "-sASYNCIFY=1"
+    "-sFETCH=1"
   )
   if(SHANDALAR_ASSET_DIR)
     target_link_options(shandalar PRIVATE
       "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}@/assets"
+      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FONTS.CV@/assets/fonts.cv"
       "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/Tutorial"
     )
   endif()
