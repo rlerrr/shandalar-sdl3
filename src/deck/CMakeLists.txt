@@ -46,6 +46,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
       "-sFORCE_FILESYSTEM=1"
       "-sASYNCIFY=1"
       "-sFETCH=1"
+      "-gsource-map"
     )
     if(SHANDALAR_ASSET_DIR)
       set(deck_preload_assets

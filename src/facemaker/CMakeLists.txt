@@ -1,25 +1,3 @@
-add_library(facemaker_core STATIC
-  src/core.c
-  src/editor.c
-  src/face_assets.c
-  src/fileio.c
-  src/lib.c
-  src/sprite.c
-  src/text.c
-)
-
-target_compile_definitions(facemaker_core PRIVATE FACEMAKER MODERN_FIXES)
-target_include_directories(facemaker_core PUBLIC
-  "${SHANDALAR_SRC_ROOT}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-target_link_libraries(facemaker_core PUBLIC
-  drawcard_facemaker
-  cardart_facemaker
-  rpbits
-  shandalar_platform
-)
-
 if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR)
   add_library(facemaker_imgui STATIC
     "${imgui_SOURCE_DIR}/imgui.cpp"
@@ -97,6 +75,7 @@ if(SHANDALAR_BUILD_FACEMAKER)
       "-sMAXIMUM_MEMORY=1GB"
       "-sASYNCIFY=1"
       "-sFETCH=1"
+      "-gsource-map"
     )
     if(SHANDALAR_ASSET_DIR)
       target_link_options(facemaker PRIVATE
@@ -117,18 +96,5 @@ if(SHANDALAR_BUILD_FACEMAKER)
 
   install(TARGETS facemaker
     RUNTIME DESTINATION .
-  )
-endif()
-
-install(TARGETS facemaker_core
-  ARCHIVE DESTINATION lib
-)
-
-if(SHANDALAR_BUILD_TESTS AND NOT EMSCRIPTEN)
-  add_executable(facemaker_core_smoke tests/core_smoke.c)
-  target_link_libraries(facemaker_core_smoke PRIVATE facemaker_core)
-  add_test(
-    NAME facemaker_core_smoke
-    COMMAND facemaker_core_smoke "${SHANDALAR_ASSET_DIR}"
   )
 endif()

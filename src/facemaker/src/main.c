@@ -13,7 +13,6 @@
 #include "drawcardlib/src/pic.h"
 #include "defs.h"
 #include "face_assets.h"
-#include "face_controls.h"
 #include "facemaker_types.h"
 
 #if defined(_WIN32) && defined(_fileno)
@@ -212,13 +211,28 @@ int g_face_set_total = 1000;
 int g_selected_face_set_index = 0;
 
 // GLOBAL: FACEMAKER 0x0040c1e8
-#define LEGACY_FACE_CONTROL(x, y, width, height, callback, value_index, value_delta) \
-  {x, y, width, height, DrawFaceControl, callback, \
-   value_index, value_delta, 0, {0, 0, 0, 0}},
 FaceControl g_face_controls[0x15] = {
-    FACEMAKER_FACE_CONTROL_LIST(LEGACY_FACE_CONTROL)
-};
-#undef LEGACY_FACE_CONTROL
+    {0, 0, 0x40, 0x20, DrawFaceControl, (FaceControlCallback)0, 0, 0, 0, {0, 0, 0, 0}},
+    {0xce, 0x24, 0x56, 0x21, DrawFaceControl, ComposeSelectedFaceImage, 0, 0, 0, {0, 0, 0, 0}},
+    {0xce, 0x56, 0x56, 0x21, DrawFaceControl, AcceptFaceSelection, 0, 0, 0, {0, 0, 0, 0}},
+    {0xe0, 0x8a, 0x30, 0x21, DrawFaceControl, (FaceControlCallback)0, 0, 0, 0, {0, 0, 0, 0}},
+    {0xd8, 0xbc, 0x40, 0x21, DrawFaceControl, (FaceControlCallback)0, 0, 0, 0, {0, 0, 0, 0}},
+    {0xb9, 0x8a, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)CycleFaceSet, -1, 0, 0, {0, 0, 0, 0}},
+    {0x111, 0x8a, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)CycleFaceSet, 1, 0, 0, {0, 0, 0, 0}},
+    {0xb1, 0xbc, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)ScrollFaceSetList, -1, 0, 0, {0, 0, 0, 0}},
+    {0x119, 0xbc, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)ScrollFaceSetList, 1, 0, 0, {0, 0, 0, 0}},
+    {0x167, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 0, -1, 0, {0, 0, 0, 0}},
+    {0x194, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 0, 1, 0, {0, 0, 0, 0}},
+    {0x206, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 1, -1, 0, {0, 0, 0, 0}},
+    {0x233, 0xd9, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 1, 1, 0, {0, 0, 0, 0}},
+    {0x29, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 2, -1, 0, {0, 0, 0, 0}},
+    {0x56, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 2, 1, 0, {0, 0, 0, 0}},
+    {0xc8, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 3, -1, 0, {0, 0, 0, 0}},
+    {0xf5, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 3, 1, 0, {0, 0, 0, 0}},
+    {0x167, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 4, -1, 0, {0, 0, 0, 0}},
+    {0x194, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 4, 1, 0, {0, 0, 0, 0}},
+    {0x206, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 5, -1, 0, {0, 0, 0, 0}},
+    {0x233, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 5, 1, 0, {0, 0, 0, 0}}};
 
 // GLOBAL: FACEMAKER 0x0041afb4
 HDC global_main_hdc;

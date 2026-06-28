@@ -74,6 +74,10 @@ if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALA
   FetchContent_MakeAvailable(imgui)
 endif()
 
+if(EMSCRIPTEN)
+  add_compile_options(-g)
+endif()
+
 if(MSVC)
   add_compile_options(/W3 /wd4996)
 else()

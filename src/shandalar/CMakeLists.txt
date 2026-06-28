@@ -27,6 +27,7 @@ if(EMSCRIPTEN)
     "-sMAXIMUM_MEMORY=1GB"
     "-sASYNCIFY=1"
     "-sFETCH=1"
+    "-gsource-map"
   )
   if(SHANDALAR_ASSET_DIR)
     function(shandalar_preload_asset asset_source asset_dest)
