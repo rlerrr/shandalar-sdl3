@@ -245,7 +245,8 @@ int BeginMenuContext(void)
 
 int ResetMenuContext(int context_index)
 {
-  if (context_index >= 0 && context_index < 50) {
+  if (context_index >= 0 && context_index < 50)
+  {
     g_menu_control_count_by_context[context_index] = 0;
     g_menu_allow_arrow_nav_by_context[context_index] = 1;
   }
@@ -303,23 +304,27 @@ int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_c
   count = g_menu_control_count_by_context[g_menu_context_index];
   g_menu_input_unhandled = 1;
 
-  if (HasQueuedKeyInput()) {
+  if (HasQueuedKeyInput())
+  {
     key = PeekQueuedKeyInput();
     key_low = key & 0xff;
 
     if (key == 0x0f09 || key == 0x0f0f ||
         (g_menu_allow_arrow_nav_by_context[g_menu_context_index] &&
-         (key == 0x4800 || key == 0x5000))) {
+         (key == 0x4800 || key == 0x5000)))
+    {
       int direction = (key == 0x0f0f || key == 0x4800) ? -1 : 1;
       int next = g_menu_current_control_index;
       PopQueuedKeyInput();
-      if (count > 0) {
+      if (count > 0)
+      {
         if (next < 0)
           next = direction > 0 ? 0 : count - 1;
         else
           next = (count + next + direction) % count;
 
-        for (i = 0; i < count; ++i) {
+        for (i = 0; i < count; ++i)
+        {
           AdvMenuControl *control = g_menu_controls_by_context[g_menu_context_index][next];
           if (control && control->state != 3)
             break;
@@ -332,18 +337,21 @@ int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_c
       }
     }
 
-    for (i = 0; i < count; ++i) {
+    for (i = 0; i < count; ++i)
+    {
       int control_index = (g_menu_current_control_index + 1 + i + count) % count;
       AdvMenuControl *control = g_menu_controls_by_context[g_menu_context_index][control_index];
       if (!control || control->state == 3)
         continue;
       if ((control->direct_hotkey && control->direct_hotkey == key) ||
           (key_low && control->navigate_hotkeys &&
-           strchr(control->navigate_hotkeys, key_low))) {
+           strchr(control->navigate_hotkeys, key_low)))
+      {
         select_menu_control(control_index);
         if ((control->direct_hotkey && control->direct_hotkey == key) ||
             (key_low && control->activate_hotkeys &&
-             strchr(control->activate_hotkeys, key_low))) {
+             strchr(control->activate_hotkeys, key_low)))
+        {
           render_menu_control(g_menu_current_control_index, 2);
           PopQueuedKeyInput();
           g_menu_prev_control_index = g_menu_current_control_index;
@@ -357,7 +365,8 @@ int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_c
       }
     }
 
-    if ((key_low == 0x0d || key == 0x1c0d) && g_menu_current_control_index >= 0) {
+    if ((key_low == 0x0d || key == 0x1c0d) && g_menu_current_control_index >= 0)
+    {
       render_menu_control(g_menu_current_control_index, 2);
       PopQueuedKeyInput();
       g_menu_prev_control_index = g_menu_current_control_index;
@@ -368,12 +377,14 @@ int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_c
     PopQueuedKeyInput();
   }
 
-  for (i = 0; i < count; ++i) {
+  for (i = 0; i < count; ++i)
+  {
     AdvMenuControl *control = g_menu_controls_by_context[g_menu_context_index][i];
     if (!menu_control_contains_point(control, mouse_x, mouse_y))
       continue;
     select_menu_control(i);
-    if (allow_activate_on_click) {
+    if (allow_activate_on_click)
+    {
       render_menu_control(i, 2);
       g_mouse_button_down_mask = 0;
       g_mouse_button_released_mask = 0;
@@ -418,12 +429,14 @@ int Palette_FindNearestEntryIndex(int target_r, int target_g, int target_b,
   int best = 0;
   int best_distance = 0x7fffffff;
   int i;
-  for (i = 0; i < 256; ++i) {
+  for (i = 0; i < 256; ++i)
+  {
     int dr = target_r - palette_bytes[i * 3 + 0];
     int dg = target_g - palette_bytes[i * 3 + 1];
     int db = target_b - palette_bytes[i * 3 + 2];
     int distance = dr * dr + dg * dg + db * db;
-    if (distance < best_distance) {
+    if (distance < best_distance)
+    {
       best_distance = distance;
       best = i;
     }
@@ -481,10 +494,13 @@ static void decode_text_line(char *line)
 {
   char *src = line;
   char *dst = line;
-  while (*src) {
-    if (*src == '\\') {
+  while (*src)
+  {
+    if (*src == '\\')
+    {
       ++src;
-      switch (*src) {
+      switch (*src)
+      {
       case 'n':
         *dst++ = '\n';
         ++src;
@@ -502,7 +518,9 @@ static void decode_text_line(char *line)
           *dst++ = *src++;
         break;
       }
-    } else {
+    }
+    else
+    {
       *dst++ = *src++;
     }
   }
@@ -529,24 +547,28 @@ int LoadTextSectionLines(const char *filename, const char *section)
     return 0;
 
   SDL_snprintf(marker, sizeof(marker), "@%s", section);
-  while (fgets(line, sizeof(line), file)) {
+  while (fgets(line, sizeof(line), file))
+  {
     strip_text_newline(line);
     if (SDL_strcasecmp(line, marker) == 0)
       break;
   }
 
-  if (feof(file)) {
+  if (feof(file))
+  {
     fclose(file);
     return 0;
   }
 
-  if (!fgets(line, sizeof(line), file)) {
+  if (!fgets(line, sizeof(line), file))
+  {
     fclose(file);
     return 0;
   }
   expected_count = atoi(line);
 
-  for (count = 0; count < expected_count && count < 249; ++count) {
+  for (count = 0; count < expected_count && count < 249; ++count)
+  {
     if (!fgets(g_text_lines[count], sizeof(g_text_lines[count]), file))
       break;
     strip_text_newline(g_text_lines[count]);
@@ -625,6 +647,10 @@ int shandalar_run_facemaker_flow(void)
   SDL_strlcpy(asset_root, global_base_directory, sizeof(asset_root));
   shandalar_runtime_shutdown();
   completed = shandalar_host_run_facemaker(asset_root, asset_root);
+  if (g_graphics_pages[0] || g_graphics_pages[1])
+  {
+    ShutdownGraphicsSystem();
+  }
   if (!shandalar_runtime_init(asset_root))
     return -1;
   if (!completed)
@@ -677,7 +703,8 @@ int shandalar_runtime_init(const char *asset_root)
 
 void shandalar_runtime_shutdown(void)
 {
-  if (g_advbuttons_ini_file) {
+  if (g_advbuttons_ini_file)
+  {
     fclose(g_advbuttons_ini_file);
     g_advbuttons_ini_file = NULL;
   }
