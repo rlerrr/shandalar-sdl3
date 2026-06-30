@@ -2,10 +2,10 @@
 
 ## Current boundary
 
-The active build contains only Facemaker and the portions of cardartlib,
-drawcardlib, and RPBits needed to load and display the Facemaker background.
-`facemaker_core` is a static library with an event/step/frame API. The SDL
-executable is a thin callback-based host for Windows and Emscripten.
+The active build contains the legacy Facemaker UI plus the portions of
+cardartlib, drawcardlib, and RPBits needed to load, edit, and export faces.
+The SDL executable hosts the legacy Win32-compatible UI through the ImGui bridge
+for Windows and Emscripten.
 
 The logical render area is capped at 1024x768. Window resizing only changes
 letterboxing; it does not change the Facemaker surface.
@@ -22,8 +22,8 @@ letterboxing; it does not change the Facemaker surface.
 | `MessageBoxA` | `SDL_ShowSimpleMessageBox` | Low; implemented |
 | `GlobalAlloc` family and device-cap queries | Portable allocation and surface metadata | Low; implemented |
 | Critical-section APIs | Removed from the active target | Low; Facemaker currently has one event-loop thread |
-| `CreateFileMappingA` IPC/shared surfaces | Removed | Medium; future SHANDALAR integration must exchange files or call `facemaker_core` directly |
-| Win32 message loop, worker thread, blocking wait functions | SDL callback host plus `FacemakerStatus` state API | High; shell implemented, original editor workflow still needs conversion |
+| `CreateFileMappingA` IPC/shared surfaces | Removed | Low; Shandalar now hosts Facemaker in-process |
+| Win32 message loop, worker thread, blocking wait functions | SDL/ImGui host pumps the compatibility message loop | Medium; implemented for the active legacy UI path |
 | Display-mode changes | Removed | Low; fixed logical surface with letterboxing |
 
 ## Build outputs
@@ -32,14 +32,7 @@ letterboxing; it does not change the Facemaker surface.
 - `msvc.bat`: modern MSVC, Windows x86, `MinSizeRel`
 - `emscripten.bat`: Emscripten HTML/WASM, `MinSizeRel`, preloads `FaceArt`
 
-The first incremental editor workflow is active: it loads the original `fb*`
-sprite sets, composes the selected face, supports mouse and keyboard controls
-for face sets and layer variants, exports `face.pic`, triggers a browser
-download on Emscripten, and exits through the library status API. Remaining work
-includes persistent browser storage, richer save naming, and visual parity for
-the original generated buttons.
-
-Control geometry, `FaceData.txt` parsing, and `fb*` sprite blob parsing/grouping
-are shared with the legacy source. The SDL editor intentionally replaces only
-the Win32 worker-loop, dialog, hit-testing, and generated-button rendering
-portions of `main.c`.
+The legacy editor workflow is active: it loads the original `fb*` sprite sets,
+composes the selected face, supports mouse and keyboard controls for face sets
+and layer variants, exports `face.pic`, and exits back to the SDL host.
+Emscripten stores local-only files through `/userdata`.

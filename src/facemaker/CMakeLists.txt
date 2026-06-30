@@ -82,7 +82,6 @@ if(SHANDALAR_BUILD_FACEMAKER)
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceArt@/assets/FaceArt"
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceButtons.txt@/assets/FaceButtons.txt"
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceData.txt@/assets/FaceData.txt"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceMostRecent.txt@/assets/FaceMostRecent.txt"
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FONTS.CV@/assets/fonts.cv"
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0085M_.TTF@/assets/TT0085M_.TTF"
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0127M_.TTF@/assets/TT0127M_.TTF"
