@@ -481,8 +481,12 @@ void DrawFormattedTextNoShadowCentered(FacemakerWindowBounds *window, int color,
 
 void DrawLoadSaveButtonText(FacemakerWindowBounds *window, int color, int x, int y, ...)
 {
-  char **text = (char **)&y + 1;
-  DrawFormattedTextShadowedCenterY(window, color, x, y, "%s", *text);
+  char *text;
+  va_list args;
+  va_start(args, y);
+  text = va_arg(args, char *);
+  va_end(args);
+  DrawFormattedTextShadowedCenterY(window, color, x, y, "%s", text ? text : "");
 }
 
 int int_to_hex_digit(int value)

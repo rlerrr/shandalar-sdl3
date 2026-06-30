@@ -31,6 +31,7 @@ void shandalar_runtime_shutdown(void);
 int RunOpeningMenu(void);
 int RunDifficultyMenu(void);
 int RunColorMenu(void);
+int RunLoadGameMenu(void);
 int RunFacemakerFlow(void);
 void PushQueuedKeyInput(int key_code);
 extern int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
@@ -231,6 +232,7 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   shandalar_win32_imgui_shutdown();
   shandalar_win32_reset();
   SDL_StopTextInput(g_window);
+  SDL_StartTextInput(g_window);
   SDL_SetWindowTitle(g_window, "Magic: Shandalar");
   SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -306,6 +308,10 @@ static int run_setup_flow(void)
     if (mode == 4) {
       g_quit_requested = 1;
       return 0;
+    }
+    if (mode == 1) {
+      RunLoadGameMenu();
+      continue;
     }
     if (mode != 0)
       continue;

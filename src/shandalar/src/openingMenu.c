@@ -1545,11 +1545,11 @@ int RunLoadSaveMenu(int save_mode)
   int frame_width;
   int menu_context;
   int row;
-  char *map_path;
+  char map_path[16];
   int slot_index;
   FILE *save_desc_file;
 
-  map_path = "magic4.map";
+  strcpy(map_path, "magic4.map");
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   LoadPcxResource(1, 0, 0, "menopt.pic", (g_graphics_bpp == 8) ? &g_palette_data_words : (void *)1);
   StretchBlitGraphicsRect(g_page1_window_bounds, 0, 0, 0x280, 0x1e0, g_page0_window_bounds, 0, 0, global_screen_width, global_screen_height);
@@ -1591,12 +1591,26 @@ int RunLoadSaveMenu(int save_mode)
   }
 
   map_path[5] = '4';
-  save_desc_file = fopen("saveDescs", "r+t");
+  save_desc_file = fopen("saveDescs", save_mode != 0 ? "r+t" : "rt");
+  if (!save_desc_file && save_mode != 0)
+  {
+    save_desc_file = fopen("saveDescs", "w+t");
+  }
   for (slot_index = 0; slot_index < 10; slot_index = slot_index + 1)
   {
-    fgets(g_loadsave_slot_descriptions[slot_index], 0x40, save_desc_file);
-    text_index = strlen(g_loadsave_slot_descriptions[slot_index]);
-    (&g_loadsave_slot_descriptions[slot_index][0])[-1 + text_index] = '\0';
+    if (save_desc_file && fgets(g_loadsave_slot_descriptions[slot_index], 0x40, save_desc_file))
+    {
+      text_index = strlen(g_loadsave_slot_descriptions[slot_index]);
+      if (text_index != 0 && (g_loadsave_slot_descriptions[slot_index][text_index - 1] == '\n' ||
+                              g_loadsave_slot_descriptions[slot_index][text_index - 1] == '\r'))
+      {
+        g_loadsave_slot_descriptions[slot_index][text_index - 1] = '\0';
+      }
+    }
+    else
+    {
+      g_loadsave_slot_descriptions[slot_index][0] = '\0';
+    }
     map_path[5] = (char)int_to_hex_digit(slot_index + 4);
     g_loadsave_slot_has_data[slot_index] = FileExists(map_path);
     if (g_loadsave_slot_has_data[slot_index] == 0)
@@ -1757,17 +1771,29 @@ restart_menu_loop:
     }
 
     g_loadsave_edit_active = 0;
-    fseek(save_desc_file, 0, 0);
-    for (slot_index = 0; slot_index < 10; slot_index = slot_index + 1)
+    if (save_desc_file)
     {
-      fprintf(save_desc_file, "%s\n", g_loadsave_slot_descriptions[slot_index]);
+      fseek(save_desc_file, 0, 0);
+      for (slot_index = 0; slot_index < 10; slot_index = slot_index + 1)
+      {
+        fprintf(save_desc_file, "%s\n", g_loadsave_slot_descriptions[slot_index]);
+      }
     }
   }
 
-  fclose(save_desc_file);
+  if (save_desc_file)
+  {
+    fclose(save_desc_file);
+  }
   FreeSpriteBlob(g_loadsave_frame_sprites[0]);
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   return g_loadsave_menu_selection;
+}
+
+// FUNCTION: SHANDALAR 0x005031a8
+int RunLoadGameMenu(void)
+{
+  return RunLoadSaveMenu(0);
 }
 
 // FUNCTION: SHANDALAR 0x004a97e7
