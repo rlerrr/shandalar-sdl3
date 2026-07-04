@@ -28,6 +28,7 @@ if(EMSCRIPTEN)
     "-sASYNCIFY=1"
     "-sFETCH=1"
     "-gsource-map"
+    "-lidbfs.js"
   )
   if(SHANDALAR_ASSET_DIR)
     function(shandalar_preload_asset asset_source asset_dest)
@@ -54,7 +55,6 @@ if(EMSCRIPTEN)
       OPTBOX.PIC|optbox.pic
       FaceButtons.txt|FaceButtons.txt
       FaceData.txt|FaceData.txt
-      FaceMostRecent.txt|FaceMostRecent.txt
       TT0127M_.TTF|TT0127M_.TTF
       TT0298M_.TTF|TT0298M_.TTF
       TT0300M_.TTF|TT0300M_.TTF

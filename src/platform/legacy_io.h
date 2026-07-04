@@ -23,7 +23,7 @@
 #define _S_IWRITE S_IWUSR
 #define _read read
 #define _write write
-#define _close close
+#define _close shandalar_close
 #define _lseek lseek
 #define _tell(fd) lseek((fd), 0, SEEK_CUR)
 #define _fileno fileno
@@ -52,9 +52,12 @@ FILE *shandalar_fopen(const char *path, const char *mode);
 int shandalar_fclose(FILE *stream);
 char *shandalar_fgets(char *str, int count, FILE *stream);
 int shandalar_open(const char *path, int flags, ...);
+int shandalar_close(int fd);
 int shandalar_chdir(const char *path);
 long shandalar_filelength(int fd);
 int shandalar_resolve_existing_path(const char *path, char *out, size_t out_size);
+const char *shandalar_user_data_root(void);
+int shandalar_user_data_sync(void);
 
 #define _findfirst shandalar_findfirst
 #define _findnext shandalar_findnext

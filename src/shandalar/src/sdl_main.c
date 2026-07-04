@@ -197,7 +197,7 @@ static void present_frame(void)
 int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root)
 {
   char module_path[1024];
-  char cmd_line[16] = "/1";
+  char cmd_line[16] = "/S";
   int result;
 
   (void)writable_root;

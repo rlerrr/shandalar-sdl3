@@ -22,17 +22,120 @@ typedef struct FindState {
 typedef struct LegacyFileMode {
   FILE *file;
   int text_mode;
+  int sync_on_close;
   struct LegacyFileMode *next;
 } LegacyFileMode;
 
 static LegacyFileMode *legacy_file_modes;
+
+static void normalize_path_copy(char *out, size_t out_size, const char *path);
+
+#ifdef __EMSCRIPTEN__
+EM_JS(int, shandalar_wasm_user_data_mount_poll, (), {
+  if (typeof FS === 'undefined' || typeof IDBFS === 'undefined')
+    return -1;
+  if (Module.__shandalarUserDataReady === 1)
+    return 1;
+  if (Module.__shandalarUserDataReady === -1)
+    return -1;
+  if (Module.__shandalarUserDataReady === undefined) {
+    Module.__shandalarUserDataReady = 0;
+    try {
+      try { FS.mkdir('/userdata'); } catch (e) {}
+      try { FS.mount(IDBFS, {}, '/userdata'); } catch (e) {
+        if (!String(e).includes('already mounted'))
+          throw e;
+      }
+      FS.syncfs(true, function(err) {
+        if (err)
+          console.error('shandalar: could not load /userdata from IndexedDB', err);
+        Module.__shandalarUserDataReady = err ? -1 : 1;
+      });
+    } catch (e) {
+      console.error('shandalar: could not mount /userdata', e);
+      Module.__shandalarUserDataReady = -1;
+    }
+  }
+  return 0;
+});
+
+EM_JS(int, shandalar_wasm_user_data_sync_poll, (), {
+  if (Module.__shandalarUserDataReady !== 1)
+    return -1;
+  if (Module.__shandalarUserDataSyncState === 1)
+    return 0;
+  if (Module.__shandalarUserDataSyncState === 2) {
+    Module.__shandalarUserDataSyncState = 0;
+    return 1;
+  }
+  if (Module.__shandalarUserDataSyncState === -1) {
+    Module.__shandalarUserDataSyncState = 0;
+    return -1;
+  }
+  Module.__shandalarUserDataSyncState = 1;
+  FS.syncfs(false, function(err) {
+    if (err)
+      console.error('shandalar: could not save /userdata to IndexedDB', err);
+    Module.__shandalarUserDataSyncState = err ? -1 : 2;
+  });
+  return 0;
+});
+
+static int ensure_user_data_ready(void)
+{
+  int state;
+  do {
+    state = shandalar_wasm_user_data_mount_poll();
+    if (state == 0)
+      emscripten_sleep(1);
+  } while (state == 0);
+  return state == 1;
+}
+#else
+static int ensure_user_data_ready(void)
+{
+  return 1;
+}
+#endif
+
+const char *shandalar_user_data_root(void)
+{
+#ifdef __EMSCRIPTEN__
+  ensure_user_data_ready();
+  return "/userdata";
+#else
+  return ".";
+#endif
+}
+
+int shandalar_user_data_sync(void)
+{
+#ifdef __EMSCRIPTEN__
+  int state;
+  if (!ensure_user_data_ready())
+    return 0;
+  do {
+    state = shandalar_wasm_user_data_sync_poll();
+    if (state == 0)
+      emscripten_sleep(1);
+  } while (state == 0);
+  return state == 1;
+#else
+  return 1;
+#endif
+}
 
 static int is_text_mode(const char *mode)
 {
   return !mode || !strchr(mode, 'b');
 }
 
-static void register_file_mode(FILE *file, const char *mode)
+static int is_write_mode(const char *mode)
+{
+  return mode && (strchr(mode, 'w') || strchr(mode, 'a') || strchr(mode, '+'));
+}
+
+static void register_file_mode(FILE *file, const char *mode, int sync_on_close)
 {
   LegacyFileMode *entry;
 
@@ -45,6 +148,7 @@ static void register_file_mode(FILE *file, const char *mode)
 
   entry->file = file;
   entry->text_mode = is_text_mode(mode);
+  entry->sync_on_close = sync_on_close;
   entry->next = legacy_file_modes;
   legacy_file_modes = entry;
 }
@@ -56,10 +160,10 @@ static int unregister_file_mode(FILE *file)
   while (*entry) {
     if ((*entry)->file == file) {
       LegacyFileMode *removed = *entry;
-      int text_mode = removed->text_mode;
+      int sync_on_close = removed->sync_on_close;
       *entry = removed->next;
       free(removed);
-      return text_mode;
+      return sync_on_close;
     }
     entry = &(*entry)->next;
   }
@@ -78,6 +182,89 @@ static int file_is_text_mode(FILE *file)
 
   return 0;
 }
+
+#ifdef __EMSCRIPTEN__
+static int ascii_equal_ignore_case(const char *a, const char *b)
+{
+  while (*a && *b) {
+    if (tolower((unsigned char)*a) != tolower((unsigned char)*b))
+      return 0;
+    ++a;
+    ++b;
+  }
+  return *a == *b;
+}
+
+static int is_hex_save_slot(char c)
+{
+  c = (char)tolower((unsigned char)c);
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+}
+
+static int map_user_data_path(const char *path, char *out, size_t out_size)
+{
+  char normalized[1024];
+  const char *base;
+  const char *drive;
+  char name[260];
+  size_t i;
+
+  normalize_path_copy(normalized, sizeof(normalized), path);
+  if (strncmp(normalized, "/userdata/", 10) == 0) {
+    snprintf(out, out_size, "%s", normalized);
+    return 1;
+  }
+
+  base = strrchr(normalized, '/');
+  base = base ? base + 1 : normalized;
+  drive = strchr(base, ':');
+  if (drive && drive[1])
+    base = drive + 1;
+
+  if (ascii_equal_ignore_case(base, "face.pic")) {
+    snprintf(out, out_size, "/userdata/face.pic");
+  } else if (ascii_equal_ignore_case(base, "FaceMostRecent.txt")) {
+    snprintf(out, out_size, "/userdata/FaceMostRecent.txt");
+  } else if (ascii_equal_ignore_case(base, "saveDescs")) {
+    snprintf(out, out_size, "/userdata/saveDescs");
+  } else if (strlen(base) == 10 &&
+             tolower((unsigned char)base[0]) == 'm' &&
+             tolower((unsigned char)base[1]) == 'a' &&
+             tolower((unsigned char)base[2]) == 'g' &&
+             tolower((unsigned char)base[3]) == 'i' &&
+             tolower((unsigned char)base[4]) == 'c' &&
+             is_hex_save_slot(base[5]) &&
+             base[6] == '.') {
+    snprintf(name, sizeof(name), "magic%c.%c%c%c",
+             (char)tolower((unsigned char)base[5]),
+             (char)tolower((unsigned char)base[7]),
+             (char)tolower((unsigned char)base[8]),
+             (char)tolower((unsigned char)base[9]));
+    if (!(ascii_equal_ignore_case(name + 7, "sve") ||
+          ascii_equal_ignore_case(name + 7, "fce") ||
+          ascii_equal_ignore_case(name + 7, "map")))
+      return 0;
+    snprintf(out, out_size, "/userdata/%s", name);
+  } else {
+    return 0;
+  }
+
+  for (i = 0; out[i]; ++i) {
+    if (out[i] == '\\')
+      out[i] = '/';
+  }
+  ensure_user_data_ready();
+  return 1;
+}
+#else
+static int map_user_data_path(const char *path, char *out, size_t out_size)
+{
+  (void)path;
+  (void)out;
+  (void)out_size;
+  return 0;
+}
+#endif
 
 static void normalize_path_copy(char *out, size_t out_size, const char *path)
 {
@@ -295,8 +482,10 @@ FILE *shandalar_fopen(const char *path, const char *mode)
 {
   char normalized[1024];
   FILE *file;
-  normalize_path_copy(normalized, sizeof(normalized), path);
-  if (mode && mode[0] == 'r') {
+  int user_data_file = map_user_data_path(path, normalized, sizeof(normalized));
+  if (!user_data_file)
+    normalize_path_copy(normalized, sizeof(normalized), path);
+  if (!user_data_file && mode && mode[0] == 'r') {
     if (!shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized))) {
       fetch_asset_for_path(normalized);
       shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
@@ -305,14 +494,17 @@ FILE *shandalar_fopen(const char *path, const char *mode)
   file = fopen(normalized, mode);
   if (!file && mode && mode[0] == 'r')
     log_open_failure("fopen", normalized, mode);
-  register_file_mode(file, mode);
+  register_file_mode(file, mode, user_data_file && is_write_mode(mode));
   return file;
 }
 
 int shandalar_fclose(FILE *stream)
 {
-  unregister_file_mode(stream);
-  return fclose(stream);
+  int sync_on_close = unregister_file_mode(stream);
+  int result = fclose(stream);
+  if (sync_on_close)
+    shandalar_user_data_sync();
+  return result;
 }
 
 char *shandalar_fgets(char *str, int count, FILE *stream)
@@ -335,6 +527,7 @@ int shandalar_open(const char *path, int flags, ...)
   char normalized[1024];
   int translated_flags;
   mode_t mode = 0;
+  int user_data_file;
   translated_flags = translate_legacy_open_flags(flags);
   if (translated_flags & O_CREAT) {
     va_list args;
@@ -342,8 +535,10 @@ int shandalar_open(const char *path, int flags, ...)
     mode = translate_legacy_open_mode(flags, (mode_t)va_arg(args, int));
     va_end(args);
   }
-  normalize_path_copy(normalized, sizeof(normalized), path);
-  if ((translated_flags & O_CREAT) == 0) {
+  user_data_file = map_user_data_path(path, normalized, sizeof(normalized));
+  if (!user_data_file)
+    normalize_path_copy(normalized, sizeof(normalized), path);
+  if (!user_data_file && (translated_flags & O_CREAT) == 0) {
     if (!shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized))) {
       fetch_asset_for_path(normalized);
       shandalar_resolve_existing_path(normalized, normalized, sizeof(normalized));
@@ -355,6 +550,15 @@ int shandalar_open(const char *path, int flags, ...)
       log_open_failure("open", normalized, "");
     return fd;
   }
+}
+
+int shandalar_close(int fd)
+{
+  int result = close(fd);
+#ifdef __EMSCRIPTEN__
+  shandalar_user_data_sync();
+#endif
+  return result;
 }
 
 int shandalar_chdir(const char *path)

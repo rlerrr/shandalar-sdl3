@@ -387,7 +387,6 @@ ShandalarAssetState shandalar_assets_prefetch_facemaker_art(void)
   static const char *required_assets[] = {
       "FaceButtons.txt",
       "FaceData.txt",
-      "FaceMostRecent.txt",
       "FaceArt/Facebk0New.pcx",
       "FaceArt/facebut1.pcx",
       "FaceArt/Facfrsh2New.pcx",

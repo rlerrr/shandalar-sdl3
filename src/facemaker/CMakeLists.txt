@@ -76,6 +76,7 @@ if(SHANDALAR_BUILD_FACEMAKER)
       "-sASYNCIFY=1"
       "-sFETCH=1"
       "-gsource-map"
+      "-lidbfs.js"
     )
     if(SHANDALAR_ASSET_DIR)
       target_link_options(facemaker PRIVATE

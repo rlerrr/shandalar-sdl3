@@ -252,6 +252,38 @@ HWND g_main_hwnd;
 // GLOBAL: FACEMAKER 0x0041b030
 char g_face_output_path[0x105];
 
+static const char *FacemakerRecentFacePath(void)
+{
+#ifdef __EMSCRIPTEN__
+  static char path[0x105];
+  snprintf(path, sizeof(path), "%s/FaceMostRecent.txt", shandalar_user_data_root());
+  return path;
+#else
+  return "FaceMostRecent.txt";
+#endif
+}
+
+static void SetInitialFaceOutputPath(void)
+{
+#ifdef __EMSCRIPTEN__
+  snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
+           shandalar_user_data_root());
+#else
+  snprintf(g_face_output_path, sizeof(g_face_output_path), "%s\\PlayFace\\*.pic",
+           global_base_directory);
+#endif
+}
+
+static void SetDialogFaceOutputPath(void)
+{
+#ifdef __EMSCRIPTEN__
+  snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
+           shandalar_user_data_root());
+#else
+  strcpy(g_face_output_path, "*.pic");
+#endif
+}
+
 // GLOBAL: FACEMAKER 0x0041c140
 HINSTANCE g_app_instance;
 
@@ -424,7 +456,11 @@ void InitOpenFileDialog(HWND owner_hwnd, OPENFILENAMEA *open_file, char *initial
   open_file->nMaxFile = 0x104;
   open_file->lpstrFileTitle = (LPSTR)0;
   open_file->nMaxFileTitle = 0x200;
+#ifdef __EMSCRIPTEN__
+  open_file->lpstrInitialDir = shandalar_user_data_root();
+#else
   open_file->lpstrInitialDir = "PlayFace";
+#endif
   open_file->lpstrTitle = g_save_dialog_title;
   open_file->Flags = 0x6000c;
   open_file->nFileOffset = 0;
@@ -441,7 +477,7 @@ int ShowSaveFaceDialog(void)
   OPENFILENAMEA open_file;
   int save_result;
 
-  strcpy(g_face_output_path, "*.pic");
+  SetDialogFaceOutputPath();
   InitOpenFileDialog(g_main_hwnd, &open_file, g_default_face_filename, "*.pic", g_face_output_path);
   save_result = GetSaveFileNameA(&open_file);
   g_mouse_button_down = 0;
@@ -866,8 +902,12 @@ int AcceptFaceSelection(FaceControl *control)
   {
     ComposeSelectedFaceImage(control);
   }
+  if (g_use_desktop_palette == 0)
+  {
+    ExportEncodedImage(2, 0, 0, 0x114, 0xaa, 0, g_face_output_path);
+  }
 
-  recent_face_file = fopen("FaceMostRecent.txt", "wt");
+  recent_face_file = fopen(FacemakerRecentFacePath(), "wt");
   if (recent_face_file != (FILE *)0)
   {
     fprintf(recent_face_file, "%d, %s", g_selected_face_set_index,
@@ -1221,7 +1261,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   SetCurrentDirectoryA(global_base_directory);
 #endif
 
-  sprintf(g_face_output_path, "%s\\PlayFace\\*.pic", global_base_directory);
+  SetInitialFaceOutputPath();
   LegacyInitNoop(LoadFontConfigIfPresent("mgraphic.exe", "fonts.cv"));
   GetPrimaryPage(0);
 
@@ -1284,7 +1324,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
                           global_screen_height);
   InitializeFaceMakerAssets();
 
-  local.recent_face_file = fopen("FaceMostRecent.txt", "rt");
+  local.recent_face_file = fopen(FacemakerRecentFacePath(), "rt");
   if (local.recent_face_file != (FILE *)0)
   {
     fscanf(local.recent_face_file, "%d, %s", &g_selected_face_set_index,
