@@ -110,7 +110,7 @@ DIBSurface *global_dibSurface = &g_dibSurfaceStorage;
 // GLOBAL: DECKDLL 0x10105730
 // GLOBAL: SHANDALAR 0x00748428
 // GLOBAL: FACEMAKER 0x00422320
-void(__cdecl *rpbits_stream_refill)();
+int(__cdecl *rpbits_stream_refill)(void);
 
 extern byte rpbits_buffer[0x200];
 
@@ -418,7 +418,7 @@ void RpBits_Setup(int fileDescriptor)
 {
   rpbits_file_descriptor = fileDescriptor;
   rpbits_stream_ptr = (byte *)rpbits_stream_end;
-  rpbits_stream_refill = (void(__cdecl *)())RpBitsRefill;
+  rpbits_stream_refill = RpBitsRefill;
 }
 
 // MATCHING

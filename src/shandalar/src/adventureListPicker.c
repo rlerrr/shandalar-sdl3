@@ -33,7 +33,7 @@ extern FacemakerWindowBounds *g_page1_window_bounds;
 int internal_rand(int max_exclusive);
 int ScaleUiCoordinateFrom320(int value);
 
-int ReadPalette(char *palette_text_path, char *palette_binary_path);
+struct PaletteLog *ReadPalette(char *palette_text_path, char *palette_binary_path);
 int ClearGraphicsPageWithPaletteColor(int page_number, int palette_color);
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void LoadPcxIntoPageNoPalette(char *path);

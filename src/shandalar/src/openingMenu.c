@@ -129,13 +129,12 @@ int HandleColorMenuControlActivate(AdvMenuControl *control);
 int shandalar_run_facemaker_flow(void);
 
 #ifdef MODERN_FIXES
-static void PumpOpeningMenuWait(void)
+void PumpOpeningMenuWait(void)
 {
-  shandalar_host_pump();
   UpdateMouseSnapshot();
 }
 #else
-static void PumpOpeningMenuWait(void)
+void PumpOpeningMenuWait(void)
 {
 #ifdef __EMSCRIPTEN__
   emscripten_sleep(0);
@@ -1729,6 +1728,12 @@ restart_menu_loop:
 
     while ((key_code = PopQueuedKeyInput()) != 0x1c0d)
     {
+      if (key_code == 0)
+      {
+        PumpOpeningMenuWait();
+        continue;
+      }
+
       switch (key_code)
       {
       case 0x4b00:

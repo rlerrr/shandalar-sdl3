@@ -1,5 +1,4 @@
 #define DUEL_ENGINE_IMPL
-#define GLOBAL_DUEL_UI_IDS_IMPL
 
 #include "defs.h"
 #include "magic/src/duel_engine.h"
@@ -17,7 +16,6 @@
 #include <string.h>
 #include <time.h>
 
-card_data_t global_cards_data[2000] = {{.id = -1}};
 int g_network_result_value;
 int g_network_result_packet_type;
 int g_reveal_all_world_info;
@@ -70,12 +68,10 @@ extern int g_menu_selection_value;
 extern int g_color_menu_selection_to_deck_color[5];
 extern DIBSurface *g_facemaker_page4_dib;
 extern HBITMAP g_facemaker_page4_bitmap;
-
+extern card_data_t global_cards_data[];
 static EncodedImage *g_name_entry_portrait_sprite;
 
-void InitializeDuelUiGlobalIds(void)
-{
-}
+int internal_rand(int maximum);
 
 void TENTATIVE_wait_for_network_result(int player, int packet_type)
 {
@@ -109,21 +105,57 @@ void StopWorldLocationMusic(void)
 
 int DrawRandomCardFromInitialLibrary(int library_index)
 {
-  int index;
-  if (library_index < 0 || library_index >= 2)
-    return -1;
-  for (index = 0; index < 500; ++index)
-    if (global_library[library_index][index] != -1)
-      return global_library[library_index][index];
-  return -1;
-}
+  struct
+  {
+    int rand_pick;    // ebp-0x14
+    int chosen_csvid; // ebp-0x10
+    int total_cards;  // ebp-0xc
+    int running_pick; // ebp-0x8
+    int i;            // ebp-0x4
+  } s;
 
-int card_dummy(int player, int card, event_t event)
-{
-  (void)player;
-  (void)card;
-  (void)event;
-  return 0;
+  if (library_index == -1)
+  {
+    return -1;
+  }
+
+  s.total_cards = 0;
+  for (s.i = 0; s.i < 200; ++s.i)
+  {
+    s.total_cards += g_initial_library[library_index][s.i].numcards;
+  }
+
+  if (s.total_cards == 0)
+  {
+    return -1;
+  }
+
+  s.rand_pick = internal_rand(s.total_cards);
+  s.running_pick = s.rand_pick;
+
+  for (s.i = 0; s.i < 200; ++s.i)
+  {
+    s.running_pick -= g_initial_library[library_index][s.i].numcards;
+    if (s.running_pick < 0)
+    {
+      s.chosen_csvid = g_initial_library[library_index][s.i].csvid;
+      if (g_duel_ai_mode_state != 1)
+      {
+        --g_initial_library[library_index][s.i].numcards;
+      }
+      break;
+    }
+  }
+
+  for (s.i = 0; s.i < g_card_count; ++s.i)
+  {
+    if ((int)global_cards_data[s.i].id == s.chosen_csvid)
+    {
+      return s.i;
+    }
+  }
+
+  return -1;
 }
 
 int show_cardlist(int *graveyard, int *card_counts, int *available, int count,

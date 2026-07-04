@@ -177,9 +177,11 @@ ATOM RegisterClassA(const WNDCLASSA *window_class)
 {
   static ATOM next_atom = 1;
   RegisteredClass *item;
-  if (!window_class || !window_class->lpszClassName || !window_class->lpfnWndProc ||
-      find_class(window_class->lpszClassName))
+  if (!window_class || !window_class->lpszClassName || !window_class->lpfnWndProc)
     return 0;
+  item = find_class(window_class->lpszClassName);
+  if (item)
+    return item->atom;
   item = (RegisteredClass *)calloc(1, sizeof(*item));
   if (!item)
     return 0;
@@ -911,6 +913,12 @@ void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc) { g_pump_proc = 
 BOOL shandalar_win32_pump(BOOL wait)
 {
   return !g_pump_proc || g_pump_proc(wait);
+}
+
+void shandalar_win32_clear_quit_message(void)
+{
+  g_quit_posted = 0;
+  g_quit_code = 0;
 }
 
 void shandalar_win32_set_system_drag_endpoint(int x, int y)

@@ -31,8 +31,17 @@
 #include "facemaker/src/facemaker_types.h"
 #include <drawcardlib/src/pic.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void LoadPcxIntoPage(int page_number, char *path);
+void PumpOpeningMenuWait(void);
+#ifdef MODERN_FIXES
+void shandalar_host_pump(void);
+#endif
+
 DIBSurface *GetPrimaryPage(int unused);
 extern DIBSurface *g_graphics_pages[10];
 
@@ -662,7 +671,7 @@ int RunTextMenuAtScaled(char *menu_text, int x_320_scale, unsigned int y_200_sca
 int DrawTextMenu(char *menu_text, int selected_option);
 void DrawDialogBoxFrameAutoStyle(int x, int y, int width, int height, int unk1);
 void DrawRectangleBorder(int x, int y, int width, int height, int color_index);
-void DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style);
+int DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style);
 void DrawUiLine(int x1, int y1, int x2, int y2, int color_index);
 void DrawTextLineClamped(char *text, int x, int y, int color_index);
 void DrawTextLineNoShadow(char *text, int x, int y, int color_index);
@@ -709,9 +718,9 @@ void UpdateAmbientWizardColorSound(int wizard_color);
 void EnterCastleDungeon(int dungeon_index);
 void ShowCityInfoScreen(int unused);
 void ShowDungeonCluesScreen(int unused);
-void RunAdventureStatsMenu(void);
+int RunAdventureStatsMenu(void);
 void ShowWorldMapScreen(int mode);
-void ShowStatsWindow(int mode, int highlight);
+int ShowStatsWindow(int mode, int highlight);
 void AnalyzeDeckAndMaybeShowReport(int show_ui);
 int FindTownAtWorldCoordinates(int world_x, int world_y);
 int FindCastleDungeonAtWorldCoordinates(int world_x, int world_y);
@@ -930,6 +939,11 @@ opening_menu:
 
       while (clock() - last_tick < 0x3c)
       {
+#ifdef __EMSCRIPTEN__
+  emscripten_sleep(0);
+#else
+  SDL_Delay(1);
+#endif
       }
       last_tick = clock();
 
@@ -1190,7 +1204,7 @@ void DrawUiLine(int x1, int y1, int x2, int y2, int color_index)
 }
 
 // FUNCTION: SHANDALAR 0x004138bd
-void DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style)
+int DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style)
 {
   int tile_columns;
   int tile_rows;
@@ -1238,6 +1252,7 @@ void DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_styl
   g_page0_window_bounds->page_number = 0;
   BlitGraphicsRect(g_page1_window_bounds, x - 10, y - 10, tile_columns * 0x10 + 0x14, tile_rows * 0x10 + 0x14,
                    g_page0_window_bounds, x - 10, y - 10);
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004136ab
@@ -1673,9 +1688,10 @@ int EndMenuContext(void)
 void DelayUiTicks(int delay)
 {
   int start = g_ui_tick_count;
-  while ((g_ui_tick_count - start) < (delay / 2))
+  do
   {
-  }
+    PumpOpeningMenuWait();
+  } while ((g_ui_tick_count - start) < (delay / 2));
 }
 
 // FUNCTION: SHANDALAR 0x004bdd0a
@@ -5403,6 +5419,9 @@ void TickWorldMagicSlotTimers(void)
 // FUNCTION: SHANDALAR 0x0046eca4
 void UpdateMouseSnapshot(void)
 {
+#ifdef MODERN_FIXES
+  shandalar_host_pump();
+#endif
   if (g_legacy_mouse_active != 0)
   {
     g_mouse_button_mask_snapshot = ConsumeMouseButtonReleaseMask() | g_mouse_button_down_mask;
@@ -5655,7 +5674,11 @@ unsigned int WaitForInputEvent(void)
 
   do
   {
+#ifdef MODERN_FIXES
+    PumpOpeningMenuWait();
+#else
     UpdateMouseSnapshot();
+#endif
   } while (g_mouse_button_mask_snapshot == 0 && !HasQueuedKeyInput());
 
   has_queued_key = g_mouse_button_mask_snapshot;
@@ -5714,7 +5737,11 @@ void ClearInputAndWaitForMouseRelease(void)
   {
     do
     {
+#ifdef MODERN_FIXES
+      PumpOpeningMenuWait();
+#else
       UpdateMouseSnapshot();
+#endif
     } while (g_mouse_button_mask_snapshot != 0);
   }
 
@@ -5754,7 +5781,12 @@ int PopNormalizedQueuedKeyInput(void)
 loop:
   queued_key = PopQueuedKeyInput();
   if (queued_key == 0)
+  {
+#ifdef MODERN_FIXES
+    PumpOpeningMenuWait();
+#endif
     goto loop;
+  }
 
   switch (queued_key)
   {

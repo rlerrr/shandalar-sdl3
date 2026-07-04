@@ -231,7 +231,7 @@ void LoadPcxIntoPage(int page_number, char *path);
 void LoadPcxIntoPageNoPalette(char *path);
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
 int MapWizardColorToDisplayIndex(int wizard_color);
-void ReadPalette(char *palette_text_path, char *palette_binary_path);
+PaletteLog *ReadPalette(char *palette_text_path, char *palette_binary_path);
 void DrawGraphicsLine(FacemakerWindowBounds *window_bounds, int x1, int y1, int x2, int y2, int color_index);
 unsigned int WaitForInputEventUnlessBlocked(void);
 int single_color_test_bit_to_color_t(int mask);
@@ -288,7 +288,7 @@ int SignNonZero(int value);
 int ClampIntToRange(int value, int min_value, int max_value);
 int MeasureMultilineTextWidth(FacemakerWindowBounds *dst, char *text);
 int GetFontLineHeight(int font_slot);
-void ApplyPortraitTintMap(FacemakerWindowBounds *dst, int x, int y, int w, int h, unsigned int tint, int maybe_shadow);
+int ApplyPortraitTintMap(FacemakerWindowBounds *dst, int x, int y, int w, int h, unsigned int tint, int maybe_shadow);
 
 int RenderStatsCreatureGridPage(int page_index);
 
@@ -1722,6 +1722,8 @@ int RunAdventureStatsMenu(void)
       break;
     }
   }
+  
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x0056335f

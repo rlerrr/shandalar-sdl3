@@ -239,9 +239,40 @@ static int asset_file_exists(const char *relative_path)
 }
 
 #ifdef __EMSCRIPTEN__
+static int ensure_parent_directories(const char *path)
+{
+  char parent[1024];
+  char *cursor;
+  char *slash;
+
+  if (!path)
+    return 0;
+  snprintf(parent, sizeof(parent), "%s", path);
+  slash = strrchr(parent, '/');
+  if (!slash)
+    return 1;
+  *slash = '\0';
+
+  cursor = parent;
+  if (*cursor == '/')
+    ++cursor;
+  while ((cursor = strchr(cursor, '/')) != NULL)
+  {
+    *cursor = '\0';
+    if (parent[0] != '\0')
+      mkdir(parent, 0777);
+    *cursor++ = '/';
+  }
+  if (parent[0] != '\0')
+    mkdir(parent, 0777);
+  return 1;
+}
+
 static int write_fetch_to_file(const char *path, const void *data, size_t size)
 {
   FILE *file = fopen(path, "wb");
+  if (!file && ensure_parent_directories(path))
+    file = fopen(path, "wb");
   if (!file)
     return 0;
   if (fwrite(data, 1, size, file) != size)

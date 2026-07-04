@@ -110,7 +110,7 @@ void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void LoadPcxIntoPage(int page_number, char *path);
 void LoadPcxIntoPageOpaque(int page_number, char *path);
 void LoadPcxIntoPageNoPalette(char *path);
-void ReadPalette(char *path, char *out_palette);
+struct PaletteLog *ReadPalette(char *path, char *out_palette);
 
 void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int src_w, int src_h,
                              FacemakerWindowBounds *src, int src_x, int src_y, int copy_w, int copy_h);
@@ -148,7 +148,7 @@ void ShowWorldMapScreen(int mode);
 void ShowDungeonCluesScreen(int unused);
 void ShowDungeonClueDetailScreen(int dungeon_index);
 int RestoreAdventureUiPaletteAndFocus(void);
-void RunAdventureStatsMenu(void);
+int RunAdventureStatsMenu(void);
 
 void DrawAdventureCard(int card_index, int x, int y, int full_card, char *banner_label);
 int internal_rand(int max_exclusive);
@@ -159,12 +159,12 @@ void DrawUiScaledCenteredTextNoShadow(FacemakerWindowBounds *window, int color_i
 int RecountDeckCardTotals(void);
 
 int AnimatePaletteToColor(int color_index, int palette_id);
-void SetFontStyleSize(int font_slot, unsigned int scaled_size);
+int SetFontStyleSize(int font_slot, unsigned int scaled_size);
 int GetFontLineHeight(int font_slot);
 void UnloadStatWinDllExports(void);
 int ShutdownSharedStartup(void);
 int FileExists(const char *filename);
-void FreeOpeningMenuSpriteWorkEntries(int work_entry_index_a, int work_entry_index_b);
+int FreeOpeningMenuSpriteWorkEntries(int work_entry_index_a, int work_entry_index_b);
 void PlaySoundEffectOnChannel(char *sound_path, int channel, int volume, int pitch_percent, int pan_percent);
 char *BuildCreatureNameWithArticle(int creature_type);
 void SetWorldMapPixelFlags(unsigned int mask, int x, int y);
@@ -224,8 +224,8 @@ void DrawCreaturePortrait(int creature_type, int x_320, int y_200, int tinted, i
 void PlayDuelMusic(int tune_index);
 void RemoveCardFromDeckById(unsigned int card_id);
 unsigned int RunCardBrowser(char *title, unsigned int color_mask, unsigned int type_mask, int reset_filters, int show_done_button);
-int QuestCardChooserCallback(void);
-void DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style);
+int QuestCardChooserCallback(int x, int y, int width, int height, int frame_style);
+int DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style);
 int HandleMainMenuButtonControlEvent(void *control_ptr, int event_type);
 int HandlePortraitMainMenuControlEvent(void *control_ptr, int event_type);
 void CopyGraphicsRect(FacemakerWindowBounds *src_page, int src_x, int src_y, int width, int height, FacemakerWindowBounds *dst_page,
@@ -238,7 +238,7 @@ int RestoreAdventureUiPaletteAndFocus(void);
 void ShowWorldMapScreen(int mode);
 void ShowCityInfoScreen(int unused);
 void ShowDungeonCluesScreen(int unused);
-void ShowStatsWindow(int mode, int highlight);
+int ShowStatsWindow(int mode, int highlight);
 
 void DrawTownMenuIconWithTooltip(int center_x, int center_y, int icon_index, int draw_mode, char *tooltip_text);
 int BeginMenuContext(void);
@@ -407,7 +407,7 @@ int g_town_hint_offer_slot_index;
 // GLOBAL: SHANDALAR 0x007481f0
 char g_town_button_labels[5][0x64];
 
-void VisitTownWiseman(void);
+int VisitTownWiseman(AdvMenuControl *control);
 
 int RenderBuyCardsDoneButton(AdvMenuControl *control, int mode);
 extern char g_town_leave_button_mode_colors[];
@@ -443,15 +443,15 @@ int s_empty_buy_card_banner_0058aeb8 = 0;
 int s_empty_buy_card_banner_0058aebc = 0;
 
 int RenderTownIconMenuControl(AdvMenuControl *control, int mode);
-void LeaveTownServicesMenu(void);
-void BuyFoodFromTown(void);
-void VisitTownWiseman(void);
-void BuyTownSpecialCardOffer(void);
-void OpenTownDeckBuilder(void);
-void OpenTownWorldMap(void);
-void OpenTownDungeonClues(void);
-void OpenTownAdventureStats(void);
-void RunTownBuyCardsScreen(void);
+int LeaveTownServicesMenu(AdvMenuControl *control);
+int BuyFoodFromTown(AdvMenuControl *control);
+int VisitTownWiseman(AdvMenuControl *control);
+int BuyTownSpecialCardOffer(AdvMenuControl *control);
+int OpenTownDeckBuilder(AdvMenuControl *control);
+int OpenTownWorldMap(AdvMenuControl *control);
+int OpenTownDungeonClues(AdvMenuControl *control);
+int OpenTownAdventureStats(AdvMenuControl *control);
+int RunTownBuyCardsScreen(AdvMenuControl *control);
 
 // GLOBAL: SHANDALAR 0x0058a890
 AdvMenuControl g_town_main_menu_controls[4] = {
@@ -975,15 +975,18 @@ int RenderTownIconMenuControl(AdvMenuControl *control, int mode)
 }
 
 // FUNCTION: SHANDALAR 0x004ef07e
-void LeaveTownServicesMenu(void)
+int LeaveTownServicesMenu(AdvMenuControl *control)
 {
+  (void)control;
   PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
   g_town_menu_result_state = -1;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f042c
-void BuyFoodFromTown(void)
+int BuyFoodFromTown(AdvMenuControl *control)
 {
+  (void)control;
   if (g_town_food_price <= Gold)
   {
     g_food = g_food + 10;
@@ -997,10 +1000,11 @@ void BuyFoodFromTown(void)
 
   // 0x0058aa34 == &g_town_icon_menu_controls[1]
   (void)RenderTownIconMenuControl(&g_town_icon_menu_controls[1], 1);
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f04c5
-void VisitTownWiseman(void)
+int VisitTownWiseman(AdvMenuControl *control)
 {
   char quest_spell_name[100];        /* -0x78 */
   TownDialogCallback saved_callback; /* -0x14 */
@@ -1024,7 +1028,7 @@ void VisitTownWiseman(void)
     (void)WaitForInputEventUnlessBlocked();
     AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
     g_town_menu_result_state = -2;
-    return;
+    return 0;
   }
 
   if (((g_current_quest_destination == -1) && (g_pending_quest_destination != -1)) &&
@@ -1138,14 +1142,16 @@ void VisitTownWiseman(void)
   (void)DrawAdventureInterfaceLayout(1);
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f18c0
-void BuyTownSpecialCardOffer(void)
+int BuyTownSpecialCardOffer(AdvMenuControl *control)
 {
   int town_index;
   int preferred_color;
 
+  (void)control;
   town_index = g_active_town_services_town_index;
   preferred_color = g_town_preferred_magic_color;
   BuyAnyCardFromTown(preferred_color, town_index);
@@ -1158,13 +1164,15 @@ void BuyTownSpecialCardOffer(void)
   /* Branchless selection of which town backdrop we use (0 or +0xc). */
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f1951
-void OpenTownDeckBuilder(void)
+int OpenTownDeckBuilder(AdvMenuControl *control)
 {
   int town_index;
 
+  (void)control;
   town_index = g_active_town_services_town_index;
   PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
@@ -1174,13 +1182,15 @@ void OpenTownDeckBuilder(void)
   DrawAdventureInterfaceLayout(1);
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f19e9
-void OpenTownWorldMap(void)
+int OpenTownWorldMap(AdvMenuControl *control)
 {
   int town_index;
 
+  (void)control;
   town_index = g_active_town_services_town_index;
   PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
   ShowWorldMapScreen(0);
@@ -1188,13 +1198,15 @@ void OpenTownWorldMap(void)
   DrawAdventureInterfaceLayout(1);
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f1a67
-void OpenTownDungeonClues(void)
+int OpenTownDungeonClues(AdvMenuControl *control)
 {
   int town_index;
 
+  (void)control;
   town_index = g_active_town_services_town_index;
   PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
   ShowDungeonCluesScreen(1);
@@ -1202,13 +1214,15 @@ void OpenTownDungeonClues(void)
   DrawAdventureInterfaceLayout(1);
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f1b4e
-void OpenTownAdventureStats(void)
+int OpenTownAdventureStats(AdvMenuControl *control)
 {
   int town_index;
 
+  (void)control;
   town_index = g_active_town_services_town_index;
   PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
   ClearInputAndWaitForMouseRelease();
@@ -1217,16 +1231,18 @@ void OpenTownAdventureStats(void)
   DrawAdventureInterfaceLayout(1);
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f0d09
-void RunTownBuyCardsScreen(void)
+int RunTownBuyCardsScreen(AdvMenuControl *control)
 {
   char *accept_scan;         /* -0x134 */
   int deck_slot;             /* -0x130 */
   int accepted;              /* -0x12c */
   char *accept_cursor;       /* -0x128 */
   int mouse_y;               /* -0x124 */
+  (void)control;
   int mouse_x;               /* -0x120 */
   int title_y_200;           /* -0x11c */
   int title_line_h;          /* -0x118 */
@@ -1449,6 +1465,7 @@ redraw_buy_cards_screen:
   g_town_menu_result_state = -2;
   FreeSpriteBlob(g_buy_cards_preview_panel_sprite);
   FreeSpriteBlob(g_buy_cards_done_button_sprites[0]);
+  return 0;
 }
 
 // FUNCTION: SHANDALAR 0x004f0b50
@@ -2266,6 +2283,9 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
   DWORD thread_exit_code;       /* ebp - 0x04 */
 
   (void)card_id;
+
+  // TODO: Remove. We win every duel currently
+  return 1;
 
   DAT_00742fc0 = 1;
   DestroyCachedCardArt();
@@ -4038,7 +4058,7 @@ loop:
 }
 
 // FUNCTION: SHANDALAR 0x00530b7e
-int QuestCardChooserCallback(void)
+int QuestCardChooserCallback(int x, int y, int width, int height, int frame_style)
 {
   // TODO(decomp): Callback used by the card-chooser UI while a "quest card marking" flow is active.
   return 0;

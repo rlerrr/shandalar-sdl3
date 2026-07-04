@@ -40,7 +40,7 @@ extern int g_wizard_siege_count;
 extern char g_ui_message_buffer[0x1000];
 extern char g_ini_string_scratch[0x28];
 
-void FreeOpeningMenuSpriteWorkEntries(int work_entry_index_a, int work_entry_index_b);
+int FreeOpeningMenuSpriteWorkEntries(int work_entry_index_a, int work_entry_index_b);
 char *BuildResolutionSpritePath(char *sprite_filename);
 int ReadSpriteEntryPointers(EncodedImage **out_sprite_entries, char *sprite_path);
 ShandalarEntryType PickRandomCreatureTypeForWizardTier(int wizard_color, int creature_tier);
@@ -67,11 +67,11 @@ DWORD FormatMessageFromStringStripCarriageReturns(char *dst, DWORD max_length, L
 unsigned int WaitForInputEventUnlessBlocked(void);
 void ClearInputAndWaitForMouseRelease(void);
 int IsWizardColorFeminine(int color_index);
-void ShowStatsWindow(int mode, int highlight);
+int ShowStatsWindow(int mode, int highlight);
 int AnimatePaletteToColor(int color_index, int palette_id);
 void LoadPcxIntoPageOpaque(int page_number, char *path);
 int ScaleUiCoordinate(int value);
-void SetFontStyleSize(int font_slot, unsigned int scaled_size);
+int SetFontStyleSize(int font_slot, unsigned int scaled_size);
 int GetFontLineHeight(int font_slot);
 void DrawFormattedTextShadowedCentered(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...);
 void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int src_w, int src_h,

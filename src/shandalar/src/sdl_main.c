@@ -25,6 +25,10 @@ extern int g_mouse_y;
 extern int g_mouse_button_down_mask;
 extern int g_mouse_button_released_mask;
 extern int g_ui_tick_count;
+extern int g_worker_should_exit;
+extern int g_worker_exit_code;
+extern int g_ui_ready;
+extern int g_mouse_button_down;
 
 int shandalar_runtime_init(const char *asset_root);
 void shandalar_runtime_shutdown(void);
@@ -223,6 +227,11 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   shandalar_win32_set_module_path(module_path);
   shandalar_set_default_font_root(asset_root);
   shandalar_win32_set_pump_proc(pump_facemaker_ui);
+  shandalar_win32_clear_quit_message();
+  g_worker_should_exit = 0;
+  g_worker_exit_code = 0;
+  g_ui_ready = 0;
+  g_mouse_button_down = 0;
   g_facemaker_host_active = 1;
 
   if (g_graphics_pages[0] || g_graphics_pages[1])

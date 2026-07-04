@@ -84,7 +84,7 @@ void DrawTextAt(FacemakerWindowBounds *dst, int text_id, int x, int y, char *tex
 int MeasureMultilineTextWidth(FacemakerWindowBounds *dst, char *text);
 int GetFontLineHeight(int font_slot);
 int GetFontStyleSize(int font_slot);
-void ApplyPortraitTintMap(FacemakerWindowBounds *dst, int x, int y, int w, int h, unsigned int tint, int maybe_shadow);
+int ApplyPortraitTintMap(FacemakerWindowBounds *dst, int x, int y, int w, int h, unsigned int tint, int maybe_shadow);
 
 void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int width, int height, EncodedImage *encoded_image);
 void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedImage *encoded_image);
@@ -124,7 +124,7 @@ void DrawCenteredTextLineClamped(char *text, int center_x, int y, int color_inde
 
 void ShowCityInfoScreen(int unused);
 
-void FormatMessageFromStringStripCarriageReturns(char *dst, int max_length, char *format, ...);
+DWORD FormatMessageFromStringStripCarriageReturns(char *dst, int max_length, char *format, ...);
 
 int RenderMapMenuControl(AdvMenuControl *control, int mode);
 int ActivateMapMenuControl(AdvMenuControl *control);

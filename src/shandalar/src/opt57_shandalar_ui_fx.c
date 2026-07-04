@@ -7,11 +7,15 @@
 #include <windows.h>
 #endif
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "facemaker/src/facemaker_types.h"
 
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow, int scale_to_screen, int center_x, int center_y,
                       int x, int y, int *format_and_args);
+int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
+                        int scale_to_screen, int center_x, int center_y,
+                        int x, int y, char *format, va_list args);
 void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int width, int height, EncodedImage *encoded_image);
 
 extern FontSlot g_font_slots[0x10];
@@ -29,31 +33,46 @@ int GetFontStyleSize(int font_slot)
 // FUNCTION: SHANDALAR 0x0057b440
 void __cdecl DrawFormattedTextNoShadow(FacemakerWindowBounds *dst, int text_color, int x, int y, char *format, ...)
 {
-  DrawTextFormatted(dst, text_color, 0, 0, 0, 0, x, y, (int *)&format);
+  va_list args;
+  va_start(args, format);
+  DrawTextFormattedVa(dst, text_color, 0, 0, 0, 0, x, y, format, args);
+  va_end(args);
 }
 
 // FUNCTION: SHANDALAR 0x0057b470
 void DrawLoadSaveButtonText(FacemakerWindowBounds *window, int color, int x, int y, ...)
 {
-  DrawTextFormatted(window, color, 0, 0, 0, 1, x, y, (int *)(&y + 1));
+  va_list args;
+  va_start(args, y);
+  DrawTextFormattedVa(window, color, 0, 0, 0, 1, x, y, "%s", args);
+  va_end(args);
 }
 
 // FUNCTION: SHANDALAR 0x0057b4a0
 void __cdecl DrawFormattedTextNoShadowCentered(FacemakerWindowBounds *dst, int text_color, int x, int y, char *format, ...)
 {
-  DrawTextFormatted(dst, text_color, 0, 0, 1, 1, x, y, (int *)&format);
+  va_list args;
+  va_start(args, format);
+  DrawTextFormattedVa(dst, text_color, 0, 0, 1, 1, x, y, format, args);
+  va_end(args);
 }
 
 // FUNCTION: SHANDALAR 0x0057b500
 void DrawWorldUiFormattedText(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...)
 {
-  DrawTextFormatted(window, color_index, 1, 0, 1, 0, x, y, (int *)&format);
+  va_list args;
+  va_start(args, format);
+  DrawTextFormattedVa(window, color_index, 1, 0, 1, 0, x, y, format, args);
+  va_end(args);
 }
 
 // FUNCTION: SHANDALAR 0x0057b5c0
 void __cdecl DrawUiScaledCenteredTextWithShadow(FacemakerWindowBounds *window, int color, int x, int y, char *format, ...)
 {
-  DrawTextFormatted(window, color, 1, 1, 1, 0, x, y, (int *)&format);
+  va_list args;
+  va_start(args, format);
+  DrawTextFormattedVa(window, color, 1, 1, 1, 0, x, y, format, args);
+  va_end(args);
 }
 // FUNCTION: SHANDALAR 0x0057c450
 void __cdecl GetEncodedImageSpanXExtents(EncodedImage *image, unsigned int *out_min_x, int *out_max_x)

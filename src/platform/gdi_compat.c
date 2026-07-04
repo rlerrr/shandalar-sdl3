@@ -1054,11 +1054,16 @@ static void draw_text_surface(HDC dc, SDL_Surface *surface, int draw_x, int draw
 {
   int x;
   int y;
+  if (!surface)
+    return;
   for (y = 0; y < surface->h && draw_y + y < clip_bottom; ++y) {
     for (x = 0; x < surface->w && draw_x + x < clip_right; ++x) {
-      uint32_t pixel = ((uint32_t *)((unsigned char *)surface->pixels +
-                                     y * surface->pitch))[x];
-      blend_text_pixel(dc, draw_x + x, draw_y + y, (unsigned char)(pixel >> 24));
+      Uint8 r;
+      Uint8 g;
+      Uint8 b;
+      Uint8 a;
+      if (SDL_ReadSurfacePixel(surface, x, y, &r, &g, &b, &a))
+        blend_text_pixel(dc, draw_x + x, draw_y + y, a);
     }
   }
 }
@@ -1080,6 +1085,8 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
   old_size = prepare_font_for_dc(dc);
   surface = TTF_RenderText_Blended(dc->font->font, utf8, (size_t)utf8_length, white);
   if (!surface) {
+    SDL_Log("gdi: TTF_RenderText_Blended failed for \"%.*s\": %s",
+            length, text, SDL_GetError());
     free(utf8);
     restore_font_size(dc, old_size);
     return FALSE;
@@ -1221,6 +1228,7 @@ static HFONT open_font(const LOGFONTA *description)
     TTF_SetFontStyle(result->font, style);
   }
   if (!result->font) {
+    SDL_Log("gdi: TTF_OpenFont failed: %s: %s", path, SDL_GetError());
     free(result);
     return NULL;
   }
@@ -1464,7 +1472,12 @@ const void *shandalar_dc_pixels(HDC dc, int *pitch)
 }
 void shandalar_set_default_font_root(const char *root)
 {
+  char *cursor;
   SDL_strlcpy(g_font_root, root ? root : "", sizeof(g_font_root));
+  for (cursor = g_font_root; *cursor; ++cursor) {
+    if (*cursor == '\\')
+      *cursor = '/';
+  }
 }
 
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)

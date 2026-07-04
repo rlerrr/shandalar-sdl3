@@ -19,10 +19,13 @@ add_executable(shandalar
   src/iniFile.c
   src/magic_runtime_stubs.c
   src/shandalar_global_strings.c
+  ../magic/src/global_duel_ui_ids.c
   ../magic/src/global_other.c
   ../magic/src/global_state.c
   ../magic/src/global_strings.c
   ../magic/src/shared_startup.c
+  ../magic/src/dummycards.c
+  ../magic/src/carddata.c
   ../deckdll/src/card_db.c
   ../deckdll/src/drm.c
   ../deckdll/src/magsnd_sdl_adapter.c
