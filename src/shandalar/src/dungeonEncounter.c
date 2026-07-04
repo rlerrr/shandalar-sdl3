@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +24,9 @@
 typedef unsigned char byte;
 typedef unsigned char uchar;
 typedef int undefined3;
+#ifndef bool
 typedef int bool;
+#endif
 #define DUNGEON_GRID_WIDTH 0xf
 #define DUNGEON_GRID_HEIGHT 0xd
 typedef int DungeonGrid[DUNGEON_GRID_WIDTH][DUNGEON_GRID_HEIGHT];
@@ -110,7 +116,6 @@ int ClampIntToRange(int value, int min_value, int max_value);
 int CountDuelPoolEligibleTowns(void);
 int EndMenuContext(void);
 int ExitIfNoUsableDeckCards(void);
-int single_color_test_bit_to_color_t(int mask);
 int PopNormalizedQueuedKeyInput(void);
 int PopulateDungeonCellEvents(void);
 void SetDungeonPassageHighlight(int direction, int enable);
@@ -156,8 +161,8 @@ unsigned int GetWorldTileType(int x, int y);
 unsigned int GetWorldMapPixelFlags(int x, int y);
 unsigned int LoadSoundWithDriveFallback(char *filename, int channel, int flags);
 unsigned int WaitForInputEventUnlessBlocked(void);
-void AnimatePaletteToColor(int color_index, int palette_id);
-void ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
+int AnimatePaletteToColor(int color_index, int palette_id);
+int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
 void ClearInputAndWaitForMouseRelease(void);
 void ConsumeUiTickCount(void);
 WPARAM WINAPI DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2);
@@ -166,7 +171,7 @@ void DrawCenteredTextLineWithShadow(char *text, int center_x, int y, int color_i
 void DrawFormattedTextShadowedCentered(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...);
 void DrawUiScaledCenteredText(char *text, int center_x_320, int y_200, int color_index);
 void DrawTiledDialogBoxFrame(int x, int y, int width, int height, int frame_style);
-void FadeInPaletteFromGray(int color_index, int palette_id);
+int FadeInPaletteFromGray(int color_index, int palette_id);
 void FreeOpeningMenuSpriteWorkEntries(int work_entry_index_a, int work_entry_index_b);
 void FreeSpriteBlob(EncodedImage *sprite_blob);
 void AddJournalEntry(int entry_type, int entry_arg);

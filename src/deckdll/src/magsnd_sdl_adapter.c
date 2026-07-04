@@ -13,9 +13,12 @@ extern int __cdecl UnloadAllSnds(void);
 extern int __cdecl PlaySnd(int num, Sound *snd);
 extern int __cdecl StopSnd(int num);
 extern int __cdecl SetSndMarker(int num, unsigned int marker);
+extern int __cdecl PlaySndMarker(int num, unsigned int marker);
+extern int __cdecl SetVol(int num, unsigned int vol);
 extern int __cdecl UpdateSnd(void);
 extern int __cdecl IsSndLoaded(int load_id, int *out_slot);
 extern int __cdecl GetLRUSnd(int *out_num, int start, int end);
+extern int __cdecl GetSndState(int num, unsigned int *out_state);
 
 int init_sound_dll(HWND hwnd, int unused, int flags)
 {
@@ -59,6 +62,16 @@ int set_sound_loop(int num, int marker)
   return SetSndMarker(num, (unsigned int)marker);
 }
 
+int sound_set_vol(int num, unsigned int vol)
+{
+  return SetVol(num, vol);
+}
+
+int play_snd_marker(int num, unsigned int marker)
+{
+  return PlaySndMarker(num, marker);
+}
+
 int sound_is_loaded(int load_id, int *out_slot)
 {
   return IsSndLoaded(load_id, out_slot);
@@ -67,6 +80,11 @@ int sound_is_loaded(int load_id, int *out_slot)
 int sound_get_lru(int *out_num, int start, int end)
 {
   return GetLRUSnd(out_num, start, end);
+}
+
+int sound_get_state(int num, int *out_state)
+{
+  return GetSndState(num, (unsigned int *)out_state);
 }
 
 int update_snd(void)

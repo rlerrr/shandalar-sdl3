@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,7 +96,6 @@ int DrawRandomCardFromInitialLibrary(int library_index);
 int ExitIfNoUsableDeckCards(void);
 int FindDeckSlotForQuestColorAndType(unsigned char color, int type);
 int FindNearestTownIndex(int world_x, int world_y);
-int single_color_test_bit_to_color_t(int mask);
 int GetRemainingAllowedCardCopies(unsigned int card_id);
 unsigned int FindWorldMagicCardIndex(int world_magic_slot_index);
 unsigned int GetWorldTileType(int x, int y);
@@ -130,7 +133,7 @@ int RunTextMenuAt(char *menu_text, int x, int y);
 int RunTextMenuAtScaled(char *menu_text, int x_320_scale, unsigned int y_200_scale);
 int ScaleUiCoordinate(int value);
 unsigned int WaitForInputEventUnlessBlocked(void);
-void AnimatePaletteToColor(int color_index, int palette_id);
+int AnimatePaletteToColor(int color_index, int palette_id);
 void BeginSpriteEncodeSession(void);
 void BlitRectByRandomTileOrderInPlace(HDC dst_dc, int dst_x, int dst_y, int width, int height, int tile_w, int tile_h, HDC src_dc);
 void ClearInputAndWaitForMouseRelease(void);
@@ -152,7 +155,7 @@ void DrawUiScaledCenteredText(char *text, int x, int y, int color_index);
 void DrawVisitScreenOverlays(FacemakerWindowBounds *window);
 void DrawWorldUiFormattedText(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...);
 void EnsureAdvfac64Loaded(int state);
-void FadeInPaletteFromGray(int color_index, int palette_id);
+int FadeInPaletteFromGray(int color_index, int palette_id);
 void FinalizeSpriteEncodeSession(void);
 void FreeSpriteBlob(EncodedImage *sprite_blob);
 int FreeOpeningMenuSpriteWorkEntries(int work_entry_index_a, int work_entry_index_b);

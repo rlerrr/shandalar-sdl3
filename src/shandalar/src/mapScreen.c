@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -67,7 +71,7 @@ EncodedImage *EncodeSpriteFromPage(int page_number, int x, int y, int width, int
 void FinalizeSpriteEncodeSession(void);
 void FreeSpriteBlob(void *memory);
 
-void ClearGraphicsPageWithPaletteColor(int page_number, int palette_index);
+int ClearGraphicsPageWithPaletteColor(int page_number, int palette_index);
 void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int src_w, int src_h,
                              FacemakerWindowBounds *src, int src_x, int src_y, int copy_w, int copy_h);
 void BlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int width, int height,

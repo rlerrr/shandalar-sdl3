@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#endif
+
 #include "defs.h"
 #include "shandalar.h"
 #include "magic/src/global_state.h"

@@ -294,8 +294,14 @@ GLOBAL_OTHERS_EXTERN int g_affected_card_context_stack[32][10];
 // GLOBAL: MAGIC 0x0093f4b4
 GLOBAL_OTHERS_EXTERN int unk_0093f4b4;
 
+#if defined(GLOBALS_OTHERS_IMPL) && defined(MAGIC)
 // GLOBAL: MAGIC 0x00925030
+HINSTANCE g_app_instance;
+#elif defined(GLOBALS_OTHERS_IMPL) && defined(SHANDALAR)
+extern HINSTANCE g_app_instance;
+#else
 GLOBAL_OTHERS_EXTERN HINSTANCE g_app_instance;
+#endif
 
 // GLOBAL: MAGIC 0x008cdab4
 // GLOBAL: SHANDALAR 0x008e1c34
@@ -319,6 +325,8 @@ GLOBAL_OTHERS_EXTERN int g_ai_recorded_action_type;
 #if defined(GLOBALS_OTHERS_IMPL) && defined(MAGIC)
 // GLOBAL: MAGIC 0x0057d9f0
 int global_screen_width = 0x280;
+#elif defined(GLOBALS_OTHERS_IMPL) && defined(SHANDALAR)
+extern int global_screen_width;
 #else
 GLOBAL_OTHERS_EXTERN int global_screen_width;
 #endif
@@ -326,6 +334,8 @@ GLOBAL_OTHERS_EXTERN int global_screen_width;
 #if defined(GLOBALS_OTHERS_IMPL) && defined(MAGIC)
 // GLOBAL: MAGIC 0x0057d9f4
 int global_screen_height = 0x1e0;
+#elif defined(GLOBALS_OTHERS_IMPL) && defined(SHANDALAR)
+extern int global_screen_height;
 #else
 GLOBAL_OTHERS_EXTERN int global_screen_height;
 #endif

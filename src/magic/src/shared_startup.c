@@ -9,6 +9,7 @@
 #include "cardartlib/src/assert.h"
 #include "cardartlib/src/palette.h"
 #include "deckdll/src/card_db.h"
+#include "deckdll/src/drm.h"
 #include "deckdll/src/shared_resources.h"
 #include "magic/src/global_strings.h"
 #include "magic/src/global_state.h"

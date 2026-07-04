@@ -37,6 +37,13 @@ if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR)
     FACEMAKER
     MODERN_FIXES
     SHANDALAR_SDL_WIN32_COMPAT
+    WinMain=FacemakerWinMain
+    ConsumeUiTickCount=FacemakerConsumeUiTickCount
+    MainWindowProc=FacemakerMainWindowProc
+    ChangeDisplayResolution=FacemakerChangeDisplayResolution
+    RestoreDisplayResolution=FacemakerRestoreDisplayResolution
+    g_app_instance=facemaker_g_app_instance
+    g_palette_class_registered=facemaker_g_palette_class_registered
     g_mouse_x=facemaker_g_mouse_x
     g_mouse_y=facemaker_g_mouse_y
     g_ui_tick_count=facemaker_g_ui_tick_count
@@ -54,6 +61,7 @@ if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR)
   )
   if(SHANDALAR_BUILD_SHANDALAR)
     target_compile_definitions(facemaker_legacy_ui PRIVATE
+      SHANDALAR_EMBEDDED_FACEMAKER
       SHANDALAR_FONTSLOT_LAYOUT
     )
   endif()

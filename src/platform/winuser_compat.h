@@ -3,16 +3,20 @@
 
 #include "platform/gdi_compat.h"
 
+#include <stdarg.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef LRESULT(CALLBACK *WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 typedef BOOL(CALLBACK *WNDENUMPROC)(HWND, LPARAM);
+typedef DWORD(CALLBACK *LPTHREAD_START_ROUTINE)(LPVOID);
 typedef intptr_t INT_PTR;
 typedef uintptr_t UINT_PTR;
 typedef INT_PTR(CALLBACK *DLGPROC)(HWND, UINT, WPARAM, LPARAM);
 typedef void(CALLBACK *TIMERPROC)(HWND, UINT, UINT_PTR, DWORD);
+typedef void(CALLBACK *LPTIMECALLBACK)(UINT, UINT, DWORD, DWORD, DWORD);
 typedef void *HRGN;
 
 typedef struct tagWNDCLASSA {
@@ -142,6 +146,7 @@ typedef struct tagWINDOWPOS {
 #define WS_THICKFRAME 0x00040000L
 #define WS_TABSTOP 0x00010000L
 #define WS_CHILDWINDOW WS_CHILD
+#define WS_EX_TOPMOST 0x00000008L
 
 #define SW_HIDE 0
 #define SW_SHOWNORMAL 1
@@ -178,6 +183,8 @@ typedef struct tagWINDOWPOS {
 #define SWP_NOACTIVATE 0x0010
 #define SWP_SHOWWINDOW 0x0040
 #define SWP_HIDEWINDOW 0x0080
+#define HWND_TOPMOST ((HWND)(intptr_t)-1)
+#define HWND_NOTOPMOST ((HWND)(intptr_t)-2)
 
 #define GWL_WNDPROC (-4)
 #define GWL_HINSTANCE (-6)
@@ -381,6 +388,17 @@ typedef struct tagWINDOWPOS {
 #define SC_MINIMIZE 0xf020
 #define SC_MOVE 0xf010
 #define LOCALE_SYSTEM_DEFAULT 0x0800
+#define GENERIC_READ 0x80000000u
+#define FILE_SHARE_READ 0x00000001u
+#define OPEN_EXISTING 3
+#define FILE_ATTRIBUTE_NORMAL 0x00000080u
+#define FILE_FLAG_SEQUENTIAL_SCAN 0x08000000u
+#define FILE_FLAG_DELETE_ON_CLOSE 0x04000000u
+#define VER_PLATFORM_WIN32_WINDOWS 1
+#define INFINITE 0xffffffffu
+#define WAIT_OBJECT_0 0
+#define WAIT_TIMEOUT 258
+#define STILL_ACTIVE 259
 
 #define SM_CXSCREEN 0
 #define SM_CYSCREEN 1
@@ -463,6 +481,7 @@ HWND GetDesktopWindow(void);
 HWND FindWindowA(LPCSTR class_name, LPCSTR window_name);
 HWND FindWindowExA(HWND parent, HWND child_after, LPCSTR class_name, LPCSTR window_name);
 BOOL GetCursorPos(POINT *point);
+BOOL SetCursorPos(int x, int y);
 HWND WindowFromPoint(POINT point);
 UINT_PTR SetTimer(HWND window, UINT_PTR id, UINT interval_ms, TIMERPROC proc);
 BOOL KillTimer(HWND window, UINT_PTR id);
@@ -520,10 +539,35 @@ DWORD GetCurrentDirectoryA(DWORD size, LPSTR buffer);
 BOOL SetCurrentDirectoryA(LPCSTR path);
 void Sleep(DWORD milliseconds);
 DWORD GetTickCount(void);
+HANDLE GetCurrentProcess(void);
+HANDLE GetCurrentThread(void);
+BOOL DuplicateHandle(HANDLE source_process, HANDLE source_handle,
+                     HANDLE target_process, HANDLE *target_handle,
+                     DWORD access, BOOL inherit, DWORD options);
 void ExitThread(DWORD exit_code);
 LONG ChangeDisplaySettingsA(DEVMODEA *dev_mode, DWORD flags);
+HANDLE CreateFileA(LPCSTR filename, DWORD desired_access, DWORD share_mode,
+                   LPSECURITY_ATTRIBUTES security_attributes,
+                   DWORD creation_disposition, DWORD flags_and_attributes,
+                   HANDLE template_file);
+DWORD GetFileSize(HANDLE file, DWORD *high_size);
+BOOL ReadFile(HANDLE file, LPVOID buffer, DWORD bytes_to_read,
+              DWORD *bytes_read, LPOVERLAPPED overlapped);
+BOOL DeviceIoControl(HANDLE device, DWORD io_control_code, LPVOID in_buffer,
+                     DWORD in_buffer_size, LPVOID out_buffer,
+                     DWORD out_buffer_size, DWORD *bytes_returned,
+                     LPOVERLAPPED overlapped);
+UINT GetDriveTypeA(LPCSTR root_path_name);
+UINT GetWindowsDirectoryA(LPSTR buffer, UINT size);
 UINT SetSystemPaletteUse(HDC dc, UINT use);
 BOOL GetSaveFileNameA(OPENFILENAMEA *open_file);
+DWORD FormatMessageA(DWORD flags, LPCVOID source, DWORD message_id, DWORD language_id,
+                     LPSTR buffer, DWORD size, va_list *arguments);
+UINT timeBeginPeriod(UINT period);
+UINT timeEndPeriod(UINT period);
+UINT timeSetEvent(UINT delay, UINT resolution, LPTIMECALLBACK callback,
+                  DWORD user, UINT event);
+UINT timeKillEvent(UINT timer_id);
 
 typedef BOOL (*ShandalarWin32PumpProc)(BOOL wait);
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc);
@@ -533,6 +577,8 @@ void shandalar_win32_clear_system_drag_endpoint(void);
 void shandalar_win32_set_cursor_position(int x, int y);
 void shandalar_win32_runtime_tick(void);
 void shandalar_win32_runtime_reset(void);
+void shandalar_win32_mm_timers_tick(void);
+void shandalar_win32_mm_timers_reset(void);
 LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
                                  LPARAM lparam, BOOL *handled);
 void shandalar_controls_reset(void);

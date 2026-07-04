@@ -1,6 +1,11 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
 #include <mmsystem.h>
 #include <direct.h>
+#endif
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +13,7 @@
 #include <time.h>
 #include <errno.h>
 
+#include "platform/legacy_io.h"
 #include "defs.h"
 #include "shandalar.h"
 #include "magic/src/global_duel_ui_ids.h"
@@ -26,6 +32,8 @@
 #include <drawcardlib/src/pic.h>
 
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
+void LoadPcxIntoPage(int page_number, char *path);
+DIBSurface *GetPrimaryPage(int unused);
 extern DIBSurface *g_graphics_pages[10];
 
 typedef struct
@@ -513,7 +521,7 @@ int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch
 int MeasureMultilineTextWidth(FacemakerWindowBounds *window_bounds, char *text);
 int SetFontStyleSize(int font_id, unsigned int style);
 void LoadPcxIntoPageNoPalette(char *path);
-void ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
+int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
 void CopyGraphicsRect(FacemakerWindowBounds *src, int src_x, int src_y, unsigned int width, int height,
                       FacemakerWindowBounds *dst, int dst_x, int dst_y);
 AdvMenuRect *PushGraphicsClipRect(AdvMenuRect *saved_clip_rect, FacemakerWindowBounds *page, int x, int y, int width, int height);
@@ -561,7 +569,7 @@ void ShowMouseCursor(void);
 void HideMouseCursor(void);
 int ReadSpriteEntryPointers(EncodedImage **out_sprite_entries, char *sprite_path);
 void FreeSpriteBlob(void *memory);
-void AnimatePaletteToColor(int color_index, int palette_id);
+int AnimatePaletteToColor(int color_index, int palette_id);
 int RunOpeningMenu(void);
 int RunDifficultyMenu(void);
 int RunColorMenu(void);
@@ -586,7 +594,7 @@ int SampleAnimatedNoiseGridBilinear(int x_fixed, int y_fixed);
 void SaveGameToSlot(int save_slot_index);
 int RunLoadGameMenu(void);
 int load_selected_duel_save_slot(int save_slot_index);
-int single_color_test_bit_to_color_t(int mask);
+color_t single_color_test_bit_to_color_t(color_test_t color_test);
 void AddJournalEntry(int entry_type, int entry_arg);
 int LoadStatWinDllExports(void);
 void LoadOpeningMenuSpriteResources(void);
@@ -661,7 +669,7 @@ void DrawTextLineNoShadow(char *text, int x, int y, int color_index);
 void DrawCenteredTextLineClamped(char *text, int center_x, int y, int color_index);
 int MeasureTextLineWidth(char *text);
 void DrawEncodedImageUiScaled(FacemakerWindowBounds *dst, int x_320, int y_200, EncodedImage *sprite, int width_320, int height_200);
-int FindWorldMagicCardIndex(int world_magic_slot_index);
+int FindWorldMagicCardIndex(shandalar_worldmagic_index_t world_magic_slot_index);
 void PushQueuedKeyInput(int key_code);
 int MapWorldClickToMovementKey(int x, int y);
 int RenderMenuControlRange(int first_index, int count);
@@ -3464,18 +3472,8 @@ int LoadStatWinDllExports(void)
     g_statwin_exports_by_ordinal[i] = 0;
   }
 
-  g_statwin_dll_module = LoadLibraryA("statwin.dll");
-  if (g_statwin_dll_module == (HANDLE)0)
-  {
-    return 1;
-  }
-
-  for (i = 0; i < 3; i = i + 1)
-  {
-    g_statwin_exports_by_ordinal[i] = (int)GetProcAddress((HMODULE)g_statwin_dll_module, (LPCSTR)((i + 1U) & 0xffff));
-  }
-
-  return 0;
+  g_statwin_dll_module = (HANDLE)0;
+  return 1;
 }
 
 // FUNCTION: SHANDALAR 0x004be4c4
@@ -5740,11 +5738,7 @@ void UnloadStatWinDllExports(void)
 {
   int i;
 
-  if (g_statwin_dll_module != (HANDLE)0)
-  {
-    FreeLibrary((HMODULE)g_statwin_dll_module);
-    g_statwin_dll_module = (HANDLE)0;
-  }
+  g_statwin_dll_module = (HANDLE)0;
 
   for (i = 0; i < 3; i = i + 1)
   {
@@ -6312,10 +6306,9 @@ char GetSoundAssetDriveLetter(void)
 unsigned int LoadSoundWithDriveFallback(char *filename, int channel, Sound *sound)
 {
 #ifdef MODERN_FIXES
-  char filename_copy[260];
-  strcpy(filename_copy, filename);
-  filename = filename_copy;
-#endif
+  sound_load(filename, channel, sound);
+  return 0;
+#else
 
   if (g_cached_cwd_initialized == 0)
   {
@@ -6338,6 +6331,7 @@ unsigned int LoadSoundWithDriveFallback(char *filename, int channel, Sound *soun
 
   sound_load(filename, channel, sound);
   return 0;
+#endif
 }
 
 // FUNCTION: SHANDALAR 0x00417dc6
@@ -6483,7 +6477,11 @@ void RestoreDisplayResolution(void)
 // FUNCTION: SHANDALAR 0x004cea02
 unsigned int InitializeSoundPresenceState(void)
 {
+#ifdef MODERN_FIXES
+  g_local_sound_missing = 0;
+#else
   g_local_sound_missing = (unsigned int)(FileExists("sound\\locmus1.wav") == 0);
+#endif
   _DAT_0074840c = 0;
   return 0;
 }
@@ -6612,22 +6610,13 @@ LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd)
 {
   char *slash;
-  char exe_cmd[264];
   HDC screen_hdc;
-  DWORD thread_id;
   int horzres;
   int resolution_option_matched;
   char game_dir[256];
-  DWORD bytes_per_sector;
-  DWORD total_number_of_clusters;
-  DWORD sectors_per_cluster;
-  int disk_free_bytes;
-  DWORD number_of_free_clusters;
-  char module_path[256];
   HWND existing_main;
   MSG msg;
   int show_shell_on_exit;
-  char cmd_copy[100];
   WNDCLASSA wndclass;
   HWND main_hwnd;
   int pad;
@@ -6636,7 +6625,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
   (void)prevInstance;
 
   show_shell_on_exit = 0;
-  strcpy(cmd_copy, cmdLine);
   g_shared_startup_lock_initialized = 0;
 
   existing_main = FindWindowA("ShandalarMainClass", (LPCSTR)0);
@@ -6659,18 +6647,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
     return 0;
   }
 
-  GetWindowsDirectoryA(module_path, 0x100);
-  module_path[3] = 0;
-  GetDiskFreeSpaceA(module_path, &sectors_per_cluster, &bytes_per_sector, &number_of_free_clusters,
-                    &total_number_of_clusters);
-
-  disk_free_bytes = number_of_free_clusters * sectors_per_cluster * bytes_per_sector;
-  if (disk_free_bytes / 0x20 / 0x400 / 0x400 == 0)
-  {
-    MessageBoxA((HWND)0, "We have determined that you may not have enough free swap file space to play Magic: The Gathering reliably.\nThis is just a warning, and you will be able to continue from here, but you may want to free space on your windows drive before you play.", "Low Memory/Swap File Space Warning",
-                0x30);
-  }
-
   srand(GetTickCount());
   set_global_base_directory(global_base_directory);
   _chdir(global_base_directory);
@@ -6690,7 +6666,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
   InitializeDuelUiGlobalIds();
 
   /* Switch to executable directory */
-#ifndef _DEBUG
+#if !defined(_DEBUG) && !defined(MODERN_FIXES)
   strcpy(game_dir, (*__p___argv())[0]);
   slash = strrchr(game_dir, '\\');
   *slash = '\0';
@@ -6717,6 +6693,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
     return 0;
   }
 
+#ifdef MODERN_FIXES
+  global_screen_width = 0x400;
+  global_screen_height = 0x300;
+  PTR_s_advinter800_pic_00589de8 = "advinter1024.pic";
+  CreateGraphicsPage(0, global_screen_width, global_screen_height, 8);
+  show_shell_on_exit = 1;
+  g_page0_window_bounds->max_x = global_screen_width - 1;
+  g_page0_window_bounds->max_y = global_screen_height - 1;
+#else
   atexit(RestoreDisplayResolution);
 
   if (0x400 < GetDeviceCaps(GetDC((HWND)0), 8))
@@ -6792,6 +6777,7 @@ cmd_parse:
     g_page0_window_bounds->max_x = global_screen_width - 1;
     g_page0_window_bounds->max_y = global_screen_height - 1;
   }
+#endif
 #ifdef _DEBUG
   // Annoying trying to debug with window always on top
   main_hwnd = CreateWindowExA(0, "ShandalarMainClass", "Magic: Shandalar", 0x80000000, 0, 0,
@@ -6842,7 +6828,8 @@ cmd_parse:
     g_shared_startup_lock_initialized = 1;
   }
 
-  g_loader_thread_handle = CreateThread((LPSECURITY_ATTRIBUTES)0, 0x2000, AdventureWorkerThread, (LPVOID)0, 0, &thread_id);
+  g_loader_thread_handle = (HANDLE)0;
+  AdventureWorkerThread((LPVOID)0);
 
   while (GetMessageA(&msg, (HWND)0, 0, 0))
   {
@@ -6864,14 +6851,6 @@ cmd_parse:
   SetSystemPaletteUse(screen_hdc, 1);
   RealizePalette(screen_hdc);
   ReleaseDC((HWND)0, screen_hdc);
-
-  if (_strnicmp(cmd_copy, "/MTGshell", 8) == 0)
-  {
-    strcpy(exe_cmd, global_base_directory);
-    strcat(exe_cmd, "\\Magic.exe");
-    strcat(exe_cmd, " /start3,1");
-    WinExec(exe_cmd, 5);
-  }
 
   return (int)msg.wParam;
 }

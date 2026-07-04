@@ -382,6 +382,7 @@ BOOL PeekMessageA(MSG *message, HWND window, UINT min_message, UINT max_message,
   if (!message)
     return FALSE;
   shandalar_win32_runtime_tick();
+  shandalar_win32_mm_timers_tick();
   for (i = 0; i < g_queue_count; ++i) {
     size_t index = (g_queue_head + i) % MESSAGE_QUEUE_CAPACITY;
     if (message_matches(&g_queue[index], window, min_message, max_message)) {
@@ -958,4 +959,5 @@ void shandalar_win32_reset(void)
   g_has_system_drag_endpoint = 0;
   shandalar_controls_reset();
   shandalar_win32_runtime_reset();
+  shandalar_win32_mm_timers_reset();
 }

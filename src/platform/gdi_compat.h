@@ -31,9 +31,11 @@ typedef intptr_t LRESULT;
 typedef uint32_t COLORREF;
 typedef char CHAR;
 typedef const char *LPCSTR;
+typedef const void *LPCVOID;
 typedef char *LPSTR;
 typedef char *PSTR;
 typedef void *LPVOID;
+typedef void *LPOVERLAPPED;
 typedef void *FARPROC;
 typedef void *LPSECURITY_ATTRIBUTES;
 typedef void *HANDLE;
@@ -196,6 +198,7 @@ typedef struct MEASUREITEMSTRUCT {
 #define ODS_FOCUS 0x0010
 #define ODT_LISTBOX 2
 
+#define MAKEWORD(low, high) ((WORD)(((BYTE)(low)) | ((WORD)((BYTE)(high)) << 8)))
 #define RGB(r,g,b) ((COLORREF)((BYTE)(r) | ((DWORD)(BYTE)(g) << 8) | ((DWORD)(BYTE)(b) << 16)))
 #define PALETTEINDEX(i) ((COLORREF)(0x01000000u | ((DWORD)(i) & 0xffffu)))
 #define PALETTERGB(r,g,b) (RGB((r),(g),(b)) | 0x02000000u)
@@ -221,6 +224,7 @@ int WINAPI shandalar_GetObjectA(HGDIOBJ object, int size, void *out);
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop);
 BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy, int sw, int sh, DWORD rop);
 COLORREF GetPixel(HDC dc, int x, int y);
+COLORREF SetPixel(HDC dc, int x, int y, COLORREF color);
 BOOL SetPixelV(HDC dc, int x, int y, COLORREF color);
 int FillRect(HDC dc, const RECT *rect, HBRUSH brush);
 HBRUSH CreateSolidBrush(COLORREF color);
@@ -299,6 +303,7 @@ DWORD GetPrivateProfileStringA(LPCSTR section, LPCSTR key, LPCSTR default_value,
 BOOL WritePrivateProfileStringA(LPCSTR section, LPCSTR key, LPCSTR value, LPCSTR filename);
 BOOL GetVersionExA(OSVERSIONINFOA *version_info);
 void OutputDebugStringA(LPCSTR message);
+#define OutputDebugString OutputDebugStringA
 int wsprintfA(LPSTR buffer, LPCSTR format, ...);
 int lstrlenA(LPCSTR text);
 #define wsprintf wsprintfA
@@ -314,6 +319,9 @@ BOOL GlobalUnlock(void *memory);
 void *GlobalHandle(void *memory);
 void *GlobalFree(void *memory);
 BOOL GdiFlush(void);
+DWORD GdiGetBatchLimit(void);
+DWORD GdiSetBatchLimit(DWORD limit);
+void checked_DeleteDC_DeleteObject(HDC dc, HGDIOBJ obj);
 int GetDeviceCaps(HDC dc, int index);
 void InitializeCriticalSection(CRITICAL_SECTION *section);
 void DeleteCriticalSection(CRITICAL_SECTION *section);

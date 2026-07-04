@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -12,6 +16,7 @@
 #include "magic/src/shared_startup.h"
 #include "magic/src/duel_engine.h"
 #include "shandalar_global_strings.h"
+#include "deckdll/src/drm.h"
 #include "deckdll/src/magsnd.h"
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
@@ -153,7 +158,7 @@ void ShowTownHintTextPopup(int hint_index);
 void DrawUiScaledCenteredTextNoShadow(FacemakerWindowBounds *window, int color_index, int x, int y, char *text);
 int RecountDeckCardTotals(void);
 
-void AnimatePaletteToColor(int color_index, int palette_id);
+int AnimatePaletteToColor(int color_index, int palette_id);
 void SetFontStyleSize(int font_slot, unsigned int scaled_size);
 int GetFontLineHeight(int font_slot);
 void UnloadStatWinDllExports(void);
@@ -2257,10 +2262,7 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
 {
   HDC desktop_dc;               /* ebp - 0x1c */
   int was_topmost;              /* ebp - 0x18 */
-  int old_main_thread_priority; /* ebp - 0x14 */
-  HANDLE duel_thread;           /* ebp - 0x10 */
   int deck_slot;                /* ebp - 0x0c */
-  DWORD thread_id;              /* ebp - 0x08 */
   DWORD thread_exit_code;       /* ebp - 0x04 */
 
   (void)card_id;
@@ -2272,9 +2274,6 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
 
   if (thread_exit_code == 2)
   {
-    old_main_thread_priority = GetThreadPriority(g_main_thread_handle);
-    SetThreadPriority(g_main_thread_handle, -0xf);
-
     if ((GetWindowLong(g_main_window_hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0)
     {
       was_topmost = 1;
@@ -2289,17 +2288,12 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
       SetWindowPos(g_main_window_hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
 
-    duel_thread = CreateThread((LPSECURITY_ATTRIBUTES)0, 0, RunDuelEngineThreadProc, (LPVOID)creature_type, 0, &thread_id);
-    WaitForSingleObject(duel_thread, INFINITE);
-    GetExitCodeThread(duel_thread, &thread_exit_code);
-    CloseHandle(duel_thread);
+    thread_exit_code = RunDuelEngineThreadProc((LPVOID)creature_type);
 
     if (was_topmost != 0)
     {
       SetWindowPos(g_main_window_hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
-
-    SetThreadPriority(g_main_thread_handle, old_main_thread_priority);
 
     if (g_one_deck_mode == 0)
     {
@@ -3425,7 +3419,7 @@ LAB_00531ee7:
       WaitForInputEventUnlessBlocked();
       RevealRandomCastleDungeonClue(dungeon_index);
       RefreshAdventureInterfaceLayout();
-      return;
+      return 0;
     }
   case 2:
     if (g_next_duel_card_id == -1)
@@ -3443,7 +3437,7 @@ LAB_00531ee7:
                               ScaleUiCoordinate(0x13c) - GetFontLineHeight(g_page0_window_bounds->font_slot) * 7, g_ui_message_buffer);
     ClearInputAndWaitForMouseRelease();
     WaitForInputEventUnlessBlocked();
-    return;
+    return 0;
 
   LAB_005324c3:
   case 3:
@@ -3455,7 +3449,7 @@ LAB_00531ee7:
     WaitForInputEventUnlessBlocked();
     WisemanChooseLairCreatureAndSetupDuel((unsigned char)preferred_color);
     RefreshAdventureInterfaceLayout();
-    return;
+    return 0;
 
   case 4:
     if (g_next_duel_card_id == -1)
@@ -3472,7 +3466,7 @@ LAB_00531ee7:
                               ScaleUiCoordinate(0x13c) - GetFontLineHeight(g_page0_window_bounds->font_slot) * 7, g_ui_message_buffer);
     ClearInputAndWaitForMouseRelease();
     WaitForInputEventUnlessBlocked();
-    return;
+    return 0;
   default:
     sprintf(g_ui_message_buffer + strlen(g_ui_message_buffer), gs_wiseman_0074d840[0x11], gs_amuletnames_plural_0077edd0[preferred_color]);
     g_page0_window_bounds->font_slot = 1;
@@ -3499,7 +3493,7 @@ LAB_00531ee7:
       deck[selected_deck_slot] = deck[selected_deck_slot] | 0x4000;
     }
     RefreshAdventureInterfaceLayout();
-    return;
+    return 0;
   }
 }
 

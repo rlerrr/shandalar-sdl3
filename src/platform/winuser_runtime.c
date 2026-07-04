@@ -26,6 +26,12 @@ BOOL GetCursorPos(POINT *point)
   return TRUE;
 }
 
+BOOL SetCursorPos(int x, int y)
+{
+  shandalar_win32_set_cursor_position(x, y);
+  return TRUE;
+}
+
 void shandalar_win32_set_cursor_position(int x, int y)
 {
   g_cursor.x = x;

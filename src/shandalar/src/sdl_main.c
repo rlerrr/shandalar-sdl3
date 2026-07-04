@@ -28,13 +28,10 @@ extern int g_ui_tick_count;
 
 int shandalar_runtime_init(const char *asset_root);
 void shandalar_runtime_shutdown(void);
-int RunOpeningMenu(void);
-int RunDifficultyMenu(void);
-int RunColorMenu(void);
-int RunLoadGameMenu(void);
-int RunFacemakerFlow(void);
+void ShutdownGraphicsSystem(void);
 void PushQueuedKeyInput(int key_code);
 extern int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
+extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
@@ -196,6 +193,9 @@ static void present_frame(void)
 
 int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root)
 {
+  HDC shandalar_hdc = global_main_hdc;
+  int shandalar_width = global_screen_width;
+  int shandalar_height = global_screen_height;
   char module_path[1024];
   char cmd_line[16] = "/S";
   int result;
@@ -225,12 +225,18 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   shandalar_win32_set_pump_proc(pump_facemaker_ui);
   g_facemaker_host_active = 1;
 
-  result = WinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
+  if (g_graphics_pages[0] || g_graphics_pages[1])
+    ShutdownGraphicsSystem();
+
+  result = FacemakerWinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
 
   g_facemaker_host_active = 0;
   shandalar_win32_set_pump_proc(NULL);
   shandalar_win32_imgui_shutdown();
-  shandalar_win32_reset();
+  ShutdownGraphicsSystem();
+  global_main_hdc = shandalar_hdc;
+  global_screen_width = shandalar_width;
+  global_screen_height = shandalar_height;
   SDL_StopTextInput(g_window);
   SDL_StartTextInput(g_window);
   SDL_SetWindowTitle(g_window, "Magic: Shandalar");
@@ -286,6 +292,8 @@ void shandalar_host_pump(void)
       break;
     }
   }
+  shandalar_win32_runtime_tick();
+  shandalar_win32_mm_timers_tick();
   ++g_ui_tick_count;
   present_frame();
 #ifdef __EMSCRIPTEN__
@@ -295,56 +303,18 @@ void shandalar_host_pump(void)
 #endif
 }
 
-static int run_setup_flow(void)
+static BOOL pump_shandalar_win32_ui(BOOL wait)
 {
-  int mode;
-  int difficulty;
-  int color;
-  int male;
-  for (;;) {
-    if (g_quit_requested)
-      return 0;
-    mode = RunOpeningMenu();
-    if (mode == 4) {
-      g_quit_requested = 1;
-      return 0;
-    }
-    if (mode == 1) {
-      RunLoadGameMenu();
-      continue;
-    }
-    if (mode != 0)
-      continue;
-    for (;;) {
-      difficulty = RunDifficultyMenu();
-      if (difficulty < 0 || g_quit_requested)
-        break;
-      for (;;) {
-        color = RunColorMenu();
-        if (color < 0 || g_quit_requested)
-          break;
-        g_selected_wizard_color = color;
-        g_starting_color = color;
-        male = RunFacemakerFlow();
-        if (male >= 0 || g_quit_requested) {
-          if (male >= 0) {
-            g_shandalar_difficulty = difficulty;
-            g_deck_color_bitmap = 1 << ((unsigned char)g_selected_wizard_color & 0xff);
-            g_skip_new_game_state_initialization = 0;
-            g_world_scene_reveal_effect_pending = 1;
-            Gold = (5 - g_shandalar_difficulty) * 0x32;
-            DAT_00591214 = 0;
-          }
-          return 0;
-        }
-      }
-    }
-  }
+  (void)wait;
+  shandalar_host_pump();
+  return !g_quit_requested;
 }
 
 int main(int argc, char **argv)
 {
+  char cmd_line[1] = "";
   const char *asset_root = argc > 1 ? argv[1] : "C:/Magic/Program";
+  int result;
 #ifdef __EMSCRIPTEN__
   asset_root = argc > 1 ? argv[1] : "/assets";
 #endif
@@ -352,6 +322,8 @@ int main(int argc, char **argv)
     return 1;
   if (!shandalar_runtime_init(asset_root))
     return 1;
+  global_screen_width = 0x400;
+  global_screen_height = 0x300;
   if (!SDL_CreateWindowAndRenderer("Magic: Shandalar", global_screen_width,
                                    global_screen_height, SDL_WINDOW_RESIZABLE,
                                    &g_window, &g_renderer))
@@ -361,14 +333,18 @@ int main(int argc, char **argv)
   if (!ensure_framebuffer(global_screen_width, global_screen_height))
     return 1;
   SDL_StartTextInput(g_window);
-  run_setup_flow();
-  while (!g_quit_requested)
-    shandalar_host_pump();
+  shandalar_win32_set_pump_proc(pump_shandalar_win32_ui);
+  result = WinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
+  shandalar_win32_set_pump_proc(NULL);
+  ShutdownGraphicsSystem();
+  shandalar_win32_reset();
+  shandalar_win32_mm_timers_reset();
+  global_main_hdc = NULL;
   SDL_free(g_rgba);
   SDL_DestroyTexture(g_texture);
   SDL_DestroyRenderer(g_renderer);
   SDL_DestroyWindow(g_window);
   shandalar_runtime_shutdown();
   SDL_Quit();
-  return 0;
+  return result;
 }

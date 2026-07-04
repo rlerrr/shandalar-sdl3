@@ -1,7 +1,11 @@
 // Optimized helpers from the 0x0057xxxx region that are implemented only in
 // SHANDALAR, but were originally scattered across multiple UI modules.
 
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdlib.h>
 
 #include "facemaker/src/facemaker_types.h"

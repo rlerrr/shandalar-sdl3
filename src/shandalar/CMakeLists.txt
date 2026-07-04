@@ -1,13 +1,42 @@
 add_executable(shandalar
   src/sdl_main.c
-  src/runtime.c
+  src/shandalar.c
   src/opt57_shandalar_core.c
+  src/opt57_shandalar_only.c
+  src/opt57_shandalar_ui_fx.c
   src/openingMenu.c
+  src/adventureWorldUi.c
+  src/world_lair_monster_slots.c
+  src/world_lair_monster_encounter.c
+  src/visitLocation.c
+  src/dungeonEncounter.c
+  src/adventureStats.c
+  src/mapScreen.c
+  src/cityInfoScreen.c
+  src/dungeonCluesScreen.c
+  src/hintText.c
+  src/adventureListPicker.c
   src/iniFile.c
-  ../magic/src/shandalar_opening_globals.c
+  src/magic_runtime_stubs.c
+  src/shandalar_global_strings.c
+  ../magic/src/global_other.c
+  ../magic/src/global_state.c
+  ../magic/src/global_strings.c
+  ../magic/src/shared_startup.c
+  ../deckdll/src/card_db.c
+  ../deckdll/src/drm.c
+  ../deckdll/src/magsnd_sdl_adapter.c
 )
 
-target_compile_definitions(shandalar PRIVATE MODERN_FIXES SHANDALAR)
+target_compile_definitions(shandalar PRIVATE
+  MODERN_FIXES
+  SHANDALAR
+  SHANDALAR_SDL_WIN32_COMPAT
+  LoadPcxIntoPageNoPalette=ShandalarLoadPcxIntoPageNoPalette
+)
+if(EMSCRIPTEN)
+  target_compile_options(shandalar PRIVATE -include platform/legacy_io.h)
+endif()
 target_include_directories(shandalar PRIVATE
   "${SHANDALAR_SRC_ROOT}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -15,6 +44,9 @@ target_include_directories(shandalar PRIVATE
 target_link_libraries(shandalar PRIVATE
   facemaker_legacy_ui
   facemaker_win32_imgui_bridge
+  cardart_static
+  drawcard_shandalar
+  magsnd_static
   SDL3::SDL3
   SDL3_ttf::SDL3_ttf
 )

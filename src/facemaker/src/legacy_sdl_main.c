@@ -11,7 +11,7 @@
 #include <emscripten.h>
 #endif
 
-extern int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
+extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
   shandalar_set_default_font_root(asset_root);
   shandalar_win32_set_pump_proc(pump_facemaker_ui);
 
-  result = WinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
+  result = FacemakerWinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
 
   shandalar_win32_imgui_shutdown();
   shandalar_win32_reset();

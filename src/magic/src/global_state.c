@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "platform/legacy_io.h"
+#include "platform/winreg_compat.h"
 
 #include "magic/src/game_support.h"
 #include "magic/src/global_duel_ui_ids.h"
@@ -553,7 +554,7 @@ unsigned int save_or_load_ver1(void)
   result &= save_or_load_data(&g_ai_search_flags, 4);
   result &= save_or_load_data(&DAT_007a7c60, 100);
   result &= save_or_load_data(g_life, 8);
-  result &= save_or_load_data(&DAT_007abce0, 8);
+  result &= save_or_load_data(g_poison_counters, 8);
   result &= save_or_load_data(&DAT_00938e38, 8);
   result &= save_or_load_data(unk_007a7d80, 0x10);
   result &= save_or_load_data(&g_current_player, 4);
@@ -760,7 +761,7 @@ unsigned int save_or_load_ver2(void)
   result &= save_or_load_data(&g_ai_search_flags, 4);
   result &= save_or_load_data(&DAT_007a7c60, 100);
   result &= save_or_load_data(g_life, 8);
-  result &= save_or_load_data(&DAT_007abce0, 8);
+  result &= save_or_load_data(g_poison_counters, 8);
   result &= save_or_load_data(unk_008b44d0, 8);
   result &= save_or_load_data(&DAT_00938e38, 8);
   result &= save_or_load_data(unk_007a7d80, 0x10);

@@ -1,9 +1,13 @@
 #include "platform/winuser_compat.h"
+#ifndef _WIN32
+#include "platform/legacy_io.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -18,6 +22,7 @@ typedef struct ProcEntry {
 
 static ProcEntry *g_procs;
 static int g_main_module;
+static int g_process_sentinel;
 
 static char *duplicate_string(const char *value)
 {
@@ -105,6 +110,31 @@ DWORD GetTickCount(void)
   return (DWORD)SDL_GetTicks();
 }
 
+HANDLE GetCurrentProcess(void)
+{
+  return (HANDLE)&g_process_sentinel;
+}
+
+HANDLE GetCurrentThread(void)
+{
+  return (HANDLE)(uintptr_t)SDL_GetCurrentThreadID();
+}
+
+BOOL DuplicateHandle(HANDLE source_process, HANDLE source_handle,
+                     HANDLE target_process, HANDLE *target_handle,
+                     DWORD access, BOOL inherit, DWORD options)
+{
+  (void)source_process;
+  (void)target_process;
+  (void)access;
+  (void)inherit;
+  (void)options;
+  if (!target_handle)
+    return FALSE;
+  *target_handle = source_handle;
+  return TRUE;
+}
+
 void ExitThread(DWORD exit_code)
 {
   (void)exit_code;
@@ -117,10 +147,259 @@ LONG ChangeDisplaySettingsA(DEVMODEA *dev_mode, DWORD flags)
   return 0;
 }
 
+HANDLE CreateFileA(LPCSTR filename, DWORD desired_access, DWORD share_mode,
+                   LPSECURITY_ATTRIBUTES security_attributes,
+                   DWORD creation_disposition, DWORD flags_and_attributes,
+                   HANDLE template_file)
+{
+  FILE *file;
+  (void)desired_access;
+  (void)share_mode;
+  (void)security_attributes;
+  (void)creation_disposition;
+  (void)flags_and_attributes;
+  (void)template_file;
+#ifdef _WIN32
+  file = fopen(filename, "rb");
+#else
+  file = shandalar_fopen(filename, "rb");
+#endif
+  return file ? (HANDLE)file : INVALID_HANDLE_VALUE;
+}
+
+DWORD GetFileSize(HANDLE file, DWORD *high_size)
+{
+  FILE *stream = (FILE *)file;
+  long current;
+  long end;
+  if (high_size)
+    *high_size = 0;
+  if (!stream || stream == (FILE *)INVALID_HANDLE_VALUE)
+    return 0xffffffffu;
+  current = ftell(stream);
+  if (fseek(stream, 0, SEEK_END) != 0)
+    return 0xffffffffu;
+  end = ftell(stream);
+  fseek(stream, current, SEEK_SET);
+  return end < 0 ? 0xffffffffu : (DWORD)end;
+}
+
+BOOL ReadFile(HANDLE file, LPVOID buffer, DWORD bytes_to_read,
+              DWORD *bytes_read, LPOVERLAPPED overlapped)
+{
+  FILE *stream = (FILE *)file;
+  size_t count;
+  (void)overlapped;
+  if (bytes_read)
+    *bytes_read = 0;
+  if (!stream || stream == (FILE *)INVALID_HANDLE_VALUE || !buffer)
+    return FALSE;
+  count = fread(buffer, 1, bytes_to_read, stream);
+  if (bytes_read)
+    *bytes_read = (DWORD)count;
+  return count == bytes_to_read || feof(stream);
+}
+
+BOOL DeviceIoControl(HANDLE device, DWORD io_control_code, LPVOID in_buffer,
+                     DWORD in_buffer_size, LPVOID out_buffer,
+                     DWORD out_buffer_size, DWORD *bytes_returned,
+                     LPOVERLAPPED overlapped)
+{
+  (void)device;
+  (void)io_control_code;
+  (void)in_buffer;
+  (void)in_buffer_size;
+  (void)out_buffer;
+  (void)out_buffer_size;
+  (void)overlapped;
+  if (bytes_returned)
+    *bytes_returned = 0;
+  return FALSE;
+}
+
+UINT GetDriveTypeA(LPCSTR root_path_name)
+{
+  (void)root_path_name;
+  return 3;
+}
+
+UINT GetWindowsDirectoryA(LPSTR buffer, UINT size)
+{
+  if (!buffer || size == 0)
+    return 0;
+  SDL_strlcpy(buffer, "C:\\Windows", size);
+  return (UINT)strlen(buffer);
+}
+
+DWORD FormatMessageA(DWORD flags, LPCVOID source, DWORD message_id, DWORD language_id,
+                     LPSTR buffer, DWORD size, va_list *arguments)
+{
+  const char *format = (const char *)source;
+  const char *scan;
+  uintptr_t inserts[16];
+  DWORD out = 0;
+  int max_insert = 0;
+  int i;
+  (void)flags;
+  (void)message_id;
+  (void)language_id;
+  if (!format || !buffer || size == 0)
+    return 0;
+
+  for (i = 0; i < 16; ++i)
+    inserts[i] = 0;
+  for (scan = format; *scan; ++scan) {
+    if (*scan == '%' && isdigit((unsigned char)scan[1])) {
+      int index = 0;
+      ++scan;
+      while (isdigit((unsigned char)*scan)) {
+        index = index * 10 + (*scan - '0');
+        ++scan;
+      }
+      if (index > max_insert && index <= 16)
+        max_insert = index;
+      if (*scan == '\0')
+        break;
+    }
+  }
+  if (arguments) {
+    va_list args_copy;
+    va_copy(args_copy, *arguments);
+    for (i = 0; i < max_insert; ++i)
+      inserts[i] = va_arg(args_copy, uintptr_t);
+    va_end(args_copy);
+  }
+
+  while (*format && out + 1 < size) {
+    if (*format != '%' || format[1] == '\0') {
+      buffer[out++] = *format++;
+      continue;
+    }
+    ++format;
+    if (*format == '%') {
+      buffer[out++] = *format++;
+      continue;
+    }
+    if (isdigit((unsigned char)*format)) {
+      int index = 0;
+      char specifier = 's';
+      while (isdigit((unsigned char)*format)) {
+        index = index * 10 + (*format - '0');
+        ++format;
+      }
+      if (*format == '!') {
+        ++format;
+        if (*format)
+          specifier = (char)tolower((unsigned char)*format);
+        while (*format && *format != '!')
+          ++format;
+        if (*format == '!')
+          ++format;
+      }
+      if (index > 0 && index <= 16) {
+        char scratch[64];
+        const char *text = (const char *)inserts[index - 1];
+        if (specifier == 'd' || specifier == 'i') {
+          SDL_snprintf(scratch, sizeof(scratch), "%d", (int)inserts[index - 1]);
+          text = scratch;
+        } else if (specifier == 'u') {
+          SDL_snprintf(scratch, sizeof(scratch), "%u", (unsigned int)inserts[index - 1]);
+          text = scratch;
+        }
+        if (text) {
+          while (*text && out + 1 < size)
+            buffer[out++] = *text++;
+        }
+      }
+      continue;
+    }
+    buffer[out++] = '%';
+  }
+  buffer[out] = '\0';
+  return out;
+}
+
 UINT SetSystemPaletteUse(HDC dc, UINT use)
 {
   (void)dc;
   return use;
+}
+
+UINT timeBeginPeriod(UINT period) { (void)period; return 0; }
+UINT timeEndPeriod(UINT period) { (void)period; return 0; }
+
+#define MAX_COMPAT_MM_TIMERS 16
+
+typedef struct CompatMmTimer {
+  UINT id;
+  UINT interval;
+  LPTIMECALLBACK callback;
+  DWORD user;
+  UINT event;
+  uint64_t next_tick;
+} CompatMmTimer;
+
+static CompatMmTimer g_mm_timers[MAX_COMPAT_MM_TIMERS];
+static UINT g_next_mm_timer_id = 1;
+
+UINT timeSetEvent(UINT delay, UINT resolution, LPTIMECALLBACK callback,
+                  DWORD user, UINT event)
+{
+  size_t i;
+  (void)resolution;
+  if (!callback)
+    return 0;
+  if (!delay)
+    delay = 1;
+  for (i = 0; i < MAX_COMPAT_MM_TIMERS; ++i) {
+    CompatMmTimer *timer = &g_mm_timers[i];
+    if (!timer->id) {
+      timer->id = g_next_mm_timer_id++;
+      if (!g_next_mm_timer_id)
+        g_next_mm_timer_id = 1;
+      timer->interval = delay;
+      timer->callback = callback;
+      timer->user = user;
+      timer->event = event;
+      timer->next_tick = SDL_GetTicks() + delay;
+      return timer->id;
+    }
+  }
+  return 0;
+}
+
+UINT timeKillEvent(UINT timer_id)
+{
+  size_t i;
+  for (i = 0; i < MAX_COMPAT_MM_TIMERS; ++i) {
+    if (g_mm_timers[i].id == timer_id) {
+      memset(&g_mm_timers[i], 0, sizeof(g_mm_timers[i]));
+      return 0;
+    }
+  }
+  return 1;
+}
+
+void shandalar_win32_mm_timers_tick(void)
+{
+  uint64_t now = SDL_GetTicks();
+  size_t i;
+  for (i = 0; i < MAX_COMPAT_MM_TIMERS; ++i) {
+    CompatMmTimer *timer = &g_mm_timers[i];
+    if (!timer->id || !timer->callback)
+      continue;
+    if (now >= timer->next_tick) {
+      UINT id = timer->id;
+      timer->next_tick = now + timer->interval;
+      timer->callback(id, 0, timer->user, 0, 0);
+    }
+  }
+}
+
+void shandalar_win32_mm_timers_reset(void)
+{
+  memset(g_mm_timers, 0, sizeof(g_mm_timers));
+  g_next_mm_timer_id = 1;
 }
 
 BOOL GetSaveFileNameA(OPENFILENAMEA *open_file)

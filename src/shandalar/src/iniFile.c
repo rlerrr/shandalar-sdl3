@@ -95,6 +95,12 @@ int ReadIniTrimmedLine(FILE *file, char *line_out)
   int unused;
   size_t leading_trimmed_count;
 
+  if (!file)
+  {
+    *line_out = '\0';
+    return 0;
+  }
+
   while (1)
   {
     if (fgets(line_out, 0x200, file) == (char *)0)
@@ -137,6 +143,11 @@ int SeekIniLine(FILE *file, char *target_line)
 {
   // GLOBAL: SHANDALAR 0x005b7758
   static char seek_line_005b7758[0x200];
+
+  if (!file)
+  {
+    return 0;
+  }
 
   fseek(file, 0, 0);
 

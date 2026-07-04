@@ -235,7 +235,11 @@ FaceControl g_face_controls[0x15] = {
     {0x233, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 5, 1, 0, {0, 0, 0, 0}}};
 
 // GLOBAL: FACEMAKER 0x0041afb4
+#ifdef SHANDALAR_EMBEDDED_FACEMAKER
+extern HDC global_main_hdc;
+#else
 HDC global_main_hdc;
+#endif
 
 // GLOBAL: FACEMAKER 0x0041b024
 char g_original_working_dir[4];
@@ -303,10 +307,18 @@ int g_main_timer_id;
 char *g_face_set_gender_tags[1000];
 
 // GLOBAL: FACEMAKER 0x0041d110
+#ifdef SHANDALAR_EMBEDDED_FACEMAKER
+extern int global_screen_width;
+#else
 int global_screen_width;
+#endif
 
 // GLOBAL: FACEMAKER 0x0041d114
+#ifdef SHANDALAR_EMBEDDED_FACEMAKER
+extern int global_screen_height;
+#else
 int global_screen_height;
+#endif
 
 // GLOBAL: FACEMAKER 0x0041d120
 char *g_face_set_display_names[1000];

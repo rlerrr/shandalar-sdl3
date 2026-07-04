@@ -145,6 +145,41 @@ int shandalar_assets_join_path(char *out, unsigned int out_size, const char *rel
   return 1;
 }
 
+static int is_absolute_path(const char *path)
+{
+  if (!path || !path[0])
+    return 0;
+  if (path[0] == '/' || path[0] == '\\')
+    return 1;
+  return path[0] && path[1] == ':';
+}
+
+FILE *shandalar_assets_fopen(const char *path, const char *mode)
+{
+  char normalized[1024];
+  char resolved[1024];
+  FILE *file;
+
+  if (!path || !mode)
+    return NULL;
+
+  snprintf(normalized, sizeof(normalized), "%s", path);
+  normalize_slashes(normalized);
+
+  if (is_absolute_path(normalized))
+    return fopen(normalized, mode);
+
+  if (mode[0] == 'r')
+    shandalar_assets_fetch_blocking(normalized);
+
+  if (!shandalar_assets_join_path(resolved, sizeof(resolved), normalized))
+    return NULL;
+  file = fopen(resolved, mode);
+  if (!file)
+    file = fopen(normalized, mode);
+  return file;
+}
+
 static int validate_asset_file(const char *path, const char *relative_path)
 {
   FILE *f;

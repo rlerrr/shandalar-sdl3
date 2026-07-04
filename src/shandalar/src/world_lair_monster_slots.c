@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +68,7 @@ unsigned int WaitForInputEventUnlessBlocked(void);
 void ClearInputAndWaitForMouseRelease(void);
 int IsWizardColorFeminine(int color_index);
 void ShowStatsWindow(int mode, int highlight);
-void AnimatePaletteToColor(int color_index, int palette_id);
+int AnimatePaletteToColor(int color_index, int palette_id);
 void LoadPcxIntoPageOpaque(int page_number, char *path);
 int ScaleUiCoordinate(int value);
 void SetFontStyleSize(int font_slot, unsigned int scaled_size);

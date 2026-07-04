@@ -8,6 +8,15 @@
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+#ifdef MODERN_FIXES
+void shandalar_host_pump(void);
+void UpdateMouseSnapshot(void);
+#endif
+
 extern int global_screen_width;
 extern int global_screen_height;
 extern int g_graphics_bpp;
@@ -109,6 +118,7 @@ int HandleOpeningMenuControlEvent(AdvMenuControl *control, int event_type);
 int HandleOpeningMenuControlActivate(AdvMenuControl *control);
 
 int SetSelectedMenuValue(AdvMenuControl *control, int event_type);
+int ActivateSelectedMenuValue(AdvMenuControl *control);
 int HandleEscControlEvent(AdvMenuControl *control, int event_type);
 int HandleDifficultyMenuControlEvent(AdvMenuControl *control, int event_type);
 int DrawDifficultyMenuEntry(int difficulty_index, int visual_state);
@@ -117,6 +127,23 @@ int DrawColorMenuEntry(int color_index, int visual_state);
 int HandleColorMenuControlEvent(AdvMenuControl *control, int event_type);
 int HandleColorMenuControlActivate(AdvMenuControl *control);
 int shandalar_run_facemaker_flow(void);
+
+#ifdef MODERN_FIXES
+static void PumpOpeningMenuWait(void)
+{
+  shandalar_host_pump();
+  UpdateMouseSnapshot();
+}
+#else
+static void PumpOpeningMenuWait(void)
+{
+#ifdef __EMSCRIPTEN__
+  emscripten_sleep(0);
+#else
+  SDL_Delay(1);
+#endif
+}
+#endif
 
 // GLOBAL: SHANDALAR 0x005aa0c8
 EncodedImage *g_opening_menu_unused_sprite_group_d[2];
@@ -199,7 +226,7 @@ AdvMenuControl g_difficulty_menu_controls[5] = {
     {0x118, 0xb4, 0x10e, 0x54, 0x118, 0xb4, 0x10e, 0x54, 1, HandleDifficultyMenuControlEvent, HandleDifficultyMenuControlActivate, 2, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
     {0x118, 0x118, 0x10e, 0x54, 0x118, 0x118, 0x10e, 0x54, 1, HandleDifficultyMenuControlEvent, HandleDifficultyMenuControlActivate, 3, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
     {0x118, 0x17c, 0x10e, 0x54, 0x118, 0x17c, 0x10e, 0x54, 1, HandleDifficultyMenuControlEvent, HandleDifficultyMenuControlActivate, 4, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
-    {-1, -1, -1, -1, -1, -1, -1, -1, 1, HandleEscControlEvent, (AdvMenuActivateCallback)SetSelectedMenuValue, 0, 0, g_difficulty_menu_esc_navigate_hotkeys, g_difficulty_menu_esc_activate_hotkeys, 0, 0, {0, 0, 0, 0}}};
+    {-1, -1, -1, -1, -1, -1, -1, -1, 1, HandleEscControlEvent, ActivateSelectedMenuValue, 0, 0, g_difficulty_menu_esc_navigate_hotkeys, g_difficulty_menu_esc_activate_hotkeys, 0, 0, {0, 0, 0, 0}}};
 
 // GLOBAL: SHANDALAR 0x005875d8
 AdvMenuControl g_color_menu_controls[6] = {
@@ -208,7 +235,7 @@ AdvMenuControl g_color_menu_controls[6] = {
     {0x33, 0xd9, 0x10e, 0x4b, 0x33, 0xd9, 0x10e, 0x4b, 1, HandleColorMenuControlEvent, HandleColorMenuControlActivate, 3, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
     {0x33, 0x124, 0x10e, 0x4b, 0x33, 0x124, 0x10e, 0x4b, 1, HandleColorMenuControlEvent, HandleColorMenuControlActivate, 4, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
     {0x33, 0x16f, 0x10e, 0x4b, 0x33, 0x16f, 0x10e, 0x4b, 1, HandleColorMenuControlEvent, HandleColorMenuControlActivate, 5, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
-    {-1, -1, -1, -1, -1, -1, -1, -1, 1, HandleEscControlEvent, (AdvMenuActivateCallback)SetSelectedMenuValue, 0, 0, g_color_menu_esc_navigate_hotkeys, g_color_menu_esc_activate_hotkeys, 0, 0, {0, 0, 0, 0}}};
+    {-1, -1, -1, -1, -1, -1, -1, -1, 1, HandleEscControlEvent, ActivateSelectedMenuValue, 0, 0, g_color_menu_esc_navigate_hotkeys, g_color_menu_esc_activate_hotkeys, 0, 0, {0, 0, 0, 0}}};
 
 // GLOBAL: SHANDALAR 0x00587598
 AdvMenuRect g_difficulty_menu_preview_rects[4] = {{0x1c7, 0x4b, 0x7a, 0x5c}, {0x1c7, 0xaf, 0x7a, 0x5c}, {0x1c7, 0x113, 0x7a, 0x5c}, {0x1c7, 0x177, 0x7a, 0x5c}};
@@ -254,7 +281,11 @@ int g_loadsave_cursor_index;
 // GLOBAL: SHANDALAR 0x005aa4e4
 int g_loadsave_edit_active;
 // GLOBAL: SHANDALAR 0x0074ad20
+#ifdef SHANDALAR
+extern int g_loadsave_skip_esc;
+#else
 int g_loadsave_skip_esc;
+#endif
 // GLOBAL: SHANDALAR 0x0074ad30
 char g_loadsave_slot_descriptions[10][0x40];
 // GLOBAL: SHANDALAR 0x00588dbc
@@ -284,6 +315,11 @@ int SetSelectedMenuValue(AdvMenuControl *control, int event_type)
 
   g_menu_selection_value = control->selection_value;
   return 0;
+}
+
+int ActivateSelectedMenuValue(AdvMenuControl *control)
+{
+  return SetSelectedMenuValue(control, 2);
 }
 
 // FUNCTION: SHANDALAR 0x004a04bd
@@ -547,6 +583,7 @@ loop:
 
   while (g_menu_selection_value == -1)
   {
+    PumpOpeningMenuWait();
     UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
   }
 
@@ -733,6 +770,7 @@ int RunDifficultyMenu(void)
   g_menu_selection_value = -1;
   while (g_menu_selection_value == -1)
   {
+    PumpOpeningMenuWait();
     UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
   }
 
@@ -922,6 +960,7 @@ int RunColorMenu(void)
   g_menu_selection_value = -1;
   while (g_menu_selection_value == -1)
   {
+    PumpOpeningMenuWait();
     UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
   }
 
@@ -1663,6 +1702,7 @@ restart_menu_loop:
   g_loadsave_menu_selection = -1;
   while (g_loadsave_menu_selection == -1)
   {
+    PumpOpeningMenuWait();
     UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
   }
   EndMenuContext();
@@ -1788,12 +1828,6 @@ restart_menu_loop:
   FreeSpriteBlob(g_loadsave_frame_sprites[0]);
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   return g_loadsave_menu_selection;
-}
-
-// FUNCTION: SHANDALAR 0x005031a8
-int RunLoadGameMenu(void)
-{
-  return RunLoadSaveMenu(0);
 }
 
 // FUNCTION: SHANDALAR 0x004a97e7

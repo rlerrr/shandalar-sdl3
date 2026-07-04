@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 
@@ -128,7 +132,7 @@ void PopNormalizedQueuedKeyInput(void);
 int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_click);
 void ClearInputAndWaitForMouseRelease(void);
 
-void AnimatePaletteToColor(int mode, int color_index);
+int AnimatePaletteToColor(int mode, int color_index);
 void PlaySoundEffectOnChannel(char *sound_path, int channel, int volume, int pitch_percent, int pan_percent);
 void DrawFormattedTextShadowedCentered(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...);
 void DrawFormattedTextNoShadow(FacemakerWindowBounds *dst, int text_color, int x, int y, char *format, ...);

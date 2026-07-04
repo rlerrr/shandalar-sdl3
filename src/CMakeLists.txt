@@ -5,6 +5,10 @@ add_subdirectory(rpbits)
 add_subdirectory(cardartlib)
 add_subdirectory(drawcardlib)
 
+if(SHANDALAR_BUILD_SHANDALAR OR SHANDALAR_BUILD_DECK)
+  add_subdirectory(magsnd)
+endif()
+
 if(SHANDALAR_BUILD_FACEMAKER)
   add_subdirectory(facemaker)
 endif()
@@ -17,7 +21,6 @@ if(SHANDALAR_BUILD_SHANDALAR)
 endif()
 
 if(SHANDALAR_BUILD_DECK)
-  add_subdirectory(magsnd)
   add_subdirectory(deckdll)
   add_subdirectory(deck)
 endif()

@@ -583,6 +583,11 @@ COLORREF GetPixel(HDC dc, int x, int y)
   return read_pixel_color(dc, x, y);
 }
 
+COLORREF SetPixel(HDC dc, int x, int y, COLORREF color)
+{
+  return SetPixelV(dc, x, y, color) ? color : (COLORREF)-1;
+}
+
 BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
 {
   unsigned char *pixel = dc ? pixel_at(dc->bitmap, x, y) : NULL;
@@ -1396,6 +1401,8 @@ BOOL GlobalUnlock(void *memory) { (void)memory; return TRUE; }
 void *GlobalHandle(void *memory) { return memory; }
 void *GlobalFree(void *memory) { free(memory); return NULL; }
 BOOL GdiFlush(void) { return TRUE; }
+DWORD GdiGetBatchLimit(void) { return 0; }
+DWORD GdiSetBatchLimit(DWORD limit) { return limit; }
 int GetDeviceCaps(HDC dc, int index)
 {
   if (index == RASTERCAPS)

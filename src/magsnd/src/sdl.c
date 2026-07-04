@@ -47,7 +47,19 @@ static int is_absolute_path(const char *path)
     return 0;
   if (path[0] == '/' || path[0] == '\\')
     return 1;
-  return path[0] && path[1] == ':';
+  return path[0] && path[1] == ':' && (path[2] == '/' || path[2] == '\\');
+}
+
+static const char *asset_relative_sound_path(const char *path)
+{
+  if (!path)
+    return path;
+  if (path[0] && path[1] == ':' && path[2] != '/' && path[2] != '\\')
+    return path + 2;
+  if ((path[0] == 'x' || path[0] == 'X') && path[1] == ':' &&
+      (path[2] == '/' || path[2] == '\\'))
+    return path + 3;
+  return path;
 }
 
 static void normalize_slashes(char *path)
@@ -61,17 +73,20 @@ static void normalize_slashes(char *path)
 
 static int resolve_sound_path(char *out, size_t out_size, const char *path)
 {
+  const char *asset_path;
   if (!out || !out_size || !path || !path[0])
     return 0;
-  if (is_absolute_path(path)) {
-    SDL_strlcpy(out, path, out_size);
-  } else if (!shandalar_assets_join_path(out, (unsigned int)out_size, path)) {
+  asset_path = asset_relative_sound_path(path);
+  if (is_absolute_path(asset_path)) {
+    SDL_strlcpy(out, asset_path, out_size);
+  } else if (!shandalar_assets_join_path(out, (unsigned int)out_size, asset_path)) {
     return 0;
   }
   normalize_slashes(out);
 #ifndef _WIN32
-  if (shandalar_assets_state(path) != SHANDALAR_ASSET_READY)
-    shandalar_assets_fetch_blocking(path);
+  if (!is_absolute_path(asset_path) &&
+      shandalar_assets_state(asset_path) != SHANDALAR_ASSET_READY)
+    shandalar_assets_fetch_blocking(asset_path);
   shandalar_resolve_existing_path(out, out, out_size);
 #endif
   return 1;

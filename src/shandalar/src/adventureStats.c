@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -221,8 +225,8 @@ static int g_stats_journal_previous_marker_y;
 // GLOBAL: SHANDALAR 0x005a82e8
 static int g_stats_journal_previous_marker_x;
 
-void AnimatePaletteToColor(int color_index, int steps);
-void ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
+int AnimatePaletteToColor(int color_index, int steps);
+int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
 void LoadPcxIntoPage(int page_number, char *path);
 void LoadPcxIntoPageNoPalette(char *path);
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
@@ -1736,7 +1740,8 @@ int ShowStatsWindow(int mode, int highlight)
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   ClearGraphicsPageWithPaletteColor(0, 0);
   LoadPcxIntoPageNoPalette("advfac64.pic");
-  old_timer_thread_priority = GetThreadPriority(g_timer_thread_handle);
+  old_timer_thread_priority = 0;
+  old_main_thread_priority = 0;
 
   for (wizard_color_index = 0; wizard_color_index < 5; wizard_color_index = wizard_color_index + 1)
   {
@@ -1813,8 +1818,8 @@ int ShowStatsWindow(int mode, int highlight)
     g_statwin_data.highlighted_lair_color = (unsigned char)highlight;
   }
   ShowStatWinDialog(&g_statwin_data, mode);
-  SetThreadPriority(g_timer_thread_handle, old_timer_thread_priority);
-  SetThreadPriority(g_main_thread_handle, old_main_thread_priority);
+  (void)old_timer_thread_priority;
+  (void)old_main_thread_priority;
   SetForegroundWindow(g_main_window_hwnd);
   BringWindowToTop(g_main_window_hwnd);
   SetFocus(g_main_window_hwnd);

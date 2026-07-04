@@ -1,4 +1,8 @@
+#ifdef MODERN_FIXES
+#include "platform/winuser_compat.h"
+#else
 #include <windows.h>
+#endif
 #include <string.h>
 #include <stddef.h>
 
@@ -30,7 +34,7 @@ int internal_rand(int max_exclusive);
 int ScaleUiCoordinateFrom320(int value);
 
 int ReadPalette(char *palette_text_path, char *palette_binary_path);
-void ClearGraphicsPageWithPaletteColor(int page_number, int palette_color);
+int ClearGraphicsPageWithPaletteColor(int page_number, int palette_color);
 void LoadPcxResource(int page_number, int x, int y, char *path, void *opaque);
 void LoadPcxIntoPageNoPalette(char *path);
 void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int src_w, int src_h,
