@@ -32,6 +32,7 @@
 typedef ptrdiff_t INT_PTR;
 
 typedef int (*Int_fn_int)(int);
+typedef void (*Void_fn_int_int)(int, int);
 void change_buttonclass_wndproc(HWND hwnd);
 static int read_deck_line(FILE *file, char *dest);
 static int is_deck_card_line(char *line);
@@ -409,9 +410,11 @@ static Int_fn_int CardTypeFromID;
 // GLOBAL: DECKDLL 0x101a8934
 static Int_fn_int CardInDeck;
 // GLOBAL: DECKDLL 0x10143350
-static Int_fn_int SetCardInDeck;
+static Void_fn_int_int SetCardInDeck;
 // GLOBAL: DECKDLL 0x10125eb4
 static Int_fn_int SellPrice;
+static void (*g_host_begin_deckbuilder)(void);
+static void (*g_host_end_deckbuilder)(void);
 
 bool check_filters(csvid_t csvid);
 int InitLicenseSecretsFromRegistry(void);
@@ -457,6 +460,14 @@ void fatal(const char *fmt, ...)
   fatal_err(buf, 0);
   exit(1);
 }
+
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+void deck_set_host_pump_hooks(void (*begin)(void), void (*end)(void))
+{
+  g_host_begin_deckbuilder = begin;
+  g_host_end_deckbuilder = end;
+}
+#endif
 
 // FUNCTION: DECKDLL 0x10028350
 int load_text(const char *file_name, const char *section_name)
@@ -1004,8 +1015,10 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   int unused_zero;
   HDC desktop_hdc;
   HACCEL accel;
+  int host_pump_active;
 
   unused_zero = 0;
+  host_pump_active = 0;
 
   global_db_flags_1 = db_flags_1;
   global_db_flags_2 = db_flags_2;
@@ -1018,7 +1031,7 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   CardIDFromType = (Int_fn_int)GetProcAddress(GetModuleHandleA(NULL), "CardIDFromType");
   CardTypeFromID = (Int_fn_int)GetProcAddress(GetModuleHandleA(NULL), "CardTypeFromID");
   CardInDeck = (Int_fn_int)GetProcAddress(GetModuleHandleA(NULL), "CardInDeck");
-  SetCardInDeck = (Int_fn_int)GetProcAddress(GetModuleHandleA(NULL), "SetCardInDeck");
+  SetCardInDeck = (Void_fn_int_int)GetProcAddress(GetModuleHandleA(NULL), "SetCardInDeck");
   SellPrice = (Int_fn_int)GetProcAddress(GetModuleHandleA(NULL), "SellPrice");
   deck = (int *)GetProcAddress(GetModuleHandleA(NULL), "deck");
   Gold = (int *)GetProcAddress(GetModuleHandleA(NULL), "Gold");
@@ -1030,7 +1043,16 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   {
     if (!CardIDFromType || !CardInDeck || !SetCardInDeck || !SellPrice || !deck || !Gold || !Scards || !global_external_current_deck)
     {
-      fatal_err("Deck Builder WinMain: Couldn't find External Functions.", 0);
+      char missing[512] = "Deck Builder WinMain: Couldn't find External Functions:";
+      if (!CardIDFromType) strcat(missing, " CardIDFromType");
+      if (!CardInDeck) strcat(missing, " CardInDeck");
+      if (!SetCardInDeck) strcat(missing, " SetCardInDeck");
+      if (!SellPrice) strcat(missing, " SellPrice");
+      if (!deck) strcat(missing, " deck");
+      if (!Gold) strcat(missing, " Gold");
+      if (!Scards) strcat(missing, " Scards");
+      if (!global_external_current_deck) strcat(missing, " _currentDeck");
+      fatal_err(missing, 0);
       return 0;
     }
   }
@@ -1040,7 +1062,14 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
     {
       if (!CardIDFromType || !CardTypeFromID || !CardInDeck || !SetCardInDeck || !Gold || !global_external_deckname)
       {
-        fatal_err("Deck Builder WinMain: Couldn't find External Functions.", 0);
+        char missing[512] = "Deck Builder WinMain: Couldn't find External Functions:";
+        if (!CardIDFromType) strcat(missing, " CardIDFromType");
+        if (!CardTypeFromID) strcat(missing, " CardTypeFromID");
+        if (!CardInDeck) strcat(missing, " CardInDeck");
+        if (!SetCardInDeck) strcat(missing, " SetCardInDeck");
+        if (!Gold) strcat(missing, " Gold");
+        if (!global_external_deckname) strcat(missing, " szDeckName");
+        fatal_err(missing, 0);
         return 0;
       }
     }
@@ -1094,6 +1123,13 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
 
   ReadDeckbuilderCsv("DeckBuilder.csv", global_origrarities);
 
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  if ((global_db_flags_1 & DBFLAGS_SHANDALAR) && g_host_begin_deckbuilder) {
+    g_host_begin_deckbuilder();
+    host_pump_active = 1;
+  }
+#endif
+
   screen_width = GetSystemMetrics(0);
   screen_height = GetSystemMetrics(1);
 
@@ -1106,6 +1142,10 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!global_main_hwnd)
   {
     fatal_err("WinMain: Couldn't create the main window", 0);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    if (host_pump_active && g_host_end_deckbuilder)
+      g_host_end_deckbuilder();
+#endif
     return 0;
   }
 
@@ -1118,6 +1158,10 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!global_cuecard_hwnd)
   {
     fatal_err("WinMain: Couldn't create the cue card window", global_main_hwnd);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    if (host_pump_active && g_host_end_deckbuilder)
+      g_host_end_deckbuilder();
+#endif
     return 0;
   }
 
@@ -1125,6 +1169,10 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!accel)
   {
     fatal_err("WinMain: Couldn't load the accelerator table", global_main_hwnd);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    if (host_pump_active && g_host_end_deckbuilder)
+      g_host_end_deckbuilder();
+#endif
     return 0;
   }
 
@@ -1140,9 +1188,14 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
     }
 
   delete_resources();
-  ShutdownCardArtGdiResources();
+  if (!(global_db_flags_1 & DBFLAGS_SHANDALAR))
+    ShutdownCardArtGdiResources();
   destroy_create_fonts_resources();
   DeleteCriticalSection(&global_critical_section_for_unknown);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  if (host_pump_active && g_host_end_deckbuilder)
+    g_host_end_deckbuilder();
+#endif
 
   return msg.wParam;
 }

@@ -313,6 +313,7 @@ extern "C" {
   WPARAM WINAPI DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2);
 #ifdef SHANDALAR_SDL_WIN32_COMPAT
   void deck_register_dialog_resources(void);
+  void deck_set_host_pump_hooks(void (*begin)(void), void (*end)(void));
 #endif
   WPARAM deckbuilder_main(HWND parent_hwnd, int db_flags_1, int db_flags_2);
   void delete_and_close_object(HANDLE obj);

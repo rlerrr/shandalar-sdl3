@@ -36,7 +36,7 @@ typedef char *LPSTR;
 typedef char *PSTR;
 typedef void *LPVOID;
 typedef void *LPOVERLAPPED;
-typedef void *FARPROC;
+typedef uintptr_t FARPROC;
 typedef void *LPSECURITY_ATTRIBUTES;
 typedef void *HANDLE;
 typedef void *HINSTANCE;

@@ -37,6 +37,9 @@ void PushQueuedKeyInput(int key_code);
 extern int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 
+static BOOL pump_shandalar_win32_ui(BOOL wait);
+static BOOL pump_deckbuilder_ui(BOOL wait);
+
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
 static SDL_Texture *g_texture;
@@ -45,6 +48,7 @@ static int g_texture_width;
 static int g_texture_height;
 static int g_quit_requested;
 static int g_facemaker_host_active;
+static int g_deckbuilder_host_active;
 
 static int legacy_key(SDL_Keycode key)
 {
@@ -79,6 +83,25 @@ static UINT facemaker_virtual_key(SDL_Keycode key)
   }
 }
 
+static UINT deckbuilder_virtual_key(SDL_Keycode key)
+{
+  switch (key) {
+  case SDLK_LEFT: return VK_LEFT;
+  case SDLK_RIGHT: return VK_RIGHT;
+  case SDLK_UP: return VK_UP;
+  case SDLK_DOWN: return VK_DOWN;
+  case SDLK_HOME: return VK_HOME;
+  case SDLK_END: return VK_END;
+  case SDLK_PAGEUP: return VK_PRIOR;
+  case SDLK_PAGEDOWN: return VK_NEXT;
+  case SDLK_RETURN: return 0x0d;
+  case SDLK_ESCAPE: return 0x1b;
+  case SDLK_BACKSPACE: return 0x08;
+  case SDLK_DELETE: return 0x2e;
+  default: return key >= 0 && key <= 0xff ? (UINT)key : 0;
+  }
+}
+
 static void forward_facemaker_keyboard_event(const SDL_Event *event)
 {
   HWND focus = GetFocus();
@@ -87,6 +110,30 @@ static void forward_facemaker_keyboard_event(const SDL_Event *event)
     return;
   if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP) {
     key = facemaker_virtual_key(event->key.key);
+    if (key)
+      PostMessageA(focus, event->type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
+                   key, 0);
+  } else if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
+    const unsigned char *text = (const unsigned char *)event->text.text;
+    while (*text)
+      PostMessageA(focus, WM_CHAR, *text++, 0);
+  }
+}
+
+static void forward_deckbuilder_keyboard_event(const SDL_Event *event)
+{
+  HWND focus = GetFocus();
+  char class_name[32] = {0};
+  UINT key;
+  if (!focus)
+    return;
+  GetClassNameA(focus, class_name, sizeof(class_name));
+  if (SDL_strcasecmp(class_name, "EDIT") == 0 ||
+      SDL_strcasecmp(class_name, "LISTBOX") == 0 ||
+      SDL_strcasecmp(class_name, "COMBOBOX") == 0)
+    return;
+  if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP) {
+    key = deckbuilder_virtual_key(event->key.key);
     if (key)
       PostMessageA(focus, event->type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
                    key, 0);
@@ -124,6 +171,38 @@ static BOOL pump_facemaker_ui(BOOL wait)
     SDL_Delay(8);
 #endif
   return !g_quit_requested && g_facemaker_host_active;
+}
+
+static BOOL pump_deckbuilder_ui(BOOL wait)
+{
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    shandalar_win32_imgui_process_event(g_renderer, &event);
+    if (event.type == SDL_EVENT_QUIT) {
+      g_quit_requested = 1;
+      PostQuitMessage(0);
+    } else {
+      forward_deckbuilder_keyboard_event(&event);
+    }
+  }
+
+  shandalar_win32_runtime_tick();
+  shandalar_win32_mm_timers_tick();
+
+  SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+  SDL_RenderClear(g_renderer);
+  shandalar_win32_imgui_begin_frame();
+  shandalar_win32_imgui_present(g_renderer);
+  shandalar_win32_imgui_render(g_renderer);
+  SDL_RenderPresent(g_renderer);
+
+#ifdef __EMSCRIPTEN__
+  emscripten_sleep(wait ? 8 : 0);
+#else
+  if (wait)
+    SDL_Delay(8);
+#endif
+  return !g_quit_requested && g_deckbuilder_host_active;
 }
 
 static int ensure_framebuffer(int width, int height)
@@ -252,6 +331,34 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   return result == 0 && !g_quit_requested;
+}
+
+void shandalar_host_begin_deckbuilder(void)
+{
+  SDL_SetWindowTitle(g_window, "Magic: Deck Builder");
+  SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
+  SDL_StartTextInput(g_window);
+  if (!shandalar_win32_imgui_init(g_window, g_renderer)) {
+    printf("shandalar: deckbuilder imgui init failed\n");
+    return;
+  }
+  shandalar_win32_clear_quit_message();
+  g_deckbuilder_host_active = 1;
+  shandalar_win32_set_pump_proc(pump_deckbuilder_ui);
+}
+
+void shandalar_host_end_deckbuilder(void)
+{
+  g_deckbuilder_host_active = 0;
+  shandalar_win32_set_pump_proc(pump_shandalar_win32_ui);
+  shandalar_win32_clear_quit_message();
+  shandalar_win32_imgui_shutdown();
+  SDL_StopTextInput(g_window);
+  SDL_StartTextInput(g_window);
+  SDL_SetWindowTitle(g_window, "Magic: Shandalar");
+  SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }
 
 void shandalar_host_pump(void)

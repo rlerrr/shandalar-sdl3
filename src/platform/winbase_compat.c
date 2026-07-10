@@ -44,18 +44,20 @@ FARPROC GetProcAddress(HMODULE module, LPCSTR proc_name)
 {
   ProcEntry *entry;
   (void)module;
+#ifndef __EMSCRIPTEN__
   if ((uintptr_t)proc_name <= 0xffffu)
-    return NULL;
+    return 0;
+#endif
   for (entry = g_procs; entry; entry = entry->next)
     if (strcmp(entry->name, proc_name) == 0)
       return entry->proc;
-  return NULL;
+  return 0;
 }
 
 BOOL shandalar_win32_register_proc(LPCSTR proc_name, FARPROC proc)
 {
   ProcEntry *entry;
-  if (!proc_name || !proc)
+  if (!proc_name)
     return FALSE;
   for (entry = g_procs; entry; entry = entry->next) {
     if (strcmp(entry->name, proc_name) == 0) {

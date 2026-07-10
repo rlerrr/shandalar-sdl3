@@ -7,6 +7,7 @@ add_subdirectory(drawcardlib)
 
 if(SHANDALAR_BUILD_SHANDALAR OR SHANDALAR_BUILD_DECK)
   add_subdirectory(magsnd)
+  add_subdirectory(deckdll)
 endif()
 
 if(SHANDALAR_BUILD_FACEMAKER)
@@ -21,6 +22,5 @@ if(SHANDALAR_BUILD_SHANDALAR)
 endif()
 
 if(SHANDALAR_BUILD_DECK)
-  add_subdirectory(deckdll)
   add_subdirectory(deck)
 endif()

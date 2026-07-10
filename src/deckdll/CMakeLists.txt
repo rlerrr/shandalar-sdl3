@@ -23,6 +23,17 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     SHANDALAR_SDL_WIN32_COMPAT
     global_hinstance=deckdll_global_hinstance
     LoadFontFromIni=deckdll_LoadFontFromIni
+    load_text=deckdll_load_text
+    deck=deckdll_deck
+    Gold=deckdll_Gold
+    Scards=deckdll_Scards
+    _PlayerFace=deckdll_PlayerFace
+    _OpponFace=deckdll_OpponFace
+    global_duelart_path=deckdll_global_duelart_path
+    create_fonts=deckdll_create_fonts
+    destroy_create_fonts_resources=deckdll_destroy_create_fonts_resources
+    global_duel_dat_path=deckdll_global_duel_dat_path
+    global_cardart_path=deckdll_global_cardart_path
   )
   target_link_libraries(deck_legacy_ui PUBLIC
     drawcard_static

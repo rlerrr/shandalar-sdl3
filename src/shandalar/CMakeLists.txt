@@ -26,9 +26,6 @@ add_executable(shandalar
   ../magic/src/shared_startup.c
   ../magic/src/dummycards.c
   ../magic/src/carddata.c
-  ../deckdll/src/card_db.c
-  ../deckdll/src/drm.c
-  ../deckdll/src/magsnd_sdl_adapter.c
 )
 
 target_compile_definitions(shandalar PRIVATE
@@ -47,6 +44,7 @@ target_include_directories(shandalar PRIVATE
 target_link_libraries(shandalar PRIVATE
   facemaker_legacy_ui
   facemaker_win32_imgui_bridge
+  deck_legacy_ui
   cardart_static
   drawcard_shandalar
   magsnd_static

@@ -5,11 +5,15 @@
 #include "magic/src/global_duel_ui_ids.h"
 #include "magic/src/global_other.h"
 #include "magic/src/global_state.h"
+#include "cardartlib/CardArtLib.h"
+#include "deckdll/src/deckdll.h"
+#include "drawcardlib/Drawcardlib.h"
 #include "drawcardlib/src/pic.h"
 #include "facemaker/src/facemaker_types.h"
 #include "platform/asset_manager.h"
 #include "platform/gdi_compat.h"
 #include "platform/legacy_io.h"
+#include "platform/winuser_compat.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +27,7 @@ int g_duel_selection_pending;
 int g_showlibrary_menu_selection;
 char global_cardart_path[0x110];
 char global_duel_dat_path[0x110];
+char szDeckName[0x104];
 BITMAPINFO g_duel_backbuffer_bmi;
 
 extern void LoadPcxResource(int page, int x, int y, char *path, void *palette);
@@ -51,6 +56,8 @@ extern void FinalizeSpriteEncodeSession(void);
 extern void FreeSpriteBlob(void *memory);
 extern void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
 extern int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root);
+extern void shandalar_host_begin_deckbuilder(void);
+extern void shandalar_host_end_deckbuilder(void);
 extern char global_base_directory[0x105];
 extern int global_screen_width;
 extern int global_screen_height;
@@ -70,8 +77,33 @@ extern DIBSurface *g_facemaker_page4_dib;
 extern HBITMAP g_facemaker_page4_bitmap;
 extern card_data_t global_cards_data[];
 static EncodedImage *g_name_entry_portrait_sprite;
+static int g_deckbuilder_attached;
+static int g_card_libraries_initialized;
 
 int internal_rand(int maximum);
+int CardIDFromType(unsigned int type);
+int CardTypeFromID(int csvid);
+int CardInDeck(int deck_entry);
+void SetCardInDeck(int deck_index, int enabled);
+int SellPrice(int card_index);
+int is_card_available_in_expansion(unsigned int card_id, int expansion);
+unsigned int HasExpansion(unsigned char expansion_mask);
+
+static int shandalar_register_deckbuilder_exports(void)
+{
+  int ok = 1;
+  ok &= shandalar_win32_register_proc("CardIDFromType", (FARPROC)CardIDFromType);
+  ok &= shandalar_win32_register_proc("CardTypeFromID", (FARPROC)CardTypeFromID);
+  ok &= shandalar_win32_register_proc("CardInDeck", (FARPROC)CardInDeck);
+  ok &= shandalar_win32_register_proc("SetCardInDeck", (FARPROC)SetCardInDeck);
+  ok &= shandalar_win32_register_proc("SellPrice", (FARPROC)SellPrice);
+  ok &= shandalar_win32_register_proc("deck", (FARPROC)deck);
+  ok &= shandalar_win32_register_proc("Gold", (FARPROC)&Gold);
+  ok &= shandalar_win32_register_proc("Scards", (FARPROC)Scards);
+  ok &= shandalar_win32_register_proc("szDeckName", (FARPROC)szDeckName);
+  ok &= shandalar_win32_register_proc("_currentDeck", (FARPROC)&_currentDeck);
+  return ok;
+}
 
 void TENTATIVE_wait_for_network_result(int player, int packet_type)
 {
@@ -83,14 +115,6 @@ void TENTATIVE_send_network_result(int player, int packet_type)
 {
   (void)player;
   g_network_result_packet_type = packet_type;
-}
-
-WPARAM WINAPI DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
-{
-  (void)parent_hwnd;
-  (void)db_flags_1;
-  (void)db_flags_2;
-  return 0;
 }
 
 DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
@@ -168,6 +192,17 @@ int show_cardlist(int *graveyard, int *card_counts, int *available, int count,
   (void)require_selection;
   (void)prompt;
   return (graveyard && count > 0) ? 0 : -1;
+}
+
+int is_card_available_in_installed_expansion(unsigned int card_id)
+{
+  if (HasExpansion(1) != 0 && is_card_available_in_expansion(card_id, 0) != 0)
+    return 1;
+  if (HasExpansion(2) != 0 && is_card_available_in_expansion(card_id, 1) != 0)
+    return 1;
+  if (HasExpansion(4) != 0 && is_card_available_in_expansion(card_id, 2) != 0)
+    return 1;
+  return 0;
 }
 
 void record_ai_action_selection(void)
@@ -409,9 +444,37 @@ int shandalar_runtime_init(const char *asset_root)
   snprintf(module_path, sizeof(module_path), "%s/shandalar.exe", root);
   shandalar_win32_set_module_path(module_path);
   shandalar_set_default_font_root(root);
+  if (!g_card_libraries_initialized) {
+    if (!CardArtLib_InitializeFromRoot(root))
+      return 0;
+    if (!DrawCardLib_InitializeFromRoot(root)) {
+      CardArtLib_Shutdown();
+      return 0;
+    }
+    g_card_libraries_initialized = 1;
+  }
+  if (!shandalar_register_deckbuilder_exports())
+    return 0;
+  deck_register_dialog_resources();
+  deck_set_host_pump_hooks(shandalar_host_begin_deckbuilder,
+                           shandalar_host_end_deckbuilder);
+  if (!g_deckbuilder_attached) {
+    if (!DllMain((HINSTANCE)1, DLL_PROCESS_ATTACH, NULL))
+      return 0;
+    g_deckbuilder_attached = 1;
+  }
   return 1;
 }
 
 void shandalar_runtime_shutdown(void)
 {
+  if (g_deckbuilder_attached) {
+    DllMain((HINSTANCE)1, DLL_PROCESS_DETACH, NULL);
+    g_deckbuilder_attached = 0;
+  }
+  if (g_card_libraries_initialized) {
+    DrawCardLib_Shutdown();
+    CardArtLib_Shutdown();
+    g_card_libraries_initialized = 0;
+  }
 }
