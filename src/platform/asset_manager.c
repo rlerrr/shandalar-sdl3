@@ -17,6 +17,7 @@ typedef struct AssetRequest
 {
   char relative_path[260];
   ShandalarAssetState state;
+  double start_time;
 } AssetRequest;
 
 static char g_asset_root[512] = ".";
@@ -356,12 +357,10 @@ ShandalarAssetState shandalar_assets_prefetch(const char *relative_path)
 #ifdef __EMSCRIPTEN__
   {
     char url[1024];
-    char status[512];
     emscripten_fetch_attr_t attr;
     shandalar_assets_join_path(url, sizeof(url), request->relative_path);
     lowercase_path(url);
-    snprintf(status, sizeof(status), "Loading %s", request->relative_path);
-    set_status(status);
+    request->start_time = emscripten_get_now();
     emscripten_fetch_attr_init(&attr);
     strcpy(attr.requestMethod, "GET");
     attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_PERSIST_FILE;
@@ -383,14 +382,27 @@ ShandalarAssetState shandalar_assets_fetch_blocking(const char *relative_path)
 {
   ShandalarAssetState state = shandalar_assets_prefetch(relative_path);
 #ifdef __EMSCRIPTEN__
-  while (state == SHANDALAR_ASSET_PENDING)
   {
-    emscripten_sleep(1);
-    state = shandalar_assets_state(relative_path);
+    int status_shown = 0;
+    while (state == SHANDALAR_ASSET_PENDING)
+    {
+      emscripten_sleep(1);
+      state = shandalar_assets_state(relative_path);
+      if (!status_shown && state == SHANDALAR_ASSET_PENDING)
+      {
+        AssetRequest *req = find_request(relative_path);
+        if (req && (emscripten_get_now() - req->start_time) >= 500.0)
+        {
+          char status[512];
+          snprintf(status, sizeof(status), "Loading %s", req->relative_path);
+          set_status(status);
+          status_shown = 1;
+        }
+      }
+    }
   }
 #endif
-  if (state != SHANDALAR_ASSET_PENDING)
-    set_status("");
+  set_status("");
   return state;
 }
 
