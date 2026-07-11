@@ -1670,7 +1670,7 @@ int RunWorldLairMonsterEncounter(int slot_index, int monster_color)
   PlayDuelMusic(0);
   if (g_shandalar_monster_definitions[creature_type].encounter_type == '\v')
   {
-    selected_card_id = FindWorldMagicCardIndex(g_world_magic_offer_slot_index);
+    selected_card_id = (g_world_magic_offer_slot_index >= 0) ? FindWorldMagicCardIndex(g_world_magic_offer_slot_index) : -1;
   }
   else
   {
@@ -2243,7 +2243,10 @@ LAB_4F4BB2:
   }
   if (g_shandalar_monster_definitions[creature_type].encounter_type == '\v')
   {
-    g_encounter_opening_hand_size_modifier = Scards[g_world_magic_offer_slot_index].worldmagic_price / 500 + -1;
+    if (g_world_magic_offer_slot_index >= 0)
+    {
+      g_encounter_opening_hand_size_modifier = Scards[g_world_magic_offer_slot_index].worldmagic_price / 500 + -1;
+    }
   }
   if (-g_shandalar_difficulty < g_encounter_opening_hand_size_modifier)
   {

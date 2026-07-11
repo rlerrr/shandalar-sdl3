@@ -585,13 +585,13 @@ DWORD FormatMessageFromStringStripCarriageReturns(char *dst, DWORD max_length, L
   va_list args;
   char *carriage_return;
 
-  args = (va_list)(&format + 1);
+  va_start(args, format);
   result = FormatMessageA(0x400, format, 0, 0, dst, max_length, &args);
+  va_end(args);
   while ((carriage_return = strchr(dst, '\r')) != (char *)0)
   {
     strcpy(carriage_return, carriage_return + 1);
   }
-  args = (va_list)0;
   return result;
 }
 

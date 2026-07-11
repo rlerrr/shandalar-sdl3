@@ -69,6 +69,15 @@ static int legacy_key(SDL_Keycode key)
   }
 }
 
+static int shandalar_mouse_button_mask(Uint8 button)
+{
+  switch (button) {
+  case SDL_BUTTON_LEFT: return 1;
+  case SDL_BUTTON_RIGHT: return 2;
+  default: return 0;
+  }
+}
+
 static UINT facemaker_virtual_key(SDL_Keycode key)
 {
   switch (key) {
@@ -384,13 +393,16 @@ void shandalar_host_pump(void)
       SDL_RenderCoordinatesFromWindow(g_renderer, x, y, &x, &y);
       g_mouse_x = (int)x;
       g_mouse_y = (int)y;
-      if (event.button.button == SDL_BUTTON_LEFT)
-        g_mouse_button_down_mask = 1;
+      g_mouse_button_down_mask |= shandalar_mouse_button_mask(event.button.button);
       break;
     case SDL_EVENT_MOUSE_BUTTON_UP:
-      if (event.button.button == SDL_BUTTON_LEFT)
-        g_mouse_button_released_mask |= 1;
-      g_mouse_button_down_mask = 0;
+      x = event.button.x;
+      y = event.button.y;
+      SDL_RenderCoordinatesFromWindow(g_renderer, x, y, &x, &y);
+      g_mouse_x = (int)x;
+      g_mouse_y = (int)y;
+      g_mouse_button_released_mask |= shandalar_mouse_button_mask(event.button.button);
+      g_mouse_button_down_mask &= ~shandalar_mouse_button_mask(event.button.button);
       break;
     case SDL_EVENT_KEY_DOWN: {
       int key = 0;

@@ -38,6 +38,7 @@ struct ShandalarFont {
   ObjectHeader header;
   TTF_Font *font;
   int size;
+  double font_size_to_cell_height;
   LOGFONTA description;
 };
 
@@ -68,6 +69,7 @@ typedef struct DCState {
 typedef struct PaintObject {
   ObjectHeader header;
   COLORREF color;
+  int is_null;
 } PaintObject;
 
 typedef struct CompatRegion {
@@ -271,16 +273,20 @@ HDC CreateCompatibleDC(HDC unused)
 
 static int map_x(HDC dc, int x)
 {
-  if (!dc || dc->map_mode == MM_TEXT)
+  if (!dc)
     return x;
+  if (dc->map_mode == MM_TEXT)
+    return dc->viewport_org_x + x - dc->window_org_x;
   return dc->viewport_org_x +
          (x - dc->window_org_x) * dc->viewport_ext_x / dc->window_ext_x;
 }
 
 static int map_y(HDC dc, int y)
 {
-  if (!dc || dc->map_mode == MM_TEXT)
+  if (!dc)
     return y;
+  if (dc->map_mode == MM_TEXT)
+    return dc->viewport_org_y + y - dc->window_org_y;
   return dc->viewport_org_y +
          (y - dc->window_org_y) * dc->viewport_ext_y / dc->window_ext_y;
 }
@@ -313,7 +319,8 @@ static float prepare_font_for_dc(HDC dc)
   if (!dc || !dc->font || !dc->font->font)
     return 0.0f;
   old_size = TTF_GetFontSize(dc->font->font);
-  device_size = (float)((double)dc->font->size * device_scale_y(dc) * g_font_device_scale);
+  device_size = (float)((double)dc->font->size * dc->font->font_size_to_cell_height *
+                        device_scale_y(dc) * g_font_device_scale);
   if (device_size < 1.0f)
     device_size = 1.0f;
   if (fabsf(old_size - device_size) > 0.01f)
@@ -494,6 +501,13 @@ static void apply_rop(unsigned char *dst, unsigned char src, DWORD rop)
     *dst = src;
 }
 
+static int can_copy_indexed_pixels_directly(HDC dst, HDC src)
+{
+  if (!dst || !src)
+    return 0;
+  return dst->palette == src->palette;
+}
+
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop)
 {
   int x, y;
@@ -511,6 +525,7 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
   if (width <= 0 || height <= 0)
     return TRUE;
   if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
+      can_copy_indexed_pixels_directly(dst, src) &&
       (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
     for (y = 0; y < height; ++y) {
       unsigned char *target = pixel_at(dst->bitmap, dx, dy + y);
@@ -557,6 +572,7 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
   if (!dst || !src || !dst->bitmap || !src->bitmap || dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0)
     return FALSE;
   if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
+      can_copy_indexed_pixels_directly(dst, src) &&
       (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
     for (y = 0; y < dh; ++y) {
       int source_y = sy + y * sh / dh;
@@ -603,19 +619,20 @@ BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
   return TRUE;
 }
 
-static PaintObject *create_paint(int kind, COLORREF color)
+static PaintObject *create_paint(int kind, COLORREF color, int is_null)
 {
   PaintObject *object = (PaintObject *)calloc(1, sizeof(*object));
   if (object) {
     object->header.kind = kind;
     object->color = color;
+    object->is_null = is_null;
   }
   return object;
 }
 
-HBRUSH CreateSolidBrush(COLORREF color) { return create_paint(OBJECT_BRUSH, color); }
+HBRUSH CreateSolidBrush(COLORREF color) { return create_paint(OBJECT_BRUSH, color, 0); }
 HBRUSH CreateBrushIndirect(const LOGBRUSH *brush) { return CreateSolidBrush(brush ? brush->lbColor : 0); }
-HPEN CreatePen(int style, int width, COLORREF color) { (void)style; (void)width; return create_paint(OBJECT_PEN, color); }
+HPEN CreatePen(int style, int width, COLORREF color) { (void)style; (void)width; return create_paint(OBJECT_PEN, color, 0); }
 HPEN CreatePenIndirect(const LOGPEN *pen) { return CreatePen(0, 1, pen ? pen->lopnColor : 0); }
 
 int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
@@ -626,18 +643,22 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
   int right;
   int bottom;
   PaintObject *paint = (PaintObject *)brush;
-  unsigned char index = color_to_index(dc, paint ? paint->color : 0);
   if (!dc || !dc->bitmap || !rect)
     return 0;
+  if (!paint || paint->is_null)
+    return 1;
   left = map_x(dc, rect->left);
   top = map_y(dc, rect->top);
   right = map_x(dc, rect->right);
   bottom = map_y(dc, rect->bottom);
-  for (y = top; y < bottom; ++y)
-    for (x = left; x < right; ++x) {
-      unsigned char *pixel = pixel_at(dc->bitmap, x, y);
-      if (pixel) *pixel = index;
-    }
+  {
+    unsigned char index = color_to_index(dc, paint->color);
+    for (y = top; y < bottom; ++y)
+      for (x = left; x < right; ++x) {
+        unsigned char *pixel = pixel_at(dc->bitmap, x, y);
+        if (pixel) *pixel = index;
+      }
+  }
   return 1;
 }
 
@@ -652,8 +673,14 @@ BOOL MoveToEx(HDC dc, int x, int y, POINT *old)
 BOOL LineTo(HDC dc, int x1, int y1)
 {
   int x0, y0, dx, sx, dy, sy, err;
-  COLORREF color = dc && dc->pen ? ((PaintObject *)dc->pen)->color : PALETTEINDEX(255);
+  PaintObject *pen = dc ? (PaintObject *)dc->pen : NULL;
+  COLORREF color = pen ? pen->color : PALETTEINDEX(255);
   if (!dc) return FALSE;
+  if (pen && pen->is_null) {
+    dc->cursor_x = x1;
+    dc->cursor_y = y1;
+    return TRUE;
+  }
   x0 = dc->cursor_x; y0 = dc->cursor_y;
   dx = abs(x1 - x0); sx = x0 < x1 ? 1 : -1;
   dy = -abs(y1 - y0); sy = y0 < y1 ? 1 : -1;
@@ -670,6 +697,11 @@ BOOL LineTo(HDC dc, int x1, int y1)
 
 BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
 {
+  RECT fill_rect;
+  if (!dc)
+    return FALSE;
+  SetRect(&fill_rect, left, top, right, bottom);
+  FillRect(dc, &fill_rect, dc->brush);
   left = map_x(dc, left);
   top = map_y(dc, top);
   right = map_x(dc, right);
@@ -865,8 +897,13 @@ BOOL DPtoLP(HDC dc, LPPOINT points, int count)
   int i;
   if (!dc || !points)
     return FALSE;
-  if (dc->map_mode == MM_TEXT)
+  if (dc->map_mode == MM_TEXT) {
+    for (i = 0; i < count; ++i) {
+      points[i].x = dc->window_org_x + points[i].x - dc->viewport_org_x;
+      points[i].y = dc->window_org_y + points[i].y - dc->viewport_org_y;
+    }
     return TRUE;
+  }
   if (!dc->viewport_ext_x || !dc->viewport_ext_y)
     return FALSE;
   for (i = 0; i < count; ++i) {
@@ -889,8 +926,12 @@ HGDIOBJ GetStockObject(int object)
                    object == DKGRAY_BRUSH ? RGB(64,64,64) : RGB(0,0,0);
   if (object == DEFAULT_GUI_FONT || object == SYSTEM_FONT)
     return NULL;
+  if (object == NULL_BRUSH)
+    return create_paint(OBJECT_BRUSH, color, 1);
+  if (object == BLACK_PEN)
+    return CreatePen(0, 1, color);
   if (object == NULL_PEN)
-    return CreatePen(0, 0, color);
+    return create_paint(OBJECT_PEN, color, 1);
   return CreateSolidBrush(color);
 }
 
@@ -1226,6 +1267,10 @@ static HFONT open_font(const LOGFONTA *description)
         SDL_strcasecmp(filename, "TT0299M_.TTF") != 0)
       style |= TTF_STYLE_ITALIC;
     TTF_SetFontStyle(result->font, style);
+    {
+      int cell_height = TTF_GetFontHeight(result->font);
+      result->font_size_to_cell_height = cell_height > 0 ? (double)result->size / (double)cell_height : 1.0;
+    }
   }
   if (!result->font) {
     SDL_Log("gdi: TTF_OpenFont failed: %s: %s", path, SDL_GetError());

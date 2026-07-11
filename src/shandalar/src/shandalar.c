@@ -754,13 +754,15 @@ int ScaleUiCoordinate(int value)
 // FUNCTION: SHANDALAR 0x0055db50
 int RunAdventureSession(void)
 {
-  clock_t last_tick;
+  Uint32 last_tick;
   int temp_value;
   int initialized_world;
   unsigned int tile_mask;
   int game_setup_mode;
   int loop_index;
   int proceed_to_main_loop;
+  int pending_ui_action_queued;
+  int mouse_snapshot_updated;
 
   initialized_world = 0;
   proceed_to_main_loop = 0;
@@ -924,20 +926,14 @@ opening_menu:
     g_world_scene_reveal_effect_pending = 1;
 #endif
 
-#ifdef MODERN_FIXES
     last_tick = 0;
     do
     {
-#else
-    do
-    {
-      last_tick = 0;
-#endif
       ConsumeUiTickCount();
       RenderAdventureWorldScene(g_world_player_x, g_world_player_y, g_world_scene_force_redraw);
       g_world_scene_force_redraw = 0;
 
-      while (clock() - last_tick < 0x3c)
+      while ((int)(SDL_GetTicks() - last_tick) < 0x3c)
       {
 #ifdef __EMSCRIPTEN__
   emscripten_sleep(0);
@@ -945,22 +941,29 @@ opening_menu:
   SDL_Delay(1);
 #endif
       }
-      last_tick = clock();
+      last_tick = SDL_GetTicks();
 
       if ((g_mouse_button_down_mask & 2U) != 0)
       {
         RunRightClickMenuAndQueueInput();
       }
-      QueuePendingMenuActionInput();
+      pending_ui_action_queued = (g_pending_ui_action_code != 0);
+      mouse_snapshot_updated = QueuePendingMenuActionInput();
 
       UpdateAdventureWorldInputAndMovement();
       UpdateWorldLairAndMonsterSlots();
 
       TickWorldMagicSlotTimers();
-      UpdateMouseSnapshot();
+      if (mouse_snapshot_updated == 0)
+      {
+        UpdateMouseSnapshot();
+      }
       UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
       g_monster_timer = g_monster_timer + 1;
-      ClearInputAndWaitForMouseRelease();
+      if (pending_ui_action_queued)
+      {
+        ClearInputAndWaitForMouseRelease();
+      }
       ClearQueuedKeyInput();
       setjmp(g_adventure_world_exit_jump_buffer);
     } while (g_adventure_world_exit_requested == 0);
@@ -2134,6 +2137,11 @@ int FindWorldMagicCardIndex(shandalar_worldmagic_index_t inx)
 {
   int entry_index;
 
+  if ((int)inx < 0)
+  {
+    return -1;
+  }
+
   for (entry_index = 0; entry_index < g_card_count + 0x10; entry_index = entry_index + 1)
   {
     if (global_cards_data[entry_index].id == Scards[inx].worldmagic_csvid)
@@ -2141,6 +2149,7 @@ int FindWorldMagicCardIndex(shandalar_worldmagic_index_t inx)
       return entry_index;
     }
   }
+  return -1;
 }
 
 // FUNCTION: SHANDALAR 0x004290e2
@@ -4343,7 +4352,13 @@ int QueuePendingMenuActionInput(void)
     break;
   default:
     UpdateMouseSnapshot();
-    if (g_mouse_button_mask_snapshot != 0)
+    if ((g_mouse_button_mask_snapshot & 2U) != 0)
+    {
+      RunRightClickMenuAndQueueInput();
+      g_pending_ui_action_code = 0;
+      return 1;
+    }
+    if ((g_mouse_button_mask_snapshot & 1U) != 0)
     {
       unused_mapped_key = MapWorldClickToMovementKey(g_mouse_x_snapshot, g_mouse_y_snapshot);
     }
@@ -4351,7 +4366,8 @@ int QueuePendingMenuActionInput(void)
     {
       PushQueuedKeyInput(unused_mapped_key);
     }
-    break;
+    g_pending_ui_action_code = 0;
+    return 1;
   }
 
   g_pending_ui_action_code = 0;
