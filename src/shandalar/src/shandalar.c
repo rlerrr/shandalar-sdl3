@@ -681,6 +681,7 @@ void DrawEncodedImageUiScaled(FacemakerWindowBounds *dst, int x_320, int y_200, 
 int FindWorldMagicCardIndex(shandalar_worldmagic_index_t world_magic_slot_index);
 void PushQueuedKeyInput(int key_code);
 int MapWorldClickToMovementKey(int x, int y);
+int IsAdventureRightClickMenuButtonHit(int x, int y);
 int RenderMenuControlRange(int first_index, int count);
 int GetUiTickCount(void);
 int SeedRandomFromTickCount(void);
@@ -990,6 +991,35 @@ int RunTextMenuAtScaled(char *menu_text, int x_320_scale, unsigned int y_200_sca
                        (int)((y_200_scale - (y_200_scale & 1)) * global_screen_height) / 200 + (y_200_scale & 1));
 }
 
+int TextMenuOptionAtPoint(char *menu_text, int x, int y)
+{
+  int line_idx;
+  int option_idx;
+  int line_top;
+
+  if ((x < g_text_menu_left) || (g_text_menu_right < x))
+  {
+    return -1;
+  }
+
+  option_idx = 0;
+  for (line_idx = 0; line_idx < g_text_menu_line_count; line_idx = line_idx + 1)
+  {
+    if ((menu_text[g_text_menu_line_offsets[line_idx]] == ' ') ||
+        (menu_text[g_text_menu_line_offsets[line_idx]] == '_'))
+    {
+      line_top = g_text_menu_top + 4 + line_idx * g_text_menu_line_height;
+      if ((line_top <= y) && (y < line_top + g_text_menu_line_height))
+      {
+        return option_idx;
+      }
+      option_idx = option_idx + 1;
+    }
+  }
+
+  return -1;
+}
+
 // FUNCTION: SHANDALAR 0x00412c37
 int RunTextMenuCore(char *menu_text, int clear_input_before_show)
 {
@@ -1102,11 +1132,7 @@ int RunTextMenuCore(char *menu_text, int clear_input_before_show)
         g_text_menu_mouse_released = 1;
       }
 
-      selected_menu_entry = ((g_mouse_y_snapshot - g_text_menu_top) - 4) / g_text_menu_line_height - g_text_menu_first_option_line;
-      if ((g_mouse_x_snapshot < g_text_menu_left) || (g_text_menu_right < g_mouse_x_snapshot))
-      {
-        selected_menu_entry = -1;
-      }
+      selected_menu_entry = TextMenuOptionAtPoint(menu_text, g_mouse_x_snapshot, g_mouse_y_snapshot);
 
       if ((g_text_menu_disabled_option_mask & (1 << (unsigned char)selected_menu_entry)) != 0)
       {
@@ -1114,7 +1140,11 @@ int RunTextMenuCore(char *menu_text, int clear_input_before_show)
       }
       else
       {
-        if (g_mouse_button_mask_snapshot == 0)
+        if (((g_mouse_button_mask_snapshot & 1U) != 0) && (selected_menu_entry != -1))
+        {
+          done = 1;
+        }
+        else if (g_mouse_button_mask_snapshot == 0)
         {
           done = 1;
         }
@@ -4360,6 +4390,12 @@ int QueuePendingMenuActionInput(void)
     }
     if ((g_mouse_button_mask_snapshot & 1U) != 0)
     {
+      if (IsAdventureRightClickMenuButtonHit(g_mouse_x_snapshot, g_mouse_y_snapshot) != 0)
+      {
+        RunRightClickMenuAndQueueInput();
+        g_pending_ui_action_code = 0;
+        return 1;
+      }
       unused_mapped_key = MapWorldClickToMovementKey(g_mouse_x_snapshot, g_mouse_y_snapshot);
     }
     if (unused_mapped_key != -1)
@@ -4485,6 +4521,20 @@ int MapWorldClickToMovementKey(int x, int y)
   }
 
   return keycode_map[direction];
+}
+
+int IsAdventureRightClickMenuButtonHit(int x, int y)
+{
+  int pad;
+  int size;
+  int left;
+  int top;
+
+  pad = ScaleUiCoordinate(4);
+  size = ScaleUiCoordinate(0x20);
+  left = global_screen_width - size - pad;
+  top = pad;
+  return left <= x && x <= left + size && top <= y && y <= top + size;
 }
 
 // FUNCTION: SHANDALAR 0x0055e808

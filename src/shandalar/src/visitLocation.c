@@ -31,6 +31,7 @@ extern int g_menu_render_guard;
 extern int g_mouse_x;
 extern int g_mouse_y;
 extern int g_mouse_button_down_mask;
+extern int g_mouse_button_mask_snapshot;
 extern int g_mouse_x_snapshot;
 extern int g_mouse_y_snapshot;
 
@@ -175,6 +176,8 @@ void BeginSpriteEncodeSession(void);
 void FinalizeSpriteEncodeSession(void);
 EncodedImage *EncodeSpriteFromPage(int page_number, int src_x, int src_y, int width, int height);
 void FreeSpriteBlob(void *sprite_blob);
+int HasQueuedKeyInput(void);
+int IsAdventureRightClickMenuButtonHit(int x, int y);
 
 void DrawFormattedTextNoShadowCentered(FacemakerWindowBounds *dst, int text_color, int x, int y, char *world_magic_button_sprite, ...);
 void DrawFormattedTextShadowedCentered(FacemakerWindowBounds *window, int color_index, int x, int y, char *world_magic_button_sprite, ...);
@@ -384,6 +387,7 @@ int g_town_shop_cache_town_index;
 int g_pending_quest_destination;
 // GLOBAL: SHANDALAR 0x005b7e40
 EncodedImage *g_buy_cards_done_button_sprites[3];
+EncodedImage *g_buy_cards_confirm_button_sprites[3];
 // GLOBAL: SHANDALAR 0x005b7e4c
 EncodedImage *g_buy_cards_title_panel_sprite;
 
@@ -410,6 +414,7 @@ char g_town_button_labels[5][0x64];
 int VisitTownWiseman(AdvMenuControl *control);
 
 int RenderBuyCardsDoneButton(AdvMenuControl *control, int mode);
+int RunBuyCardsConfirmPrompt(int card_id, int price);
 extern char g_town_leave_button_mode_colors[];
 
 // GLOBAL: SHANDALAR 0x0058ab88
@@ -1307,6 +1312,10 @@ int RunTownBuyCardsScreen(AdvMenuControl *control)
   BeginSpriteEncodeSession();
   for (loop_i = 0; loop_i < 3; loop_i = loop_i + 1)
   {
+    g_buy_cards_confirm_button_sprites[loop_i] = EncodeSpriteFromPage(1, loop_i * 0x5a + 1, 1, 0x59, 0x23);
+  }
+  for (loop_i = 0; loop_i < 3; loop_i = loop_i + 1)
+  {
     SetFontStyleSize(7, (loop_i == 2) ? 9 : 11);
     DrawFormattedTextNoShadowCentered(g_page1_window_bounds, colors[loop_i], loop_i * 0x5a + 0x2e, 0x10, "%s", (char *)g_done_text_table_entry);
     g_buy_cards_done_button_sprites[loop_i] = EncodeSpriteFromPage(1, loop_i * 0x5a + 1, 1, 0x59, 0x23);
@@ -1405,32 +1414,23 @@ redraw_buy_cards_screen:
         (void)UpdateMenuControlSelection(mouse_x, mouse_y, g_mouse_button_down_mask);
         continue;
       }
-      /*else
-      {
 
-      }
-
-      if (selected_idx != -1)
-      {
-        break;
-      }*/
-
-      sprintf(g_ui_message_buffer, gs_visit_citybuy_0077f1d0[2], g_town_shop_card_prices[idx]);
-      DrawEncodedImageResampled(g_page0_window_bounds, ScaleUiCoordinateFrom320(0xdc) / 2, ScaleUiCoordinateFrom320(0x34) / 2, ScaleUiCoordinateFrom320(0xc5) / 2, ScaleUiCoordinateFrom320(0x10f) / 2, g_buy_cards_preview_panel_sprite);
-      DrawAdventureCardSized(g_town_shop_card_ids[idx], 0x7a, 0x29, 0x4b, 0x70, 1, (char *)&s_empty_buy_card_banner_0058aebc);
-      DrawUiScaledCenteredTextNoShadow(g_page0_window_bounds, 0x1b, 0x140, 0x47, g_ui_message_buffer);
-      ClearInputAndWaitForMouseRelease();
-      key = PopNormalizedQueuedKeyInput();
+      key = RunBuyCardsConfirmPrompt(g_town_shop_card_ids[idx], g_town_shop_card_prices[idx]);
+      (void)DrawAdventureInterfaceLayout(1);
 
       accept_cursor = gs_visit_citybuy_0077f1d0[3];
-      accepted = 0;
-      while (*accept_cursor != '\0')
+      accepted = key == -2;
+      if (key > 0)
       {
-        accept_scan = accept_cursor;
-        accept_cursor = accept_cursor + 1;
-        if ((int)(signed char)*accept_scan == key)
+        accepted = 0;
+        while (*accept_cursor != '\0')
         {
-          accepted = 1;
+          accept_scan = accept_cursor;
+          accept_cursor = accept_cursor + 1;
+          if ((int)(signed char)*accept_scan == key)
+          {
+            accepted = 1;
+          }
         }
       }
 
@@ -1466,6 +1466,80 @@ redraw_buy_cards_screen:
   FreeSpriteBlob(g_buy_cards_preview_panel_sprite);
   FreeSpriteBlob(g_buy_cards_done_button_sprites[0]);
   return 0;
+}
+
+int RunBuyCardsConfirmPrompt(int card_id, int price)
+{
+  int key;
+  int modal_x;
+  int modal_y;
+  int modal_w;
+  int modal_h;
+  int accept_x;
+  int cancel_x;
+  int button_y;
+  int button_w;
+  int button_h;
+  int text_y;
+  int accept_state;
+  int cancel_state;
+  int text_offset;
+
+  sprintf(g_ui_message_buffer, gs_visit_citybuy_0077f1d0[2], price);
+  modal_x = ScaleUiCoordinateFrom320(0xdc) / 2;
+  modal_y = ScaleUiCoordinateFrom320(0x34) / 2;
+  modal_w = ScaleUiCoordinateFrom320(0xc5) / 2;
+  modal_h = ScaleUiCoordinateFrom320(0x10f) / 2;
+  DrawEncodedImageResampled(g_page0_window_bounds, modal_x, modal_y, modal_w, modal_h, g_buy_cards_preview_panel_sprite);
+  DrawAdventureCardSized(card_id, 0x7a, 0x29, 0x4b, 0x70, 1, (char *)&s_empty_buy_card_banner_0058aebc);
+  DrawUiScaledCenteredTextNoShadow(g_page0_window_bounds, 0x1b, 0x140, 0x47, g_ui_message_buffer);
+
+  button_w = ScaleUiCoordinate((int)g_buy_cards_confirm_button_sprites[0]->width);
+  button_h = ScaleUiCoordinate((int)g_buy_cards_confirm_button_sprites[0]->height);
+  accept_x = global_screen_width / 2 - button_w - ScaleUiCoordinate(4);
+  cancel_x = global_screen_width / 2 + ScaleUiCoordinate(4);
+  button_y = modal_y + modal_h + ScaleUiCoordinate(8);
+
+  ClearInputAndWaitForMouseRelease();
+  do
+  {
+    UpdateMouseSnapshot();
+    accept_state = ((accept_x <= g_mouse_x_snapshot) && (g_mouse_x_snapshot <= accept_x + button_w) &&
+                    (button_y <= g_mouse_y_snapshot) && (g_mouse_y_snapshot <= button_y + button_h))
+                       ? ((g_mouse_button_mask_snapshot & 1U) ? 2 : 1)
+                       : 0;
+    cancel_state = ((cancel_x <= g_mouse_x_snapshot) && (g_mouse_x_snapshot <= cancel_x + button_w) &&
+                    (button_y <= g_mouse_y_snapshot) && (g_mouse_y_snapshot <= button_y + button_h))
+                       ? ((g_mouse_button_mask_snapshot & 1U) ? 2 : 1)
+                       : 0;
+    DrawEncodedImageResampled(g_page0_window_bounds, accept_x, button_y, button_w, button_h,
+                              g_buy_cards_confirm_button_sprites[accept_state]);
+    DrawEncodedImageResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
+                              g_buy_cards_confirm_button_sprites[cancel_state]);
+    text_offset = (accept_state == 2) ? ScaleUiCoordinate(1) : 0;
+    text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2 + text_offset;
+    DrawFormattedTextNoShadowCentered(g_page0_window_bounds, (accept_state == 0) ? 0x1b : 0x1a,
+                                      accept_x + button_w / 2 + text_offset, text_y, "Yes");
+    text_offset = (cancel_state == 2) ? ScaleUiCoordinate(1) : 0;
+    text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2 + text_offset;
+    DrawFormattedTextNoShadowCentered(g_page0_window_bounds, (cancel_state == 0) ? 0x1b : 0x1a,
+                                      cancel_x + button_w / 2 + text_offset, text_y, "No");
+    if ((g_mouse_button_mask_snapshot & 1U) != 0)
+    {
+      if (accept_state != 0)
+      {
+        return -2;
+      }
+      if (cancel_state != 0)
+      {
+        return 0;
+      }
+    }
+    DelayUiTicks(1);
+  } while (HasQueuedKeyInput() == 0);
+
+  key = PopNormalizedQueuedKeyInput();
+  return key;
 }
 
 // FUNCTION: SHANDALAR 0x004f0b50
@@ -2169,7 +2243,9 @@ loop:
   {
     UpdateMouseSnapshot();
     (void)UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
-    if ((g_mouse_button_down_mask & 2U) != 0)
+    if (((g_mouse_button_down_mask & 2U) != 0) ||
+        (((g_mouse_button_down_mask & 1U) != 0) &&
+         (IsAdventureRightClickMenuButtonHit(g_mouse_x_snapshot, g_mouse_y_snapshot) != 0)))
     {
       menu_context = RunRightClickMenuAndQueueInput();
 

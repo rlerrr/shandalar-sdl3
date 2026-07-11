@@ -288,6 +288,9 @@ extern int g_world_scene_reveal_effect_pending;
 extern int g_world_scroll_cache_ready;
 extern int g_monster_timer;
 extern int g_skip_world_sfx_preload;
+extern int g_mouse_x;
+extern int g_mouse_y;
+extern int g_mouse_button_down_mask;
 extern char g_ui_message_buffer[0x1000];
 extern int g_ego_sprite_width;
 extern int g_ego_sprite_draw_height;
@@ -314,6 +317,8 @@ extern DIBSurface *g_graphics_pages[10];
 extern OpeningMenuSpriteWorkEntry g_opening_menu_sprite_work_buffer[0x20];
 extern EncodedImage *g_world_magic_avatar_sprites[5];
 extern EncodedImage *g_worlds_extra_sprite_entries[4];
+extern EncodedImage *g_main_menu_button_sprites_normal[4];
+extern EncodedImage *g_main_menu_button_sprites_highlight[4];
 extern EncodedImage *g_castles_sprite_entries[20];
 extern EncodedImage *g_wizard_controlled_town_sprite_entries[5];
 extern EncodedImage *g_current_location_marker_sprite;
@@ -341,6 +346,7 @@ void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int wid
 void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedImage *encoded_image);
 void DrawEncodedImageUnscaledClipped(FacemakerWindowBounds *dst, int x, int y, EncodedImage *encoded_image);
 void DrawEncodedImageUiScaled(FacemakerWindowBounds *dst, int x_320, int y_200, EncodedImage *sprite, int width_320, int height_200);
+void FillGraphicsRect(FacemakerWindowBounds *window_bounds, int x, int y, int width, int height, unsigned int color_index);
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int parse_format, int centered, int draw_shadow, int multiline, int x, int y, int *arg_ptr);
 void DrawTextAt(FacemakerWindowBounds *window, int color, int x, int y, char *text, ...);
 void DrawWorldUiFormattedText(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...);
@@ -377,6 +383,8 @@ int FindNearestTownIndex(int world_x, int world_y);
 char *BuildCreatureNameWithArticle(int creature_type);
 char *BuildTownDisplayName(int town_index);
 DWORD FormatMessageFromStringStripCarriageReturns(char *dst, DWORD max_length, LPCVOID format, ...);
+int IsAdventureRightClickMenuButtonHit(int x, int y);
+void DrawAdventureRightClickMenuButton(void);
 
 // FUNCTION: SHANDALAR 0x005501dc
 int ScaleUiCoordinateFrom320(int value)
@@ -1451,6 +1459,46 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
   g_page0_window_bounds->page_number = saved_page_number;
 }
 
+void DrawAdventureRightClickMenuButton(void)
+{
+  int pad;
+  int size;
+  int left;
+  int top;
+  int fill_color;
+  int border_light;
+  int border_dark;
+  EncodedImage *sprite;
+
+  pad = ScaleUiCoordinate(4);
+  size = ScaleUiCoordinate(0x20);
+  left = global_screen_width - size - pad;
+  top = pad;
+
+  fill_color = 0x1a;
+  border_light = 0xfe;
+  border_dark = 0x1b;
+  sprite = g_main_menu_button_sprites_normal[0];
+  if (IsAdventureRightClickMenuButtonHit(g_mouse_x, g_mouse_y) != 0)
+  {
+    fill_color = (g_mouse_button_down_mask & 1) ? 0x18 : 0x1b;
+    border_light = 0xff;
+    border_dark = 0x1a;
+    sprite = g_main_menu_button_sprites_highlight[0] ? g_main_menu_button_sprites_highlight[0] : sprite;
+  }
+
+  FillGraphicsRect(g_page0_window_bounds, left, top, size, size, fill_color);
+  FillGraphicsRect(g_page0_window_bounds, left, top, size, ScaleUiCoordinate(1), border_light);
+  FillGraphicsRect(g_page0_window_bounds, left, top, ScaleUiCoordinate(1), size, border_light);
+  FillGraphicsRect(g_page0_window_bounds, left, top + size - ScaleUiCoordinate(1), size, ScaleUiCoordinate(1), border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + size - ScaleUiCoordinate(1), top, ScaleUiCoordinate(1), size, border_dark);
+  if (sprite != 0)
+  {
+    DrawEncodedImageResampled(g_page0_window_bounds, left + ScaleUiCoordinate(3), top + ScaleUiCoordinate(3),
+                              size - ScaleUiCoordinate(6), size - ScaleUiCoordinate(6), sprite);
+  }
+}
+
 // FUNCTION: SHANDALAR 0x0054baaa
 int DrawAdventureQuestStatusPanel(int force_redraw)
 {
@@ -1813,6 +1861,7 @@ void *DrawAdventureInterfaceLayout(int force_redraw)
 
   g_page0_window_bounds->font_slot = 2;
   DrawAdventureQuestStatusPanel(1);
+  DrawAdventureRightClickMenuButton();
 
   if ((g_adventure_ui_layout_dirty == 0) && (force_redraw == 0))
   {
@@ -2430,6 +2479,7 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
     ShowMouseCursorNested();
     DrawAdventureQuestStatusPanel(0);
     DrawQuestDeadlineClock();
+    DrawAdventureRightClickMenuButton();
     return;
   }
   else

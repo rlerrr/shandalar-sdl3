@@ -28,6 +28,7 @@ extern char g_ini_string_scratch[0x28];
 extern int g_mouse_x_snapshot;
 extern int g_mouse_y_snapshot;
 extern int g_mouse_button_down_mask;
+extern int g_mouse_button_mask_snapshot;
 extern int g_mouse_y;
 extern int g_mouse_x;
 extern int g_menu_render_guard;
@@ -41,6 +42,7 @@ extern char g_text_lines[249][300];
 extern FacemakerWindowBounds *g_page0_window_bounds;
 extern FacemakerWindowBounds *g_page1_window_bounds;
 extern FacemakerWindowBounds *g_page2_window_bounds;
+static EncodedImage *g_name_entry_done_button_sprites[3];
 
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
 int MeasureMultilineTextWidth(FacemakerWindowBounds *window, char *text);
@@ -82,6 +84,7 @@ void __cdecl DrawFormattedTextNoShadowCentered(FacemakerWindowBounds *dst, int t
 void DrawFormattedTextShadowed(FacemakerWindowBounds *window, int color, int x, int y, char *format, ...);
 void LoadPcxIntoPageOpaque(int page_number, char *path);
 unsigned int WaitForInputEventUnlessBlocked(void);
+void ClearInputAndWaitForMouseRelease(void);
 int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_click);
 int ScaleUiCoordinate(int value);
 int Palette_FindNearestEntryIndex(int target_r, int target_g, int target_b, unsigned char *palette_bytes);
@@ -127,6 +130,166 @@ int DrawColorMenuEntry(int color_index, int visual_state);
 int HandleColorMenuControlEvent(AdvMenuControl *control, int event_type);
 int HandleColorMenuControlActivate(AdvMenuControl *control);
 int shandalar_run_facemaker_flow(void);
+
+static int FindNearestVisiblePaletteEntry(int target_r, int target_g, int target_b, unsigned char *palette_bytes)
+{
+  int palette_index;
+  int best_index;
+  int best_distance;
+  int dr;
+  int dg;
+  int db;
+  int distance;
+
+  best_index = 1;
+  best_distance = 0x7fffffff;
+  for (palette_index = 1; palette_index < 0x100; palette_index = palette_index + 1)
+  {
+    dr = target_r - (int)palette_bytes[palette_index * 3];
+    dg = target_g - (int)palette_bytes[palette_index * 3 + 1];
+    db = target_b - (int)palette_bytes[palette_index * 3 + 2];
+    distance = dr * dr + dg * dg + db * db;
+    if (distance < best_distance)
+    {
+      best_distance = distance;
+      best_index = palette_index;
+    }
+  }
+  return best_index;
+}
+
+static int ApplyVisibleSpritePaletteMap(FacemakerWindowBounds *page, int src_x, int src_y, unsigned int width, int height, char *palette_source_path,
+                                        char *target_palette_path)
+{
+  unsigned int scanline_buffer[0x200];
+  RpBitsPalettePacket source_palette;
+  RpBitsPalettePacket target_palette;
+  unsigned char remap_table[0x100];
+  unsigned char *palette_cursor;
+  int y;
+  int x;
+  int red;
+  int green;
+  int blue;
+
+  LoadPcxResource(-1, 0, 0, palette_source_path, &source_palette);
+  LoadPcxResource(-1, 0, 0, target_palette_path, &target_palette);
+
+  remap_table[0] = 0;
+  palette_cursor = source_palette.entry_data + 3;
+  for (x = 1; x < 0x100; x = x + 1)
+  {
+    red = (int)palette_cursor[0];
+    green = (int)palette_cursor[1];
+    blue = (int)palette_cursor[2];
+    remap_table[x] = (unsigned char)FindNearestVisiblePaletteEntry(red, green, blue, target_palette.entry_data);
+    palette_cursor = palette_cursor + 3;
+  }
+
+  for (y = src_y; y < src_y + height; y = y + 1)
+  {
+    ReadGraphicsScanline(scanline_buffer, page->page_number, src_x, y, width);
+    for (x = 0; x < (int)width; x = x + 1)
+    {
+      ((unsigned char *)scanline_buffer)[x] = remap_table[((unsigned char *)scanline_buffer)[x]];
+    }
+    WriteGraphicsScanline(scanline_buffer, page->page_number, src_x, y, width);
+  }
+
+  return 0;
+}
+
+static void ResetNameEntryDoneButtonSprites(void)
+{
+  if (g_name_entry_done_button_sprites[0] != 0)
+  {
+    FreeSpriteBlob((void *)g_name_entry_done_button_sprites[0]);
+  }
+  g_name_entry_done_button_sprites[0] = 0;
+  g_name_entry_done_button_sprites[1] = 0;
+  g_name_entry_done_button_sprites[2] = 0;
+}
+
+static void BuildNameEntryDoneButtonSprites(void)
+{
+  int i;
+  int source_sprite_indices[3] = {3, 4, 4};
+  EncodedImage *source_sprites[13];
+  EncodedImage *source_sprite;
+
+  if (g_name_entry_done_button_sprites[0] != 0)
+  {
+    return;
+  }
+
+  ReadSpriteEntryPointers(&source_sprites[0], "BuyButtons.spr");
+  BeginSpriteEncodeSession();
+  for (i = 0; i < 3; i = i + 1)
+  {
+    source_sprite = source_sprites[source_sprite_indices[i]];
+    FillGraphicsRect(g_page2_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, 0);
+    DrawEncodedImageResampled(g_page2_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, source_sprite);
+    ApplyVisibleSpritePaletteMap(g_page2_window_bounds, 0, 0, (unsigned int)source_sprite->width, (int)source_sprite->height, "buycards.pic",
+                                 "namepick.pic");
+    g_name_entry_done_button_sprites[i] = EncodeSpriteFromPage(2, 0, 0, (int)source_sprite->width, (int)source_sprite->height);
+  }
+  FinalizeSpriteEncodeSession();
+  FreeSpriteBlob((void *)source_sprites[0]);
+}
+
+static void GetNameEntryDoneButtonRect(int *out_x, int *out_y, int *out_w, int *out_h)
+{
+  EncodedImage *sprite;
+
+  BuildNameEntryDoneButtonSprites();
+  sprite = g_name_entry_done_button_sprites[0];
+  *out_w = sprite ? sprite->width : 0x59;
+  *out_h = sprite ? sprite->height : 0x23;
+  *out_x = (global_screen_width - *out_w) / 2;
+  *out_y = ScaleUiCoordinate(0x12c) + 0x6a + 6;
+}
+
+static int GetNameEntryDoneButtonState(void)
+{
+  int x;
+  int y;
+  int w;
+  int h;
+
+  GetNameEntryDoneButtonRect(&x, &y, &w, &h);
+  if (x <= g_mouse_x && g_mouse_x <= x + w && y <= g_mouse_y && g_mouse_y <= y + h)
+  {
+    return (g_mouse_button_down_mask & 1) ? 2 : 1;
+  }
+  return 0;
+}
+
+static void DrawNameEntryDoneButton(void)
+{
+  int x;
+  int y;
+  int w;
+  int h;
+  int state;
+
+  GetNameEntryDoneButtonRect(&x, &y, &w, &h);
+  state = GetNameEntryDoneButtonState();
+  DrawEncodedImageResampled(g_page0_window_bounds, x, y, w, h, g_name_entry_done_button_sprites[state]);
+}
+
+static int IsNameEntryDoneButtonPressed(void)
+{
+  int x;
+  int y;
+  int w;
+  int h;
+
+  GetNameEntryDoneButtonRect(&x, &y, &w, &h);
+  return (g_mouse_button_mask_snapshot & 1) != 0 &&
+         (g_mouse_button_down_mask & 1) == 0 &&
+         x <= g_mouse_x_snapshot && g_mouse_x_snapshot <= x + w &&
+         y <= g_mouse_y_snapshot && g_mouse_y_snapshot <= y + h;
+}
 
 #ifdef MODERN_FIXES
 void PumpOpeningMenuWait(void)
@@ -1041,15 +1204,27 @@ int RunNameEntryDialog(char *name_buffer)
   dialog_top = 0x12c;
   LoadPcxIntoPageOpaque(1, "namepick.pic");
   g_page1_window_bounds->font_slot = g_page0_window_bounds->font_slot;
+  ResetNameEntryDoneButtonSprites();
+  BuildNameEntryDoneButtonSprites();
   LoadTextSectionLines("ADVstrings.txt", "STARTUP");
   DrawFormattedTextNoShadowCentered(g_page1_window_bounds, 0xed, 0x8b, 0x19, &g_text_lines[2][0]);
   DrawFormattedTextNoShadowCentered(g_page1_window_bounds, 0xb4, 0x8a, 0x18, &g_text_lines[2][0]);
   BlitGraphicsRect(g_page1_window_bounds, 0, 0, 0x114, 0x6a, g_page1_window_bounds, 0, 200);
   DrawFormattedTextNoShadowCentered(g_page1_window_bounds, 0xb4, 0x8a, 0x100, "%s", name_buffer);
   BlitTransparentRuns(g_page1_window_bounds, 0, 200, 0x114, 0x6a, g_page0_window_bounds, (global_screen_width - 0x114) / 2, ScaleUiCoordinate(dialog_top));
+  DrawNameEntryDoneButton();
+  ClearInputAndWaitForMouseRelease();
   do
   {
     DelayUiTicks(1);
+#ifdef MODERN_FIXES
+    UpdateMouseSnapshot();
+#endif
+    DrawNameEntryDoneButton();
+    if (IsNameEntryDoneButtonPressed())
+    {
+      break;
+    }
     key_code = PopQueuedKeyInput();
     if (key_code == 0x1c0d)
     {
@@ -1066,6 +1241,7 @@ int RunNameEntryDialog(char *name_buffer)
       BlitGraphicsRect(g_page1_window_bounds, 0, 0, 0x114, 0x6a, g_page1_window_bounds, 0, 200);
       DrawFormattedTextNoShadowCentered(g_page1_window_bounds, 0xb4, 0x8a, 0x100, "%s", name_buffer);
       BlitTransparentRuns(g_page1_window_bounds, 0, 200, 0x114, 0x6a, g_page0_window_bounds, (global_screen_width - 0x114) / 2, ScaleUiCoordinate(dialog_top));
+      DrawNameEntryDoneButton();
     }
     DrawBlinkingNameCaret(g_page0_window_bounds, 0xb4, ScaleUiCoordinate(0x140) - text_width / 2, ScaleUiCoordinate(dialog_top) + 0x30, name_buffer,
                           g_name_entry_cursor);
