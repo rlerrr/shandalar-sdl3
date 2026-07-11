@@ -435,6 +435,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND, UINT, WPARAM, LPARAM);
 
 INT_PTR CALLBACK dlgproc_DeckStats(HWND, UINT, WPARAM, LPARAM);
+static int deckbuilder_selling_available(void);
 
 // FUNCTION: DECKDLL 0x1000d9a3
 static int fatal_err(const char *text, HWND hwnd)
@@ -2655,6 +2656,7 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   BITMAP bmp;
   PAINTSTRUCT paint;
   RECT rect2; // ebp - 0x20
+  RECT hint_rect;
   RECT rect;  // ebp - 0x10
 
   // TitleClass fonts.
@@ -2736,6 +2738,19 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     rect2.top = rect2.top + -3;
     SetTextColor(hdc, PALETTERGB(243, 209, 175));
     DrawTextA(hdc, global_deckinfo.deckname, strlen(global_deckinfo.deckname), &rect2, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+
+    if (deckbuilder_selling_available())
+    {
+      CopyRect(&hint_rect, &rect);
+      hint_rect.top = hint_rect.bottom - 0x16;
+      SelectObject(hdc, title_font_small);
+      SetTextColor(hdc, PALETTERGB(20, 46, 77));
+      OffsetRect(&hint_rect, 2, 2);
+      DrawTextA(hdc, "Drop card here to sell", 22, &hint_rect, DT_SINGLELINE | DT_CENTER);
+      OffsetRect(&hint_rect, -2, -2);
+      SetTextColor(hdc, PALETTERGB(243, 209, 175));
+      DrawTextA(hdc, "Drop card here to sell", 22, &hint_rect, DT_SINGLELINE | DT_CENTER);
+    }
 
     EndPaint(hwnd, &paint);
     return 0;
@@ -2866,6 +2881,19 @@ LRESULT CALLBACK wndproc_FullCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     ClientToScreen(hwnd, &pt);
     TrackPopupMenu(global_fullcard_popup, 2, pt.x, pt.y, 0, hwnd, NULL);
     return 0;
+  }
+
+  case WM_LBUTTONDOWN:
+  {
+    static DWORD last_click = 0;
+    DWORD now = GetTickCount();
+    if (now - last_click <= GetDoubleClickTime()) {
+      SendMessageA(hwnd, WM_COMMAND, RES_FULLCARDMENU_EXPAND, 0);
+      last_click = 0;
+      return 0;
+    }
+    last_click = now;
+    return DefWindowProcA(hwnd, msg, wparam, lparam);
   }
 
   default:
@@ -3725,6 +3753,79 @@ void refresh_numofcards_text(void)
   InvalidateRect(global_button_stats_hwnd, NULL, FALSE);
 }
 
+static int deckbuilder_selling_available(void)
+{
+  return ((global_db_flags_1 & DBFLAGS_SHANDALAR) != 0) &&
+         ((global_db_flags_2 & DBFLAGS_STANDALONE) != 0) &&
+         SellPrice != 0 && Gold != 0;
+}
+
+static void refresh_gold_title_text(void)
+{
+  char buf[32];
+
+  load_text("menus", "PRICE");
+  sprintf(buf, text_lines[0], *Gold);
+  strncpy(global_deckinfo.deckname, buf, 12);
+  InvalidateRect(global_title_hwnd, NULL, TRUE);
+}
+
+static int sell_card_from_available_pool(csvid_t csvid)
+{
+  iid_t iid;
+  int sell_price;
+
+  if (!deckbuilder_selling_available())
+    return 0;
+  iid = get_iid_from_global_deck_card(csvid);
+  if (iid == -1)
+    return 0;
+  sell_price = SellPrice(iid);
+  if (!delete_card_from_global_deck(csvid, 1))
+    return 0;
+
+  *Gold += sell_price;
+  refresh_gold_title_text();
+  TENTATIVE_remove_selected_from_horzlist(global_listbox_hwnd, global_horzlist_hwnd);
+  InvalidateRect(global_horzlist_hwnd, 0, 0);
+  count_packs();
+  if (global_cfg.effects != 0)
+    play_sound(3, 400, 0, 0);
+  return 1;
+}
+
+static int sell_temp_removed_deck_cards(csvid_t csvid, int amount)
+{
+  iid_t iid;
+  int sell_price;
+  int sold;
+  int i;
+
+  if (!deckbuilder_selling_available() || amount <= 0)
+    return 0;
+  iid = get_iid_from_global_deck_card(csvid);
+  if (iid == -1)
+    return 0;
+  sell_price = SellPrice(iid);
+  sold = 0;
+  for (i = 0; i < amount; i++)
+  {
+    if (delete_card_from_global_deck(csvid, 2))
+      sold++;
+  }
+  if (sold == 0)
+    return 0;
+
+  *Gold += sell_price * sold;
+  global_deck_was_edited = 1;
+  refresh_gold_title_text();
+  count_packs();
+  refresh_numofcards_text();
+  if (global_cfg.effects != 0)
+    play_sound(3, 400, 0, 0);
+  return 1;
+}
+
 // FUNCTION: DECKDLL 0x1002b126
 static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shifted)
 {
@@ -3779,6 +3880,7 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
     while (target_hwnd != (HWND)0 &&
            target_hwnd != global_main_hwnd &&
            target_hwnd != global_decksurface_hwnd &&
+           target_hwnd != global_title_hwnd &&
            target_hwnd != global_unknown_10144b04 &&
            target_hwnd != global_unknown_10125a3c &&
            target_hwnd != global_horzlist_hwnd)
@@ -3790,6 +3892,9 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
   {
     target_hwnd = global_decksurface_hwnd;
   }
+
+  if (target_hwnd == global_title_hwnd && !deckbuilder_selling_available())
+    target_hwnd = global_main_hwnd;
 
   if (target_hwnd == global_decksurface_hwnd)
   {
@@ -3826,6 +3931,11 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
 
     if ((global_db_flags_1 & 0x41) != 0)
       SendMessageA(global_horzlist_hwnd, 0x466, (WPARAM)itemdata, 0);
+  }
+  else if (target_hwnd == global_title_hwnd)
+  {
+    if (!sell_card_from_available_pool((csvid_t)itemdata))
+      MessageBeep(0);
   }
   else if ((target_hwnd == global_unknown_10125a3c) || (target_hwnd == global_unknown_10144b04))
   {
@@ -4802,6 +4912,7 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
         target != NULL &&
         target != global_main_hwnd &&
         target != global_decksurface_hwnd &&
+        target != global_title_hwnd &&
         target != global_unknown_10144b04 &&
         target != global_unknown_10125a3c &&
         target != global_horzlist_hwnd)
@@ -4815,6 +4926,9 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
     DestroyWindow(hwnd);
     SetFocus(global_horzlist_hwnd);
   }
+
+  if (target == global_title_hwnd && !deckbuilder_selling_available())
+    target = global_main_hwnd;
 
   *(WORD *)&num = 1;
   if (global_decksurface_hwnd == parent)
@@ -4884,6 +4998,11 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
       change_global_deck_card_availability(csvid, 2);
     }
     count_packs();
+  }
+  else if (target == global_title_hwnd)
+  {
+    if (parent != global_decksurface_hwnd || !sell_temp_removed_deck_cards(csvid, num & 0xffff))
+      MessageBeep(0);
   }
   else if (target == global_unknown_10125a3c || target == global_unknown_10144b04)
   {
