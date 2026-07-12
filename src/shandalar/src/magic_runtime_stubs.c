@@ -15,6 +15,7 @@
 #include "platform/legacy_io.h"
 #include "platform/winuser_compat.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,9 @@ extern void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int d
                                     int src_x, int src_y, int copy_w, int copy_h);
 extern void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y,
                                       int width, int height, EncodedImage *encoded_image);
+extern int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
+                               int scale_to_screen, int center_x, int center_y,
+                               int x, int y, char *format, va_list args);
 extern DIBSurface *InitializeGraphicsSystem(int width, int height, int bits_per_pixel);
 extern void *CreateGraphicsPage(int page_number, int width, int height, int bits_per_pixel);
 extern void SetGraphicsPage(int page_number, void *page);
@@ -125,6 +129,14 @@ DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
 
 void StopWorldLocationMusic(void)
 {
+}
+
+void DrawTextAt(FacemakerWindowBounds *window, int color, int x, int y, char *format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  DrawTextFormattedVa(window, color, 1, 1, 1, 1, x, y, format, args);
+  va_end(args);
 }
 
 int DrawRandomCardFromInitialLibrary(int library_index)

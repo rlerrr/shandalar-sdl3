@@ -1786,7 +1786,7 @@ int RunWorldLairMonsterEncounter(int slot_index, int monster_color)
                             ScaleUiCoordinate((int)duel_pool_panel_sprite->height),
                             duel_pool_panel_sprite);
   BuildQuestStatusMessage();
-  DrawTextAt(g_page0_window_bounds, 0xd2, 0x21f, 0x199, g_ui_message_buffer);
+  DrawTextAt(g_page0_window_bounds, 0xd2, 0x21f, 0x199, "%s", g_ui_message_buffer);
   FinalizeSpriteEncodeSession();
   FreeSpriteBlob(preduel_card_frame_left);
   DrawCreaturePortrait(creature_type, ScaleUiCoordinate(0x140), ScaleUiCoordinate(10), 0, 0);
@@ -2618,20 +2618,20 @@ LAB_4F4BB2:
         {
           strcpy(g_ui_message_buffer, "");
         }
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
         reward_text_y = reward_text_y + 0x28;
       }
       if (((reward_flags & 1) != 0) && (g_life[0] != g_player_starting_life))
       {
         g_next_duel_life_delta = g_life[0] - g_player_starting_life;
         sprintf(g_ui_message_buffer, gs_encounter_postduel_0077f050[0x10], g_life[0]);
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
       }
       if ((reward_flags & 0x800) != 0)
       {
         g_next_duel_card_id = internal_rand(4) + 1;
         sprintf(g_ui_message_buffer, gs_encounter_postduel_0077f050[0x11], g_next_duel_card_id);
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
       }
       if ((reward_flags & 0x402) != 0)
       {
@@ -2691,12 +2691,12 @@ LAB_4F4BB2:
       {
         g_food = g_food + internal_rand(0x1e) + 0x14;
         strcpy(g_ui_message_buffer, gs_encounter_postduel_0077f050[0x16]);
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
       }
       if ((reward_flags & 0x40) != 0)
       {
         strcpy(g_ui_message_buffer, gs_encounter_postduel_0077f050[0x17]);
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
         WaitForInputEventUnlessBlocked();
         ForceReloadAdvfac64(1);
         selected_card_id = RunCardBrowser(gs_encounter_postduel_0077f050[0x19], 0, 0xffffffff, 1, 0);
@@ -2714,7 +2714,7 @@ LAB_4F4BB2:
       if ((reward_flags & 0x1000) != 0)
       {
         strcpy(g_ui_message_buffer, gs_encounter_postduel_0077f050[0x18]);
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
         WaitForInputEventUnlessBlocked();
         ForceReloadAdvfac64(1);
         for (slot_index = 0; slot_index < 500; slot_index = slot_index + 1)
@@ -2737,7 +2737,7 @@ LAB_4F4BB2:
       if ((reward_flags & 8) != 0)
       {
         strcpy(g_ui_message_buffer, gs_encounter_postduel_0077f050[0x1a]);
-        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, g_ui_message_buffer);
+        DrawTextAt(g_page0_window_bounds, reward_text_color, reward_text_x, reward_text_y, "%s", g_ui_message_buffer);
         Gold = Gold + 100;
       }
       ClearInputAndWaitForMouseRelease();

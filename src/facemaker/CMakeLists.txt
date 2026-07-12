@@ -42,6 +42,7 @@ if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR)
     MainWindowProc=FacemakerMainWindowProc
     ChangeDisplayResolution=FacemakerChangeDisplayResolution
     RestoreDisplayResolution=FacemakerRestoreDisplayResolution
+    DrawTextAt=FacemakerDrawTextAt
     g_app_instance=facemaker_g_app_instance
     g_palette_class_registered=facemaker_g_palette_class_registered
     g_mouse_x=facemaker_g_mouse_x

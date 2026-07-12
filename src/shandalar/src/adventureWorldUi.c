@@ -1723,7 +1723,7 @@ int DrawAdventureQuestStatusPanel(int force_redraw)
           break;
         }
 
-        DrawTextAt(g_page1_window_bounds, 0xff, text_x, 0x41, g_ui_message_buffer);
+        DrawTextAt(g_page1_window_bounds, 0xff, text_x, 0x41, "%s", g_ui_message_buffer);
 
         BlitGraphicsRect(g_page1_window_bounds, (unsigned int)scaled_strip_x,
                          ScaleUiCoordinate(0x148) - ScaleUiCoordinate(0x135),
@@ -1745,7 +1745,7 @@ int DrawAdventureQuestStatusPanel(int force_redraw)
       }
     }
 
-    DrawTextAt(g_page1_window_bounds, 0xff, text_x, 0x41, g_ui_message_buffer);
+    DrawTextAt(g_page1_window_bounds, 0xff, text_x, 0x41, "%s", g_ui_message_buffer);
 
     BlitGraphicsRect(g_page1_window_bounds, (unsigned int)scaled_strip_x,
                      ScaleUiCoordinate(0x148) - ScaleUiCoordinate(0x135),

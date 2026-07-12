@@ -274,7 +274,7 @@ void ShowTownHintTextPopup(int hint_index)
                             button_sprite_10);
 
   WrapTextToWidthForPopup(g_ui_message_buffer, wrapped_hint_text, ScaleUiCoordinate(0x85));
-  DrawTextAt(g_page0_window_bounds, 0xfe, 0x140, 0xbc, wrapped_hint_text);
+  DrawTextAt(g_page0_window_bounds, 0xfe, 0x140, 0xbc, "%s", wrapped_hint_text);
   WaitForInputEventUnlessBlocked();
   FreeSpriteBlob(button_sprite_10);
 }
