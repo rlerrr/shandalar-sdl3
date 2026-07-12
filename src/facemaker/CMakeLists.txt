@@ -83,7 +83,7 @@ if(SHANDALAR_BUILD_FACEMAKER)
       "-sMAXIMUM_MEMORY=1GB"
       "-sASYNCIFY=1"
       "-sFETCH=1"
-      "-gsource-map"
+      "--profiling-funcs"
       "-lidbfs.js"
     )
     if(SHANDALAR_ASSET_DIR)

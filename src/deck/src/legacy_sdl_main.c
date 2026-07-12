@@ -110,6 +110,10 @@ static void forward_keyboard_event(const SDL_Event *event)
   }
 }
 
+EM_ASYNC_JS(void, wait_next_frame, (), {
+  await new Promise(requestAnimationFrame);
+});
+
 static BOOL pump_legacy_ui(BOOL wait)
 {
   SDL_Event event;
@@ -233,7 +237,7 @@ static BOOL pump_legacy_ui(BOOL wait)
   }
 
 #ifdef __EMSCRIPTEN__
-  emscripten_sleep(wait ? 8 : 0);
+  wait_next_frame();
 #else
   if (wait)
     SDL_Delay(8);

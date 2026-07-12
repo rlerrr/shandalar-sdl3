@@ -1527,16 +1527,50 @@ void shandalar_set_default_font_root(const char *root)
 
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
 {
-  int x;
-  int y;
+  HBITMAP bitmap;
+  int x, y, height, width;
   if (!dc || !dc->bitmap || !pixels || pitch_bytes < dc->bitmap->width * 4)
     return FALSE;
-  for (y = 0; y < dc->bitmap->height; ++y) {
-    uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
-    for (x = 0; x < dc->bitmap->width; ++x) {
-      COLORREF color = read_pixel_color(dc, x, y);
-      dst[x] = 0xff000000u | ((color & 0xffu) << 16) | (color & 0xff00u) |
-               ((color >> 16) & 0xffu);
+  bitmap = dc->bitmap;
+  height = bitmap->height;
+  width = bitmap->width;
+  if (bitmap->bits_per_pixel == 24) {
+    unsigned char *base = bitmap->pixels;
+    int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
+    for (y = 0; y < height; ++y) {
+      int row = top_down ? y : height - 1 - y;
+      unsigned char *src = base + row * src_pitch;
+      uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
+      for (x = 0; x < width; ++x) {
+        unsigned char *p = src + x * 3;
+        dst[x] = 0xff000000u | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0];
+      }
+    }
+  } else if (dc->palette) {
+    PALETTEENTRY *entries = dc->palette->entries;
+    unsigned char *base = bitmap->pixels;
+    int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
+    for (y = 0; y < height; ++y) {
+      int row = top_down ? y : height - 1 - y;
+      unsigned char *src = base + row * src_pitch;
+      uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
+      for (x = 0; x < width; ++x) {
+        PALETTEENTRY *entry = &entries[src[x]];
+        dst[x] = 0xff000000u | ((uint32_t)entry->peRed << 16) |
+                 ((uint32_t)entry->peGreen << 8) | entry->peBlue;
+      }
+    }
+  } else {
+    unsigned char *base = bitmap->pixels;
+    int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
+    for (y = 0; y < height; ++y) {
+      int row = top_down ? y : height - 1 - y;
+      unsigned char *src = base + row * src_pitch;
+      uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
+      for (x = 0; x < width; ++x) {
+        unsigned char v = src[x];
+        dst[x] = 0xff000000u | ((uint32_t)v << 16) | ((uint32_t)v << 8) | v;
+      }
     }
   }
   return TRUE;
