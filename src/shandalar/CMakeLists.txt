@@ -92,6 +92,11 @@ if(EMSCRIPTEN)
       TT0298M_.TTF|TT0298M_.TTF
       TT0300M_.TTF|TT0300M_.TTF
       TT0530M_.TTF|TT0530M_.TTF
+      TT0085M_.TTF|TT0085M_.TTF
+      TT0299M_.TTF|TT0299M_.TTF
+      Magis___.TTF|Magis___.TTF
+      Magim___.TTF|Magim___.TTF
+      DuelArt/Duel.dat|DuelArt/Duel.dat
     )
     foreach(shandalar_preload_entry IN LISTS shandalar_opening_preload_assets)
       string(REPLACE "|" ";" shandalar_preload_pair "${shandalar_preload_entry}")
