@@ -170,9 +170,15 @@ static char *utf8_from_windows_text(LPCSTR text, int length, int *out_length)
   return utf8;
 }
 
+#define COLOR_CACHE_SIZE 256
+#define COLOR_CACHE_MASK (COLOR_CACHE_SIZE - 1)
+static struct { COLORREF color; unsigned char index; unsigned int gen; } g_color_cache[COLOR_CACHE_SIZE];
+static unsigned int g_palette_gen;
+
 static unsigned char color_to_index(HDC dc, COLORREF color)
 {
   unsigned int i;
+  unsigned int slot;
   unsigned int best = 0;
   unsigned int best_distance = UINT32_MAX;
   int r;
@@ -182,6 +188,10 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
   if ((color & 0xff000000u) == 0x01000000u)
     return (unsigned char)(color & 0xffu);
   color &= 0x00ffffffu;
+
+  slot = (color >> 2) & COLOR_CACHE_MASK;
+  if (g_color_cache[slot].color == color && g_color_cache[slot].gen == g_palette_gen)
+    return g_color_cache[slot].index;
 
   r = color & 0xff;
   g = (color >> 8) & 0xff;
@@ -199,6 +209,9 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
       best = i;
     }
   }
+  g_color_cache[slot].color = color;
+  g_color_cache[slot].index = (unsigned char)best;
+  g_color_cache[slot].gen = g_palette_gen;
   return (unsigned char)best;
 }
 
@@ -995,6 +1008,7 @@ UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
     dc->palette->entries[start + i].peGreen = colors[i].rgbGreen;
     dc->palette->entries[start + i].peBlue = colors[i].rgbBlue;
   }
+  ++g_palette_gen;
   return count;
 }
 int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
