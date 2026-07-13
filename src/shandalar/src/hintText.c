@@ -11,6 +11,7 @@
 #include "shandalar_global_strings.h"
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
+#include "platform/legacy_io.h"
 
 typedef struct
 {
@@ -41,12 +42,19 @@ void AppendTownHintBodyText(int hint_index)
 {
   char hint_text[256];
   FILE *hints_file;
-  int item_count;
 
   hints_file = fopen("hints.txt", "rt");
   fseek(hints_file, g_hint_text_offsets[hint_index], 0);
-  item_count = fscanf(hints_file, "%[^\n]", hint_text);
-  strcat(g_ui_message_buffer, hint_text);
+  while (fgets(hint_text, sizeof(hint_text), hints_file) != NULL)
+  {
+    hint_text[strcspn(hint_text, "\r\n")] = '\0';
+    if (hint_text[0] == '\0')
+    {
+      continue;
+    }
+    strcat(g_ui_message_buffer, hint_text);
+    break;
+  }
   fclose(hints_file);
 }
 

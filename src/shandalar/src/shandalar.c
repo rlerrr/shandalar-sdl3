@@ -1541,16 +1541,15 @@ void LoadTownHintMetadata(void)
   char difficulty_codes[8];
   int hint_index;
   int second_csvid;
-  int card_index;
   char line[256];
   FILE *hints_file;
-  int scan_result;
+  long body_offset;
 
   hints_file = fopen("hints.txt", "rt");
   hint_index = 0;
-  do
+  while (hint_index < 0x100 && fgets(line, sizeof(line), hints_file) != NULL)
   {
-    scan_result = fscanf(hints_file, "%[^\n]", line);
+    line[strcspn(line, "\n")] = '\0';
     if (line[0] == '.')
     {
       sscanf(line + 1, "%d %d %s", &first_csvid, &second_csvid, difficulty_codes);
@@ -1578,17 +1577,21 @@ void LoadTownHintMetadata(void)
         g_hint_difficulty_masks[hint_index] = g_hint_difficulty_masks[hint_index] | 8;
       }
 
-      card_index = FindCardIndexByCsvid(first_csvid);
-      card_index = FindCardIndexByCsvid(second_csvid);
-      scan_result = fscanf(hints_file, "%[\n]", line);
-      g_hint_text_offsets[hint_index] = ftell(hints_file);
+      body_offset = ftell(hints_file);
+      while (fgets(line, sizeof(line), hints_file) != NULL)
+      {
+        line[strcspn(line, "\r\n")] = '\0';
+        if (line[0] != '\0')
+        {
+          break;
+        }
+        body_offset = ftell(hints_file);
+      }
+      g_hint_text_offsets[hint_index] = body_offset;
+      fseek(hints_file, body_offset, SEEK_SET);
       hint_index = hint_index + 1;
     }
-    else
-    {
-      scan_result = fscanf(hints_file, "%[\n]", line);
-    }
-  } while ((hint_index < 0x100) && (scan_result != -1));
+  }
 
   do
   {
