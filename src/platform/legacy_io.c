@@ -28,6 +28,14 @@ typedef struct LegacyFileMode {
 
 static LegacyFileMode *legacy_file_modes;
 
+typedef struct LegacyFdMode {
+  int fd;
+  int sync_on_close;
+  struct LegacyFdMode *next;
+} LegacyFdMode;
+
+static LegacyFdMode *legacy_fd_modes;
+
 static void normalize_path_copy(char *out, size_t out_size, const char *path);
 
 #ifdef __EMSCRIPTEN__
@@ -178,6 +186,41 @@ static int file_is_text_mode(FILE *file)
   for (entry = legacy_file_modes; entry; entry = entry->next) {
     if (entry->file == file)
       return entry->text_mode;
+  }
+
+  return 0;
+}
+
+static void register_fd_mode(int fd, int sync_on_close)
+{
+  LegacyFdMode *entry;
+
+  if (fd < 0)
+    return;
+
+  entry = (LegacyFdMode *)malloc(sizeof(*entry));
+  if (!entry)
+    return;
+
+  entry->fd = fd;
+  entry->sync_on_close = sync_on_close;
+  entry->next = legacy_fd_modes;
+  legacy_fd_modes = entry;
+}
+
+static int unregister_fd_mode(int fd)
+{
+  LegacyFdMode **entry = &legacy_fd_modes;
+
+  while (*entry) {
+    if ((*entry)->fd == fd) {
+      LegacyFdMode *removed = *entry;
+      int sync_on_close = removed->sync_on_close;
+      *entry = removed->next;
+      free(removed);
+      return sync_on_close;
+    }
+    entry = &(*entry)->next;
   }
 
   return 0;
@@ -548,16 +591,18 @@ int shandalar_open(const char *path, int flags, ...)
     int fd = open(normalized, translated_flags, mode);
     if (fd < 0 && (translated_flags & O_CREAT) == 0)
       log_open_failure("open", normalized, "");
+    if (fd >= 0)
+      register_fd_mode(fd, user_data_file && (translated_flags & (O_WRONLY | O_RDWR)));
     return fd;
   }
 }
 
 int shandalar_close(int fd)
 {
+  int sync_on_close = unregister_fd_mode(fd);
   int result = close(fd);
-#ifdef __EMSCRIPTEN__
-  shandalar_user_data_sync();
-#endif
+  if (sync_on_close)
+    shandalar_user_data_sync();
   return result;
 }
 
