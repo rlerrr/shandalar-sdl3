@@ -11,6 +11,12 @@
 
 namespace {
 
+#ifndef WM_APP
+#define WM_APP 0x8000
+#endif
+
+#define WM_DECKBUILDER_DRAG_SELL_HOVER (WM_APP + 0x442)
+
 struct WindowTexture {
   WindowTexture *next;
   HWND window;
@@ -24,6 +30,7 @@ WindowTexture *g_textures;
 SDL_Window *g_window;
 SDL_Renderer *g_renderer;
 HWND g_left_down_target;
+HWND g_deckbuilder_drag_hover_title;
 ImVec2 g_left_down_position;
 
 WindowTexture *find_texture(HWND window)
@@ -68,6 +75,67 @@ bool is_card_drag_source(HWND window)
   GetClassNameA(window, name, sizeof(name));
   return SDL_strcasecmp(name, "MAGICDECK_CardClass") == 0 ||
          SDL_strcasecmp(name, "MAGICDECK_HorzListClass") == 0;
+}
+
+HWND find_child_window_by_class(HWND window, const char *wanted_class)
+{
+  HWND child;
+  char class_name[64] = {};
+
+  for (child = GetWindow(window, GW_CHILD); child; child = GetWindow(child, GW_HWNDNEXT)) {
+    HWND found;
+    GetClassNameA(child, class_name, sizeof(class_name));
+    if (SDL_strcasecmp(class_name, wanted_class) == 0)
+      return child;
+    found = find_child_window_by_class(child, wanted_class);
+    if (found)
+      return found;
+  }
+  return nullptr;
+}
+
+HWND find_deckbuilder_title_window(HWND window)
+{
+  HWND root;
+  HWND found;
+
+  root = window;
+  while (root && GetParent(root))
+    root = GetParent(root);
+
+  found = root ? find_child_window_by_class(root, "MAGICDECK_TitleClass") : nullptr;
+  if (found)
+    return found;
+
+  for (root = GetWindow(GetDesktopWindow(), GW_CHILD); root; root = GetWindow(root, GW_HWNDNEXT)) {
+    found = find_child_window_by_class(root, "MAGICDECK_TitleClass");
+    if (found)
+      return found;
+  }
+  return nullptr;
+}
+
+void notify_deckbuilder_drag_source(HWND title, HWND source)
+{
+  POINT source_point;
+  if (!title || !source)
+    return;
+  if (g_deckbuilder_drag_hover_title && g_deckbuilder_drag_hover_title != title &&
+      IsWindow(g_deckbuilder_drag_hover_title))
+    SendMessageA(g_deckbuilder_drag_hover_title, WM_DECKBUILDER_DRAG_SELL_HOVER, 0, 0);
+  g_deckbuilder_drag_hover_title = title;
+  source_point = {static_cast<LONG>(g_left_down_position.x),
+                  static_cast<LONG>(g_left_down_position.y)};
+  ScreenToClient(source, &source_point);
+  SendMessageA(title, WM_DECKBUILDER_DRAG_SELL_HOVER, (WPARAM)source,
+               MAKELPARAM(source_point.x, source_point.y));
+}
+
+void clear_deckbuilder_drag_hover(void)
+{
+  if (g_deckbuilder_drag_hover_title && IsWindow(g_deckbuilder_drag_hover_title))
+    SendMessageA(g_deckbuilder_drag_hover_title, WM_DECKBUILDER_DRAG_SELL_HOVER, 0, 0);
+  g_deckbuilder_drag_hover_title = nullptr;
 }
 
 void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list)
@@ -525,6 +593,7 @@ void forward_mouse(void)
     shandalar_win32_set_cursor_position(static_cast<int>(mouse.x), static_cast<int>(mouse.y));
     SendMessageA(source, WM_LBUTTONUP, buttons & ~MK_LBUTTON,
                  mouse_lparam(source, mouse));
+    clear_deckbuilder_drag_hover();
     completed_drag_release = true;
   }
   if (!target || target == GetDesktopWindow())
@@ -537,6 +606,10 @@ void forward_mouse(void)
   if (is_builtin_control(target))
     return;
   LPARAM local = mouse_lparam(target, mouse);
+  if (g_left_down_target && ImGui::GetIO().MouseDown[ImGuiMouseButton_Left]) {
+    notify_deckbuilder_drag_source(find_deckbuilder_title_window(g_left_down_target),
+                                   g_left_down_target);
+  }
   PostMessageA(target, WM_MOUSEMOVE, buttons, local);
 
   if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
@@ -551,6 +624,8 @@ void forward_mouse(void)
     } else {
       g_left_down_target = target;
       g_left_down_position = mouse;
+      notify_deckbuilder_drag_source(find_deckbuilder_title_window(g_left_down_target),
+                                     g_left_down_target);
     }
   }
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !completed_drag_release)

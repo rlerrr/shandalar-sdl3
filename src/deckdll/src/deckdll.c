@@ -26,6 +26,12 @@
 #define WM_MOUSEWHEEL 0x020A
 #endif
 
+#ifndef WM_APP
+#define WM_APP 0x8000
+#endif
+
+#define WM_DECKBUILDER_DRAG_SELL_HOVER (WM_APP + 0x442)
+
 #define MAKELONG2(a, b) ((LONG)(((a) & 0xffff) | ((DWORD)((WORD)(b))) << 16))
 #define MAKELONG3(a, b) ((LONG)(((a) & 0xffff) | ((DWORD)((b) & 0xffff)) << 16))
 
@@ -436,6 +442,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND, UINT, WPARAM, LPARAM);
 
 INT_PTR CALLBACK dlgproc_DeckStats(HWND, UINT, WPARAM, LPARAM);
 static int deckbuilder_selling_available(void);
+static int deckbuilder_drag_sell_price(HWND source, POINT source_point);
 
 // FUNCTION: DECKDLL 0x1000d9a3
 static int fatal_err(const char *text, HWND hwnd)
@@ -2658,6 +2665,10 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   RECT rect2; // ebp - 0x20
   RECT hint_rect;
   RECT rect;  // ebp - 0x10
+  int saved_dc;
+  POINT drag_source_point;
+  char hint_text[64];
+  int new_drag_sell_price;
 
   // TitleClass fonts.
   // GLOBAL: DECKDLL 0x10105280
@@ -2666,6 +2677,8 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   static HFONT title_font_large;
   // GLOBAL: DECKDLL 0x101052bc
   static HFONT title_font_small;
+  static HFONT title_font_hint;
+  static int title_drag_sell_price = -1;
   // GLOBAL: DECKDLL 0x100362d8
   static LOGFONT titleClass_fontTemplate = {
       0,        // lfHeight
@@ -2684,11 +2697,14 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     title_font_large = CreateFontIndirect(&title_font_logfont);
     title_font_logfont.lfHeight = 0x1e;
     title_font_small = CreateFontIndirect(&title_font_logfont);
+    title_font_logfont.lfHeight = 0x18;
+    title_font_hint = CreateFontIndirect(&title_font_logfont);
     return 0;
 
   case WM_DESTROY:
     DeleteObject(title_font_large);
     DeleteObject(title_font_small);
+    DeleteObject(title_font_hint);
     return 0;
 
   case WM_ERASEBKGND:
@@ -2724,6 +2740,7 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       SelectObject(hdc, title_font_small);
 
     SetBkMode(hdc, TRANSPARENT);
+    saved_dc = SaveDC(hdc);
     SetMapMode(hdc, MM_ANISOTROPIC);
 
     SetWindowExtEx(hdc, rect2.right - rect2.left, 0x46, NULL);
@@ -2738,21 +2755,44 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     rect2.top = rect2.top + -3;
     SetTextColor(hdc, PALETTERGB(243, 209, 175));
     DrawTextA(hdc, global_deckinfo.deckname, strlen(global_deckinfo.deckname), &rect2, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+    RestoreDC(hdc, saved_dc);
 
     if (deckbuilder_selling_available())
     {
       CopyRect(&hint_rect, &rect);
-      hint_rect.top = hint_rect.bottom - 0x16;
-      SelectObject(hdc, title_font_small);
+      hint_rect.top = hint_rect.bottom - 0x18;
+      hint_rect.bottom += 2;
+      if (title_drag_sell_price >= 0)
+        sprintf(hint_text, "Sell for %d gold", title_drag_sell_price);
+      else
+        strcpy(hint_text, "Drop card here to sell");
+
+      SelectObject(hdc, title_font_hint);
+      SetBkMode(hdc, TRANSPARENT);
       SetTextColor(hdc, PALETTERGB(20, 46, 77));
       OffsetRect(&hint_rect, 2, 2);
-      DrawTextA(hdc, "Drop card here to sell", 22, &hint_rect, DT_SINGLELINE | DT_CENTER);
+      DrawTextA(hdc, hint_text, strlen(hint_text), &hint_rect, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
       OffsetRect(&hint_rect, -2, -2);
       SetTextColor(hdc, PALETTERGB(243, 209, 175));
-      DrawTextA(hdc, "Drop card here to sell", 22, &hint_rect, DT_SINGLELINE | DT_CENTER);
+      DrawTextA(hdc, hint_text, strlen(hint_text), &hint_rect, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
     }
 
     EndPaint(hwnd, &paint);
+    return 0;
+
+  case WM_DECKBUILDER_DRAG_SELL_HOVER:
+    new_drag_sell_price = -1;
+    if (wparam != 0)
+    {
+      drag_source_point.x = (short)(lparam & 0xffff);
+      drag_source_point.y = (short)((lparam >> 16) & 0xffff);
+      new_drag_sell_price = deckbuilder_drag_sell_price((HWND)wparam, drag_source_point);
+    }
+    if (new_drag_sell_price != title_drag_sell_price)
+    {
+      title_drag_sell_price = new_drag_sell_price;
+      InvalidateRect(hwnd, NULL, TRUE);
+    }
     return 0;
 
   case WM_LBUTTONDOWN:
@@ -3758,6 +3798,63 @@ static int deckbuilder_selling_available(void)
   return ((global_db_flags_1 & DBFLAGS_SHANDALAR) != 0) &&
          ((global_db_flags_2 & DBFLAGS_STANDALONE) != 0) &&
          SellPrice != 0 && Gold != 0;
+}
+
+static int deckbuilder_sell_price_for_csvid(csvid_t csvid)
+{
+  iid_t iid;
+
+  if (!deckbuilder_selling_available())
+    return -1;
+  iid = get_iid_from_global_deck_card(csvid);
+  if (iid == -1)
+    return -1;
+  return SellPrice(iid);
+}
+
+static int deckbuilder_drag_sell_price(HWND source, POINT source_point)
+{
+  char class_name[64];
+  csvid_t csvid;
+  int item_index;
+  int item_count;
+  int left_index;
+  int width_plus_space;
+  RECT source_rect;
+
+  if (!source || !deckbuilder_selling_available())
+    return -1;
+
+  class_name[0] = '\0';
+  GetClassNameA(source, class_name, sizeof(class_name));
+  if (strcasecmp(class_name, "MAGICDECK_CardClass") == 0)
+  {
+    if (GetParent(source) != global_decksurface_hwnd)
+      return -1;
+    csvid = (csvid_t)GetWindowLongA(source, global_cardclass_csvid_offset);
+    return deckbuilder_sell_price_for_csvid(csvid);
+  }
+
+  if (strcasecmp(class_name, "MAGICDECK_HorzListClass") == 0)
+  {
+    if (source != global_horzlist_hwnd)
+      return -1;
+    GetClientRect(source, &source_rect);
+    if (!PtInRect(&source_rect, source_point))
+      return -1;
+    width_plus_space = (int)GetWindowWord(source, HORZLIST_WIDTHPLUSSPACE_INDEX);
+    if (width_plus_space <= 0)
+      return -1;
+    left_index = (int)GetWindowWord(source, HORZLIST_LEFTPIC_INDEX);
+    item_index = left_index + source_point.x / width_plus_space;
+    item_count = (int)GetWindowWord(source, HORZLIST_LASTPIC_INDEX);
+    if (item_index < 0 || item_index >= item_count)
+      return -1;
+    csvid = (csvid_t)SendMessageA(source, LB_GETITEMDATA, item_index, 0);
+    return deckbuilder_sell_price_for_csvid(csvid);
+  }
+
+  return -1;
 }
 
 static void refresh_gold_title_text(void)
