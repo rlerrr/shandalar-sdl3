@@ -301,16 +301,7 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
     return 0;
 
   shandalar_assets_set_root(asset_root);
-  if (shandalar_assets_prefetch_facemaker_art() != SHANDALAR_ASSET_READY) {
-    printf("shandalar: failed to load Facemaker assets: %s\n",
-           shandalar_assets_last_error());
-    shandalar_win32_imgui_shutdown();
-    SDL_StopTextInput(g_window);
-    SDL_SetWindowTitle(g_window, "Magic: Shandalar");
-    SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
-                                     SDL_LOGICAL_PRESENTATION_LETTERBOX);
-    return 0;
-  }
+
   SDL_snprintf(module_path, sizeof(module_path), "%s/Facemaker.exe", asset_root);
   shandalar_win32_set_module_path(module_path);
   shandalar_set_default_font_root(asset_root);

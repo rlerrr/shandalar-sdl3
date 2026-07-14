@@ -64,49 +64,57 @@ if(EMSCRIPTEN)
     "-lidbfs.js"
   )
   if(SHANDALAR_ASSET_DIR)
-    function(shandalar_preload_asset asset_source asset_dest)
-      target_link_options(shandalar PRIVATE
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/${asset_source}@/assets/${asset_dest}"
-      )
-    endfunction()
-
     set(shandalar_opening_preload_assets
-      advButtons.txt|advButtons.txt
-      MENUBAK.PIC|menubak.pic
-      BEGIN.SPR|begin.spr
-      MENU2.PIC|menu2.pic
-      menu2-norm.pic|menu2-norm.pic
-      MENU2-HI.PIC|menu2-hi.pic
-      MENU3.PIC|menu3.pic
-      menu3-but1.pic|menu3-but1.pic
-      MENU3BUT.PIC|menu3but.pic
-      NAMEPICK.PIC|namepick.pic
-      AdvStrings.txt|ADVstrings.txt
-      ADVFAC64.PIC|advfac64.pic
-      pedstls.pic|pedstls.pic
-      MENOPT.PIC|menopt.pic
-      OPTBOX.PIC|optbox.pic
-      FaceButtons.txt|FaceButtons.txt
-      FaceData.txt|FaceData.txt
-      TT0127M_.TTF|TT0127M_.TTF
-      TT0298M_.TTF|TT0298M_.TTF
-      TT0300M_.TTF|TT0300M_.TTF
-      TT0530M_.TTF|TT0530M_.TTF
-      TT0085M_.TTF|TT0085M_.TTF
-      TT0299M_.TTF|TT0299M_.TTF
-      Magis___.TTF|Magis___.TTF
-      Magim___.TTF|Magim___.TTF
-      DuelArt/Duel.dat|DuelArt/Duel.dat
+      advButtons.txt
+      MENUBAK.PIC
+      AdvStrings.txt
+      FaceButtons.txt
+      FaceData.txt   
+      uistrings.txt
+      advblocks.txt
+      hints.txt
+      concise.csv
+      TT0127M_.TTF
+      TT0298M_.TTF
+      TT0300M_.TTF
+      TT0530M_.TTF
+      TT0085M_.TTF
+      TT0299M_.TTF
+      Magis___.TTF
+      Magim___.TTF
+      fonts.cv
+      DuelArt/Duel.dat
+      duelpalall.tr
+      duel.plogpal
+      cards.dat
+      cardart/manasymbols.pic
+      cardart/cardsets.pic
+      cardart/cardback.pic
+      sound/kwalkl.wav
+      sound/kwalkr.wav
+      sound/bwalkl.wav
+      sound/bwalkr.wav
+      sound/gwalkl.wav
+      sound/gwalkr.wav
+      sound/rwalkl.wav
+      sound/rwalkr.wav
+      sound/wwalkl.wav
+      sound/wwalkr.wav
+      sound/kbird1.wav
+      sound/bbird1.wav
+      sound/gbird1.wav
+      sound/rbird1.wav
+      sound/wbird1.wav
+      todpal.tr
+      advfac64.pic
+      dbox.spr
+      begin.spr
     )
     foreach(shandalar_preload_entry IN LISTS shandalar_opening_preload_assets)
-      string(REPLACE "|" ";" shandalar_preload_pair "${shandalar_preload_entry}")
-      list(GET shandalar_preload_pair 0 shandalar_preload_source)
-      list(GET shandalar_preload_pair 1 shandalar_preload_dest)
-      shandalar_preload_asset("${shandalar_preload_source}" "${shandalar_preload_dest}")
+      target_link_options(shandalar PRIVATE
+        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/${shandalar_preload_entry}@/assets/${shandalar_preload_entry}"
+      )
     endforeach()
-    target_link_options(shandalar PRIVATE
-      "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FONTS.CV@/assets/fonts.cv"
-    )
   endif()
 endif()
 
