@@ -1247,7 +1247,6 @@ int RunNameEntryDialog(char *name_buffer)
                           g_name_entry_cursor);
   } while (1);
 
-  WaitForInputEventUnlessBlocked();
   return 0;
 }
 

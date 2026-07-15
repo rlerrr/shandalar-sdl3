@@ -5837,7 +5837,7 @@ int UpdateMenuControlSelection(int mouse_x, int mouse_y, int allow_activate_on_c
     g_menu_controls_by_context[g_menu_context_index][g_menu_current_control_index]->on_render(g_menu_controls_by_context[g_menu_context_index][g_menu_current_control_index], 1);
   }
 
-  if ((allow_activate_on_click == 1) && (g_menu_current_control_index >= 0))
+  if ((g_mouse_button_mask_snapshot & 1) && !(g_mouse_button_down_mask & 1) && (g_menu_current_control_index >= 0))
   {
     g_menu_controls_by_context[g_menu_context_index][g_menu_current_control_index]->on_render(g_menu_controls_by_context[g_menu_context_index][g_menu_current_control_index], 2);
   }

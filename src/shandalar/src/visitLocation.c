@@ -1484,21 +1484,35 @@ int RunBuyCardsConfirmPrompt(int card_id, int price)
   int accept_state;
   int cancel_state;
   int text_offset;
+  int restore_h;
 
   sprintf(g_ui_message_buffer, gs_visit_citybuy_0077f1d0[2], price);
   modal_x = ScaleUiCoordinateFrom320(0xdc) / 2;
   modal_y = ScaleUiCoordinateFrom320(0x34) / 2;
   modal_w = ScaleUiCoordinateFrom320(0xc5) / 2;
   modal_h = ScaleUiCoordinateFrom320(0x10f) / 2;
-  DrawEncodedImageResampled(g_page0_window_bounds, modal_x, modal_y, modal_w, modal_h, g_buy_cards_preview_panel_sprite);
-  DrawAdventureCardSized(card_id, 0x7a, 0x29, 0x4b, 0x70, 1, (char *)&s_empty_buy_card_banner_0058aebc);
-  DrawUiScaledCenteredTextNoShadow(g_page0_window_bounds, 0x1b, 0x140, 0x47, g_ui_message_buffer);
 
   button_w = ScaleUiCoordinate((int)g_buy_cards_confirm_button_sprites[0]->width);
   button_h = ScaleUiCoordinate((int)g_buy_cards_confirm_button_sprites[0]->height);
   accept_x = global_screen_width / 2 - button_w - ScaleUiCoordinate(4);
   cancel_x = global_screen_width / 2 + ScaleUiCoordinate(4);
   button_y = modal_y + modal_h + ScaleUiCoordinate(8);
+  restore_h = button_y + button_h - modal_y;
+
+  BlitGraphicsRect(g_page0_window_bounds, modal_x, modal_y, modal_w, restore_h,
+                   g_page1_window_bounds, modal_x, modal_y);
+  DrawEncodedImageResampled(g_page0_window_bounds, modal_x, modal_y, modal_w, modal_h, g_buy_cards_preview_panel_sprite);
+  DrawAdventureCardSized(card_id, 0x7a, 0x29, 0x4b, 0x70, 1, (char *)&s_empty_buy_card_banner_0058aebc);
+  DrawUiScaledCenteredTextNoShadow(g_page0_window_bounds, 0x1b, 0x140, 0x47, g_ui_message_buffer);
+  DrawEncodedImageResampled(g_page0_window_bounds, accept_x, button_y, button_w, button_h,
+                            g_buy_cards_confirm_button_sprites[0]);
+  DrawEncodedImageResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
+                            g_buy_cards_confirm_button_sprites[0]);
+  text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2;
+  DrawFormattedTextNoShadowCentered(g_page0_window_bounds, 0x1b,
+                                    accept_x + button_w / 2, text_y, "Yes");
+  DrawFormattedTextNoShadowCentered(g_page0_window_bounds, 0x1b,
+                                    cancel_x + button_w / 2, text_y, "No");
 
   ClearInputAndWaitForMouseRelease();
   do
@@ -1528,10 +1542,14 @@ int RunBuyCardsConfirmPrompt(int card_id, int price)
     {
       if (accept_state != 0)
       {
+        BlitGraphicsRect(g_page1_window_bounds, modal_x, modal_y, modal_w, restore_h,
+                         g_page0_window_bounds, modal_x, modal_y);
         return -2;
       }
       if (cancel_state != 0)
       {
+        BlitGraphicsRect(g_page1_window_bounds, modal_x, modal_y, modal_w, restore_h,
+                         g_page0_window_bounds, modal_x, modal_y);
         return 0;
       }
     }
@@ -1539,6 +1557,8 @@ int RunBuyCardsConfirmPrompt(int card_id, int price)
   } while (HasQueuedKeyInput() == 0);
 
   key = PopNormalizedQueuedKeyInput();
+  BlitGraphicsRect(g_page1_window_bounds, modal_x, modal_y, modal_w, restore_h,
+                   g_page0_window_bounds, modal_x, modal_y);
   return key;
 }
 

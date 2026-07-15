@@ -1504,19 +1504,16 @@ retry:
     }
     UpdateMouseSnapshot();
     UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
-    if ((g_stats_journal_menu_selection == -1) && ((g_mouse_button_down_mask != 0) || (IsKeyInputQueueEmpty() == 0)))
+    if ((g_stats_journal_menu_selection == -1) && (IsKeyInputQueueEmpty() == 0))
     {
       key_code = PopQueuedKeyInput();
-      if (((g_mouse_button_down_mask & 1) != 0) || (key_code == 0x5000))
+      if (key_code == 0x5000)
       {
         SelectStatsJournalEntry(g_stats_journal_current_entry + 1);
       }
-      else
+      else if (key_code == 0x4800)
       {
-        if (((g_mouse_button_down_mask & 2) != 0) || (key_code == 0x4800))
-        {
-          SelectStatsJournalEntry(g_stats_journal_current_entry - 1);
-        }
+        SelectStatsJournalEntry(g_stats_journal_current_entry - 1);
       }
       ClearInputAndWaitForMouseRelease();
     }
