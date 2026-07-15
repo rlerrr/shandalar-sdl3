@@ -299,6 +299,21 @@ BOOL DestroyWindow(HWND window)
   SendMessageA(window, WM_DESTROY, 0, 0);
   SendMessageA(window, WM_NCDESTROY, 0, 0);
   unlink_child(window);
+  /*
+   * Keep the window allocation as a tombstone so stale HWND values can be
+   * rejected safely, but release everything owned by the live window.  Deck
+   * builder windows are created and destroyed repeatedly inside Shandalar;
+   * retaining their full-size backing bitmaps here leaked several megabytes
+   * per visit and left selected fonts/brushes referenced after their owners
+   * had deleted them.
+   */
+  shandalar_destroy_screen_dc(window->backing_dc);
+  window->backing_dc = NULL;
+  free(window->extra);
+  window->extra = NULL;
+  window->extra_size = 0;
+  free(window->text);
+  window->text = NULL;
   window->alive = 0;
   return TRUE;
 }

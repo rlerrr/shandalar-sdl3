@@ -106,6 +106,26 @@ struct filter_dlg_title_t
 // GLOBAL: DECKDLL 0x10104db0
 static struct filter_dlg_title_t global_filter_dlg_title;
 
+static void
+destroy_filter_button_resources(void)
+{
+  if (global_filter_buttons_hdc)
+  {
+    DeleteDC(global_filter_buttons_hdc);
+    global_filter_buttons_hdc = NULL;
+  }
+  if (global_filter_dlg_title.bmp)
+  {
+    DeleteObject((HGDIOBJ)global_filter_dlg_title.bmp);
+    global_filter_dlg_title.bmp = NULL;
+  }
+  if (global_filter_buttons_font)
+  {
+    DeleteObject(global_filter_buttons_font);
+    global_filter_buttons_font = NULL;
+  }
+}
+
 // GLOBAL: DECKDLL 0x101127a8
 static HMENU global_filtermenu_default;
 // GLOBAL: DECKDLL 0x101127d8
@@ -902,8 +922,7 @@ wndproc_CardListFilterClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case 0x402:
     GetClientRect(cardlistfilter_hwnd, &global_filter_buttons_rect);
 
-    if (global_filter_buttons_hdc)
-      DeleteDC(global_filter_buttons_hdc);
+    destroy_filter_button_resources();
     hdc = GetDC(hwnd);
     ApplyCardArtPaletteToDc(hdc);
 
@@ -1374,10 +1393,7 @@ wndproc_CardListFilterClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     return 0;
 
   case WM_DESTROY:
-    if (global_filter_buttons_hdc)
-      DeleteDC(global_filter_buttons_hdc);
-    DeleteObject((HGDIOBJ)global_filter_dlg_title.bmp);
-    DeleteObject(global_filter_buttons_font);
+    destroy_filter_button_resources();
     destroy_filter_menus();
     KillTimer(hwnd, 1);
     return 0;
