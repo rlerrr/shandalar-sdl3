@@ -511,6 +511,7 @@ extern int g_selected_save_slot_index;
 #ifdef _DEBUG
 extern int g_reveal_all_world_info;
 int g_debug_lair_event_type = -1;
+int RunWorldLairMonsterEncounter(int slot_index, int monster_color);
 #endif
 
 int InitLicenseSecretsFromRegistry(void);
@@ -4257,11 +4258,121 @@ void RunDebugToggleWorldMagicMenu(void)
   } while (menu_selection != -1);
 }
 
+void RunDebugEncounterCreatureMenu(void)
+{
+  int menu_selection;
+  int creature_index;
+  int tier;
+  int tier_count;
+  char unique_tiers[0x100];
+  int submenu_indices[0x39];
+  int submenu_count;
+  int slot_index;
+  int monster_color;
+
+  memset(unique_tiers, 0, sizeof(unique_tiers));
+  for (creature_index = 1; creature_index < (int)gs_creature_name_count_00593934; creature_index++)
+  {
+    tier = (int)g_shandalar_monster_definitions[creature_index].tier;
+    if (tier != 0 && tier < 0x100)
+    {
+      unique_tiers[tier] = 1;
+    }
+  }
+
+  strcpy(g_ui_message_buffer, "DEBUG - Creature Tier\n");
+  for (tier = 1; tier < 0x100; tier++)
+  {
+    if (unique_tiers[tier])
+    {
+      sprintf(g_ui_message_buffer + strlen(g_ui_message_buffer), " Tier %d\n", tier);
+    }
+  }
+
+  menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  if (menu_selection == -1)
+  {
+    return;
+  }
+
+  tier_count = 0;
+  for (tier = 1; tier < 0x100; tier++)
+  {
+    if (unique_tiers[tier])
+    {
+      if (tier_count == menu_selection)
+      {
+        break;
+      }
+      tier_count++;
+    }
+  }
+
+  if (tier >= 0x100)
+  {
+    return;
+  }
+
+  submenu_count = 0;
+  strcpy(g_ui_message_buffer, "DEBUG - Creature\n");
+  for (creature_index = 1; creature_index < (int)gs_creature_name_count_00593934; creature_index++)
+  {
+    if ((int)g_shandalar_monster_definitions[creature_index].tier == tier)
+    {
+      submenu_indices[submenu_count] = creature_index;
+      submenu_count++;
+      sprintf(g_ui_message_buffer + strlen(g_ui_message_buffer), " %s%s\n",
+              g_shandalar_monster_definitions[creature_index].article,
+              g_shandalar_monster_definitions[creature_index].name);
+    }
+  }
+
+  menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  if (menu_selection == -1 || menu_selection >= submenu_count)
+  {
+    return;
+  }
+
+  creature_index = submenu_indices[menu_selection];
+  for (slot_index = 0; slot_index < 8; slot_index++)
+  {
+    if (g_lair_or_monster_slots[slot_index].entry_type == SHANDALAR_ENTRY_NONE)
+    {
+      break;
+    }
+  }
+
+  if (slot_index >= 8)
+  {
+    return;
+  }
+
+  monster_color = (int)single_color_test_bit_to_color_t((int)g_shandalar_monster_definitions[creature_index].color_mask);
+  if (monster_color == 0)
+  {
+    monster_color = g_selected_wizard_color;
+    if (monster_color < 1 || monster_color > 5)
+    {
+      monster_color = 1;
+    }
+  }
+
+  g_lair_or_monster_slots[slot_index].entry_type = (ShandalarEntryType)creature_index;
+  g_lair_or_monster_slots[slot_index].world_x = g_world_player_x;
+  g_lair_or_monster_slots[slot_index].world_y = g_world_player_y;
+  g_lair_or_monster_slots[slot_index].color = monster_color;
+
+  RunWorldLairMonsterEncounter(slot_index, monster_color);
+
+  g_lair_or_monster_slots[slot_index].entry_type = SHANDALAR_ENTRY_NONE;
+  RefreshAdventureInterfaceLayout();
+}
+
 void RunDebugRightClickMenu(void)
 {
   int menu_selection;
 
-  sprintf(g_ui_message_buffer, "DEBUG\n Encounter Lair\n Toggle World Magic\n Reveal All World Info [%s]\n",
+  sprintf(g_ui_message_buffer, "DEBUG\n Encounter Lair\n Encounter Creature\n Toggle World Magic\n Reveal All World Info [%s]\n",
           (g_reveal_all_world_info != 0) ? "ON" : "OFF");
   menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
   switch (menu_selection)
@@ -4270,9 +4381,12 @@ void RunDebugRightClickMenu(void)
     RunDebugEncounterLairMenu();
     break;
   case 1:
-    RunDebugToggleWorldMagicMenu();
+    RunDebugEncounterCreatureMenu();
     break;
   case 2:
+    RunDebugToggleWorldMagicMenu();
+    break;
+  case 3:
     // Shows entire map and enables map screen click to teleport
     g_reveal_all_world_info = (g_reveal_all_world_info == 0);
     break;
