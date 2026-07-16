@@ -1,11 +1,8 @@
 // Optimized helpers from the 0x0057xxxx region that are implemented only in
 // SHANDALAR, but were originally scattered across multiple UI modules.
 
-#ifdef MODERN_FIXES
 #include "platform/winuser_compat.h"
-#else
-#include <windows.h>
-#endif
+#include <SDL3/SDL_timer.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
@@ -22,6 +19,11 @@ extern FontSlot g_font_slots[0x10];
 
 // From visitLocation.c (used by BlitRectByStaggeredRandomTileOrder)
 extern int g_ui_fx_lcg_multipliers[0x14];
+
+void shandalar_host_pump(void);
+
+// Time it takes for random blit rect effect to finish
+#define TILE_REVEAL_MS 1000
 
 // FUNCTION: SHANDALAR 0x0057ae30
 #pragma optimize("gy", on)
@@ -169,12 +171,20 @@ unsigned int BlitRectByRandomTileOrderInPlace(HDC dst, int dst_x, int dst_y, int
   unsigned int result;
   unsigned int modulus;
   unsigned int lcg_mask;
+  int tiles_batched;
+  int tiles_done;
+  int batch_size;
+  Uint32 start_ticks;
 
   blocks_x = (unsigned int)(width % tile_w != 0) + width / tile_w;
   blocks_y = (unsigned int)(height % tile_h != 0) + height / tile_h;
   bit_cursor = 0x40000000;
   modulus = 0;
   masked_block_count = (blocks_y + 1) * (blocks_x + 1);
+  tiles_batched = 0;
+  tiles_done = 0;
+  batch_size = 120;
+  start_ticks = SDL_GetTicks();
   bit_count = 0;
   do
   {
@@ -238,6 +248,22 @@ unsigned int BlitRectByRandomTileOrderInPlace(HDC dst, int dst_x, int dst_y, int
         result = BitBlt(dst, dst_x_00, dst_y_00, bit_count, copy_h, src, dst_x_00, dst_y_00, 0xcc0020);
       }
       masked_block_count = masked_block_count - 1;
+      tiles_batched++;
+      tiles_done++;
+      if (tiles_batched >= batch_size)
+      {
+        shandalar_host_pump();
+        tiles_batched = 0;
+        Uint32 elapsed = SDL_GetTicks() - start_ticks;
+        int remaining = blocks_x * blocks_y - tiles_done;
+        if (remaining > 0 && elapsed >= 50)
+        {
+          Uint64 projected = (Uint64)tiles_done * TILE_REVEAL_MS / elapsed;
+          batch_size = (int)((Uint64)batch_size * (blocks_x * blocks_y) / projected);
+          if (batch_size < 1) batch_size = 1;
+          if (batch_size > remaining) batch_size = remaining;
+        }
+      }
     }
   }
 
@@ -264,12 +290,22 @@ unsigned int BlitRectByRandomTileOrder(HDC dst_hdc, int dst_x, int dst_y, int wi
   unsigned int lfsr;
   unsigned int lfsr_limit;
   unsigned int result;
+  int tiles_batched;
+  int tiles_done;
+  int batch_size;
+  int total_tiles;
+  Uint32 start_ticks;
 
   tiles_x = width / block_w + (width % block_w != 0);
   tiles_y = height / block_h + (height % block_h != 0);
   bit_count = 0;
   lfsr_limit = 0;
   tile_count = (unsigned int)((tiles_y + 1) * (tiles_x + 1));
+  tiles_batched = 0;
+  tiles_done = 0;
+  total_tiles = tiles_x * tiles_y;
+  batch_size = 120;
+  start_ticks = SDL_GetTicks();
   bit = 0x40000000;
   do
   {
@@ -333,6 +369,22 @@ unsigned int BlitRectByRandomTileOrder(HDC dst_hdc, int dst_x, int dst_y, int wi
                         src_x + tile_x * block_w, src_y + tile_y * block_h, SRCCOPY);
       }
       tile_count = tile_count - 1;
+      tiles_batched++;
+      tiles_done++;
+      if (tiles_batched >= batch_size)
+      {
+        shandalar_host_pump();
+        tiles_batched = 0;
+        Uint32 elapsed = SDL_GetTicks() - start_ticks;
+        int remaining = total_tiles - tiles_done;
+        if (remaining > 0 && elapsed >= 50)
+        {
+          Uint64 projected = (Uint64)tiles_done * TILE_REVEAL_MS / elapsed;
+          batch_size = (int)((Uint64)batch_size * total_tiles / projected);
+          if (batch_size < 1) batch_size = 1;
+          if (batch_size > remaining) batch_size = remaining;
+        }
+      }
     }
   }
 

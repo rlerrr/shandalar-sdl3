@@ -2232,8 +2232,8 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
   AdvMenuRect minimap_clip_rect_scratch;
   AdvMenuRect ui_clip_rect_scratch;
   AdvMenuRect world_clip_rect_scratch;
-  int scaled_0x20;
-  int scaled_0x8c;
+  DIBSurface * scaled_0x20;
+  DIBSurface * scaled_0x8c;
   int status_layout_x[6];
   int status_layout_y[3];
   int resolution_index;
@@ -2444,23 +2444,23 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
   }
   else
   {
-    scaled_0x8c = (int)g_graphics_pages[g_page1_window_bounds->page_number];
-    scaled_0x20 = (int)g_graphics_pages[g_page0_window_bounds->page_number];
+    scaled_0x8c = g_graphics_pages[g_page1_window_bounds->page_number];
+    scaled_0x20 = g_graphics_pages[g_page0_window_bounds->page_number];
     if (global_screen_width != 0x400)
     {
-      BlitRectByRandomTileOrder(((DIBSurface *)scaled_0x20)->hTempDC,
+      BlitRectByRandomTileOrder(scaled_0x20->hTempDC,
                                 ScaleUiCoordinateFrom320(0x20) & 0xfffffffc, ScaleUiCoordinateFrom320(0x18),
                                 ScaleUiCoordinateFrom320(0x100), ScaleUiCoordinateFrom320(0x8c), 6, 6,
-                                ((DIBSurface *)scaled_0x8c)->hTempDC,
+                                scaled_0x8c->hTempDC,
                                 0x40, g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10);
       DelayUiTicks(0x2d);
     }
     else
     {
-      BlitRectByRandomTileOrder(((DIBSurface *)scaled_0x20)->hTempDC,
+      BlitRectByRandomTileOrder(scaled_0x20->hTempDC,
                                 (ScaleUiCoordinateFrom320(0x20) + 4U) & 0xfffffffc, ScaleUiCoordinateFrom320(0x18),
                                 ScaleUiCoordinateFrom320(0x100) - 2, ScaleUiCoordinateFrom320(0x8c), 8, 8,
-                                ((DIBSurface *)scaled_0x8c)->hTempDC,
+                                scaled_0x8c->hTempDC,
                                 0x40, g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10);
       DelayUiTicks(0x2d);
     }

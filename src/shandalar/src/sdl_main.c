@@ -53,62 +53,103 @@ static int g_deckbuilder_host_active;
 
 static int legacy_key(SDL_Keycode key)
 {
-  switch (key) {
-  case SDLK_RETURN: return 0x1c0d;
-  case SDLK_KP_ENTER: return 0x1c0d;
-  case SDLK_ESCAPE: return 0x011b;
-  case SDLK_BACKSPACE: return 0x0e08;
-  case SDLK_DELETE: return 0x5300;
-  case SDLK_INSERT: return 0x5200;
-  case SDLK_HOME: return 0x4700;
-  case SDLK_END: return 0x4f00;
-  case SDLK_LEFT: return 0x4b00;
-  case SDLK_RIGHT: return 0x4d00;
-  case SDLK_UP: return 0x4800;
-  case SDLK_DOWN: return 0x5000;
-  default: return 0;
+  switch (key)
+  {
+  case SDLK_RETURN:
+    return 0x1c0d;
+  case SDLK_KP_ENTER:
+    return 0x1c0d;
+  case SDLK_ESCAPE:
+    return 0x011b;
+  case SDLK_BACKSPACE:
+    return 0x0e08;
+  case SDLK_DELETE:
+    return 0x5300;
+  case SDLK_INSERT:
+    return 0x5200;
+  case SDLK_HOME:
+    return 0x4700;
+  case SDLK_END:
+    return 0x4f00;
+  case SDLK_LEFT:
+    return 0x4b00;
+  case SDLK_RIGHT:
+    return 0x4d00;
+  case SDLK_UP:
+    return 0x4800;
+  case SDLK_DOWN:
+    return 0x5000;
+  default:
+    return 0;
   }
 }
 
 static int shandalar_mouse_button_mask(Uint8 button)
 {
-  switch (button) {
-  case SDL_BUTTON_LEFT: return 1;
-  case SDL_BUTTON_RIGHT: return 2;
-  default: return 0;
+  switch (button)
+  {
+  case SDL_BUTTON_LEFT:
+    return 1;
+  case SDL_BUTTON_RIGHT:
+    return 2;
+  default:
+    return 0;
   }
 }
 
 static UINT facemaker_virtual_key(SDL_Keycode key)
 {
-  switch (key) {
-  case SDLK_LEFT: return VK_LEFT;
-  case SDLK_RIGHT: return VK_RIGHT;
-  case SDLK_UP: return VK_UP;
-  case SDLK_DOWN: return VK_DOWN;
-  case SDLK_RETURN: return 0x0d;
-  case SDLK_ESCAPE: return 0x1b;
-  case SDLK_BACKSPACE: return 0x08;
-  default: return key >= 0 && key <= 0xff ? (UINT)key : 0;
+  switch (key)
+  {
+  case SDLK_LEFT:
+    return VK_LEFT;
+  case SDLK_RIGHT:
+    return VK_RIGHT;
+  case SDLK_UP:
+    return VK_UP;
+  case SDLK_DOWN:
+    return VK_DOWN;
+  case SDLK_RETURN:
+    return 0x0d;
+  case SDLK_ESCAPE:
+    return 0x1b;
+  case SDLK_BACKSPACE:
+    return 0x08;
+  default:
+    return key >= 0 && key <= 0xff ? (UINT)key : 0;
   }
 }
 
 static UINT deckbuilder_virtual_key(SDL_Keycode key)
 {
-  switch (key) {
-  case SDLK_LEFT: return VK_LEFT;
-  case SDLK_RIGHT: return VK_RIGHT;
-  case SDLK_UP: return VK_UP;
-  case SDLK_DOWN: return VK_DOWN;
-  case SDLK_HOME: return VK_HOME;
-  case SDLK_END: return VK_END;
-  case SDLK_PAGEUP: return VK_PRIOR;
-  case SDLK_PAGEDOWN: return VK_NEXT;
-  case SDLK_RETURN: return 0x0d;
-  case SDLK_ESCAPE: return 0x1b;
-  case SDLK_BACKSPACE: return 0x08;
-  case SDLK_DELETE: return 0x2e;
-  default: return key >= 0 && key <= 0xff ? (UINT)key : 0;
+  switch (key)
+  {
+  case SDLK_LEFT:
+    return VK_LEFT;
+  case SDLK_RIGHT:
+    return VK_RIGHT;
+  case SDLK_UP:
+    return VK_UP;
+  case SDLK_DOWN:
+    return VK_DOWN;
+  case SDLK_HOME:
+    return VK_HOME;
+  case SDLK_END:
+    return VK_END;
+  case SDLK_PAGEUP:
+    return VK_PRIOR;
+  case SDLK_PAGEDOWN:
+    return VK_NEXT;
+  case SDLK_RETURN:
+    return 0x0d;
+  case SDLK_ESCAPE:
+    return 0x1b;
+  case SDLK_BACKSPACE:
+    return 0x08;
+  case SDLK_DELETE:
+    return 0x2e;
+  default:
+    return key >= 0 && key <= 0xff ? (UINT)key : 0;
   }
 }
 
@@ -118,12 +159,15 @@ static void forward_facemaker_keyboard_event(const SDL_Event *event)
   UINT key;
   if (!focus)
     return;
-  if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP) {
+  if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP)
+  {
     key = facemaker_virtual_key(event->key.key);
     if (key)
       PostMessageA(focus, event->type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
                    key, 0);
-  } else if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
+  }
+  else if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text)
+  {
     const unsigned char *text = (const unsigned char *)event->text.text;
     while (*text)
       PostMessageA(focus, WM_CHAR, *text++, 0);
@@ -142,27 +186,38 @@ static void forward_deckbuilder_keyboard_event(const SDL_Event *event)
       SDL_strcasecmp(class_name, "LISTBOX") == 0 ||
       SDL_strcasecmp(class_name, "COMBOBOX") == 0)
     return;
-  if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP) {
+  if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP)
+  {
     key = deckbuilder_virtual_key(event->key.key);
     if (key)
       PostMessageA(focus, event->type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
                    key, 0);
-  } else if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
+  }
+  else if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text)
+  {
     const unsigned char *text = (const unsigned char *)event->text.text;
     while (*text)
       PostMessageA(focus, WM_CHAR, *text++, 0);
   }
 }
 
+EM_ASYNC_JS(void, wait_next_frame, (), {
+  await new Promise(requestAnimationFrame);
+});
+
 static BOOL pump_facemaker_ui(BOOL wait)
 {
   SDL_Event event;
-  while (SDL_PollEvent(&event)) {
+  while (SDL_PollEvent(&event))
+  {
     shandalar_win32_imgui_process_event(g_renderer, &event);
-    if (event.type == SDL_EVENT_QUIT) {
+    if (event.type == SDL_EVENT_QUIT)
+    {
       g_quit_requested = 1;
       PostQuitMessage(0);
-    } else {
+    }
+    else
+    {
       forward_facemaker_keyboard_event(&event);
     }
   }
@@ -175,7 +230,10 @@ static BOOL pump_facemaker_ui(BOOL wait)
   SDL_RenderPresent(g_renderer);
 
 #ifdef __EMSCRIPTEN__
-  emscripten_sleep(wait ? 8 : 0);
+  if (wait)
+    wait_next_frame();
+  else
+    emscripten_sleep(1);
 #else
   if (wait)
     SDL_Delay(8);
@@ -186,12 +244,16 @@ static BOOL pump_facemaker_ui(BOOL wait)
 static BOOL pump_deckbuilder_ui(BOOL wait)
 {
   SDL_Event event;
-  while (SDL_PollEvent(&event)) {
+  while (SDL_PollEvent(&event))
+  {
     shandalar_win32_imgui_process_event(g_renderer, &event);
-    if (event.type == SDL_EVENT_QUIT) {
+    if (event.type == SDL_EVENT_QUIT)
+    {
       g_quit_requested = 1;
       PostQuitMessage(0);
-    } else {
+    }
+    else
+    {
       forward_deckbuilder_keyboard_event(&event);
     }
   }
@@ -225,7 +287,8 @@ static int ensure_framebuffer(int width, int height)
   SDL_free(g_rgba);
   g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_ARGB8888,
                                 SDL_TEXTUREACCESS_STREAMING, width, height);
-  if (!g_texture) {
+  if (!g_texture)
+  {
     g_rgba = NULL;
     g_texture_width = 0;
     g_texture_height = 0;
@@ -233,7 +296,8 @@ static int ensure_framebuffer(int width, int height)
   }
   SDL_SetTextureScaleMode(g_texture, SDL_SCALEMODE_NEAREST);
   g_rgba = (uint32_t *)SDL_malloc((size_t)width * (size_t)height * sizeof(uint32_t));
-  if (!g_rgba) {
+  if (!g_rgba)
+  {
     SDL_DestroyTexture(g_texture);
     g_texture = NULL;
     g_texture_width = 0;
@@ -252,10 +316,12 @@ static void present_indexed_frame(const unsigned char *pixels, int width, int he
   int y;
   if (!pixels || !rgb_palette || !ensure_framebuffer(width, height))
     return;
-  for (y = 0; y < height; ++y) {
+  for (y = 0; y < height; ++y)
+  {
     const unsigned char *src = pixels + y * pitch;
     uint32_t *dst = g_rgba + y * width;
-    for (x = 0; x < width; ++x) {
+    for (x = 0; x < width; ++x)
+    {
       const unsigned char *rgb = rgb_palette + src[x] * 3;
       dst[x] = 0xff000000u | ((uint32_t)rgb[0] << 16) |
                ((uint32_t)rgb[1] << 8) | rgb[2];
@@ -276,7 +342,8 @@ static void present_frame(void)
   const unsigned char *pixels = (const unsigned char *)shandalar_dc_pixels(global_main_hdc, &pitch);
   if (!pixels)
     return;
-  for (i = 0; i < 256; ++i) {
+  for (i = 0; i < 256; ++i)
+  {
     rgb_palette[i * 3 + 0] = g_palette_entries[i].peRed;
     rgb_palette[i * 3 + 1] = g_palette_entries[i].peGreen;
     rgb_palette[i * 3 + 2] = g_palette_entries[i].peBlue;
@@ -340,7 +407,8 @@ void shandalar_host_begin_deckbuilder(void)
   SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_StartTextInput(g_window);
-  if (!shandalar_win32_imgui_init(g_window, g_renderer)) {
+  if (!shandalar_win32_imgui_init(g_window, g_renderer))
+  {
     printf("shandalar: deckbuilder imgui init failed\n");
     return;
   }
@@ -367,8 +435,10 @@ void shandalar_host_pump(void)
   SDL_Event event;
   float x;
   float y;
-  while (SDL_PollEvent(&event)) {
-    switch (event.type) {
+  while (SDL_PollEvent(&event))
+  {
+    switch (event.type)
+    {
     case SDL_EVENT_QUIT:
       g_quit_requested = 1;
       break;
@@ -396,7 +466,8 @@ void shandalar_host_pump(void)
       g_mouse_button_released_mask |= shandalar_mouse_button_mask(event.button.button);
       g_mouse_button_down_mask &= ~shandalar_mouse_button_mask(event.button.button);
       break;
-    case SDL_EVENT_KEY_DOWN: {
+    case SDL_EVENT_KEY_DOWN:
+    {
       int key = 0;
       if (event.key.key == SDLK_TAB)
         key = (event.key.mod & SDL_KMOD_SHIFT) ? 0x0f0f : 0x0f09;
@@ -417,7 +488,7 @@ void shandalar_host_pump(void)
   ++g_ui_tick_count;
   present_frame();
 #ifdef __EMSCRIPTEN__
-  emscripten_sleep(0);
+  wait_next_frame();
 #else
   SDL_Delay(1);
 #endif
