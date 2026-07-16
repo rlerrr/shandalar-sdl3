@@ -459,6 +459,8 @@ int g_text_menu_color_normal = 0x71;
 int g_text_menu_color_selected = 0xe3;
 // GLOBAL: SHANDALAR 0x005a5fe8
 int g_text_menu_line_offsets[0x20];
+
+int g_text_menu_line_y[0x20];
 // GLOBAL: SHANDALAR 0x005a6068
 int g_text_menu_color_base;
 // GLOBAL: SHANDALAR 0x005a606c
@@ -1007,8 +1009,8 @@ int TextMenuOptionAtPoint(char *menu_text, int x, int y)
     if ((menu_text[g_text_menu_line_offsets[line_idx]] == ' ') ||
         (menu_text[g_text_menu_line_offsets[line_idx]] == '_'))
     {
-      line_top = g_text_menu_top + 4 + line_idx * g_text_menu_line_height;
-      if ((line_top <= y) && (y < line_top + g_text_menu_line_height))
+      line_top = g_text_menu_line_y[line_idx];
+      if ((line_top <= y) && (y < line_top + g_text_menu_line_height + 8))
       {
         return option_idx;
       }
@@ -1033,6 +1035,7 @@ int RunTextMenuCore(char *menu_text, int clear_input_before_show)
   int line_height;
   int timer_seconds_left;
   int mouse_active;
+  int mouse_drag_active;
   int last_timer_seconds;
 
   if ((clear_input_before_show != 0) && (g_text_menu_abort_requested == 0))
@@ -1078,6 +1081,7 @@ int RunTextMenuCore(char *menu_text, int clear_input_before_show)
   line_height_copy = g_text_menu_line_height;
 
   mouse_active = 0;
+  mouse_drag_active = 0;
   done = mouse_active;
   HideMouseCursorNested();
   DrawTextMenu(menu_text, g_text_menu_initial_selection);
@@ -1131,19 +1135,29 @@ int RunTextMenuCore(char *menu_text, int clear_input_before_show)
         g_text_menu_mouse_released = 1;
       }
 
+      if ((g_mouse_button_down_mask & 1U) != 0)
+      {
+        mouse_drag_active = 1;
+      }
+
       selected_menu_entry = TextMenuOptionAtPoint(menu_text, g_mouse_x_snapshot, g_mouse_y_snapshot);
 
       if ((g_text_menu_disabled_option_mask & (1 << (unsigned char)selected_menu_entry)) != 0)
       {
         selected_menu_entry = previous_menu_entry;
       }
-      else
+
+      if (mouse_drag_active != 0 && (g_mouse_button_down_mask & 1U) == 0)
       {
-        if (((g_mouse_button_mask_snapshot & 1U) != 0) && (selected_menu_entry != -1))
+        if (selected_menu_entry != -1 || g_text_menu_option_count <= 1)
         {
           done = 1;
         }
-        else if (g_mouse_button_mask_snapshot == 0)
+        mouse_drag_active = 0;
+      }
+      else if ((g_mouse_button_mask_snapshot & 1U) != 0 && (g_mouse_button_down_mask & 1U) == 0)
+      {
+        if (selected_menu_entry != -1 || g_text_menu_option_count <= 1)
         {
           done = 1;
         }
@@ -1435,13 +1449,34 @@ int DrawTextMenu(char *menu_text, int selected_option)
       }
     }
 
-    g_text_menu_line_count = ClampIntToRange(g_text_menu_line_count, 0, (global_screen_height - g_text_menu_top) / g_text_menu_line_height);
+    g_text_menu_line_count = ClampIntToRange(g_text_menu_line_count, 0, (global_screen_height - g_text_menu_top) / (g_text_menu_line_height + 8));
+    {
+      int current_y = g_text_menu_top + 10;
+      for (line_idx = 0; line_idx < g_text_menu_line_count; line_idx++)
+      {
+        g_text_menu_line_y[line_idx] = current_y;
+        if ((menu_text[g_text_menu_line_offsets[line_idx]] == ' ') || (menu_text[g_text_menu_line_offsets[line_idx]] == '_'))
+        {
+          current_y += g_text_menu_line_height + 8;
+        }
+        else if ((line_idx + 1 < g_text_menu_line_count) &&
+                 ((menu_text[g_text_menu_line_offsets[line_idx + 1]] == ' ') ||
+                  (menu_text[g_text_menu_line_offsets[line_idx + 1]] == '_')))
+        {
+          current_y += g_text_menu_line_height + 8;
+        }
+        else
+        {
+          current_y += g_text_menu_line_height;
+        }
+      }
+      menu_bottom = current_y + 4;
+    }
     if (g_text_menu_left == -1)
     {
-      g_text_menu_left = 0xa0 - (g_text_menu_max_line_width + 8) / 2;
+      g_text_menu_left = 0xa0 - (g_text_menu_max_line_width + 16) / 2;
     }
-    g_text_menu_right = g_text_menu_max_line_width + g_text_menu_left + 8;
-    menu_bottom = g_text_menu_line_count * g_text_menu_line_height + g_text_menu_top + 6;
+    g_text_menu_right = g_text_menu_max_line_width + g_text_menu_left + 16;
     if (g_text_menu_show_ok_button != 0)
     {
       menu_bottom = menu_bottom + 2;
@@ -1480,7 +1515,7 @@ int DrawTextMenu(char *menu_text, int selected_option)
         menu_text[g_text_menu_line_offsets[line_idx]] = '^';
         if ((g_text_menu_finish_flash != 0) && (menu_option_idx == selected_option))
         {
-          DrawTextLineNoShadow(menu_text + g_text_menu_line_offsets[line_idx], g_text_menu_left + 5, line_idx * g_text_menu_line_height + g_text_menu_top + 5, 0xff);
+          DrawTextLineNoShadow(menu_text + g_text_menu_line_offsets[line_idx], g_text_menu_left + 10, g_text_menu_line_y[line_idx], 0xff);
         }
         else
         {
@@ -1499,7 +1534,7 @@ int DrawTextMenu(char *menu_text, int selected_option)
           {
             highlight_color = g_text_menu_color_base;
           }
-          DrawTextLineNoShadow(menu_text + g_text_menu_line_offsets[line_idx], g_text_menu_left + 5, line_idx * g_text_menu_line_height + g_text_menu_top + 5, highlight_color);
+          DrawTextLineNoShadow(menu_text + g_text_menu_line_offsets[line_idx], g_text_menu_left + 10, g_text_menu_line_y[line_idx], highlight_color);
         }
         menu_text[g_text_menu_line_offsets[line_idx]] = ' ';
       }
@@ -1520,7 +1555,7 @@ int DrawTextMenu(char *menu_text, int selected_option)
         {
           text_color = g_text_menu_color_base;
         }
-        DrawTextLineNoShadow(menu_text + g_text_menu_line_offsets[line_idx], g_text_menu_left + 5, line_idx * g_text_menu_line_height + g_text_menu_top + 5, text_color);
+        DrawTextLineNoShadow(menu_text + g_text_menu_line_offsets[line_idx], g_text_menu_left + 10, g_text_menu_line_y[line_idx], text_color);
       }
       menu_text[g_text_menu_line_offsets[line_idx + 1] - 1] = '\n';
     }
