@@ -1070,11 +1070,22 @@ BOOL GetCharABCWidthsA(HDC dc, UINT first, UINT last, ABC *widths)
 {
   UINT ch;
   if (!widths) return FALSE;
+  if (!dc || !dc->font || !dc->font->font) {
+    for (ch = first; ch <= last; ++ch) {
+      widths[ch - first].abcA = 0; widths[ch - first].abcB = 8; widths[ch - first].abcC = 0;
+    }
+    return TRUE;
+  }
+  prepare_font_for_dc(dc);
   for (ch = first; ch <= last; ++ch) {
-    char text[2] = {(char)ch, 0};
-    SIZE size;
-    GetTextExtentPoint32A(dc, text, 1, &size);
-    widths[ch - first].abcA = 0; widths[ch - first].abcB = (UINT)size.cx; widths[ch - first].abcC = 0;
+    int advance;
+    if (TTF_GetGlyphMetrics(dc->font->font, cp1252_codepoint((unsigned char)ch), NULL, NULL, NULL, NULL, &advance)) {
+      widths[ch - first].abcA = 0;
+      widths[ch - first].abcB = (UINT)logical_from_device(advance, device_scale_x(dc));
+      widths[ch - first].abcC = 0;
+    } else {
+      widths[ch - first].abcA = 0; widths[ch - first].abcB = 8; widths[ch - first].abcC = 0;
+    }
   }
   return TRUE;
 }

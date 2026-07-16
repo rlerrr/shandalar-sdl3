@@ -238,6 +238,8 @@ BOOL UnloadFontSlot(int font_slot)
   return RemoveFontResourceA(font->data.gdi.font_file);
 }
 
+static int g_glyph_width_cache[0x10][0x100];
+
 // FUNCTION: SHANDALAR 0x0057aa30
 int GetFontCharWidth(int font_slot, unsigned char ch_value)
 {
@@ -245,16 +247,22 @@ int GetFontCharWidth(int font_slot, unsigned char ch_value)
   HDC hdc;
   ABC abc;
   unsigned int ch;
+  int cached;
 
   font = &g_font_slots[font_slot];
   ch = (unsigned int)(unsigned char)ch_value;
   if (font->font_loaded != 0)
   {
-    hdc = GetDC((HWND)0);
-    SelectObject(hdc, font->hfont);
-    GetCharABCWidthsA(hdc, ch, ch, &abc);
-    ReleaseDC((HWND)0, hdc);
-    return abc.abcA + abc.abcB + abc.abcC;
+    cached = g_glyph_width_cache[font_slot][ch];
+    if (cached)
+      return cached;
+    if (font->hdc == (HDC)0)
+      font->hdc = CreateCompatibleDC((HDC)0);
+    SelectObject(font->hdc, font->hfont);
+    GetCharABCWidthsA(font->hdc, ch, ch, &abc);
+    cached = abc.abcA + abc.abcB + abc.abcC;
+    g_glyph_width_cache[font_slot][ch] = cached;
+    return cached;
   }
   if (font->has_packed_widths != 0)
   {
