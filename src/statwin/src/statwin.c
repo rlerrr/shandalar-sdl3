@@ -1,7 +1,6 @@
 #include "statwin/statwin.h"
 
 #include "magsnd/magsnd.h"
-#include "platform/asset_manager.h"
 #include "platform/legacy_io.h"
 
 #include <SDL3_image/SDL_image.h>
@@ -100,13 +99,6 @@ static const RectI g_mana_sources[5][5] = {
     {{32, 15, 14, 16}, {4, 12, 14, 16}, {8, 5, 14, 13}, {8, 28, 16, 14}, {24, 28, 16, 15}},
     {{29, 8, 19, 19}, {0, 14, 17, 20}, {12, 0, 19, 21}, {0, 33, 26, 14}, {23, 29, 20, 16}}};
 
-static int asset_path(char *out, size_t out_size, const char *name)
-{
-  char relative[512];
-  SDL_snprintf(relative, sizeof(relative), "%s/%s", STATWIN_ASSET_DIR, name);
-  return shandalar_assets_join_path(out, (unsigned int)out_size, relative);
-}
-
 static Sint64 SDLCALL file_io_seek(void *userdata, Sint64 offset,
                                    SDL_IOWhence whence)
 {
@@ -163,10 +155,6 @@ static SDL_IOStream *open_asset_io(const char *name)
   SDL_IOStreamInterface interface;
   SDL_snprintf(relative, sizeof(relative), "%s/%s", STATWIN_ASSET_DIR, name);
   file = fopen(relative, "rb");
-#ifdef _WIN32
-  if (!file)
-    file = shandalar_assets_fopen(relative, "rb");
-#endif
   if (!file) {
     SDL_Log("statwin: could not open %s", relative);
     return NULL;
@@ -399,8 +387,7 @@ static int play_sidecar_audio(const char *animation_name)
   if (!extension)
     return 0;
   SDL_strlcpy(extension, ".WAV", sizeof(name) - (size_t)(extension - name));
-  if (!asset_path(path, sizeof(path), name))
-    return 0;
+  SDL_snprintf(path, sizeof(path), "%s/%s", STATWIN_ASSET_DIR, name);
   SDL_zero(sound);
   sound.volume = 400;
   sound.flags = 4;
