@@ -18,6 +18,7 @@ if(SHANDALAR_BUILD_SHANDALAR)
   if(NOT SHANDALAR_BUILD_FACEMAKER)
     add_subdirectory(facemaker)
   endif()
+  add_subdirectory(statwin)
   add_subdirectory(shandalar)
 endif()
 

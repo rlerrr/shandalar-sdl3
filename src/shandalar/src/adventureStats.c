@@ -15,18 +15,9 @@
 #include "facemaker/src/facemaker_types.h"
 #include "cardartlib/src/palette.h"
 #include "drawcardlib/src/pic.h"
+#include "statwin/statwin.h"
 
 typedef unsigned char byte;
-
-typedef struct
-{
-  int progress_by_color[5];
-  int duel_wins_by_color[5];
-  unsigned char town_count_by_color[5];
-  unsigned char highlighted_wizard_color;
-  unsigned char highlighted_creature_type;
-  unsigned char highlighted_lair_color;
-} StatWinData;
 
 typedef struct
 {
@@ -78,7 +69,6 @@ int FindNearestTownIndex(int world_x, int world_y);
 extern int global_screen_width;
 extern int global_screen_height;
 extern int g_default_palette_fade_steps;
-extern int g_statwin_exports_by_ordinal[3];
 extern int g_world_magic_town_flags[5];
 extern char g_ui_message_buffer[0x1000];
 extern HWND g_main_window_hwnd;
@@ -1535,10 +1525,7 @@ retry:
 // FUNCTION: SHANDALAR 0x005227e3
 void __cdecl ShowStatWinDialog(void *statwin_data, int mode)
 {
-  if (g_statwin_exports_by_ordinal[0] != 0)
-  {
-    ((void(__cdecl *)(void *, int))g_statwin_exports_by_ordinal[0])(statwin_data, mode);
-  }
+  statwin_show((const StatWinData *)statwin_data, mode);
 }
 
 // FUNCTION: SHANDALAR 0x005344b6
@@ -1719,7 +1706,7 @@ int RunAdventureStatsMenu(void)
       break;
     }
   }
-  
+
   return 0;
 }
 
@@ -1811,6 +1798,9 @@ int ShowStatsWindow(int mode, int highlight)
       g_statwin_data.highlighted_creature_type = (unsigned char)highlight;
       g_statwin_data.highlighted_wizard_color = (unsigned char)color_order[color_order[0]];
     }
+
+    // TODO: This shit is annoying! Is this real OG behavior??
+    return 0;
   }
   if (mode == 3)
   {

@@ -18,6 +18,7 @@
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
 #include "cardartlib/src/palette.h"
+#include "statwin/statwin.h"
 
 /* Dungeon / castle encounter flow rooted at SHANDALAR 0x0050a5c1. */
 
@@ -78,7 +79,6 @@ extern int g_next_duel_card_id;
 extern int g_next_duel_life_delta;
 extern int g_neighbor_dx[9];
 extern int g_neighbor_dy[9];
-extern int g_statwin_exports_by_ordinal[3];
 extern int g_wizard_siege_count;
 extern int g_ego_sprite_width;
 extern int g_ego_sprite_height;
@@ -1924,12 +1924,7 @@ void PlayCastleMusic(int castle_music_index)
 // FUNCTION: SHANDALAR 0x0052283d
 undefined4 PlayStatWinMovie(char *path, int x, int y, int flags)
 {
-  if (g_statwin_exports_by_ordinal[2] != 0)
-  {
-    return ((int(__cdecl *)(char *, int, int, int))g_statwin_exports_by_ordinal[2])(path, x, y, flags);
-  }
-
-  return 0;
+  return statwin_play_video(path, x, y, flags);
 }
 
 // FUNCTION: SHANDALAR 0x0050c03d

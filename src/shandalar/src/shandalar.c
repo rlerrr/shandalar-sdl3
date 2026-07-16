@@ -29,6 +29,7 @@
 #include "deckdll/src/magsnd.h"
 #include "deckdll/src/shared_resources.h"
 #include "facemaker/src/facemaker_types.h"
+#include "statwin/statwin.h"
 #include <drawcardlib/src/pic.h>
 
 #ifdef __EMSCRIPTEN__
@@ -253,7 +254,6 @@ int g_mouse_button_mask_snapshot;
 // GLOBAL: SHANDALAR 0x007490f0
 DialogBoxSpriteBank g_dialog_box_sprite_bank;
 // GLOBAL: SHANDALAR 0x0058e050
-HANDLE g_statwin_dll_module = 0;
 extern char g_save_file_path[13];
 // GLOBAL: SHANDALAR 0x0058c5ec
 int g_dungeon_card_effect_by_color[4] = {0, 8, 867, 939};
@@ -266,8 +266,6 @@ int g_mana_castle_card_effect_by_difficulty[5][4] = {
     {288, 15, 262, 803},
     {123, 439, 192, 155},
     {128, 134, 28, 620}};
-// GLOBAL: SHANDALAR 0x00746e00
-int g_statwin_exports_by_ordinal[3];
 // GLOBAL: SHANDALAR 0x00747ee0
 int g_menu_render_guard;
 // GLOBAL: SHANDALAR 0x00747ef0
@@ -2202,12 +2200,7 @@ void AddJournalEntry(int entry_type, int entry_arg)
 // FUNCTION: SHANDALAR 0x0052280c
 int UpdateStatWindowProgress(void *progress_values)
 {
-  if (g_statwin_exports_by_ordinal[1] != 0)
-  {
-    return ((int(__cdecl *)(void *))g_statwin_exports_by_ordinal[1])(progress_values);
-  }
-
-  return 0;
+  return statwin_init((const StatWinData *)progress_values);
 }
 
 // FUNCTION: SHANDALAR 0x0056302b
@@ -3524,14 +3517,6 @@ int SaveGameWithMessage(char *save_file_path)
 // FUNCTION: SHANDALAR 0x005226e0
 int LoadStatWinDllExports(void)
 {
-  int i;
-
-  for (i = 0; i < 3; i = i + 1)
-  {
-    g_statwin_exports_by_ordinal[i] = 0;
-  }
-
-  g_statwin_dll_module = (HANDLE)0;
   return 1;
 }
 
@@ -4073,13 +4058,7 @@ void UpdateWorldMagicUnlockProgress(void)
   int scan_index;
   int wizard_color_index;
   int original_required_duel_wins;
-  int world_magic_progress_values[5];
-  int world_magic_victory_counts[5];
-  unsigned char world_magic_town_counts[5];
-  unsigned char unused_flag_a;
-  unsigned char unused_flag_b;
-  unsigned char unused_flag_c;
-  int unused_padding;
+  StatWinData statwin_data = {0};
   int town_count_for_wizard_color;
 
   for (wizard_color_index = 0; wizard_color_index < 5; wizard_color_index = wizard_color_index + 1)
@@ -4095,10 +4074,10 @@ void UpdateWorldMagicUnlockProgress(void)
         town_count_for_wizard_color = town_count_for_wizard_color + 1;
       }
     }
-    world_magic_town_counts[mapped_world_magic_index] = (unsigned char)town_count_for_wizard_color;
+    statwin_data.town_count_by_color[mapped_world_magic_index] = (unsigned char)town_count_for_wizard_color;
     if (g_world_magic_town_flags[wizard_color_index] != 0)
     {
-      world_magic_progress_values[mapped_world_magic_index] = 0;
+      statwin_data.progress_by_color[mapped_world_magic_index] = 0;
     }
     else
     {
@@ -4116,15 +4095,12 @@ void UpdateWorldMagicUnlockProgress(void)
           world_magic_duel_win_count = world_magic_duel_win_count + 1;
         }
       }
-      world_magic_victory_counts[mapped_world_magic_index] = world_magic_duel_win_count;
+      statwin_data.duel_wins_by_color[mapped_world_magic_index] = world_magic_duel_win_count;
       required_duel_wins = MAX(g_shandalar_difficulty * 5 + 20, required_duel_wins - original_required_duel_wins);
-      world_magic_progress_values[mapped_world_magic_index] = 0x1e - (original_required_duel_wins - required_duel_wins);
+      statwin_data.progress_by_color[mapped_world_magic_index] = 0x1e - (original_required_duel_wins - required_duel_wins);
     }
   }
-  unused_flag_a = 0;
-  unused_flag_b = 0;
-  unused_flag_c = 0;
-  UpdateStatWindowProgress(world_magic_progress_values);
+  UpdateStatWindowProgress(&statwin_data);
 }
 
 // FUNCTION: SHANDALAR 0x0056bff1
@@ -5946,14 +5922,7 @@ void ClearQueuedKeyInput(void)
 // FUNCTION: SHANDALAR 0x00522786
 void UnloadStatWinDllExports(void)
 {
-  int i;
-
-  g_statwin_dll_module = (HANDLE)0;
-
-  for (i = 0; i < 3; i = i + 1)
-  {
-    g_statwin_exports_by_ordinal[i] = 0;
-  }
+  statwin_shutdown();
 }
 
 // FUNCTION: SHANDALAR 0x00414127

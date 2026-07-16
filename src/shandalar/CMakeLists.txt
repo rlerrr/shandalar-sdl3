@@ -48,6 +48,7 @@ target_link_libraries(shandalar PRIVATE
   cardart_static
   drawcard_shandalar
   magsnd_static
+  statwin_static
   SDL3::SDL3
   SDL3_ttf::SDL3_ttf
 )

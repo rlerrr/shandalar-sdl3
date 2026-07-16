@@ -10,6 +10,7 @@
 #include "platform/gdi_compat.h"
 #include "platform/winuser_compat.h"
 #include "platform/winuser_imgui_bridge.h"
+#include "statwin/statwin.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -451,6 +452,7 @@ int main(int argc, char **argv)
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   if (!ensure_framebuffer(global_screen_width, global_screen_height))
     return 1;
+  statwin_set_renderer(g_renderer);
   SDL_StartTextInput(g_window);
   shandalar_win32_set_pump_proc(pump_shandalar_win32_ui);
   result = WinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
@@ -461,6 +463,7 @@ int main(int argc, char **argv)
   global_main_hdc = NULL;
   SDL_free(g_rgba);
   SDL_DestroyTexture(g_texture);
+  statwin_set_renderer(NULL);
   SDL_DestroyRenderer(g_renderer);
   SDL_DestroyWindow(g_window);
   shandalar_runtime_shutdown();
