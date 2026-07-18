@@ -411,6 +411,7 @@ static int run_animation(const char *name, Scene *scene)
   Uint64 duration = 0;
   Uint64 deadline = 0;
   int dismissed = 0;
+  int finished = 0;
   int audio_playing;
 
   if (!g_renderer)
@@ -426,19 +427,23 @@ static int run_animation(const char *name, Scene *scene)
   audio_playing = play_sidecar_audio(name);
   while (!dismissed) {
     Uint64 now = SDL_GetTicks();
-    if (!frame_texture || now >= deadline) {
-      SDL_DestroyTexture(frame_texture);
-      frame_texture = NULL;
-      SDL_DestroySurface(frame);
-      frame = NULL;
-      if (!IMG_GetAnimationDecoderFrame(decoder, &frame, &duration))
-        break;
-      frame_texture = SDL_CreateTextureFromSurface(g_renderer, frame);
-      if (!frame_texture)
-        break;
-      SDL_SetTextureBlendMode(frame_texture, SDL_BLENDMODE_BLEND);
-      scene->animation = frame_texture;
-      deadline = now + (duration ? duration : 67);
+    if (!finished && (!frame_texture || now >= deadline)) {
+      SDL_Surface *next_frame = NULL;
+      Uint64 next_duration = 0;
+      if (!IMG_GetAnimationDecoderFrame(decoder, &next_frame, &next_duration)) {
+        finished = 1;
+      } else {
+        SDL_DestroyTexture(frame_texture);
+        SDL_DestroySurface(frame);
+        frame = next_frame;
+        duration = next_duration;
+        frame_texture = SDL_CreateTextureFromSurface(g_renderer, frame);
+        if (!frame_texture)
+          break;
+        SDL_SetTextureBlendMode(frame_texture, SDL_BLENDMODE_BLEND);
+        scene->animation = frame_texture;
+        deadline = now + (duration ? duration : 67);
+      }
     }
     render_scene(scene);
     dismissed = poll_dismiss_event();
