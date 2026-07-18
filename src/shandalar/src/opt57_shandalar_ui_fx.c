@@ -173,6 +173,7 @@ unsigned int BlitRectByRandomTileOrderInPlace(HDC dst, int dst_x, int dst_y, int
   unsigned int lcg_mask;
   int tiles_batched;
   int tiles_done;
+  int batch_count;
   int batch_size;
   Uint32 start_ticks;
 
@@ -183,6 +184,7 @@ unsigned int BlitRectByRandomTileOrderInPlace(HDC dst, int dst_x, int dst_y, int
   masked_block_count = (blocks_y + 1) * (blocks_x + 1);
   tiles_batched = 0;
   tiles_done = 0;
+  batch_count = 0;
   batch_size = 120;
   start_ticks = SDL_GetTicks();
   bit_count = 0;
@@ -254,12 +256,15 @@ unsigned int BlitRectByRandomTileOrderInPlace(HDC dst, int dst_x, int dst_y, int
       {
         shandalar_host_pump();
         tiles_batched = 0;
+        batch_count++;
         Uint32 elapsed = SDL_GetTicks() - start_ticks;
         int remaining = blocks_x * blocks_y - tiles_done;
-        if (remaining > 0 && elapsed >= 50)
+        if (remaining > 0 && batch_count > 0)
         {
-          Uint64 projected = (Uint64)tiles_done * TILE_REVEAL_MS / elapsed;
-          batch_size = (int)((Uint64)batch_size * (blocks_x * blocks_y) / projected);
+          Uint32 avg_per_batch = elapsed / batch_count;
+          int remaining_batches = (remaining + batch_size - 1) / batch_size;
+          Uint32 estimated_total = elapsed + remaining_batches * avg_per_batch;
+          batch_size = (int)((Uint64)batch_size * estimated_total / TILE_REVEAL_MS);
           if (batch_size < 1) batch_size = 1;
           if (batch_size > remaining) batch_size = remaining;
         }
@@ -292,6 +297,7 @@ unsigned int BlitRectByRandomTileOrder(HDC dst_hdc, int dst_x, int dst_y, int wi
   unsigned int result;
   int tiles_batched;
   int tiles_done;
+  int batch_count;
   int batch_size;
   int total_tiles;
   Uint32 start_ticks;
@@ -303,6 +309,7 @@ unsigned int BlitRectByRandomTileOrder(HDC dst_hdc, int dst_x, int dst_y, int wi
   tile_count = (unsigned int)((tiles_y + 1) * (tiles_x + 1));
   tiles_batched = 0;
   tiles_done = 0;
+  batch_count = 0;
   total_tiles = tiles_x * tiles_y;
   batch_size = 120;
   start_ticks = SDL_GetTicks();
@@ -375,12 +382,15 @@ unsigned int BlitRectByRandomTileOrder(HDC dst_hdc, int dst_x, int dst_y, int wi
       {
         shandalar_host_pump();
         tiles_batched = 0;
+        batch_count++;
         Uint32 elapsed = SDL_GetTicks() - start_ticks;
         int remaining = total_tiles - tiles_done;
-        if (remaining > 0 && elapsed >= 50)
+        if (remaining > 0 && batch_count > 0)
         {
-          Uint64 projected = (Uint64)tiles_done * TILE_REVEAL_MS / elapsed;
-          batch_size = (int)((Uint64)batch_size * total_tiles / projected);
+          Uint32 avg_per_batch = elapsed / batch_count;
+          int remaining_batches = (remaining + batch_size - 1) / batch_size;
+          Uint32 estimated_total = elapsed + remaining_batches * avg_per_batch;
+          batch_size = (int)((Uint64)batch_size * estimated_total / TILE_REVEAL_MS);
           if (batch_size < 1) batch_size = 1;
           if (batch_size > remaining) batch_size = remaining;
         }
