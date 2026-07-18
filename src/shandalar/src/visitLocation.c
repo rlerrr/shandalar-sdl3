@@ -4102,6 +4102,19 @@ loop:
     return g_card_browser_selected_card;
   }
 
+  /* Done button rect check: click on the button exits the browser. */
+  if (show_done_button != 0 &&
+      x >= g_card_browser_done_button.x &&
+      x <= g_card_browser_done_button.x + g_card_browser_done_button.width &&
+      y >= g_card_browser_done_button.y &&
+      y <= g_card_browser_done_button.y + g_card_browser_done_button.height)
+  {
+    (void)EndMenuContext();
+    FreeSpriteBlob(g_card_browser_done_button_sprites[0]);
+    DestroyCachedCardArt();
+    return 0xffffffff;
+  }
+
   if (mouse_button_or_index)
   {
     if (y < ScaleUiCoordinateFrom320(0x6d) / 2)

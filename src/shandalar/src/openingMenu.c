@@ -1217,9 +1217,6 @@ int RunNameEntryDialog(char *name_buffer)
   do
   {
     DelayUiTicks(1);
-#ifdef MODERN_FIXES
-    UpdateMouseSnapshot();
-#endif
     DrawNameEntryDoneButton();
     if (IsNameEntryDoneButtonPressed())
     {
