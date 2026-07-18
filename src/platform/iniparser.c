@@ -11,7 +11,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 #include "iniparser.h"
 
 /*---------------------------- Defines -------------------------------------*/
@@ -491,7 +490,7 @@ int64_t iniparser_getint64(const dictionary * d, const char * key, int64_t notfo
 
     str = iniparser_getstring(d, key, INI_INVALID_KEY);
     if (str==NULL || str==INI_INVALID_KEY) return notfound ;
-    return strtoimax(str, NULL, 0);
+    return (int64_t)strtoll(str, NULL, 0);
 }
 
 uint64_t iniparser_getuint64(const dictionary * d, const char * key, uint64_t notfound)
@@ -500,7 +499,7 @@ uint64_t iniparser_getuint64(const dictionary * d, const char * key, uint64_t no
 
     str = iniparser_getstring(d, key, INI_INVALID_KEY);
     if (str==NULL || str==INI_INVALID_KEY) return notfound ;
-    return strtoumax(str, NULL, 0);
+    return (uint64_t)strtoull(str, NULL, 0);
 }
 
 

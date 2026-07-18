@@ -1,32 +1,15 @@
 #include "platform/winuser_compat.h"
+#include "platform/winreg_compat.h"
+#include "platform/legacy_io.h"
+#include "platform/iniparser.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct RegistryValue {
-  struct RegistryValue *next;
-  char *name;
-  DWORD type;
-  BYTE *data;
-  DWORD size;
-} RegistryValue;
-
 struct ShandalarRegistryKey {
-  struct ShandalarRegistryKey *next;
   char *path;
-  RegistryValue *values;
 };
-
-static struct ShandalarRegistryKey *g_registry_keys;
-
-static char *registry_strdup(const char *text)
-{
-  size_t size = strlen(text ? text : "") + 1;
-  char *copy = (char *)malloc(size);
-  if (copy)
-    memcpy(copy, text ? text : "", size);
-  return copy;
-}
 
 static const char *root_name(HKEY key)
 {
@@ -60,39 +43,120 @@ static char *make_path(HKEY key, const char *subkey)
   return path;
 }
 
-static HKEY find_key(const char *path)
+static dictionary *ini_load(void)
 {
-  HKEY key;
-  for (key = g_registry_keys; key; key = key->next)
-    if (strcmp(key->path, path) == 0)
-      return key;
-  return NULL;
+  FILE *fp;
+  dictionary *d;
+  fp = fopen("registry.ini", "r");
+  if (!fp)
+    return NULL;
+  d = iniparser_load_file(fp, "registry.ini");
+  fclose(fp);
+  return d;
 }
 
-static RegistryValue *find_value(HKEY key, const char *name)
+static int ini_save(dictionary *d)
 {
-  RegistryValue *value;
-  if (!key || key == HKEY_CURRENT_USER || key == HKEY_LOCAL_MACHINE)
-    return NULL;
-  for (value = key->values; value; value = value->next)
-    if (strcmp(value->name, name ? name : "") == 0)
-      return value;
-  return NULL;
+  size_t i;
+  FILE *fp;
+  if (!d)
+    return -1;
+  fp = fopen("registry.ini", "w");
+  if (!fp)
+    return -1;
+  for (i = 0; i < d->size; i++) {
+    if (d->key[i] && d->val[i] == NULL)
+      iniparser_dumpsection_ini(d, d->key[i], fp);
+  }
+  fprintf(fp, "\n");
+  fclose(fp);
+  return 0;
+}
+
+static const char *type_to_str(DWORD type)
+{
+  switch (type) {
+    case REG_SZ:     return "REG_SZ";
+    case REG_DWORD:  return "REG_DWORD";
+    case REG_BINARY: return "REG_BINARY";
+    case REG_QWORD:  return "REG_QWORD";
+    default:         return "REG_BINARY";
+  }
+}
+
+static DWORD str_to_type(const char *str)
+{
+  if (strcmp(str, "REG_SZ") == 0)     return REG_SZ;
+  if (strcmp(str, "REG_DWORD") == 0)  return REG_DWORD;
+  if (strcmp(str, "REG_BINARY") == 0) return REG_BINARY;
+  if (strcmp(str, "REG_QWORD") == 0)  return REG_QWORD;
+  return REG_BINARY;
+}
+
+static unsigned long long parse_qword(const char *str)
+{
+  unsigned long long val = 0;
+  while (*str >= '0' && *str <= '9') {
+    val = val * 10 + (unsigned long long)(*str - '0');
+    str++;
+  }
+  return val;
+}
+
+static void bin_to_hex(const BYTE *data, DWORD size, char *out, DWORD out_size)
+{
+  static const char hex[] = "0123456789abcdef";
+  DWORD i;
+  for (i = 0; i < size && i * 2 + 1 < out_size; i++) {
+    out[i * 2] = hex[(data[i] >> 4) & 0xf];
+    out[i * 2 + 1] = hex[data[i] & 0xf];
+  }
+  if (out_size > 0)
+    out[i * 2 < out_size ? i * 2 : out_size - 1] = '\0';
+}
+
+static int hex_to_bin(const char *hex_str, BYTE *out, DWORD out_size)
+{
+  DWORD len = (DWORD)strlen(hex_str) / 2;
+  DWORD i;
+  if (len > out_size) len = out_size;
+  for (i = 0; i < len; i++) {
+    BYTE b = 0;
+    char hi = hex_str[i * 2];
+    char lo = hex_str[i * 2 + 1];
+    if (hi >= '0' && hi <= '9') b = (BYTE)((hi - '0') << 4);
+    else if (hi >= 'a' && hi <= 'f') b = (BYTE)((hi - 'a' + 10) << 4);
+    else if (hi >= 'A' && hi <= 'F') b = (BYTE)((hi - 'A' + 10) << 4);
+    if (lo >= '0' && lo <= '9') b |= (BYTE)(lo - '0');
+    else if (lo >= 'a' && lo <= 'f') b |= (BYTE)(lo - 'a' + 10);
+    else if (lo >= 'A' && lo <= 'F') b |= (BYTE)(lo - 'A' + 10);
+    out[i] = b;
+  }
+  return (int)len;
 }
 
 LSTATUS RegOpenKeyExA(HKEY key, LPCSTR subkey, DWORD options, DWORD desired, HKEY *result)
 {
   char *path;
-  HKEY found;
+  dictionary *d;
+  int found;
   (void)options;
   (void)desired;
   if (!result || !(path = make_path(key, subkey)))
     return ERROR_INVALID_PARAMETER;
-  found = find_key(path);
-  free(path);
-  if (!found)
+  d = ini_load();
+  found = d && iniparser_find_entry(d, path);
+  iniparser_freedict(d);
+  if (!found) {
+    free(path);
     return ERROR_FILE_NOT_FOUND;
-  *result = found;
+  }
+  *result = (HKEY)malloc(sizeof(struct ShandalarRegistryKey));
+  if (!*result) {
+    free(path);
+    return ERROR_INVALID_PARAMETER;
+  }
+  (*result)->path = path;
   return ERROR_SUCCESS;
 }
 
@@ -101,7 +165,8 @@ LSTATUS RegCreateKeyExA(HKEY key, LPCSTR subkey, DWORD reserved, LPSTR class_nam
                         HKEY *result, LPDWORD disposition)
 {
   char *path;
-  HKEY found;
+  dictionary *d;
+  int exists;
   (void)reserved;
   (void)class_name;
   (void)options;
@@ -109,79 +174,156 @@ LSTATUS RegCreateKeyExA(HKEY key, LPCSTR subkey, DWORD reserved, LPSTR class_nam
   (void)security;
   if (!result || !(path = make_path(key, subkey)))
     return ERROR_INVALID_PARAMETER;
-  found = find_key(path);
-  if (!found) {
-    found = (HKEY)calloc(1, sizeof(*found));
-    if (!found) {
-      free(path);
-      return ERROR_INVALID_PARAMETER;
-    }
-    found->path = path;
-    found->next = g_registry_keys;
-    g_registry_keys = found;
-    if (disposition)
-      *disposition = 1;
-  } else {
+  d = ini_load();
+  exists = d && iniparser_find_entry(d, path);
+  iniparser_freedict(d);
+  *result = (HKEY)malloc(sizeof(struct ShandalarRegistryKey));
+  if (!*result) {
     free(path);
-    if (disposition)
-      *disposition = 2;
+    return ERROR_INVALID_PARAMETER;
   }
-  *result = found;
+  (*result)->path = path;
+  if (disposition)
+    *disposition = exists ? 2 : 1;
   return ERROR_SUCCESS;
 }
 
 LSTATUS RegQueryValueExA(HKEY key, LPCSTR value_name, LPDWORD reserved, LPDWORD type,
                          LPBYTE data, LPDWORD data_size)
 {
-  RegistryValue *value = find_value(key, value_name);
+  const char *section;
+  char type_key[520], value_key[520];
+  const char *type_str, *value_str;
+  DWORD reg_type, needed_size;
+  BYTE buffer[4096];
+  dictionary *d;
   (void)reserved;
-  if (!value || !data_size)
-    return value ? ERROR_INVALID_PARAMETER : ERROR_FILE_NOT_FOUND;
+  if (!key || key == HKEY_CURRENT_USER || key == HKEY_LOCAL_MACHINE || !value_name || !data_size)
+    return ERROR_INVALID_PARAMETER;
+  section = key->path;
+  d = ini_load();
+  if (!d)
+    return ERROR_FILE_NOT_FOUND;
+  snprintf(type_key, sizeof(type_key), "%s:%s.type", section, value_name);
+  snprintf(value_key, sizeof(value_key), "%s:%s.value", section, value_name);
+  type_str = iniparser_getstring(d, type_key, "");
+  value_str = iniparser_getstring(d, value_key, "");
+  if (!type_str[0] || !value_str[0]) {
+    iniparser_freedict(d);
+    return ERROR_FILE_NOT_FOUND;
+  }
+  reg_type = str_to_type(type_str);
   if (type)
-    *type = value->type;
+    *type = reg_type;
+  switch (reg_type) {
+    case REG_SZ: {
+      DWORD slen = (DWORD)strlen(value_str) + 1;
+      if (slen > sizeof(buffer)) slen = sizeof(buffer);
+      memcpy(buffer, value_str, slen);
+      needed_size = (DWORD)strlen(value_str) + 1;
+      break;
+    }
+    case REG_DWORD: {
+      DWORD val = (DWORD)iniparser_getint(d, value_key, 0);
+      memcpy(buffer, &val, sizeof(val));
+      needed_size = 4;
+      break;
+    }
+    case REG_QWORD: {
+      unsigned long long qval = parse_qword(value_str);
+      memcpy(buffer, &qval, sizeof(qval));
+      needed_size = 8;
+      break;
+    }
+    default: {
+      needed_size = (DWORD)(strlen(value_str) / 2);
+      if (needed_size > sizeof(buffer))
+        needed_size = (DWORD)sizeof(buffer);
+      hex_to_bin(value_str, buffer, needed_size);
+      break;
+    }
+  }
+  iniparser_freedict(d);
   if (!data) {
-    *data_size = value->size;
+    *data_size = needed_size;
     return ERROR_SUCCESS;
   }
-  if (*data_size < value->size) {
-    *data_size = value->size;
+  if (*data_size < needed_size) {
+    *data_size = needed_size;
     return ERROR_MORE_DATA;
   }
-  memcpy(data, value->data, value->size);
-  *data_size = value->size;
+  memcpy(data, buffer, needed_size);
+  *data_size = needed_size;
   return ERROR_SUCCESS;
 }
 
 LSTATUS RegSetValueExA(HKEY key, LPCSTR value_name, DWORD reserved, DWORD type,
                        const BYTE *data, DWORD data_size)
 {
-  RegistryValue *value;
-  BYTE *copy;
+  const char *section;
+  char type_key[520], value_key[520];
+  char type_str[32], value_str[4096];
+  dictionary *d;
   (void)reserved;
-  if (!key || key == HKEY_CURRENT_USER || key == HKEY_LOCAL_MACHINE || (!data && data_size))
+  if (!key || key == HKEY_CURRENT_USER || key == HKEY_LOCAL_MACHINE || !value_name || (!data && data_size))
     return ERROR_INVALID_PARAMETER;
-  copy = data_size ? (BYTE *)malloc(data_size) : NULL;
-  if (data_size && !copy)
+  if (type == REG_DWORD && data_size < 4)
     return ERROR_INVALID_PARAMETER;
-  if (data_size)
-    memcpy(copy, data, data_size);
-  value = find_value(key, value_name);
-  if (!value) {
-    value = (RegistryValue *)calloc(1, sizeof(*value));
-    if (!value) {
-      free(copy);
-      return ERROR_INVALID_PARAMETER;
+  section = key->path;
+  snprintf(type_key, sizeof(type_key), "%s:%s.type", section, value_name);
+  snprintf(value_key, sizeof(value_key), "%s:%s.value", section, value_name);
+  snprintf(type_str, sizeof(type_str), "%s", type_to_str(type));
+  switch (type) {
+    case REG_SZ: {
+      DWORD slen = data ? (DWORD)strlen((const char *)data) : 0;
+      if (slen >= sizeof(value_str)) slen = sizeof(value_str) - 1;
+      if (data) memcpy(value_str, data, slen);
+      value_str[slen] = '\0';
+      break;
     }
-    value->name = registry_strdup(value_name ? value_name : "");
-    value->next = key->values;
-    key->values = value;
+    case REG_DWORD: {
+      DWORD val = 0;
+      if (data_size >= 4) memcpy(&val, data, 4);
+      snprintf(value_str, sizeof(value_str), "%lu", (unsigned long)val);
+      break;
+    }
+    case REG_QWORD: {
+      unsigned long long qval = 0;
+      if (data_size >= 8) memcpy(&qval, data, 8);
+      snprintf(value_str, sizeof(value_str), "%llu", qval);
+      break;
+    }
+    default: {
+      DWORD hex_len = data_size * 2;
+      if (hex_len >= sizeof(value_str)) hex_len = (DWORD)sizeof(value_str) - 1;
+      bin_to_hex(data, data_size, value_str, sizeof(value_str));
+      break;
+    }
   }
-  free(value->data);
-  value->data = copy;
-  value->size = data_size;
-  value->type = type;
+  d = ini_load();
+  if (!d)
+    d = dictionary_new(0);
+  iniparser_set(d, section, NULL);
+  iniparser_set(d, type_key, type_str);
+  iniparser_set(d, value_key, value_str);
+  ini_save(d);
+  iniparser_freedict(d);
   return ERROR_SUCCESS;
 }
 
-LSTATUS RegCloseKey(HKEY key) { return key ? ERROR_SUCCESS : ERROR_INVALID_PARAMETER; }
-LSTATUS RegFlushKey(HKEY key) { return key ? ERROR_SUCCESS : ERROR_INVALID_PARAMETER; }
+LSTATUS RegCloseKey(HKEY key)
+{
+  if (!key)
+    return ERROR_INVALID_PARAMETER;
+  if (key == HKEY_CURRENT_USER || key == HKEY_LOCAL_MACHINE)
+    return ERROR_SUCCESS;
+  free(key->path);
+  free(key);
+  return ERROR_SUCCESS;
+}
+
+LSTATUS RegFlushKey(HKEY key)
+{
+  (void)key;
+  return ERROR_SUCCESS;
+}

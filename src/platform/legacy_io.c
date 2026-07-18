@@ -270,6 +270,8 @@ static int map_user_data_path(const char *path, char *out, size_t out_size)
     snprintf(out, out_size, "/userdata/FaceMostRecent.txt");
   } else if (ascii_equal_ignore_case(base, "saveDescs")) {
     snprintf(out, out_size, "/userdata/saveDescs");
+  } else if (ascii_equal_ignore_case(base, "registry.ini")) {
+    snprintf(out, out_size, "/userdata/registry.ini");
   } else if (strlen(base) == 10 &&
              tolower((unsigned char)base[0]) == 'm' &&
              tolower((unsigned char)base[1]) == 'a' &&

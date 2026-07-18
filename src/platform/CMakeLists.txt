@@ -2,6 +2,8 @@ add_library(shandalar_platform STATIC
   asset_manager.c
   gdi_compat.c
   legacy_io.c
+  dictionary.c
+  iniparser.c
   winbase_compat.c
   wincontrols_compat.c
   windialog_compat.c

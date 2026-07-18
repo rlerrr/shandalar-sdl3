@@ -20,6 +20,7 @@ typedef BYTE *LPBYTE;
 #define REG_SZ 1
 #define REG_BINARY 3
 #define REG_DWORD 4
+#define REG_QWORD 11
 #define REG_OPTION_NON_VOLATILE 0
 
 LSTATUS RegOpenKeyExA(HKEY key, LPCSTR subkey, DWORD options, DWORD desired, HKEY *result);
