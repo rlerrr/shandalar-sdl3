@@ -485,7 +485,6 @@ void shandalar_host_pump(void)
   }
   shandalar_win32_runtime_tick();
   shandalar_win32_mm_timers_tick();
-  ++g_ui_tick_count;
   present_frame();
 #ifdef __EMSCRIPTEN__
   wait_next_frame();
