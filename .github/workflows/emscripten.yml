@@ -22,7 +22,7 @@ jobs:
             cmake_args: -DSHANDALAR_BUILD_FACEMAKER=OFF -DSHANDALAR_BUILD_SHANDALAR=OFF -DSHANDALAR_BUILD_DECK=ON
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -46,6 +46,17 @@ jobs:
 
       - name: Build (${{ matrix.target }})
         run: cmake --build "${{ github.workspace }}/build-${{ matrix.target }}"
+
+      - name: Upload to Cloudflare R2 (${{ matrix.target }})
+        uses: ryand56/r2-upload-action@latest
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: shandalar-sdl3
+          source-dir: ${{ github.workspace }}/out/${{ matrix.target }}
+          destination-dir: ${{ matrix.target }}
+          output-file-url: false
 
       - name: Upload artifacts (${{ matrix.target }})
         uses: actions/upload-artifact@v4
