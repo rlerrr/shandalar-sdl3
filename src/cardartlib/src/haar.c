@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <stdef.h>
+#include <stddef.h>
 #include <string.h>
 #include "platform/gdi_compat.h"
 #include "haar.h"
