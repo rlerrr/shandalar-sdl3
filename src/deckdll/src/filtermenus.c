@@ -1,4 +1,4 @@
-#include <STDDEF.H>
+#include <stdef.h>
 #include <stdlib.h>
 #include "filtermenus.h"
 #include "mystdbool.h"
