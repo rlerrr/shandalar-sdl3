@@ -111,6 +111,7 @@ if(EMSCRIPTEN)
       dbox.spr
       begin.spr
     )
+    download_assets(${shandalar_opening_preload_assets})
     foreach(shandalar_preload_entry IN LISTS shandalar_opening_preload_assets)
       target_link_options(shandalar PRIVATE
         "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/${shandalar_preload_entry}@/assets/${shandalar_preload_entry}"

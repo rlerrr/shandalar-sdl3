@@ -68,25 +68,19 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         TT0530M_.TTF
         Magis___.TTF
         Magim___.TTF
-        CardArt
-        DBArt
-        DuelArt
+        fonts.cv
+        DuelArt/Duel.dat
         DuelSounds/DRAW.WAV
         DuelSounds/DISCARD.WAV
         DuelSounds/BUTTON.WAV
         DuelSounds/CANCEL.WAV
       )
+      download_assets(${deck_preload_assets})
       foreach(deck_preload_asset IN LISTS deck_preload_assets)
         target_link_options(deck PRIVATE
           "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/${deck_preload_asset}@/assets/${deck_preload_asset}"
         )
       endforeach()
-      target_link_options(deck PRIVATE
-        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/CardArt/SmallArt.cat"
-        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/CardArt/MedArt.cat"
-        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/DuelArt/COINTOSS_Heads.avi"
-        "SHELL:--exclude-file ${SHANDALAR_ASSET_DIR}/DuelArt/COINTOSS_Tails.avi"
-      )
     endif()
   endif()
 else()

@@ -128,6 +128,8 @@ else()
   add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-unused-function)
 endif()
 
+include(cmake/DownloadAssets.cmake)
+
 if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR OR SHANDALAR_BUILD_DECK)
   add_subdirectory(src)
 endif()

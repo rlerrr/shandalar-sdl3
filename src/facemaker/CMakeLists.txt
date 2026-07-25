@@ -88,18 +88,24 @@ if(SHANDALAR_BUILD_FACEMAKER)
       "-lidbfs.js"
     )
     if(SHANDALAR_ASSET_DIR)
-      target_link_options(facemaker PRIVATE
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceArt@/assets/FaceArt"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceButtons.txt@/assets/FaceButtons.txt"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FaceData.txt@/assets/FaceData.txt"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/FONTS.CV@/assets/fonts.cv"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0085M_.TTF@/assets/TT0085M_.TTF"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0127M_.TTF@/assets/TT0127M_.TTF"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0298M_.TTF@/assets/TT0298M_.TTF"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0299M_.TTF@/assets/TT0299M_.TTF"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0300M_.TTF@/assets/TT0300M_.TTF"
-        "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/TT0530M_.TTF@/assets/TT0530M_.TTF"
+      set(facemaker_preload_assets
+        FaceButtons.txt
+        FaceData.txt
+        fonts.cv
+        TT0085M_.TTF
+        TT0127M_.TTF
+        TT0298M_.TTF
+        TT0299M_.TTF
+        TT0300M_.TTF
+        TT0530M_.TTF
+
       )
+      download_assets(${facemaker_preload_assets})
+      foreach(entry IN LISTS facemaker_preload_assets)
+        target_link_options(facemaker PRIVATE
+          "SHELL:--preload-file ${SHANDALAR_ASSET_DIR}/${entry}@/assets/${entry}"
+        )
+      endforeach()
     endif()
   endif()
 
