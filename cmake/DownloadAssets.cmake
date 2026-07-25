@@ -10,7 +10,7 @@ function(download_assets)
       get_filename_component(asset_dir "${local_path}" DIRECTORY)
       file(MAKE_DIRECTORY "${asset_dir}")
       message(STATUS "Downloading asset: ${asset_path}")
-      file(DOWNLOAD "https://shandalar.dev/assets/${url_path}"
+      file(DOWNLOAD "https://shandalar-dot-dev-test.pages.dev/assets/${url_path}"
            "${local_path}"
            STATUS download_status)
       list(GET download_status 0 status_code)
