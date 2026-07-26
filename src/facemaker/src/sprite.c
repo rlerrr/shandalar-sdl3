@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <malloc.h>
 #include "platform/legacy_io.h"
 #include <string.h>
@@ -126,28 +127,22 @@ int ReadSpriteEntryPointers(EncodedImage **out_entry_ptrs, char *sprite_path)
 // FUNCTION: FACEMAKER 0x00408a50
 EncodedImage *EncodeSpriteFromPage(int page_number, int x, int y, unsigned int width, int height)
 {
-  char *scan;
-  char *write_ptr;
-  char first_char;
   EncodedImage *sprite;
-  int *write_cursor;
+  unsigned char *write_cursor;
+  unsigned char *last_nonempty_row_end;
   int border_left;
   int border_top;
   int line_index;
+  int last_nonempty_line;
   int probe_x;
   int probe_y;
   int i;
-  int run_start;
+  unsigned int run_start;
   int run_end;
   unsigned int sampled;
   unsigned int sampled_next;
   unsigned int run_len;
-  unsigned int run_offset;
-  unsigned int dword_count;
-  unsigned int tail_count;
-  unsigned char *run_header;
-  void *zero_in_run;
-  char line_buffer[0x400];
+  unsigned char line_buffer[0x400];
 
   line_index = 0;
   probe_y = y + 1 + height;
@@ -218,25 +213,22 @@ EncodedImage *EncodeSpriteFromPage(int page_number, int x, int y, unsigned int w
   }
 
   sprite = (EncodedImage *)g_sprite_blob_cursor;
-  write_cursor = (int *)sprite->spans;
-  do
+  write_cursor = sprite->spans;
+  last_nonempty_row_end = write_cursor;
+  last_nonempty_line = -1;
+
+  while (line_index < height)
   {
     ReadGraphicsScanline((unsigned int *)line_buffer, page_number, x, y + line_index, width);
-    scan = line_buffer;
-    run_offset = width;
-    first_char = line_buffer[0];
-    while (first_char == '\0' && run_offset != 0)
+    for (run_start = 0; run_start < width && line_buffer[run_start] == 0; run_start++)
     {
-      first_char = scan[1];
-      scan = scan + 1;
-      run_offset = run_offset - 1;
     }
-    if (scan - width != line_buffer)
+    if (run_start != width)
     {
       break;
     }
     line_index = line_index + 1;
-  } while (line_index < height);
+  }
 
   sprite->width = (unsigned short)width;
   sprite->height = (unsigned short)height;
@@ -246,80 +238,43 @@ EncodedImage *EncodeSpriteFromPage(int page_number, int x, int y, unsigned int w
   sprite->row_count = (short)height - (short)line_index;
   for (; line_index < height; line_index = line_index + 1)
   {
-    scan = line_buffer;
-    run_offset = width;
-    first_char = line_buffer[0];
-    while (first_char == '\0' && run_offset != 0)
+    ReadGraphicsScanline((unsigned int *)line_buffer, page_number, x, y + line_index, width);
+
+    for (run_start = 0; run_start < width && line_buffer[run_start] == 0; run_start++)
     {
-      first_char = scan[1];
-      scan = scan + 1;
-      run_offset = run_offset - 1;
     }
-    run_offset = (int)scan - (int)line_buffer;
-    if (width == run_offset)
+    if (run_start == width)
     {
-      *(unsigned char *)write_cursor = 0xff;
-      write_cursor = (int *)((int)write_cursor + 1);
+      *write_cursor++ = 0xff;
     }
     else
     {
-      *(char *)write_cursor = (char)run_offset;
-      run_header = (unsigned char *)((int)write_cursor + 1);
-      first_char = *(char *)((int)&border_left + width + 3);
-      run_start = (int)&border_left + width + 3;
-      run_end = run_start;
-      run_len = width;
-      while (first_char == '\0' && run_len != 0)
+      run_end = (int)width;
+      while (run_end > (int)run_start && line_buffer[run_end - 1] == 0)
       {
-        first_char = *(char *)(run_end + -1);
         run_end = run_end - 1;
-        run_len = run_len - 1;
       }
-      run_len = run_end + ((width - run_offset) - run_start);
-      zero_in_run = memchr(line_buffer + run_offset, 0, run_len);
-      if (zero_in_run == (void *)0)
+
+      run_len = (unsigned int)run_end - run_start;
+      *write_cursor++ = (unsigned char)run_start;
+      if (memchr(line_buffer + run_start, 0, run_len) == NULL)
       {
-        *run_header = 0xfe;
-        run_header = (unsigned char *)((int)write_cursor + 2);
+        *write_cursor++ = 0xfe;
       }
-      *run_header = (char)run_len;
-      scan = line_buffer + run_offset;
-      write_ptr = (char *)(run_header + 1);
-      for (dword_count = run_len >> 2; dword_count != 0; dword_count = dword_count - 1)
-      {
-        *(unsigned int *)write_ptr = *(unsigned int *)scan;
-        scan = scan + 4;
-        write_ptr = write_ptr + 4;
-      }
-      write_cursor = (int *)(run_header + 1 + run_len);
-      for (tail_count = run_len & 3; tail_count != 0; tail_count = tail_count - 1)
-      {
-        *write_ptr = *scan;
-        scan = scan + 1;
-        write_ptr = write_ptr + 1;
-      }
+      *write_cursor++ = (unsigned char)run_len;
+      memcpy(write_cursor, line_buffer + run_start, run_len);
+      write_cursor += run_len;
+      last_nonempty_row_end = write_cursor;
+      last_nonempty_line = line_index;
     }
-    ReadGraphicsScanline((unsigned int *)line_buffer, page_number, x, y + line_index + 1, width);
   }
 
-  first_char = *(char *)((int)write_cursor - 1);
-  g_sprite_blob_cursor = write_cursor;
-  while (first_char == -1)
-  {
-    sprite->row_count = sprite->row_count - 1;
-    first_char = *(char *)((int)g_sprite_blob_cursor - 2);
-    g_sprite_blob_cursor = (int *)((int)g_sprite_blob_cursor - 1);
-  }
-  if (((unsigned int)g_sprite_blob_cursor & 1) != 0)
-  {
-    g_sprite_blob_cursor = (int *)((int)g_sprite_blob_cursor + 1);
-  }
-  if (((unsigned int)g_sprite_blob_cursor & 2) != 0)
-  {
-    g_sprite_blob_cursor = (int *)((int)g_sprite_blob_cursor + 2);
-  }
+  sprite->row_count =
+      (last_nonempty_line < sprite->first_row) ? 0 : (short)(last_nonempty_line - sprite->first_row + 1);
+  write_cursor = last_nonempty_row_end;
+  g_sprite_blob_cursor = (int *)(((uintptr_t)write_cursor + 3) & ~(uintptr_t)3);
   *g_sprite_blob_cursor = -1;
-  sprite->total_size = (int)g_sprite_blob_cursor - (int)sprite;
+  sprite->total_size = (int)((char *)g_sprite_blob_cursor - (char *)sprite);
   return sprite;
 }
 
