@@ -54,8 +54,6 @@ extern int g_reveal_all_world_info;
 extern int g_player_starting_life;
 // GLOBAL: SHANDALAR 0x007483e4
 int g_analyzed_deck_special_rules;
-// GLOBAL: SHANDALAR 0x0093a870
-char g_itoa_buffer[0x20];
 extern int g_world_magic_offer_slot_index;
 extern int g_world_scroll_cache_ready;
 extern int g_text_menu_color_normal;

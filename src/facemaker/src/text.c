@@ -165,7 +165,7 @@ int LoadBitmapFontFromFile(int font_id, FILE *file)
     if (font->has_packed_widths == '\0')
     {
         fseek(file, -8 - glyph_count, 1);
-        fread(font->data.bitmap.glyph_advance + (unsigned int)font->first_char, 1, glyph_count, file);
+        fread(FONT_GLYPH_ADVANCE(font) + (unsigned int)font->first_char, 1, glyph_count, file);
         fseek(file, 8, 1);
     }
 
@@ -810,7 +810,7 @@ int MeasureMultilineTextWidth(FacemakerWindowBounds *window_bounds, char *text)
             {
                 if (font->has_packed_widths == 0)
                 {
-                    char_width = (int)font->data.bitmap.glyph_advance[(unsigned char)c] + (int)(unsigned char)font->glyph_spacing;
+                    char_width = (int)FONT_GLYPH_ADVANCE(font)[(unsigned char)c] + (int)(unsigned char)font->glyph_spacing;
                 }
                 else
                 {
@@ -923,7 +923,7 @@ int DrawTextLine(FacemakerWindowBounds *window_bounds, int x, int y, char *text)
             }
             else if (font->has_packed_widths == 0)
             {
-                local.char_width = (int)font->data.bitmap.glyph_advance[local.ch] + (int)(unsigned char)font->glyph_spacing;
+                local.char_width = (int)FONT_GLYPH_ADVANCE(font)[local.ch] + (int)(unsigned char)font->glyph_spacing;
             }
             else
             {
@@ -957,7 +957,7 @@ int DrawTextLine(FacemakerWindowBounds *window_bounds, int x, int y, char *text)
             }
             else if (font->has_packed_widths == 0)
             {
-                local.char_width = (int)font->data.bitmap.glyph_advance[local.ch] + (int)(unsigned char)font->glyph_spacing;
+                local.char_width = (int)FONT_GLYPH_ADVANCE(font)[local.ch] + (int)(unsigned char)font->glyph_spacing;
             }
             else
             {

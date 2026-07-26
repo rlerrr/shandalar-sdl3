@@ -58,8 +58,6 @@ extern char g_text_lines[249][300];
 extern int g_loadsave_skip_esc;
 extern jmp_buf g_adventure_session_restart_jump_buffer;
 extern jmp_buf g_adventure_world_exit_jump_buffer;
-extern char g_itoa_buffer[0x20];
-
 extern int card_dummy(int player, int card, event_t event);
 
 typedef struct
@@ -2885,9 +2883,9 @@ void RemoveCardFromDeckById(unsigned int card_id)
 }
 
 // FUNCTION: SHANDALAR 0x005224a0
-void ShowPlayer1LibraryMenu(int unused)
+void show_opponent_library_window(int unused_color)
 {
-  (void)unused;
+  (void)unused_color;
   SelectAdventureListCardIndex(g_active_player, global_library[1], 500, gs_showlibrary_text_0074bcc0.accept_keys, 0, &g_showlibrary_menu_selection);
 }
 
@@ -2926,7 +2924,7 @@ void WisemanChooseLairCreatureAndSetupDuel(unsigned char amulet_color)
     {
       global_library[1][i] = DrawRandomCardFromInitialLibrary(g_opponent_initial_library_index);
     }
-    ShowPlayer1LibraryMenu(g_opponent_initial_library_index);
+    show_opponent_library_window(g_opponent_initial_library_index);
   }
 }
 

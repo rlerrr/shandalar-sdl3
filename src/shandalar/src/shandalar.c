@@ -4130,7 +4130,7 @@ void UpdateWorldMagicUnlockProgress(void)
         }
       }
       statwin_data.duel_wins_by_color[mapped_world_magic_index] = world_magic_duel_win_count;
-      required_duel_wins = MAX(g_shandalar_difficulty * 5 + 20, required_duel_wins - original_required_duel_wins);
+      required_duel_wins = MAX(g_shandalar_difficulty * 5 + 20, required_duel_wins - world_magic_duel_win_count);
       statwin_data.progress_by_color[mapped_world_magic_index] = 0x1e - (original_required_duel_wins - required_duel_wins);
     }
   }

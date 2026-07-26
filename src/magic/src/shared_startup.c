@@ -19,6 +19,7 @@ extern int global_available_slots;
 extern card_ptr_t global_raw_cards_storage[2000];
 extern card_data_t global_cards_data[];
 extern BITMAPINFO g_duel_backbuffer_bmi;
+extern char *s_duel_options_registry_path_00588100;
 
 typedef struct
 {
@@ -466,7 +467,7 @@ void LoadDuelInterfaceRegistryOptions(void)
     DWORD value_size;
   } s;
 
-  if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\MicroProse\\Magic: The Gathering\\DuelOptions", 0, KEY_QUERY_VALUE, &s.options_key) == ERROR_SUCCESS)
+  if (RegOpenKeyExA(HKEY_CURRENT_USER, s_duel_options_registry_path_00588100, 0, KEY_QUERY_VALUE, &s.options_key) == ERROR_SUCCESS)
   {
     s.value_size = 10;
     s.integer_buffer[0] = '\0';

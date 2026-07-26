@@ -268,7 +268,7 @@ int GetFontCharWidth(int font_slot, unsigned char ch_value)
   {
     return (unsigned int)font->has_packed_widths + (unsigned int)font->glyph_spacing;
   }
-  return (unsigned int)font->glyph_spacing + (unsigned int)font->data.bitmap.glyph_advance[ch];
+  return (unsigned int)font->glyph_spacing + (unsigned int)FONT_GLYPH_ADVANCE(font)[ch];
 }
 
 // FUNCTION: SHANDALAR 0x0057acb0
@@ -298,7 +298,7 @@ int MeasureTextSpanWidth(FacemakerWindowBounds *window, char *text, int length)
         glyph_width = font->glyph_width;
         if (glyph_width == 0)
         {
-          glyph_width = font->data.bitmap.glyph_advance[(unsigned char)ch];
+          glyph_width = FONT_GLYPH_ADVANCE(font)[(unsigned char)ch];
           glyph_spacing = font->glyph_spacing;
         }
         else
