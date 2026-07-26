@@ -2453,7 +2453,6 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
                                 ScaleUiCoordinateFrom320(0x100), ScaleUiCoordinateFrom320(0x8c), 6, 6,
                                 scaled_0x8c->hTempDC,
                                 0x40, g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10);
-      DelayUiTicks(0x2d);
     }
     else
     {
@@ -2462,7 +2461,6 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
                                 ScaleUiCoordinateFrom320(0x100) - 2, ScaleUiCoordinateFrom320(0x8c), 8, 8,
                                 scaled_0x8c->hTempDC,
                                 0x40, g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10);
-      DelayUiTicks(0x2d);
     }
     g_world_scene_reveal_effect_pending = 0;
   }

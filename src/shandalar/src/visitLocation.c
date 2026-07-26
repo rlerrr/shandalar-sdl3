@@ -649,7 +649,6 @@ int ShowWizardVisitBackdrop(char *pcx_path)
                           x, y, w, h);
   DrawVisitScreenOverlays(g_page1_window_bounds);
   BlitRectByStaggeredRandomTileOrder(dst->hTempDC, x, y, w, h, 0x20, 3, 8, 8, src->hTempDC);
-  DelayUiTicks(0x2d);
   return 0;
 }
 
@@ -1242,11 +1241,11 @@ int OpenTownAdventureStats(AdvMenuControl *control)
 // FUNCTION: SHANDALAR 0x004f0d09
 int RunTownBuyCardsScreen(AdvMenuControl *control)
 {
-  char *accept_scan;         /* -0x134 */
-  int deck_slot;             /* -0x130 */
-  int accepted;              /* -0x12c */
-  char *accept_cursor;       /* -0x128 */
-  int mouse_y;               /* -0x124 */
+  char *accept_scan;   /* -0x134 */
+  int deck_slot;       /* -0x130 */
+  int accepted;        /* -0x12c */
+  char *accept_cursor; /* -0x128 */
+  int mouse_y;         /* -0x124 */
   (void)control;
   int mouse_x;               /* -0x120 */
   int title_y_200;           /* -0x11c */
@@ -2312,8 +2311,11 @@ loop:
         RefreshAdventureInterfaceLayout();
         (void)DrawAdventureInterfaceLayout(1);
         g_loadsave_skip_esc = 0;
-        (void)EndMenuContext();
-        longjmp(g_adventure_session_restart_jump_buffer, 0);
+        if (save_slot_index != -1)
+        {
+          (void)EndMenuContext();
+          longjmp(g_adventure_session_restart_jump_buffer, 0);
+        }
         break;
       case 1:
         tmp_mask = (unsigned int)RunSaveMenuAndSelectSlot();
@@ -2373,10 +2375,10 @@ loop:
 // FUNCTION: SHANDALAR 0x00568320
 int RunDuelEngine(unsigned int card_id, int creature_type)
 {
-  HDC desktop_dc;               /* ebp - 0x1c */
-  int was_topmost;              /* ebp - 0x18 */
-  int deck_slot;                /* ebp - 0x0c */
-  DWORD thread_exit_code;       /* ebp - 0x04 */
+  HDC desktop_dc;         /* ebp - 0x1c */
+  int was_topmost;        /* ebp - 0x18 */
+  int deck_slot;          /* ebp - 0x0c */
+  DWORD thread_exit_code; /* ebp - 0x04 */
 
   (void)card_id;
 

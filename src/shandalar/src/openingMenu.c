@@ -43,6 +43,7 @@ extern FacemakerWindowBounds *g_page0_window_bounds;
 extern FacemakerWindowBounds *g_page1_window_bounds;
 extern FacemakerWindowBounds *g_page2_window_bounds;
 static EncodedImage *g_name_entry_done_button_sprites[3];
+static EncodedImage *g_loadsave_cancel_button_sprites[3];
 
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
 int MeasureMultilineTextWidth(FacemakerWindowBounds *window, char *text);
@@ -112,6 +113,7 @@ int ApplyPortraitPaletteMap(FacemakerWindowBounds *page, int src_x, int src_y, u
 int ApplyPortraitTintMap(FacemakerWindowBounds *page, int src_x, int src_y, unsigned int width, int height, unsigned int tint_mask, int tint_mode);
 int HandleLoadSaveEscControlEvent(AdvMenuControl *control, int event_type);
 int ActivateLoadSaveEscControl(AdvMenuControl *control);
+int RenderLoadSaveCancelButton(AdvMenuControl *control, int mode);
 int DrawLoadSaveButton(FacemakerWindowBounds *window, EncodedImage **button_sprites, int button_width, int button_height, char *button_text,
                        int font_slot, int visual_state);
 int HandleLoadSaveSlotControlEvent(AdvMenuControl *control, int event_type);
@@ -210,8 +212,37 @@ static void ResetNameEntryDoneButtonSprites(void)
   g_name_entry_done_button_sprites[2] = 0;
 }
 
+static void BuildLoadSaveCancelButtonSprites(void)
+{
+  EncodedImage *source_sprites[13];
+  EncodedImage *source_sprite;
+  int source_sprite_indices[3] = {3, 4, 4};
+  int i;
+
+  if (g_loadsave_cancel_button_sprites[0] != 0)
+  {
+    return;
+  }
+
+  ReadSpriteEntryPointers(&source_sprites[0], "BuyButtons.spr");
+  BeginSpriteEncodeSession();
+  for (i = 0; i < 3; i = i + 1)
+  {
+    source_sprite = source_sprites[source_sprite_indices[i]];
+    FillGraphicsRect(g_page1_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, 0);
+    DrawEncodedImageResampled(g_page1_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, source_sprite);
+    ApplyVisibleSpritePaletteMap(g_page1_window_bounds, 0, 0, (unsigned int)source_sprite->width, (int)source_sprite->height, "buycards.pic", "menopt.pic");
+    g_loadsave_cancel_button_sprites[i] = EncodeSpriteFromPage(1, 0, 0, (int)source_sprite->width, (int)source_sprite->height);
+  }
+  FinalizeSpriteEncodeSession();
+  FreeSpriteBlob((void *)source_sprites[0]);
+}
+
 static void BuildNameEntryDoneButtonSprites(void)
 {
+  // Uses page 2 as scratch, which is safe: only called from RunNameEntryDialog via
+  // shandalar_run_facemaker_flow (character creation), before the world map exists.
+
   int i;
   int source_sprite_indices[3] = {3, 4, 4};
   EncodedImage *source_sprites[13];
@@ -467,7 +498,7 @@ AdvMenuControl g_loadsave_menu_controls[11] = {
     {0x2c, 0x127, 0x168, 0x1b, 0x2c, 0x127, 0x168, 0x1b, 1, HandleLoadSaveSlotControlEvent, ActivateLoadSaveSlotControl, 0xb, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
     {0x2c, 0x145, 0x168, 0x1b, 0x2c, 0x145, 0x168, 0x1b, 1, HandleLoadSaveSlotControlEvent, ActivateLoadSaveSlotControl, 0xc, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
     {0x2c, 0x163, 0x168, 0x1b, 0x2c, 0x163, 0x168, 0x1b, 1, HandleLoadSaveSlotControlEvent, ActivateLoadSaveSlotControl, 0xd, 0, (char *)0, (char *)0, 0, 0, {0, 0, 0, 0}},
-    {-1, -1, -1, -1, -1, -1, -1, -1, 1, HandleLoadSaveEscControlEvent, ActivateLoadSaveEscControl, 0xe, 0, g_loadsave_esc_key, g_loadsave_esc_key_2, 0, 0, {0, 0, 0, 0}}};
+    {0xb4, 0x1a0, 0x59, 0x23, 0xb4, 0x1a0, 0x59, 0x23, 1, RenderLoadSaveCancelButton, ActivateLoadSaveEscControl, 0xe, 0, g_loadsave_esc_key, g_loadsave_esc_key_2, 0, 0, {0, 0, 0, 0}}};
 
 // FUNCTION: SHANDALAR 0x004a04a0
 int SetSelectedMenuValue(AdvMenuControl *control, int event_type)
@@ -1517,6 +1548,39 @@ int ActivateLoadSaveEscControl(AdvMenuControl *control)
   return 0;
 }
 
+int RenderLoadSaveCancelButton(AdvMenuControl *control, int mode)
+{
+  int mouse_inside;
+
+  if (mode == 3)
+  {
+    return 0;
+  }
+
+  if (g_menu_render_guard == 0)
+  {
+    mouse_inside = (g_mouse_x >= control->x && g_mouse_x <= control->x + control->width &&
+                    g_mouse_y >= control->y && g_mouse_y <= control->y + control->height);
+    if (mouse_inside == 0)
+    {
+      return 0;
+    }
+  }
+
+  if (control->state == 3)
+  {
+    return 0;
+  }
+
+  DrawEncodedImageResampled(g_page0_window_bounds, control->x, control->y, control->width, control->height,
+                            g_loadsave_cancel_button_sprites[mode]);
+  if ((mode == 2) && (control->on_activate != (AdvMenuActivateCallback)0))
+  {
+    control->on_activate(control);
+  }
+  return 1;
+}
+
 // FUNCTION: SHANDALAR 0x004a84c7
 int DrawBlinkingNameCaret(FacemakerWindowBounds *window, int color_index, int caret_x, int caret_y, char *name_buffer, int cursor_pos)
 {
@@ -1785,6 +1849,11 @@ int RunLoadSaveMenu(int save_mode)
   }
   FinalizeSpriteEncodeSession();
 
+  if ((save_mode != 0) || (g_loadsave_skip_esc != 0))
+  {
+    BuildLoadSaveCancelButtonSprites();
+  }
+
   frame_x = 0x1c;
   frame_y = 0x45;
   frame_width = 0x1a4 - frame_x;
@@ -1835,7 +1904,7 @@ int RunLoadSaveMenu(int save_mode)
 
   if (g_loadsave_menu_controls[0].base_x == g_loadsave_menu_controls[0].x)
   {
-    for (slot_index = 0; slot_index < 10; slot_index = slot_index + 1)
+    for (slot_index = 0; slot_index < 11; slot_index = slot_index + 1)
     {
       g_loadsave_menu_controls[slot_index].x = ScaleUiCoordinate(g_loadsave_menu_controls[slot_index].x);
       g_loadsave_menu_controls[slot_index].y = ScaleUiCoordinate(g_loadsave_menu_controls[slot_index].y);
@@ -1868,6 +1937,11 @@ restart_menu_loop:
       RenderAdvMenuControlNormally(&g_loadsave_menu_controls[slot_index]);
       DrawLoadSaveSlotEntry(slot_index, 0);
     }
+  }
+
+  if ((save_mode != 0) || (g_loadsave_skip_esc != 0))
+  {
+    RenderAdvMenuControlNormally(&g_loadsave_menu_controls[10]);
   }
 
   g_loadsave_menu_selection = -1;
@@ -2003,6 +2077,13 @@ restart_menu_loop:
     fclose(save_desc_file);
   }
   FreeSpriteBlob(g_loadsave_frame_sprites[0]);
+  if (g_loadsave_cancel_button_sprites[0] != 0)
+  {
+    FreeSpriteBlob((void *)g_loadsave_cancel_button_sprites[0]);
+    g_loadsave_cancel_button_sprites[0] = 0;
+    g_loadsave_cancel_button_sprites[1] = 0;
+    g_loadsave_cancel_button_sprites[2] = 0;
+  }
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   return g_loadsave_menu_selection;
 }

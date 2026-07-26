@@ -1226,7 +1226,6 @@ int RunTextMenuCore(char *menu_text, int clear_input_before_show)
   {
     HideMouseCursorNested();
     DrawTextMenu(menu_text, selected_menu_entry);
-    DelayUiTicks(0x14);
     ShowMouseCursorNested();
   }
   else

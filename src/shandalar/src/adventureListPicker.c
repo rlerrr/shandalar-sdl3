@@ -160,12 +160,12 @@ static void BuildAdventureListConfirmButtonSprites(EncodedImage **button_sprites
   RpBitsPalettePacket target_palette;
 
   CopyPaletteLogToRpBitsPalette(&target_palette, screen_palette);
-  LoadPcxResource(2, 0, 0, "smBuybttn.pic", (void *)0);
-  ApplyVisibleSpritePaletteMapToPalette(g_page2_window_bounds, 0, 0, 0x10e, 0x24, "buycards.pic", target_palette.entry_data);
+  LoadPcxResource(1, 0, 0, "smBuybttn.pic", (void *)0);
+  ApplyVisibleSpritePaletteMapToPalette(g_page1_window_bounds, 0, 0, 0x10e, 0x24, "buycards.pic", target_palette.entry_data);
   BeginSpriteEncodeSession();
   for (i = 0; i < 3; i = i + 1)
   {
-    button_sprites[i] = EncodeSpriteFromPage(2, i * 0x5a + 1, 1, 0x59, 0x23);
+    button_sprites[i] = EncodeSpriteFromPage(1, i * 0x5a + 1, 1, 0x59, 0x23);
   }
   FinalizeSpriteEncodeSession();
 }

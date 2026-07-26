@@ -257,14 +257,46 @@ int SeedRandomFromTickCount(void)
 
 int AddCardToDeckSorted(int card_id)
 {
-  int index;
-  for (index = 0; index < 500; ++index) {
-    if (deck[index] == -1) {
-      deck[index] = card_id;
-      return index;
+  int entry_key;
+  int candidate_key;
+  int card_index;
+  int slot;
+  int deck_full;
+
+  entry_key = (int)global_cards_data[card_id].color * 0x20 +
+              (int)global_cards_data[card_id].type * 0x100 +
+              (int)(unsigned char)global_cards_data[card_id].name[0];
+  deck_full = 1;
+  for (slot = 0; slot < 500; slot = slot + 1)
+  {
+    if (deck[slot] == -1)
+    {
+      deck_full = 0;
     }
   }
-  return -1;
+  if (deck_full != 0)
+  {
+    return -1;
+  }
+  for (slot = 0x1f2; slot >= 0; slot = slot - 1)
+  {
+    if (deck[slot] == -1)
+    {
+      continue;
+    }
+    card_index = deck[slot] & 0xfff;
+    candidate_key = (int)global_cards_data[card_index].color * 0x20 +
+                    (int)global_cards_data[card_index].type * 0x100 +
+                    (int)(unsigned char)global_cards_data[card_index].name[0];
+    if (candidate_key >= entry_key)
+    {
+      deck[slot + 1] = card_id;
+      return slot + 1;
+    }
+    deck[slot + 1] = (unsigned int)deck[slot];
+  }
+  deck[0] = card_id;
+  return 0;
 }
 
 int GetCardRarity(int card_id)
