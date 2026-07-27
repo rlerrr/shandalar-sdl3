@@ -471,10 +471,17 @@ int shandalar_run_facemaker_flow(void)
 
 color_t single_color_test_bit_to_color_t(color_test_t color_test)
 {
-  int color;
-  for (color = 0; color < 8; ++color)
-    if (((int)color_test & (1 << color)) != 0)
-      return (color_t)color;
+  if ((color_test & COLOR_TEST_BLACK) != 0)
+    return COLOR_BLACK;
+  if ((color_test & COLOR_TEST_BLUE) != 0)
+    return COLOR_BLUE;
+  if ((color_test & COLOR_TEST_GREEN) != 0)
+    return COLOR_GREEN;
+  if ((color_test & COLOR_TEST_RED) != 0)
+    return COLOR_RED;
+  if ((color_test & COLOR_TEST_WHITE) != 0)
+    return COLOR_WHITE;
+
   return COLOR_COLORLESS;
 }
 
