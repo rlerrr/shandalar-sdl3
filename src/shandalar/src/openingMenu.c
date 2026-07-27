@@ -1581,6 +1581,27 @@ int RenderLoadSaveCancelButton(AdvMenuControl *control, int mode)
   return 1;
 }
 
+static int UpdateLoadSaveEditDoneButton(void)
+{
+  AdvMenuControl *control;
+  int mouse_inside;
+  int visual_state;
+
+  control = &g_loadsave_menu_controls[10];
+  mouse_inside = (g_mouse_x >= control->x && g_mouse_x <= control->x + control->width &&
+                  g_mouse_y >= control->y && g_mouse_y <= control->y + control->height);
+  visual_state = mouse_inside ? ((g_mouse_button_down_mask & 1) != 0 ? 2 : 1) : 0;
+  DrawEncodedImageResampled(g_page0_window_bounds, control->x, control->y, control->width, control->height,
+                            g_loadsave_cancel_button_sprites[visual_state]);
+
+  return (g_mouse_button_mask_snapshot & 1) != 0 &&
+         (g_mouse_button_down_mask & 1) == 0 &&
+         g_mouse_x_snapshot >= control->x &&
+         g_mouse_x_snapshot <= control->x + control->width &&
+         g_mouse_y_snapshot >= control->y &&
+         g_mouse_y_snapshot <= control->y + control->height;
+}
+
 // FUNCTION: SHANDALAR 0x004a84c7
 int DrawBlinkingNameCaret(FacemakerWindowBounds *window, int color_index, int caret_x, int caret_y, char *name_buffer, int cursor_pos)
 {
@@ -1972,11 +1993,22 @@ restart_menu_loop:
     g_loadsave_cursor_index = strlen(edit_buffer + 1);
     DrawLoadSaveSlotEntry(selected_slot, 2);
 
-    while ((key_code = PopQueuedKeyInput()) != 0x1c0d)
+    while (1)
     {
+      key_code = PopQueuedKeyInput();
+      if (key_code == 0x1c0d)
+      {
+        break;
+      }
       if (key_code == 0)
       {
         PumpOpeningMenuWait();
+        if (UpdateLoadSaveEditDoneButton())
+        {
+          PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
+          g_loadsave_menu_selection = selected_slot + 4;
+          break;
+        }
         continue;
       }
 
@@ -2062,6 +2094,13 @@ restart_menu_loop:
     }
 
     g_loadsave_edit_active = 0;
+    strcpy(g_loadsave_slot_descriptions[selected_slot], edit_buffer + 1);
+    if (g_loadsave_slot_descriptions[selected_slot][0] == '\0')
+    {
+      snprintf(g_loadsave_slot_descriptions[selected_slot],
+               sizeof(g_loadsave_slot_descriptions[selected_slot]),
+               "Save Slot %d", selected_slot + 1);
+    }
     if (save_desc_file)
     {
       fseek(save_desc_file, 0, 0);
