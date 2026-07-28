@@ -20,7 +20,6 @@ extern HDC global_main_hdc;
 extern int global_screen_width;
 extern int global_screen_height;
 extern DIBSurface *g_graphics_pages[10];
-extern PALETTEENTRY g_palette_entries[256];
 extern int g_mouse_x;
 extern int g_mouse_y;
 extern int g_mouse_button_down_mask;
@@ -309,46 +308,19 @@ static int ensure_framebuffer(int width, int height)
   return 1;
 }
 
-static void present_indexed_frame(const unsigned char *pixels, int width, int height,
-                                  int pitch, const unsigned char *rgb_palette)
+static void present_frame(void)
 {
-  int x;
-  int y;
-  if (!pixels || !rgb_palette || !ensure_framebuffer(width, height))
+  if (!ensure_framebuffer(global_screen_width, global_screen_height) ||
+      !shandalar_dc_copy_rgba(global_main_hdc, g_rgba,
+                              global_screen_width * (int)sizeof(uint32_t)))
     return;
-  for (y = 0; y < height; ++y)
-  {
-    const unsigned char *src = pixels + y * pitch;
-    uint32_t *dst = g_rgba + y * width;
-    for (x = 0; x < width; ++x)
-    {
-      const unsigned char *rgb = rgb_palette + src[x] * 3;
-      dst[x] = 0xff000000u | ((uint32_t)rgb[0] << 16) |
-               ((uint32_t)rgb[1] << 8) | rgb[2];
-    }
-  }
-  SDL_UpdateTexture(g_texture, NULL, g_rgba, width * (int)sizeof(uint32_t));
+
+  SDL_UpdateTexture(g_texture, NULL, g_rgba,
+                    global_screen_width * (int)sizeof(uint32_t));
   SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
   SDL_RenderClear(g_renderer);
   SDL_RenderTexture(g_renderer, g_texture, NULL, NULL);
   SDL_RenderPresent(g_renderer);
-}
-
-static void present_frame(void)
-{
-  int pitch;
-  int i;
-  unsigned char rgb_palette[256 * 3];
-  const unsigned char *pixels = (const unsigned char *)shandalar_dc_pixels(global_main_hdc, &pitch);
-  if (!pixels)
-    return;
-  for (i = 0; i < 256; ++i)
-  {
-    rgb_palette[i * 3 + 0] = g_palette_entries[i].peRed;
-    rgb_palette[i * 3 + 1] = g_palette_entries[i].peGreen;
-    rgb_palette[i * 3 + 2] = g_palette_entries[i].peBlue;
-  }
-  present_indexed_frame(pixels, global_screen_width, global_screen_height, pitch, rgb_palette);
 }
 
 int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root)
