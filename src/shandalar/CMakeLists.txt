@@ -60,6 +60,7 @@ if(EMSCRIPTEN)
     "-sFORCE_FILESYSTEM=1"
     "-sMAXIMUM_MEMORY=1GB"
     "-sASYNCIFY=1"
+    "-sEXIT_RUNTIME=1"
     "-sFETCH=1"
     "--profiling-funcs"
     "-lidbfs.js"

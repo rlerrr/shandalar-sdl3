@@ -1200,7 +1200,12 @@ undefined4 HandleDefeatedWizardCastle(int castle_index)
     g_adventure_world_exit_requested = 1;
     UnloadStatWinDllExports();
     ShutdownSharedStartup();
+#ifdef __EMSCRIPTEN__
+    // Returning nonzero is kinda BM
+    exit(0);
+#else
     exit(0xff);
+#endif
   }
   return 0;
 }
