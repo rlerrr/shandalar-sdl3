@@ -22,7 +22,6 @@
 #include "cardartlib/src/assert.h"
 #include "drawcardlib/src/pic.h"
 #include "facemaker/src/facemaker_types.h"
-#include "platform/asset_manager.h"
 
 #ifdef _WIN32
 #undef _fileno
@@ -152,7 +151,7 @@ int ReadSpriteEntryPointersWithLimit(EncodedImage **out_entry_ptrs, char *sprite
   int iVar2;
 
   iVar2 = 0;
-  _File = shandalar_assets_fopen(sprite_path, "rb");
+  _File = fopen(sprite_path, "rb");
   assert((int)_File, "D:\\NewMagic\\sources\\sidlib\\sprite.c", 0xc5,
          "Could not open Sprite File %s\n", sprite_path);
   iVar1 = _fileno(_File);

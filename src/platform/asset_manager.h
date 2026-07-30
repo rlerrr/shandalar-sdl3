@@ -1,8 +1,6 @@
 #ifndef SHANDALAR_ASSET_MANAGER_H
 #define SHANDALAR_ASSET_MANAGER_H
 
-#include <stdio.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,7 +15,6 @@ typedef enum ShandalarAssetState {
 void shandalar_assets_set_root(const char *root);
 const char *shandalar_assets_root(void);
 int shandalar_assets_join_path(char *out, unsigned int out_size, const char *relative_path);
-FILE *shandalar_assets_fopen(const char *path, const char *mode);
 ShandalarAssetState shandalar_assets_prefetch(const char *relative_path);
 ShandalarAssetState shandalar_assets_fetch_blocking(const char *relative_path);
 ShandalarAssetState shandalar_assets_state(const char *relative_path);

@@ -1,6 +1,5 @@
 #include "face_assets.h"
 
-#include "platform/asset_manager.h"
 #include "platform/legacy_io.h"
 
 #include <SDL3/SDL.h>
@@ -62,7 +61,7 @@ int facemaker_sprite_blob_load_entries(const char *path, unsigned char **blob,
     return 0;
   *blob = NULL;
   *blob_size = 0;
-  file = shandalar_assets_fopen(path, "rb");
+  file = fopen(path, "rb");
   if (!file)
     return 0;
   fseek(file, 0, SEEK_END);
