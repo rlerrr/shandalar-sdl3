@@ -59,7 +59,6 @@ void DrawCenteredTextLineWithShadow(char *text, int center_x, int y, int color_i
 void DrawTextAt(FacemakerWindowBounds *window, int color, int x, int y, char *text, ...);
 void DrawScaledTextNoShadow(char *text, int x, int y, int color_index);
 void DrawFormattedTextNoShadowCentered(FacemakerWindowBounds *dst, int text_color, int x, int y, char *format, ...);
-int GetFontLineHeight(int font_slot);
 void DelayUiTicks(int ticks);
 
 void UpdateMouseSnapshot(void);
@@ -170,6 +169,15 @@ static void BuildAdventureListConfirmButtonSprites(EncodedImage **button_sprites
   FinalizeSpriteEncodeSession();
 }
 
+static void DrawAdventureListConfirmButtonText(char *text, int center_x, int center_y, int color, int visual_state)
+{
+  int pressed_offset;
+
+  pressed_offset = (visual_state == 2) ? ScaleUiCoordinateFrom320(1) / 2 : 0;
+  DrawFormattedTextNoShadowCentered(g_page0_window_bounds, color,
+                                    center_x + pressed_offset, center_y + pressed_offset, text);
+}
+
 // FUNCTION: SHANDALAR 0x0055837e
 INT_PTR __cdecl ShowAdventureListCardList(int *card_ids, int card_count, void *title, int require_card_click, char *out_selection)
 {
@@ -222,8 +230,6 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
   int button_h;
   int accept_state;
   int cancel_state;
-  int text_y;
-  int text_offset;
   PaletteLog *screen_palette;
 
   if ((player == g_other_player) &&
@@ -446,14 +452,10 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
         DrawEncodedImageResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
                                   confirm_button_sprites[cancel_state]);
 
-        text_offset = (accept_state == 2) ? ScaleUiCoordinateFrom320(1) / 2 : 0;
-        text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2 + text_offset;
-        DrawFormattedTextNoShadowCentered(g_page0_window_bounds, (accept_state == 0) ? 0x1b : 0x1a,
-                                          accept_x + button_w / 2 + text_offset, text_y, "Yes");
-        text_offset = (cancel_state == 2) ? ScaleUiCoordinateFrom320(1) / 2 : 0;
-        text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2 + text_offset;
-        DrawFormattedTextNoShadowCentered(g_page0_window_bounds, (cancel_state == 0) ? 0x1b : 0x1a,
-                                          cancel_x + button_w / 2 + text_offset, text_y, "No");
+        DrawAdventureListConfirmButtonText("Yes", accept_x + button_w / 2, button_y + button_h / 2,
+                                           (accept_state == 0) ? 0x1b : 0x1a, accept_state);
+        DrawAdventureListConfirmButtonText("No", cancel_x + button_w / 2, button_y + button_h / 2,
+                                           (cancel_state == 0) ? 0x1b : 0x1a, cancel_state);
 
         if ((g_mouse_button_mask_snapshot & 1U) != 0)
         {

@@ -1465,6 +1465,15 @@ redraw_buy_cards_screen:
   return 0;
 }
 
+static void DrawBuyCardsConfirmButtonText(char *text, int center_x, int center_y, int color, int visual_state)
+{
+  int pressed_offset;
+
+  pressed_offset = (visual_state == 2) ? ScaleUiCoordinate(1) : 0;
+  DrawFormattedTextNoShadowCentered(g_page0_window_bounds, color,
+                                    center_x + pressed_offset, center_y + pressed_offset, text);
+}
+
 int RunBuyCardsConfirmPrompt(int card_id, int price)
 {
   int key;
@@ -1477,10 +1486,8 @@ int RunBuyCardsConfirmPrompt(int card_id, int price)
   int button_y;
   int button_w;
   int button_h;
-  int text_y;
   int accept_state;
   int cancel_state;
-  int text_offset;
   int restore_h;
 
   sprintf(g_ui_message_buffer, gs_visit_citybuy_0077f1d0[2], price);
@@ -1505,11 +1512,8 @@ int RunBuyCardsConfirmPrompt(int card_id, int price)
                             g_buy_cards_confirm_button_sprites[0]);
   DrawEncodedImageResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
                             g_buy_cards_confirm_button_sprites[0]);
-  text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2;
-  DrawFormattedTextNoShadowCentered(g_page0_window_bounds, 0x1b,
-                                    accept_x + button_w / 2, text_y, "Yes");
-  DrawFormattedTextNoShadowCentered(g_page0_window_bounds, 0x1b,
-                                    cancel_x + button_w / 2, text_y, "No");
+  DrawBuyCardsConfirmButtonText("Yes", accept_x + button_w / 2, button_y + button_h / 2, 0x1b, 0);
+  DrawBuyCardsConfirmButtonText("No", cancel_x + button_w / 2, button_y + button_h / 2, 0x1b, 0);
 
   ClearInputAndWaitForMouseRelease();
   do
@@ -1527,14 +1531,10 @@ int RunBuyCardsConfirmPrompt(int card_id, int price)
                               g_buy_cards_confirm_button_sprites[accept_state]);
     DrawEncodedImageResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
                               g_buy_cards_confirm_button_sprites[cancel_state]);
-    text_offset = (accept_state == 2) ? ScaleUiCoordinate(1) : 0;
-    text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2 + text_offset;
-    DrawFormattedTextNoShadowCentered(g_page0_window_bounds, (accept_state == 0) ? 0x1b : 0x1a,
-                                      accept_x + button_w / 2 + text_offset, text_y, "Yes");
-    text_offset = (cancel_state == 2) ? ScaleUiCoordinate(1) : 0;
-    text_y = button_y + button_h / 2 - GetFontLineHeight(g_page0_window_bounds->font_slot) / 2 + text_offset;
-    DrawFormattedTextNoShadowCentered(g_page0_window_bounds, (cancel_state == 0) ? 0x1b : 0x1a,
-                                      cancel_x + button_w / 2 + text_offset, text_y, "No");
+    DrawBuyCardsConfirmButtonText("Yes", accept_x + button_w / 2, button_y + button_h / 2,
+                                  (accept_state == 0) ? 0x1b : 0x1a, accept_state);
+    DrawBuyCardsConfirmButtonText("No", cancel_x + button_w / 2, button_y + button_h / 2,
+                                  (cancel_state == 0) ? 0x1b : 0x1a, cancel_state);
     if ((g_mouse_button_mask_snapshot & 1U) != 0)
     {
       if (accept_state != 0)
