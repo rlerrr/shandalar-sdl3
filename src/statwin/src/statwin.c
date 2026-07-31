@@ -9,6 +9,7 @@
 
 #define STATWIN_ASSET_DIR "Statwin_SDL"
 #define STATWIN_SOUND_SLOT 0xfe
+#define STATWIN_STATUS_SOUND_SLOT 0xff
 
 typedef struct RectI {
   int x;
@@ -402,6 +403,23 @@ static void stop_sidecar_audio(int playing)
   }
 }
 
+static int play_status_audio(void)
+{
+  Sound sound;
+  SDL_zero(sound);
+  sound.volume = 400;
+  sound.flags = 5;
+  return PlaySndFile("STATSCRN.WAV", STATWIN_STATUS_SOUND_SLOT, &sound) == 0;
+}
+
+static void stop_status_audio(int playing)
+{
+  if (playing) {
+    StopSnd(STATWIN_STATUS_SOUND_SLOT);
+    UnloadSnd(STATWIN_STATUS_SOUND_SLOT);
+  }
+}
+
 static int run_animation(const char *name, Scene *scene)
 {
   SDL_IOStream *io;
@@ -484,6 +502,7 @@ void statwin_show(const StatWinData *data, int mode)
   StatsAssets assets;
   Scene scene;
   unsigned int color;
+  int status_audio_playing = 0;
   if (!g_renderer || (!data && !g_has_cached_data))
     return;
   if (data) {
@@ -500,6 +519,9 @@ void statwin_show(const StatWinData *data, int mode)
   color = g_cached_data.highlighted_wizard_color;
   if (color > 4)
     color = 0;
+
+  if (!(mode == 1 && g_cached_data.progress_by_color[color] == 0))
+    status_audio_playing = play_status_audio();
 
   if (mode == 1 && g_cached_data.progress_by_color[color] == 0) {
     SDL_Texture *room = load_texture(g_missing_backgrounds[color]);
@@ -529,6 +551,7 @@ void statwin_show(const StatWinData *data, int mode)
   else {
     wait_on_scene(&scene);
   }
+  stop_status_audio(status_audio_playing);
   destroy_stats_assets(&assets);
 }
 
