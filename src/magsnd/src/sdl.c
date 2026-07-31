@@ -1,7 +1,7 @@
 #include "magsnd.h"
 
 #include "platform/asset_manager.h"
-#include "platform/legacy_io.h"
+#include "platform/file_io.h"
 
 #include <SDL3/SDL.h>
 #include <stdint.h>
@@ -71,25 +71,22 @@ static void normalize_slashes(char *path)
   }
 }
 
-static int resolve_sound_path(char *out, size_t out_size, const char *path)
+static SDL_IOStream *open_sound_io(const char *path)
 {
   const char *asset_path;
-  if (!out || !out_size || !path || !path[0])
-    return 0;
+  char resolved[1024];
+
+  if (!path || !path[0])
+    return NULL;
   asset_path = asset_relative_sound_path(path);
   if (is_absolute_path(asset_path)) {
-    SDL_strlcpy(out, asset_path, out_size);
-  } else if (!shandalar_assets_join_path(out, (unsigned int)out_size, asset_path)) {
-    return 0;
+    SDL_strlcpy(resolved, asset_path, sizeof(resolved));
+  } else if (!shandalar_assets_join_path(resolved, sizeof(resolved),
+                                         asset_path)) {
+    return NULL;
   }
-  normalize_slashes(out);
-#ifndef _WIN32
-  if (!is_absolute_path(asset_path) &&
-      shandalar_assets_state(asset_path) != SHANDALAR_ASSET_READY)
-    shandalar_assets_fetch_blocking(asset_path);
-  shandalar_resolve_existing_path(out, out, out_size);
-#endif
-  return 1;
+  normalize_slashes(resolved);
+  return shandalar_open_file_io(resolved, "rb");
 }
 
 static void free_slot(SdlSndSlot *slot)
@@ -225,7 +222,7 @@ void __cdecl ReleaseSnd(void)
 
 int __cdecl LoadSnd(LPSTR path, int num, Sound *snd)
 {
-  char resolved[1024];
+  SDL_IOStream *io;
   SdlSndSlot *slot;
   (void)snd;
 
@@ -236,9 +233,12 @@ int __cdecl LoadSnd(LPSTR path, int num, Sound *snd)
   slot = &g_slots[num];
   if (slot->loaded)
     return MAGSND_OK;
-  if (!resolve_sound_path(resolved, sizeof(resolved), path))
+  if (!path || !path[0])
     return MAGSND_BAD_ARGUMENT;
-  if (!SDL_LoadWAV(resolved, &slot->spec, &slot->buffer, &slot->length)) {
+  io = open_sound_io(path);
+  if (!io)
+    return MAGSND_NOT_LOADED;
+  if (!SDL_LoadWAV_IO(io, true, &slot->spec, &slot->buffer, &slot->length)) {
     SDL_zero(*slot);
     return MAGSND_NOT_LOADED;
   }

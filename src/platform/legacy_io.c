@@ -389,11 +389,67 @@ static void log_open_failure(const char *kind, const char *path, const char *mod
 #endif
 }
 
+static int resolve_case_insensitive_components(const char *current,
+                                               const char *cursor,
+                                               char *out, size_t out_size)
+{
+  char component[260];
+  const char *slash;
+  const char *next;
+  struct dirent *entry;
+  DIR *dir;
+  size_t component_len;
+
+  while (*cursor == '/')
+    ++cursor;
+  if (!*cursor) {
+    snprintf(out, out_size, "%s", current);
+    return 1;
+  }
+
+  slash = strchr(cursor, '/');
+  component_len = slash ? (size_t)(slash - cursor) : strlen(cursor);
+  if (component_len >= sizeof(component))
+    return 0;
+  memcpy(component, cursor, component_len);
+  component[component_len] = '\0';
+  next = cursor + component_len;
+  while (*next == '/')
+    ++next;
+
+  if (component[0] == '\0' || strcmp(component, ".") == 0)
+    return resolve_case_insensitive_components(current, next, out, out_size);
+
+  dir = opendir(current);
+  if (!dir)
+    return 0;
+
+  while ((entry = readdir(dir)) != NULL) {
+    char candidate[1024];
+    int written;
+    if (strcasecmp(entry->d_name, component) != 0)
+      continue;
+    if (strcmp(current, "/") == 0)
+      written = snprintf(candidate, sizeof(candidate), "/%s", entry->d_name);
+    else
+      written = snprintf(candidate, sizeof(candidate), "%s/%s", current,
+                         entry->d_name);
+    if (written < 0 || (size_t)written >= sizeof(candidate))
+      continue;
+    if (resolve_case_insensitive_components(candidate, next, out, out_size)) {
+      closedir(dir);
+      return 1;
+    }
+  }
+  closedir(dir);
+  return 0;
+}
+
 static int resolve_case_insensitive_path(const char *path, char *out, size_t out_size)
 {
   char normalized[1024];
-  char current[1024];
   const char *cursor;
+  const char *current;
 
   normalize_path_copy(normalized, sizeof(normalized), path);
   if (access(normalized, F_OK) == 0) {
@@ -403,64 +459,13 @@ static int resolve_case_insensitive_path(const char *path, char *out, size_t out
 
   cursor = normalized;
   if (*cursor == '/') {
-    snprintf(current, sizeof(current), "/");
+    current = "/";
     while (*cursor == '/')
       ++cursor;
   } else {
-    snprintf(current, sizeof(current), ".");
+    current = ".";
   }
-
-  while (*cursor) {
-    char component[260];
-    char directory[1024];
-    const char *slash;
-    struct dirent *entry;
-    DIR *dir;
-    size_t component_len;
-    int found = 0;
-
-    slash = strchr(cursor, '/');
-    component_len = slash ? (size_t)(slash - cursor) : strlen(cursor);
-    if (component_len >= sizeof(component))
-      return 0;
-    memcpy(component, cursor, component_len);
-    component[component_len] = '\0';
-
-    if (component[0] == '\0' || strcmp(component, ".") == 0) {
-      cursor += component_len;
-      while (*cursor == '/')
-        ++cursor;
-      continue;
-    }
-
-    snprintf(directory, sizeof(directory), "%s", current);
-    dir = opendir(directory);
-    if (!dir)
-      return 0;
-
-    while ((entry = readdir(dir)) != NULL) {
-      if (strcasecmp(entry->d_name, component) == 0) {
-        size_t len = strlen(current);
-        if (strcmp(current, "/") == 0)
-          snprintf(current, sizeof(current), "/%s", entry->d_name);
-        else
-          snprintf(current + len, sizeof(current) - len, "/%s", entry->d_name);
-        found = 1;
-        break;
-      }
-    }
-    closedir(dir);
-
-    if (!found)
-      return 0;
-
-    cursor += component_len;
-    while (*cursor == '/')
-      ++cursor;
-  }
-
-  snprintf(out, out_size, "%s", current);
-  return 1;
+  return resolve_case_insensitive_components(current, cursor, out, out_size);
 }
 
 int shandalar_resolve_existing_path(const char *path, char *out, size_t out_size)

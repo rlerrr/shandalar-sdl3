@@ -1,10 +1,9 @@
 #include "statwin/statwin.h"
 
 #include "magsnd/magsnd.h"
-#include "platform/legacy_io.h"
+#include "platform/file_io.h"
 
 #include <SDL3_image/SDL_image.h>
-#include <stdio.h>
 #include <string.h>
 
 #define STATWIN_ASSET_DIR "Statwin_SDL"
@@ -100,79 +99,14 @@ static const RectI g_mana_sources[5][5] = {
     {{32, 15, 14, 16}, {4, 12, 14, 16}, {8, 5, 14, 13}, {8, 28, 16, 14}, {24, 28, 16, 15}},
     {{29, 8, 19, 19}, {0, 14, 17, 20}, {12, 0, 19, 21}, {0, 33, 26, 14}, {23, 29, 20, 16}}};
 
-static Sint64 SDLCALL file_io_seek(void *userdata, Sint64 offset,
-                                   SDL_IOWhence whence)
-{
-  FILE *file = (FILE *)userdata;
-  int origin;
-  switch (whence) {
-  case SDL_IO_SEEK_SET: origin = SEEK_SET; break;
-  case SDL_IO_SEEK_CUR: origin = SEEK_CUR; break;
-  case SDL_IO_SEEK_END: origin = SEEK_END; break;
-  default: return -1;
-  }
-  if (fseek(file, (long)offset, origin) != 0)
-    return -1;
-  return (Sint64)ftell(file);
-}
-
-static size_t SDLCALL file_io_read(void *userdata, void *ptr, size_t size,
-                                   SDL_IOStatus *status)
-{
-  FILE *file = (FILE *)userdata;
-  size_t bytes = fread(ptr, 1, size, file);
-  if (bytes < size)
-    *status = ferror(file) ? SDL_IO_STATUS_ERROR : SDL_IO_STATUS_EOF;
-  return bytes;
-}
-
-static size_t SDLCALL file_io_write(void *userdata, const void *ptr,
-                                    size_t size, SDL_IOStatus *status)
-{
-  (void)userdata;
-  (void)ptr;
-  (void)size;
-  *status = SDL_IO_STATUS_READONLY;
-  return 0;
-}
-
-static bool SDLCALL file_io_flush(void *userdata, SDL_IOStatus *status)
-{
-  (void)userdata;
-  (void)status;
-  return true;
-}
-
-static bool SDLCALL file_io_close(void *userdata)
-{
-  return fclose((FILE *)userdata) == 0;
-}
-
 static SDL_IOStream *open_asset_io(const char *name)
 {
   char relative[512];
-  FILE *file;
   SDL_IOStream *io;
-  SDL_IOStreamInterface interface;
   SDL_snprintf(relative, sizeof(relative), "%s/%s", STATWIN_ASSET_DIR, name);
-  file = fopen(relative, "rb");
-  if (!file) {
+  io = shandalar_open_file_io(relative, "rb");
+  if (!io)
     SDL_Log("statwin: could not open %s", relative);
-    return NULL;
-  }
-  SDL_INIT_INTERFACE(&interface);
-  interface.seek = file_io_seek;
-  interface.read = file_io_read;
-  interface.write = file_io_write;
-  interface.flush = file_io_flush;
-  interface.close = file_io_close;
-  io = SDL_OpenIO(&interface, file);
-  if (!io) {
-    SDL_Log("statwin: could not create an IO stream for %s: %s",
-            relative, SDL_GetError());
-    fclose(file);
-    return NULL;
-  }
   return io;
 }
 
