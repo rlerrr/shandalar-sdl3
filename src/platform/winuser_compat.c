@@ -715,6 +715,11 @@ BOOL ShowWindow(HWND window, int command)
 BOOL IsWindowVisible(HWND window) { return valid_window(window) && window->visible; }
 BOOL IsWindow(HWND window) { return valid_window(window); }
 BOOL IsWindowEnabled(HWND window) { return valid_window(window) && window->enabled; }
+BOOL shandalar_win32_accepts_double_click(HWND window)
+{
+  return valid_window(window) && window->window_class &&
+         (window->window_class->value.style & CS_DBLCLKS) != 0;
+}
 
 BOOL EnableWindow(HWND window, BOOL enable)
 {

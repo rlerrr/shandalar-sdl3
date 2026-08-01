@@ -5,11 +5,13 @@
 
 #include "drawcardlib/src/pic.h"
 #include "facemaker/src/facemaker_types.h"
+#include "deck/src/deck_imgui_interaction.h"
 #include "magic/src/global_state.h"
 #include "platform/asset_manager.h"
 #include "platform/gdi_compat.h"
 #include "platform/winuser_compat.h"
 #include "platform/winuser_imgui_bridge.h"
+#include "platform/winuser_sdl_compositor.h"
 #include "statwin/statwin.h"
 
 #ifdef __EMSCRIPTEN__
@@ -224,16 +226,18 @@ static void forward_deckbuilder_keyboard_event(const SDL_Event *event)
   }
 }
 
+#ifdef __EMSCRIPTEN__
 EM_ASYNC_JS(void, wait_next_frame, (), {
   await new Promise(requestAnimationFrame);
 });
+#endif
 
 static BOOL pump_facemaker_ui(BOOL wait)
 {
   SDL_Event event;
   while (SDL_PollEvent(&event))
   {
-    shandalar_win32_imgui_process_event(g_renderer, &event);
+    shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
     if (event.type == SDL_EVENT_QUIT)
     {
       g_quit_requested = 1;
@@ -247,9 +251,7 @@ static BOOL pump_facemaker_ui(BOOL wait)
 
   SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
   SDL_RenderClear(g_renderer);
-  shandalar_win32_imgui_begin_frame();
-  shandalar_win32_imgui_present(g_renderer);
-  shandalar_win32_imgui_render(g_renderer);
+  shandalar_win32_sdl_compositor_present(g_renderer);
   SDL_RenderPresent(g_renderer);
 
 #ifdef __EMSCRIPTEN__
@@ -288,6 +290,7 @@ static BOOL pump_deckbuilder_ui(BOOL wait)
   SDL_RenderClear(g_renderer);
   shandalar_win32_imgui_begin_frame();
   shandalar_win32_imgui_present(g_renderer);
+  shandalar_deck_imgui_interaction_present();
   shandalar_win32_imgui_render(g_renderer);
   SDL_RenderPresent(g_renderer);
 
@@ -361,7 +364,7 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_StartTextInput(g_window);
-  if (!shandalar_win32_imgui_init(g_window, g_renderer))
+  if (!shandalar_win32_sdl_compositor_init(g_renderer))
     return 0;
 
   shandalar_assets_set_root(asset_root);
@@ -384,7 +387,7 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
 
   g_facemaker_host_active = 0;
   shandalar_win32_set_pump_proc(NULL);
-  shandalar_win32_imgui_shutdown();
+  shandalar_win32_sdl_compositor_shutdown();
   ShutdownGraphicsSystem();
   global_main_hdc = shandalar_hdc;
   global_screen_width = shandalar_width;
@@ -418,6 +421,7 @@ void shandalar_host_end_deckbuilder(void)
   g_deckbuilder_host_active = 0;
   shandalar_win32_set_pump_proc(pump_shandalar_win32_ui);
   shandalar_win32_clear_quit_message();
+  shandalar_deck_imgui_interaction_shutdown();
   shandalar_win32_imgui_shutdown();
   SDL_StopTextInput(g_window);
   SDL_StartTextInput(g_window);

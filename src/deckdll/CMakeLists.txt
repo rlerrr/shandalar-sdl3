@@ -40,4 +40,14 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     magsnd_static
     shandalar_platform
   )
+
+  add_library(deck_imgui_interaction STATIC
+    "${SHANDALAR_SRC_ROOT}/deck/src/deck_imgui_interaction.cpp"
+  )
+  target_include_directories(deck_imgui_interaction PUBLIC
+    "${SHANDALAR_SRC_ROOT}"
+  )
+  target_link_libraries(deck_imgui_interaction PUBLIC
+    legacy_win32_imgui_bridge
+  )
 endif()

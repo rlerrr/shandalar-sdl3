@@ -461,6 +461,7 @@ BOOL IsWindowVisible(HWND window);
 BOOL EnableWindow(HWND window, BOOL enable);
 BOOL IsWindowEnabled(HWND window);
 BOOL IsWindow(HWND window);
+BOOL shandalar_win32_accepts_double_click(HWND window);
 BOOL ClientToScreen(HWND window, POINT *point);
 BOOL ScreenToClient(HWND window, POINT *point);
 int MapWindowPoints(HWND from, HWND to, POINT *points, UINT count);

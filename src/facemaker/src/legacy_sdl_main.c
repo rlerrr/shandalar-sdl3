@@ -3,7 +3,7 @@
 #include "platform/asset_manager.h"
 #include "platform/gdi_compat.h"
 #include "platform/winuser_compat.h"
-#include "platform/winuser_imgui_bridge.h"
+#include "platform/winuser_sdl_compositor.h"
 
 #include <stdio.h>
 
@@ -12,6 +12,10 @@
 #endif
 
 extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
+
+HDC global_main_hdc;
+int global_screen_width;
+int global_screen_height;
 
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
@@ -66,15 +70,17 @@ static void forward_keyboard_event(const SDL_Event *event)
   }
 }
 
+#ifdef __EMSCRIPTEN__
 EM_ASYNC_JS(void, wait_next_frame, (), {
   await new Promise(requestAnimationFrame);
 });
+#endif
 
 static BOOL pump_facemaker_ui(BOOL wait)
 {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    shandalar_win32_imgui_process_event(g_renderer, &event);
+    shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
     if (event.type == SDL_EVENT_QUIT) {
       g_quit_requested = 1;
       PostQuitMessage(0);
@@ -85,9 +91,7 @@ static BOOL pump_facemaker_ui(BOOL wait)
 
   SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
   SDL_RenderClear(g_renderer);
-  shandalar_win32_imgui_begin_frame();
-  shandalar_win32_imgui_present(g_renderer);
-  shandalar_win32_imgui_render(g_renderer);
+  shandalar_win32_sdl_compositor_present(g_renderer);
   SDL_RenderPresent(g_renderer);
 
   if (g_smoke_frames_remaining > 0 && --g_smoke_frames_remaining == 0) {
@@ -140,8 +144,8 @@ int main(int argc, char **argv)
   SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_StartTextInput(g_window);
-  if (!shandalar_win32_imgui_init(g_window, g_renderer)) {
-    printf("facemaker: imgui init failed\n");
+  if (!shandalar_win32_sdl_compositor_init(g_renderer)) {
+    printf("facemaker: compositor init failed\n");
     return 1;
   }
 
@@ -153,7 +157,7 @@ int main(int argc, char **argv)
 
   result = FacemakerWinMain((HINSTANCE)1, (HINSTANCE)0, cmd_line, SW_SHOW);
 
-  shandalar_win32_imgui_shutdown();
+  shandalar_win32_sdl_compositor_shutdown();
   shandalar_win32_reset();
   SDL_StopTextInput(g_window);
   SDL_DestroyRenderer(g_renderer);

@@ -1,0 +1,15 @@
+#ifndef SHANDALAR_DECK_IMGUI_INTERACTION_H
+#define SHANDALAR_DECK_IMGUI_INTERACTION_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void shandalar_deck_imgui_interaction_present(void);
+void shandalar_deck_imgui_interaction_shutdown(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

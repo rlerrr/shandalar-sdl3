@@ -138,8 +138,6 @@ extern void WriteGraphicsScanline(unsigned int *scanline_data, int page_number, 
                                   unsigned int byte_count);
 extern void ReadGraphicsScanline(unsigned int *out_scanline, int page_number, int src_x, int src_y,
                                  unsigned int byte_count);
-extern ATOM RegisterPaletteClass(HINSTANCE hInstance);
-extern HWND CreatePalettePopupWindow(HINSTANCE hInstance, HWND parent_hwnd);
 extern int AnimatePaletteToColor(int enabled, int mode);
 extern int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
 extern void CopyBytesAsmCompat(double *dst, double *src, unsigned int size);
@@ -235,11 +233,7 @@ FaceControl g_face_controls[0x15] = {
     {0x233, 0x1b8, 0x25, 0x1d, DrawFaceControl, (FaceControlCallback)AdjustVisibleFaceVariant, 5, 1, 0, {0, 0, 0, 0}}};
 
 // GLOBAL: FACEMAKER 0x0041afb4
-#ifdef SHANDALAR_EMBEDDED_FACEMAKER
 extern HDC global_main_hdc;
-#else
-HDC global_main_hdc;
-#endif
 
 // GLOBAL: FACEMAKER 0x0041b024
 char g_original_working_dir[4];
@@ -294,12 +288,6 @@ HINSTANCE g_app_instance;
 // GLOBAL: FACEMAKER 0x0041c144
 int g_ui_ready;
 
-// GLOBAL: FACEMAKER 0x00412488
-HWND g_palette_hwnd;
-
-// GLOBAL: FACEMAKER 0x0041248c
-int g_palette_class_registered;
-
 // GLOBAL: FACEMAKER 0x00412490
 int g_main_timer_id;
 
@@ -307,18 +295,10 @@ int g_main_timer_id;
 char *g_face_set_gender_tags[1000];
 
 // GLOBAL: FACEMAKER 0x0041d110
-#ifdef SHANDALAR_EMBEDDED_FACEMAKER
 extern int global_screen_width;
-#else
-int global_screen_width;
-#endif
 
 // GLOBAL: FACEMAKER 0x0041d114
-#ifdef SHANDALAR_EMBEDDED_FACEMAKER
 extern int global_screen_height;
-#else
-int global_screen_height;
-#endif
 
 // GLOBAL: FACEMAKER 0x0041d120
 char *g_face_set_display_names[1000];
@@ -1841,29 +1821,6 @@ LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
     case 0x9c47:
       return ShowSaveFaceDialog();
 
-    case 0xffff:
-      if (g_palette_class_registered == 0)
-      {
-        RegisterPaletteClass(g_app_instance);
-        g_palette_class_registered = 1;
-      }
-
-      g_palette_hwnd = FindWindowExA((HWND)0, (HWND)0, "ShowPaletteClass", "Current Palette");
-      if (g_palette_hwnd != (HWND)0)
-      {
-        BringWindowToTop(g_palette_hwnd);
-      }
-      else
-      {
-        g_palette_hwnd = CreatePalettePopupWindow(g_app_instance, (HWND)0);
-        if (g_palette_hwnd == (HWND)0)
-        {
-          return 0;
-        }
-        ShowWindow(g_palette_hwnd, SW_SHOW);
-      }
-      UpdateWindow(g_palette_hwnd);
-      break;
     }
     break;
 

@@ -42,6 +42,7 @@ int main(void)
   WNDCLASSA window_class;
   HWND parent;
   HWND child;
+  HWND double_click_window;
   HWND listbox;
   HWND button;
   HKEY registry_key;
@@ -58,10 +59,18 @@ int main(void)
   parent = CreateWindowExA(0, "CompatTest", "parent", WS_VISIBLE, 10, 20, 320, 200,
                            NULL, NULL, NULL, NULL);
   CHECK(parent);
+  CHECK(!shandalar_win32_accepts_double_click(parent));
+  window_class.style = CS_DBLCLKS;
+  window_class.lpszClassName = "DoubleClickTest";
+  CHECK(RegisterClassA(&window_class));
+  double_click_window = CreateWindowExA(0, "DoubleClickTest", "double", WS_VISIBLE,
+                                        0, 0, 20, 20, NULL, NULL, NULL, NULL);
+  CHECK(double_click_window);
+  CHECK(shandalar_win32_accepts_double_click(double_click_window));
   child = CreateWindowExA(0, "CompatTest", "child", WS_CHILD | WS_VISIBLE,
                           5, 7, 100, 50, parent, (HMENU)42, NULL, NULL);
   CHECK(child);
-  CHECK(creates == 2);
+  CHECK(creates == 3);
   CHECK(GetParent(child) == parent);
   CHECK(GetDlgItem(parent, 42) == child);
   CHECK(GetDlgCtrlID(child) == 42);
@@ -111,7 +120,8 @@ int main(void)
     CHECK(strcmp(text, "saved") == 0);
   }
   CHECK(DestroyWindow(parent));
-  CHECK(destroys == 2); /* Built-in controls use their own window procedure. */
+  CHECK(DestroyWindow(double_click_window));
+  CHECK(destroys == 3); /* Built-in controls use their own window procedure. */
   CHECK(!IsWindow(parent) && !IsWindow(child));
   shandalar_win32_reset();
   return 0;

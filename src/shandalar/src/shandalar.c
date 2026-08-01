@@ -159,12 +159,8 @@ int g_local_sound_missing;
 int g_local_sound_state;
 // GLOBAL: SHANDALAR 0x00748410
 HANDLE g_loader_thread_handle;
-// GLOBAL: SHANDALAR 0x005b7d90
-int g_palette_class_registered;
 // GLOBAL: SHANDALAR 0x005b7d94
 int g_timer_thread_handle_ready;
-// GLOBAL: SHANDALAR 0x005b7d98
-HWND g_palette_window_hwnd;
 // GLOBAL: SHANDALAR 0x00986d94
 int g_mouse_button_down_mask;
 // GLOBAL: SHANDALAR 0x00986d98
@@ -525,8 +521,6 @@ void *CreateGraphicsPage(int page_number, int width, int height, int bits_per_pi
 void PreloadWorldAmbientSounds(void);
 void FreeAdvblocksFileBuffer(void);
 void QueueKeyInputFromMessage(WPARAM wparam, LPARAM lparam);
-ATOM RegisterPaletteClass(HINSTANCE hinst);
-HWND CreatePalettePopupWindow(HINSTANCE hinst, HWND parent_hwnd);
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
 int MeasureMultilineTextWidth(FacemakerWindowBounds *window_bounds, char *text);
 int SetFontStyleSize(int font_id, unsigned int style);
@@ -6781,33 +6775,6 @@ LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
   case 0x100:
   case 0x104:
     QueueKeyInputFromMessage(wparam, lparam);
-    if (wparam != 0x7a)
-    {
-      return DefWindowProcA(hwnd, msg, wparam, lparam);
-    }
-
-    if (g_palette_class_registered == 0)
-    {
-      RegisterPaletteClass(g_app_instance);
-      g_palette_class_registered = 1;
-    }
-
-    g_palette_window_hwnd = FindWindowExA((HWND)0, (HWND)0, "ShowPaletteClass", "Current Palette");
-    if (g_palette_window_hwnd != (HWND)0)
-    {
-      BringWindowToTop(g_palette_window_hwnd);
-    }
-    else
-    {
-      g_palette_window_hwnd = CreatePalettePopupWindow(g_app_instance, (void *)0);
-      if (g_palette_window_hwnd == (HWND)0)
-      {
-        return 0;
-      }
-      ShowWindow(g_palette_window_hwnd, 5);
-    }
-
-    UpdateWindow(g_palette_window_hwnd);
     return DefWindowProcA(hwnd, msg, wparam, lparam);
   case 2:
     sound_close();

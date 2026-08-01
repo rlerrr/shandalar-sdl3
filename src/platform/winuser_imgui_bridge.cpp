@@ -1,62 +1,20 @@
 #include "platform/winuser_imgui_bridge.h"
 
 #include "platform/winuser_compat.h"
+#include "platform/winuser_sdl_compositor.h"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
-#include <stdlib.h>
-
 namespace {
 
-#ifndef WM_APP
-#define WM_APP 0x8000
-#endif
-
-#define WM_DECKBUILDER_DRAG_SELL_HOVER (WM_APP + 0x442)
-
-struct WindowTexture {
-  WindowTexture *next;
-  HWND window;
-  SDL_Texture *texture;
-  int width;
-  int height;
-  uint32_t *pixels;
-};
-
-WindowTexture *g_textures;
-SDL_Window *g_window;
 SDL_Renderer *g_renderer;
-HWND g_left_down_target;
-HWND g_deckbuilder_drag_hover_title;
-ImVec2 g_left_down_position;
-
-WindowTexture *find_texture(HWND window)
-{
-  for (WindowTexture *entry = g_textures; entry; entry = entry->next)
-    if (entry->window == window)
-      return entry;
-  WindowTexture *entry = static_cast<WindowTexture *>(calloc(1, sizeof(*entry)));
-  if (!entry)
-    return nullptr;
-  entry->window = window;
-  entry->next = g_textures;
-  g_textures = entry;
-  return entry;
-}
 
 bool is_builtin_control(HWND window)
 {
-  char name[32] = {};
-  GetClassNameA(window, name, sizeof(name));
-  return SDL_strcasecmp(name, "BUTTON") == 0 ||
-         SDL_strcasecmp(name, "EDIT") == 0 ||
-         SDL_strcasecmp(name, "STATIC") == 0 ||
-         SDL_strcasecmp(name, "LISTBOX") == 0 ||
-         SDL_strcasecmp(name, "COMBOBOX") == 0 ||
-         SDL_strcasecmp(name, "SCROLLBAR") == 0;
+  return shandalar_win32_is_builtin_control(window) != 0;
 }
 
 bool is_descendant_or_self(HWND window, HWND ancestor)
@@ -69,75 +27,6 @@ bool is_descendant_or_self(HWND window, HWND ancestor)
   return false;
 }
 
-bool is_card_drag_source(HWND window)
-{
-  char name[64] = {};
-  GetClassNameA(window, name, sizeof(name));
-  return SDL_strcasecmp(name, "MAGICDECK_CardClass") == 0 ||
-         SDL_strcasecmp(name, "MAGICDECK_HorzListClass") == 0;
-}
-
-HWND find_child_window_by_class(HWND window, const char *wanted_class)
-{
-  HWND child;
-  char class_name[64] = {};
-
-  for (child = GetWindow(window, GW_CHILD); child; child = GetWindow(child, GW_HWNDNEXT)) {
-    HWND found;
-    GetClassNameA(child, class_name, sizeof(class_name));
-    if (SDL_strcasecmp(class_name, wanted_class) == 0)
-      return child;
-    found = find_child_window_by_class(child, wanted_class);
-    if (found)
-      return found;
-  }
-  return nullptr;
-}
-
-HWND find_deckbuilder_title_window(HWND window)
-{
-  HWND root;
-  HWND found;
-
-  root = window;
-  while (root && GetParent(root))
-    root = GetParent(root);
-
-  found = root ? find_child_window_by_class(root, "MAGICDECK_TitleClass") : nullptr;
-  if (found)
-    return found;
-
-  for (root = GetWindow(GetDesktopWindow(), GW_CHILD); root; root = GetWindow(root, GW_HWNDNEXT)) {
-    found = find_child_window_by_class(root, "MAGICDECK_TitleClass");
-    if (found)
-      return found;
-  }
-  return nullptr;
-}
-
-void notify_deckbuilder_drag_source(HWND title, HWND source)
-{
-  POINT source_point;
-  if (!title || !source)
-    return;
-  if (g_deckbuilder_drag_hover_title && g_deckbuilder_drag_hover_title != title &&
-      IsWindow(g_deckbuilder_drag_hover_title))
-    SendMessageA(g_deckbuilder_drag_hover_title, WM_DECKBUILDER_DRAG_SELL_HOVER, 0, 0);
-  g_deckbuilder_drag_hover_title = title;
-  source_point = {static_cast<LONG>(g_left_down_position.x),
-                  static_cast<LONG>(g_left_down_position.y)};
-  ScreenToClient(source, &source_point);
-  SendMessageA(title, WM_DECKBUILDER_DRAG_SELL_HOVER, (WPARAM)source,
-               MAKELPARAM(source_point.x, source_point.y));
-}
-
-void clear_deckbuilder_drag_hover(void)
-{
-  if (g_deckbuilder_drag_hover_title && IsWindow(g_deckbuilder_drag_hover_title))
-    SendMessageA(g_deckbuilder_drag_hover_title, WM_DECKBUILDER_DRAG_SELL_HOVER, 0, 0);
-  g_deckbuilder_drag_hover_title = nullptr;
-}
-
 void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list)
 {
   char class_name[32] = {};
@@ -148,37 +37,25 @@ void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list
   GetWindowRect(window, &rect);
   const int width = rect.right - rect.left;
   const int height = rect.bottom - rect.top;
-  HDC dc = shandalar_window_backing_dc(window);
-  if (!is_builtin_control(window) && dc && width > 0 && height > 0) {
-    UpdateWindow(window);
-    WindowTexture *entry = find_texture(window);
-    if (!entry)
-      return;
-    if (!entry->texture || entry->width != width || entry->height != height) {
-      if (entry->texture)
-        SDL_DestroyTexture(entry->texture);
-      free(entry->pixels);
-      entry->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                                         SDL_TEXTUREACCESS_STREAMING, width, height);
-      entry->width = width;
-      entry->height = height;
-      entry->pixels = static_cast<uint32_t *>(
-          malloc(static_cast<size_t>(width) * height * sizeof(uint32_t)));
-    }
-    if (entry->texture && entry->pixels &&
-        shandalar_dc_copy_rgba(dc, entry->pixels, width * sizeof(uint32_t))) {
-      SDL_UpdateTexture(entry->texture, nullptr, entry->pixels, width * sizeof(uint32_t));
+  if (!is_builtin_control(window) && width > 0 && height > 0) {
+    int texture_width = 0;
+    int texture_height = 0;
+    SDL_Texture *texture =
+        shandalar_win32_sdl_compositor_texture(window, &texture_width,
+                                                &texture_height);
+    if (texture) {
       GetClassNameA(window, class_name, sizeof(class_name));
       if (SDL_strcasecmp(class_name, "#32770") == 0) {
         int caption_height = GetSystemMetrics(SM_CYCAPTION);
-        draw_list->AddImage(reinterpret_cast<ImTextureID>(entry->texture),
+        draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left),
                                    static_cast<float>(rect.top + caption_height)),
                             ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)),
                             ImVec2(0.0f, 0.0f),
-                            ImVec2(1.0f, static_cast<float>(height - caption_height) / height));
+                            ImVec2(1.0f, static_cast<float>(texture_height - caption_height) /
+                                            texture_height));
       } else {
-        draw_list->AddImage(reinterpret_cast<ImTextureID>(entry->texture),
+        draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
                             ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)));
       }
@@ -351,20 +228,24 @@ void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
   if (!window || !IsWindowVisible(window) || !GetWindowRect(window, &rect))
     return;
   if (!is_builtin_control(window)) {
-    WindowTexture *entry = find_texture(window);
-    if (entry && entry->texture && entry->width > 0 && entry->height > 0) {
+    int texture_width = 0;
+    int texture_height = 0;
+    SDL_Texture *texture =
+        shandalar_win32_sdl_compositor_texture(window, &texture_width,
+                                                &texture_height);
+    if (texture && texture_width > 0 && texture_height > 0) {
       GetClassNameA(window, class_name, sizeof(class_name));
       if (SDL_strcasecmp(class_name, "#32770") == 0) {
         int caption_height = GetSystemMetrics(SM_CYCAPTION);
-        draw_list->AddImage(reinterpret_cast<ImTextureID>(entry->texture),
+        draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left),
                                    static_cast<float>(rect.top + caption_height)),
                             ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)),
                             ImVec2(0.0f, 0.0f),
-                            ImVec2(1.0f, static_cast<float>(entry->height - caption_height) /
-                                             entry->height));
+                            ImVec2(1.0f, static_cast<float>(texture_height - caption_height) /
+                                             texture_height));
       } else {
-        draw_list->AddImage(reinterpret_cast<ImTextureID>(entry->texture),
+        draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
                             ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)));
       }
@@ -509,138 +390,6 @@ void draw_controls(void)
   ImGui::PopStyleVar();
 }
 
-void draw_drag_preview(void)
-{
-  char class_name[64] = {};
-  RECT rect = {};
-  ImVec2 mouse;
-  ImVec2 uv0(0.0f, 0.0f);
-  ImVec2 uv1(1.0f, 1.0f);
-  ImVec2 size;
-  ImVec2 offset;
-  WindowTexture *entry;
-  if (!g_left_down_target || !IsWindow(g_left_down_target) ||
-      !ImGui::GetIO().MouseDown[ImGuiMouseButton_Left])
-    return;
-  entry = find_texture(g_left_down_target);
-  if (!entry || !entry->texture || entry->width <= 0 || entry->height <= 0)
-    return;
-  GetWindowRect(g_left_down_target, &rect);
-  GetClassNameA(g_left_down_target, class_name, sizeof(class_name));
-  size = ImVec2(static_cast<float>(entry->width), static_cast<float>(entry->height));
-  offset = ImVec2(g_left_down_position.x - rect.left,
-                  g_left_down_position.y - rect.top);
-  if (SDL_strcasecmp(class_name, "MAGICDECK_HorzListClass") == 0) {
-    int content_height = entry->height - GetSystemMetrics(SM_CYHSCROLL);
-    int card_width = content_height > 0 ? content_height : entry->height;
-    int local_x = static_cast<int>(g_left_down_position.x) - rect.left;
-    int source_x = card_width > 0 ? (local_x / card_width) * card_width : 0;
-    if (source_x + card_width > entry->width)
-      source_x = entry->width - card_width;
-    if (source_x < 0) source_x = 0;
-    uv0 = ImVec2(static_cast<float>(source_x) / entry->width, 0.0f);
-    uv1 = ImVec2(static_cast<float>(source_x + card_width) / entry->width,
-                 static_cast<float>(content_height) / entry->height);
-    size = ImVec2(static_cast<float>(card_width), static_cast<float>(content_height));
-    offset.x -= source_x;
-  }
-  mouse = ImGui::GetIO().MousePos;
-  ImGui::GetForegroundDrawList()->AddImage(
-      reinterpret_cast<ImTextureID>(entry->texture),
-      ImVec2(mouse.x - offset.x, mouse.y - offset.y),
-      ImVec2(mouse.x - offset.x + size.x, mouse.y - offset.y + size.y),
-      uv0, uv1, IM_COL32(255, 255, 255, 210));
-}
-
-LPARAM mouse_lparam(HWND window, const ImVec2 &mouse)
-{
-  POINT point = {static_cast<LONG>(mouse.x), static_cast<LONG>(mouse.y)};
-  ScreenToClient(window, &point);
-  return MAKELPARAM(point.x, point.y);
-}
-
-WPARAM mouse_buttons(const ImGuiIO &io)
-{
-  WPARAM result = 0;
-  if (io.MouseDown[ImGuiMouseButton_Left]) result |= MK_LBUTTON;
-  if (io.MouseDown[ImGuiMouseButton_Right]) result |= MK_RBUTTON;
-  if (io.KeyShift) result |= MK_SHIFT;
-  return result;
-}
-
-void forward_mouse(void)
-{
-  ImGuiIO &io = ImGui::GetIO();
-  bool completed_drag_release = false;
-  const ImVec2 mouse = io.MousePos;
-  if (mouse.x < 0.0f || mouse.y < 0.0f)
-    return;
-  shandalar_win32_set_cursor_position(static_cast<int>(mouse.x), static_cast<int>(mouse.y));
-  POINT screen = {static_cast<LONG>(mouse.x), static_cast<LONG>(mouse.y)};
-  HWND target = WindowFromPoint(screen);
-  HWND modal = shandalar_win32_active_dialog();
-  WPARAM buttons = mouse_buttons(io);
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && g_left_down_target) {
-    HWND source = g_left_down_target;
-    ImVec2 down = g_left_down_position;
-    g_left_down_target = nullptr;
-    shandalar_win32_set_cursor_position(static_cast<int>(down.x), static_cast<int>(down.y));
-    shandalar_win32_set_system_drag_endpoint(static_cast<int>(mouse.x),
-                                              static_cast<int>(mouse.y));
-    SendMessageA(source, WM_LBUTTONDOWN, buttons | MK_LBUTTON,
-                 mouse_lparam(source, down));
-    shandalar_win32_clear_system_drag_endpoint();
-    shandalar_win32_set_cursor_position(static_cast<int>(mouse.x), static_cast<int>(mouse.y));
-    SendMessageA(source, WM_LBUTTONUP, buttons & ~MK_LBUTTON,
-                 mouse_lparam(source, mouse));
-    clear_deckbuilder_drag_hover();
-    completed_drag_release = true;
-  }
-  if (!target || target == GetDesktopWindow())
-    return;
-  if (modal && !is_descendant_or_self(target, modal)) {
-    g_left_down_target = nullptr;
-    BringWindowToTop(modal);
-    return;
-  }
-  if (is_builtin_control(target))
-    return;
-  LPARAM local = mouse_lparam(target, mouse);
-  if (g_left_down_target && ImGui::GetIO().MouseDown[ImGuiMouseButton_Left]) {
-    notify_deckbuilder_drag_source(find_deckbuilder_title_window(g_left_down_target),
-                                   g_left_down_target);
-  }
-  PostMessageA(target, WM_MOUSEMOVE, buttons, local);
-
-  if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-    if (ImGui::IsAnyItemHovered()) {
-      g_left_down_target = nullptr;
-    } else if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-      g_left_down_target = nullptr;
-      SendMessageA(target, WM_LBUTTONDBLCLK, buttons, local);
-    } else if (!is_card_drag_source(target)) {
-      g_left_down_target = nullptr;
-      SendMessageA(target, WM_LBUTTONDOWN, buttons | MK_LBUTTON, local);
-    } else {
-      g_left_down_target = target;
-      g_left_down_position = mouse;
-      notify_deckbuilder_drag_source(find_deckbuilder_title_window(g_left_down_target),
-                                     g_left_down_target);
-    }
-  }
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !completed_drag_release)
-    SendMessageA(target, WM_LBUTTONUP, buttons & ~MK_LBUTTON, local);
-  if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-    SendMessageA(target, ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Right) ?
-                         WM_RBUTTONDBLCLK : WM_RBUTTONDOWN, buttons, local);
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-    SendMessageA(target, WM_RBUTTONUP, buttons, local);
-  if (io.MouseWheel != 0.0f) {
-    WPARAM wheel = MAKEWPARAM(buttons, static_cast<int>(io.MouseWheel * 120.0f));
-    SendMessageA(target, WM_MOUSEWHEEL, wheel, MAKELPARAM(screen.x, screen.y));
-  }
-}
-
 }  // namespace
 
 extern "C" int shandalar_win32_imgui_init(SDL_Window *window, SDL_Renderer *renderer)
@@ -649,9 +398,9 @@ extern "C" int shandalar_win32_imgui_init(SDL_Window *window, SDL_Renderer *rend
   ImGui::CreateContext();
   ImGui::StyleColorsClassic();
   ImGui::GetIO().IniFilename = nullptr;
-  g_window = window;
   g_renderer = renderer;
-  return ImGui_ImplSDL3_InitForSDLRenderer(window, renderer) &&
+  return shandalar_win32_sdl_compositor_init(renderer) &&
+         ImGui_ImplSDL3_InitForSDLRenderer(window, renderer) &&
          ImGui_ImplSDLRenderer3_Init(renderer);
 }
 
@@ -695,6 +444,7 @@ extern "C" void shandalar_win32_imgui_present(SDL_Renderer *renderer)
 {
   if (!renderer || !ImGui::GetCurrentContext())
     return;
+  shandalar_win32_sdl_compositor_update();
   ImDrawList *draw_list = ImGui::GetBackgroundDrawList();
   HWND desktop = GetDesktopWindow();
   HWND window = GetWindow(desktop, GW_CHILD);
@@ -703,8 +453,6 @@ extern "C" void shandalar_win32_imgui_present(SDL_Renderer *renderer)
   for (; window; window = GetWindow(window, GW_HWNDPREV))
     draw_window_tree(renderer, window, draw_list);
   draw_controls();
-  draw_drag_preview();
-  forward_mouse();
 }
 
 extern "C" void shandalar_win32_imgui_render(SDL_Renderer *renderer)
@@ -716,20 +464,11 @@ extern "C" void shandalar_win32_imgui_render(SDL_Renderer *renderer)
 
 extern "C" void shandalar_win32_imgui_shutdown(void)
 {
-  while (g_textures) {
-    WindowTexture *next = g_textures->next;
-    if (g_textures->texture)
-      SDL_DestroyTexture(g_textures->texture);
-    free(g_textures->pixels);
-    free(g_textures);
-    g_textures = next;
-  }
+  shandalar_win32_sdl_compositor_shutdown();
   if (ImGui::GetCurrentContext()) {
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
   }
-  g_window = nullptr;
   g_renderer = nullptr;
-  g_left_down_target = nullptr;
 }

@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include "deckdll/src/deckdll.h"
+#include "deck/src/deck_imgui_interaction.h"
 #include "cardartlib/CardArtLib.h"
 #include "drawcardlib/Drawcardlib.h"
 #include "platform/gdi_compat.h"
@@ -110,9 +111,11 @@ static void forward_keyboard_event(const SDL_Event *event)
   }
 }
 
+#ifdef __EMSCRIPTEN__
 EM_ASYNC_JS(void, wait_next_frame, (), {
   await new Promise(requestAnimationFrame);
 });
+#endif
 
 static BOOL pump_legacy_ui(BOOL wait)
 {
@@ -195,6 +198,7 @@ static BOOL pump_legacy_ui(BOOL wait)
   SDL_RenderClear(g_renderer);
   shandalar_win32_imgui_begin_frame();
   shandalar_win32_imgui_present(g_renderer);
+  shandalar_deck_imgui_interaction_present();
   shandalar_win32_imgui_render(g_renderer);
   SDL_RenderPresent(g_renderer);
   if (first_frame) {
@@ -338,6 +342,7 @@ int main(int argc, char **argv)
   DrawCardLib_Shutdown();
   CardArtLib_Shutdown();
 
+  shandalar_deck_imgui_interaction_shutdown();
   shandalar_win32_imgui_shutdown();
   shandalar_win32_reset();
   SDL_StopTextInput(g_window);

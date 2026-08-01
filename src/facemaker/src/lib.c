@@ -815,30 +815,6 @@ void ReadGraphicsScanline(unsigned int *out_scanline, int page_number, int src_x
   memcpy(out_scanline, src_ptr, byte_count);
 }
 
-// FUNCTION: SHANDALAR 0x0057da90
-// FUNCTION: FACEMAKER 0x0040a1a0
-LRESULT CALLBACK PaletteClassWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-  (void)hwnd; (void)msg; (void)wparam; (void)lparam;
-  return 0;
-}
-
-// FUNCTION: SHANDALAR 0x0057dc20
-// FUNCTION: FACEMAKER 0x0040a330
-ATOM RegisterPaletteClass(HINSTANCE hInstance)
-{
-  (void)hInstance;
-  return 1;
-}
-
-// FUNCTION: SHANDALAR 0x0057dcb0
-// FUNCTION: FACEMAKER 0x0040a3c0
-HWND CreatePalettePopupWindow(HINSTANCE hInstance, HWND parent_hwnd)
-{
-  (void)hInstance; (void)parent_hwnd;
-  return NULL;
-}
-
 typedef struct
 {
   int r;

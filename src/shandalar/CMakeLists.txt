@@ -43,7 +43,8 @@ target_include_directories(shandalar PRIVATE
 )
 target_link_libraries(shandalar PRIVATE
   facemaker_legacy_ui
-  facemaker_win32_imgui_bridge
+  deck_imgui_interaction
+  legacy_win32_imgui_bridge
   deck_legacy_ui
   cardart_static
   drawcard_shandalar
