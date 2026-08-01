@@ -21,6 +21,8 @@ SDL_COMPILE_TIME_ASSERT(statwin_data_size, sizeof(StatWinData) == 52);
 void statwin_set_renderer(SDL_Renderer *renderer);
 int statwin_init(const StatWinData *data);
 void statwin_show(const StatWinData *data, int mode);
+void statwin_prefetch_wizard_defeat_media(int wizard_color);
+void statwin_prefetch_arzakon_defeat_media(void);
 int statwin_play_video(const char *path, int x, int y, int flags);
 void statwin_shutdown(void);
 

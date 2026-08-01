@@ -897,6 +897,11 @@ int RunDungeonMonsterDuel(int dungeon_index, int monster_slot, int final_battle)
                                    [(char)g_castle_dungeon_slots[dungeon_index].color - 1][ClampIntToRange(work_index, 0, 2)]);
     }
   }
+  if (final_battle != 0 && dungeon_index < 5)
+  {
+    statwin_prefetch_wizard_defeat_media(
+        (int)(char)g_castle_dungeon_slots[dungeon_index].color);
+  }
   LoadCreatureDuelDeck(creature_type, FindCardIndexByCsvid(g_shandalar_monster_definitions[creature_type].deck_number), 0,
                        -1);
   PlaySoundEffectOnChannel("x:sound\\dngnduel.wav", 0xf, 100, 100, 0);
@@ -1128,6 +1133,7 @@ undefined4 HandleDefeatedWizardCastle(int castle_index)
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   if (g_defeated_wizards_bitmap == 0x3e)
   {
+    statwin_prefetch_arzakon_defeat_media();
     DelayUiTicks(0x3c);
     LoadPcxIntoPageOpaque(1, "5thwiz.pic");
     StretchBlitGraphicsRect(g_page1_window_bounds, 0, 0, 0x280, 0x1e0, g_page0_window_bounds, 0, 0, global_screen_width,

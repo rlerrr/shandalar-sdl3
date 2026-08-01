@@ -1,6 +1,7 @@
 #include "statwin/statwin.h"
 
 #include "magsnd/magsnd.h"
+#include "platform/asset_manager.h"
 #include "platform/file_io.h"
 
 #include <SDL3_image/SDL_image.h>
@@ -55,6 +56,8 @@ static const char *const g_hit_animations[5] = {
 
 static const char *const g_missing_animations[5] = {
     "BUBBLES.WEBP", "FIRE.WEBP", "WATER.WEBP", "VINE.WEBP", "SMOKE.WEBP"};
+
+static const unsigned char g_defeated_wizard_colors[5] = {4, 2, 3, 1, 0};
 
 static const char *const g_missing_backgrounds[5] = {
     "ROOM-WHT.PNG", "ROOM-RED.PNG", "ROOM-BLU.PNG", "ROOM-GRN.PNG", "ROOM-BLK.PNG"};
@@ -429,6 +432,36 @@ int statwin_init(const StatWinData *data)
   g_cached_data = *data;
   g_has_cached_data = 1;
   return 0;
+}
+
+static void prefetch_animation_and_audio(const char *name)
+{
+  char path[512];
+  char *extension;
+  if (!name || !name[0])
+    return;
+  SDL_snprintf(path, sizeof(path), "%s/%s", STATWIN_ASSET_DIR, name);
+  shandalar_assets_prefetch(path);
+  extension = SDL_strrchr(path, '.');
+  if (!extension)
+    return;
+  SDL_strlcpy(extension, ".WAV", sizeof(path) - (size_t)(extension - path));
+  shandalar_assets_prefetch(path);
+}
+
+void statwin_prefetch_wizard_defeat_media(int wizard_color)
+{
+  unsigned int wizard_index;
+  if (wizard_color < 1 || wizard_color > 5)
+    return;
+  wizard_index = (unsigned int)(wizard_color - 1);
+  prefetch_animation_and_audio(
+      g_missing_animations[g_defeated_wizard_colors[wizard_index]]);
+}
+
+void statwin_prefetch_arzakon_defeat_media(void)
+{
+  prefetch_animation_and_audio("Mtgend.WEBP");
 }
 
 void statwin_show(const StatWinData *data, int mode)

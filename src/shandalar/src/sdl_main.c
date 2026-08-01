@@ -14,6 +14,30 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+
+EM_JS(void, load_shandalar_asset_bundle, (), {
+  const bundleUrl = Module.locateFile
+    ? Module.locateFile("shandalar-assets.js")
+    : "./shandalar-assets.js";
+  import(bundleUrl)
+    .then((bundle) => {
+      const bundleModule = Object.create(Module);
+      bundleModule.setStatus = () => {};
+      const createDataFile = Module.FS_createDataFile;
+      bundleModule.FS_createDataFile = (parent, name, ...args) => {
+        const path = name ? `${parent}/${name}` : parent;
+        try {
+          FS.unlink(path);
+        } catch (error) {
+          // Most bundle files will not exist yet.
+        }
+        return createDataFile(parent, name, ...args);
+      };
+      return bundle.default(bundleModule);
+    })
+    .then(() => console.log("Shandalar asset bundle loaded"))
+    .catch((error) => console.error("Failed to load Shandalar asset bundle:", error));
+});
 #endif
 
 extern HDC global_main_hdc;
@@ -457,6 +481,7 @@ void shandalar_host_pump(void)
   }
   shandalar_win32_runtime_tick();
   shandalar_win32_mm_timers_tick();
+  shandalar_assets_update();
   present_frame();
 #ifdef __EMSCRIPTEN__
   wait_next_frame();
@@ -484,6 +509,11 @@ int main(int argc, char **argv)
     return 1;
   if (!shandalar_runtime_init(asset_root))
     return 1;
+#ifdef __EMSCRIPTEN__
+  load_shandalar_asset_bundle();
+  shandalar_assets_prefetch_small_art_cat();
+  shandalar_assets_prefetch_med_art_cat();
+#endif
   global_screen_width = 0x400;
   global_screen_height = 0x300;
   if (!SDL_CreateWindowAndRenderer("Magic: Shandalar", global_screen_width,
