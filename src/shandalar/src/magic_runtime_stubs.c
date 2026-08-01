@@ -22,7 +22,6 @@
 #include <string.h>
 #include <time.h>
 
-result_network_packet_t g_network_result_packet;
 int g_reveal_all_world_info;
 int g_duel_selection_pending;
 int g_showlibrary_menu_selection;
@@ -107,18 +106,6 @@ static int shandalar_register_deckbuilder_exports(void)
   ok &= shandalar_win32_register_proc("szDeckName", (FARPROC)szDeckName);
   ok &= shandalar_win32_register_proc("_currentDeck", (FARPROC)&_currentDeck);
   return ok;
-}
-
-void TENTATIVE_wait_for_network_result(int player, int packet_type)
-{
-  (void)player;
-  g_network_result_packet.packet_type = (char)packet_type;
-}
-
-void TENTATIVE_send_network_result(int player, int packet_type)
-{
-  (void)player;
-  g_network_result_packet.packet_type = (char)packet_type;
 }
 
 DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)

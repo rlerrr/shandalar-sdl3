@@ -1,3 +1,5 @@
+include("${SHANDALAR_SRC_ROOT}/magic/duel_sources.cmake")
+
 add_executable(shandalar
   src/sdl_main.c
   src/shandalar.c
@@ -19,12 +21,12 @@ add_executable(shandalar
   src/iniFile.c
   src/magic_runtime_stubs.c
   src/shandalar_global_strings.c
+  ${SHANDALAR_MAGIC_DUEL_SOURCES}
   ../magic/src/global_duel_ui_ids.c
   ../magic/src/global_other.c
   ../magic/src/global_state.c
   ../magic/src/global_strings.c
   ../magic/src/shared_startup.c
-  ../magic/src/dummycards.c
   ../magic/src/carddata.c
 )
 
@@ -40,6 +42,9 @@ endif()
 target_include_directories(shandalar PRIVATE
   "${SHANDALAR_SRC_ROOT}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+target_include_directories(shandalar BEFORE PRIVATE
+  "${SHANDALAR_SRC_ROOT}/magic/compat"
 )
 target_link_libraries(shandalar PRIVATE
   facemaker_legacy_ui
