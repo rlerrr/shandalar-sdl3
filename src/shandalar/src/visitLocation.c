@@ -2383,7 +2383,7 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
   // TODO: Remove. We win every duel currently
   return 1;
 
-  DAT_00742fc0 = 1;
+  g_duel_state_00742fc0 = 1;
   DestroyCachedCardArt();
 
   thread_exit_code = 2;
@@ -2441,7 +2441,7 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
     }
 
     g_duel_active = 0;
-    DAT_00742fc0 = 1;
+    g_duel_state_00742fc0 = 1;
     g_attacking_creature_count = 0;
     g_duel_selection_pending = g_attacking_creature_count;
     g_duel_extra_turn_player = -1;

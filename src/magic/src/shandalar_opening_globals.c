@@ -14,5 +14,5 @@ int g_starting_color;
 int g_deck_color_bitmap = 1;
 int Gold = 100;
 int g_skip_new_game_state_initialization;
-int DAT_00591214 = 1;
+int g_world_location_entry_enabled = 1;
 int g_world_scene_reveal_effect_pending;
