@@ -5,6 +5,7 @@
 #include "magic/src/global_duel_ui_ids.h"
 #include "magic/src/global_other.h"
 #include "magic/src/global_state.h"
+#include "magic/src/network.h"
 #include "cardartlib/CardArtLib.h"
 #include "deckdll/src/deckdll.h"
 #include "drawcardlib/Drawcardlib.h"
@@ -21,8 +22,7 @@
 #include <string.h>
 #include <time.h>
 
-int g_network_result_value;
-int g_network_result_packet_type;
+result_network_packet_t g_network_result_packet;
 int g_reveal_all_world_info;
 int g_duel_selection_pending;
 int g_showlibrary_menu_selection;
@@ -112,13 +112,13 @@ static int shandalar_register_deckbuilder_exports(void)
 void TENTATIVE_wait_for_network_result(int player, int packet_type)
 {
   (void)player;
-  g_network_result_packet_type = packet_type;
+  g_network_result_packet.packet_type = (char)packet_type;
 }
 
 void TENTATIVE_send_network_result(int player, int packet_type)
 {
   (void)player;
-  g_network_result_packet_type = packet_type;
+  g_network_result_packet.packet_type = (char)packet_type;
 }
 
 DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
