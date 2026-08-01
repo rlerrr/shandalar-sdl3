@@ -39,6 +39,8 @@ struct ShandalarFont {
   TTF_Font *font;
   int size;
   double font_size_to_cell_height;
+  unsigned int units_per_em;
+  unsigned int cell_height_units;
   LOGFONTA description;
 };
 
@@ -106,6 +108,65 @@ struct ShandalarDC {
 static char g_font_root[512];
 static char g_module_path[1024] = ".\\shandalar.exe";
 static double g_font_device_scale = 1.0;
+
+static unsigned int read_be16(const unsigned char *data)
+{
+  return ((unsigned int)data[0] << 8) | data[1];
+}
+
+static unsigned int read_be32(const unsigned char *data)
+{
+  return ((unsigned int)data[0] << 24) |
+         ((unsigned int)data[1] << 16) |
+         ((unsigned int)data[2] << 8) |
+         data[3];
+}
+
+/*
+ * GDI's tmInternalLeading for a TrueType font is the cell height minus the
+ * em height. SDL_ttf exposes the cell metrics but not the em square, so read
+ * the small amount of sfnt metadata needed to reproduce that value.
+ */
+static void load_font_design_metrics(struct ShandalarFont *font, const char *path)
+{
+  unsigned char *data;
+  size_t size;
+  unsigned int table_count;
+  unsigned int table_index;
+  unsigned int head_offset = 0;
+  unsigned int os2_offset = 0;
+
+  if (!font || !path)
+    return;
+  data = (unsigned char *)SDL_LoadFile(path, &size);
+  if (!data || size < 12)
+    goto done;
+  table_count = read_be16(data + 4);
+  if (table_count > (size - 12) / 16)
+    goto done;
+  for (table_index = 0; table_index < table_count; ++table_index) {
+    const unsigned char *record = data + 12 + table_index * 16;
+    unsigned int offset = read_be32(record + 8);
+    unsigned int length = read_be32(record + 12);
+    if (offset > size || length > size - offset)
+      continue;
+    if (memcmp(record, "head", 4) == 0 && length >= 20)
+      head_offset = offset;
+    else if (memcmp(record, "OS/2", 4) == 0 && length >= 78)
+      os2_offset = offset;
+  }
+  if (head_offset && os2_offset) {
+    unsigned int units_per_em = read_be16(data + head_offset + 18);
+    unsigned int win_ascent = read_be16(data + os2_offset + 74);
+    unsigned int win_descent = read_be16(data + os2_offset + 76);
+    if (units_per_em && win_ascent + win_descent >= units_per_em) {
+      font->units_per_em = units_per_em;
+      font->cell_height_units = win_ascent + win_descent;
+    }
+  }
+done:
+  SDL_free(data);
+}
 
 static unsigned int cp1252_codepoint(unsigned char ch)
 {
@@ -1058,7 +1119,17 @@ BOOL GetTextMetricsA(HDC dc, TEXTMETRICA *metrics)
     metrics->tmHeight = logical_from_device(TTF_GetFontHeight(dc->font->font), scale);
     metrics->tmAscent = logical_from_device(TTF_GetFontAscent(dc->font->font), scale);
     metrics->tmDescent = logical_from_device(-TTF_GetFontDescent(dc->font->font), scale);
-    metrics->tmInternalLeading = metrics->tmHeight - metrics->tmAscent - metrics->tmDescent;
+    if (dc->font->cell_height_units > dc->font->units_per_em) {
+      int device_height = TTF_GetFontHeight(dc->font->font);
+      int device_internal_leading = (int)lround(
+          (double)device_height *
+          (double)(dc->font->cell_height_units - dc->font->units_per_em) /
+          (double)dc->font->cell_height_units);
+      metrics->tmInternalLeading = logical_from_device(device_internal_leading, scale);
+    } else {
+      metrics->tmInternalLeading =
+          metrics->tmHeight - metrics->tmAscent - metrics->tmDescent;
+    }
     restore_font_size(dc, old_size);
   } else {
     metrics->tmHeight = 12; metrics->tmAscent = 10; metrics->tmDescent = 2;
@@ -1283,6 +1354,7 @@ static HFONT open_font(const LOGFONTA *description)
                                    ? -result->size
                                    : result->size;
   SDL_snprintf(path, sizeof(path), "%s/%s", g_font_root, filename);
+  load_font_design_metrics(result, path);
   result->font = TTF_OpenFont(path, (float)result->size);
   if (result->font) {
     if (description && description->lfWeight >= FW_BOLD &&
