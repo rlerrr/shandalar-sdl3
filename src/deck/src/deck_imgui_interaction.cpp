@@ -178,7 +178,9 @@ void forward_mouse(void)
   shandalar_win32_set_cursor_position(static_cast<int>(mouse.x),
                                       static_cast<int>(mouse.y));
   POINT screen = {static_cast<LONG>(mouse.x), static_cast<LONG>(mouse.y)};
-  HWND target = WindowFromPoint(screen);
+  HWND target = GetCapture();
+  if (!target)
+    target = WindowFromPoint(screen);
   HWND modal = shandalar_win32_active_dialog();
   WPARAM buttons = mouse_buttons(io);
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && g_left_down_target) {

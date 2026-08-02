@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <setjmp.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,6 +7,7 @@
 #include "cardartlib/src/assert.h"
 #include "defs.h"
 #include "magic/src/duel_engine.h"
+#include "magic/src/duel_runtime.h"
 #include "magic/src/game_support.h"
 #include "magic/src/global_duel_ui_ids.h"
 #include "magic/src/global_other.h"
@@ -83,11 +85,15 @@ extern HANDLE global_mutex_GameInit;
 extern int g_world_location_music_active;
 extern int g_random_seed_initialized;
 extern int g_random_seed_tick_value;
-int single_color_test_bit_to_color_t(int color_mask);
+color_t single_color_test_bit_to_color_t(color_test_t color_mask);
 void ShowMouseCursorNested(void);
 void HideMouseCursorNested(void);
 #endif
 void refresh_ai_random_table(void);
+void save_gametype0(char *path);
+void save_soloduel(char *path);
+void save_gauntlet(char *path);
+void save_sealeddeck(char *path);
 
 // GLOBAL: MAGIC 0x009251d4
 // GLOBAL: SHANDALAR 0x00939304
@@ -2886,6 +2892,21 @@ idk:
 
 // FUNCTION: MAGIC 0x004dbe21
 // FUNCTION: SHANDALAR 0x00542adc
+static jmp_buf g_duel_exit_jump;
+static DWORD g_duel_exit_result;
+static int g_duel_exit_jump_active;
+
+void abort_duel_run(DWORD result)
+{
+  g_duel_exit_result = result;
+  if (g_duel_exit_jump_active != 0)
+  {
+    longjmp(g_duel_exit_jump, 1);
+  }
+  OutputDebugStringA("abort_duel_run called without an active Duel context\n");
+  abort();
+}
+
 DWORD WINAPI start_duel_thread(LPVOID unused)
 {
   DWORD result;
@@ -2899,7 +2920,15 @@ DWORD WINAPI start_duel_thread(LPVOID unused)
   }
 
   InitializeDuelUiGlobalIds();
-  result = play_duel(0, g_duel_creature_type);
-  PostMessageA(g_duel_window_hwnd, 0x401, result, 0);
+  g_duel_exit_jump_active = 1;
+  if (setjmp(g_duel_exit_jump) == 0)
+  {
+    result = play_duel(0, g_duel_creature_type);
+  }
+  else
+  {
+    result = g_duel_exit_result;
+  }
+  g_duel_exit_jump_active = 0;
   return result;
 }

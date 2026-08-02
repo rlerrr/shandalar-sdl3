@@ -7,6 +7,7 @@ set(SHANDALAR_MAGIC_DUEL_SOURCES
   "${CMAKE_CURRENT_LIST_DIR}/src/duel.c"
   "${CMAKE_CURRENT_LIST_DIR}/src/duel_ai.c"
   "${CMAKE_CURRENT_LIST_DIR}/src/duel_engine.c"
+  "${CMAKE_CURRENT_LIST_DIR}/src/duel_dialog_resources.c"
   "${CMAKE_CURRENT_LIST_DIR}/src/duel_engine_attackclass_wndproc.c"
   "${CMAKE_CURRENT_LIST_DIR}/src/duel_engine_attackphasedisplay_wndproc.c"
   "${CMAKE_CURRENT_LIST_DIR}/src/duel_engine_bigcardchoice_wndproc.c"

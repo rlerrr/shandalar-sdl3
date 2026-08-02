@@ -46,6 +46,13 @@ int damage_creature(int target_player, int target_card, int amount, int source_p
 void damage_player(int target_player, int amount, int source_player, int source_card);
 int dispatch_event(int player, int card, event_t event);
 int draw_card_for_player(int player);
+void show_duel_card_preview(unsigned int internal_card_id, int player, int card, int text_color,
+                            char *button_text, int show_ok_button);
+void show_card_preview_if_human(unsigned int internal_card_id, int text_color, char *button_text,
+                                int show_ok_button);
+void show_card_image_dialog(unsigned int internal_card_id, int text_color, char *button_text,
+                            int show_ok_button);
+int is_card_color_compatible_with_mask(int card_color, int color_mask, int compatibility_level);
 color_t single_color_test_bit_to_color_t(color_test_t color_test);
 int count_active_card_instances_plus_one(int player, int internal_card_id);
 int count_permanents_by_internal_card_id(int player, int internal_card_id, int who_to_check);
@@ -76,6 +83,11 @@ int can_stop_for_phase(int use_current_player_stops);
 int can_pay_untap_cost(int player, int card);
 int is_card_pending_resolution(int player, int card);
 int network_random(int player, int maximum);
+int network_random_boolean(int player);
+int choose_fireball_options(int player, int internal_card_id, int maximum_mana, int maximum_targets,
+                            int *mana_to_pay, int *number_of_targets, int *damage_per_target);
+int choose_magical_hack_colors(int player, target_t *target, const char *prompt, int initial_color_mask,
+                               int has_initial_color);
 void start_ai_decision_search(int decision_code, int time_scale);
 void reset_upkeep_costs(void);
 unsigned int get_current_stack_action(void);
@@ -103,7 +115,7 @@ void redraw_shandalar_duel_screen(int view_player, int present_after_draw);
 int graveyard_has_type(int player, int type);
 int ClampIntToRange(int a1, int a2, int a3);
 int DrawRandomCardFromInitialLibrary(int library_index);
-int is_basic_land_internal_card_id_of_color(int internal_card_id, int color);
+int is_basic_land_internal_card_id_of_color(int internal_card_id, color_t color);
 int card_has_basic_land_type(int player, int card, int land_color);
 int ante_drawn_card(int player);
 void remove_card_from_graveyard(int player, int graveyard_index);
@@ -115,7 +127,8 @@ void request_duel_display_refresh(int player, int card, int reason, int flags);
 void request_duel_display_refresh_if_human(int player, int card, int reason, int flags);
 void move_card_to_graveyard(int player, int card);
 void put_card_on_bottom_of_library(int player, int internal_card_id);
-int find_internal_card_id_by_csv_id(int card_id);
+int find_internal_card_id_by_csv_id(card_id_t card_id);
+void hurkyls_recall_bounce_artifact(int target_player, int target_card);
 int charge_mana(int player, color_t color, int amount);
 int begin_mana_payment_record(void);
 int end_mana_payment_record(void);
@@ -156,7 +169,7 @@ int copy_mana_pool_to_display(void);
 int resolve_top_card_on_stack(void);
 void reassess_all_cards_and_mana(void);
 void process_damage_prevention(int player);
-int dispatch_card_trigger_event(int player, int card, int event, int extra);
+int dispatch_card_trigger_event(int player, int card, event_t event, int extra);
 void push_affected_card_stack(void);
 void pop_affected_card_stack(void);
 int card_death_ward(int player, int card, event_t event);
@@ -203,7 +216,7 @@ int dispatch_event_to_single_card(int player,
 int is_nonactivated_mana_source(int player, int card);
 int get_hacked_color(int player, int card, int value);
 void invalidate_dynamic_card_type(int internal_card_id);
-int is_selected_target_already_attached(int player, int card);
+int is_selected_target_already_attached(int player, int card, int internal_card_id);
 int choose_best_tapped_permanent_for_ai(int player, int mode);
 /* target_source_mode:
  *   0 = check direct player/card targets
@@ -248,7 +261,7 @@ int do_dialog(int who_chooses,
               const char *options,
               int ai_choice);
 void undeclare_mana_available_hex(int player, color_test_t color, int amount);
-int play_sound_effect(int sound_id);
+int play_sound_effect(wav_t sound_id);
 int load_recorded_action_target(int offset);
 void record_ai_action_selection(void);
 int load_recorded_action_code(int offset);
@@ -276,6 +289,7 @@ void regenerate_card(int player, int card);
 int generic_creature_stat_aura(int player, int card, event_t event, int power_modifier, int toughness_modifier);
 int mark_zombie_as_nonregenerable(int player, int card, int internal_card_id);
 int select_target_creature_and_store(int player, unsigned int preferred_controller, int card);
+int select_target_creature_and_store_without_protection(int player, unsigned int preferred_controller, int card);
 int select_target_land_and_store(int player, int preferred_controller, int card);
 int select_target_artifact_and_store(int player, unsigned int preferred_controller, int card);
 void dispatch_three_arg_callback_to_cards_in_play(int(__cdecl *callback)(int, int, int), int who_to_check);

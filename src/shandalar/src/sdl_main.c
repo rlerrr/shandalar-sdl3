@@ -65,6 +65,7 @@ extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, 
 
 static BOOL pump_shandalar_win32_ui(BOOL wait);
 static BOOL pump_deckbuilder_ui(BOOL wait);
+static BOOL pump_duel_ui(BOOL wait);
 
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
@@ -75,6 +76,7 @@ static int g_texture_height;
 static int g_quit_requested;
 static int g_facemaker_host_active;
 static int g_deckbuilder_host_active;
+static int g_duel_host_active;
 
 static int legacy_key(SDL_Keycode key)
 {
@@ -173,7 +175,29 @@ static UINT deckbuilder_virtual_key(SDL_Keycode key)
     return 0x08;
   case SDLK_DELETE:
     return 0x2e;
+  case SDLK_F1:
+    return VK_F1;
+  case SDLK_F2:
+    return VK_F2;
+  case SDLK_F3:
+    return VK_F3;
+  case SDLK_F4:
+    return VK_F4;
+  case SDLK_F5:
+    return VK_F5;
+  case SDLK_F6:
+    return VK_F6;
+  case SDLK_F8:
+    return VK_F8;
+  case SDLK_F9:
+    return VK_F9;
+  case SDLK_F10:
+    return VK_F10;
+  case SDLK_F12:
+    return VK_F12;
   default:
+    if (key >= 'a' && key <= 'z')
+      return (UINT)(key - 'a' + 'A');
     return key >= 0 && key <= 0xff ? (UINT)key : 0;
   }
 }
@@ -303,6 +327,42 @@ static BOOL pump_deckbuilder_ui(BOOL wait)
   return !g_quit_requested && g_deckbuilder_host_active;
 }
 
+static BOOL pump_duel_ui(BOOL wait)
+{
+  SDL_Event event;
+  while (SDL_PollEvent(&event))
+  {
+    shandalar_win32_imgui_process_event(g_renderer, &event);
+    if (event.type == SDL_EVENT_QUIT)
+    {
+      g_quit_requested = 1;
+      PostQuitMessage(0);
+    }
+    else
+    {
+      forward_deckbuilder_keyboard_event(&event);
+    }
+  }
+
+  shandalar_win32_runtime_tick();
+  shandalar_win32_mm_timers_tick();
+  shandalar_assets_update();
+  SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+  SDL_RenderClear(g_renderer);
+  shandalar_win32_imgui_begin_frame();
+  shandalar_win32_imgui_present(g_renderer);
+  shandalar_win32_imgui_render(g_renderer);
+  SDL_RenderPresent(g_renderer);
+
+#ifdef __EMSCRIPTEN__
+  emscripten_sleep(wait ? 8 : 0);
+#else
+  if (wait)
+    SDL_Delay(8);
+#endif
+  return !g_quit_requested && g_duel_host_active;
+}
+
 static int ensure_framebuffer(int width, int height)
 {
   if (width <= 0 || height <= 0)
@@ -422,6 +482,35 @@ void shandalar_host_end_deckbuilder(void)
   shandalar_win32_set_pump_proc(pump_shandalar_win32_ui);
   shandalar_win32_clear_quit_message();
   shandalar_deck_imgui_interaction_shutdown();
+  shandalar_win32_imgui_shutdown();
+  SDL_StopTextInput(g_window);
+  SDL_StartTextInput(g_window);
+  SDL_SetWindowTitle(g_window, "Magic: Shandalar");
+  SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
+}
+
+void shandalar_host_begin_duel(void)
+{
+  SDL_SetWindowTitle(g_window, "Magic: The Gathering");
+  SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
+  SDL_StartTextInput(g_window);
+  if (!shandalar_win32_imgui_init(g_window, g_renderer))
+  {
+    printf("shandalar: duel imgui init failed\n");
+    return;
+  }
+  shandalar_win32_clear_quit_message();
+  g_duel_host_active = 1;
+  shandalar_win32_set_pump_proc(pump_duel_ui);
+}
+
+void shandalar_host_end_duel(void)
+{
+  g_duel_host_active = 0;
+  shandalar_win32_set_pump_proc(pump_shandalar_win32_ui);
+  shandalar_win32_clear_quit_message();
   shandalar_win32_imgui_shutdown();
   SDL_StopTextInput(g_window);
   SDL_StartTextInput(g_window);

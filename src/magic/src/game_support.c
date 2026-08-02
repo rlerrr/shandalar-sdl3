@@ -9,6 +9,7 @@
 #include "deckdll/src/shared_resources.h"
 #include "drawcardlib/Drawcardlib.h"
 #include "game_support.h"
+#include "magic/src/duel_runtime.h"
 #include "global_strings.h"
 
 typedef ptrdiff_t INT_PTR;
@@ -25,6 +26,7 @@ extern const char *g_duel_sound_filenames[];
 extern char global_duelsounds_path[0x110];
 
 int GetNextManaSymbol(char **text);
+void append_to_trace_txt(char *text);
 int choose_a_color_dialog(int player, const char *prompt, int use_color_names_instead_of_land, int ai_choice, unsigned int available_colors);
 
 int begin_mana_payment_record(void);
@@ -8890,8 +8892,7 @@ int choose_a_number(int player, char *prompt, int maxnum)
 // FUNCTION: SHANDALAR 0x0056a37b
 void exit_duel_thread(int player)
 {
-  PostMessageA((void *)g_duel_window_hwnd, 0x401, (unsigned int)player, 0);
-  ExitThread((unsigned int)player);
+  abort_duel_run((DWORD)player);
 }
 
 // FUNCTION: MAGIC 0x004b5d72

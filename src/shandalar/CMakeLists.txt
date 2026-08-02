@@ -19,7 +19,7 @@ add_executable(shandalar
   src/hintText.c
   src/adventureListPicker.c
   src/iniFile.c
-  src/magic_runtime_stubs.c
+  src/magic_runtime.c
   src/shandalar_global_strings.c
   ${SHANDALAR_MAGIC_DUEL_SOURCES}
   ../magic/src/global_duel_ui_ids.c
@@ -37,7 +37,12 @@ target_compile_definitions(shandalar PRIVATE
   LoadPcxIntoPageNoPalette=ShandalarLoadPcxIntoPageNoPalette
 )
 if(EMSCRIPTEN)
-  target_compile_options(shandalar PRIVATE -include platform/legacy_io.h)
+  target_compile_options(shandalar PRIVATE
+    -include platform/legacy_io.h
+    -Wno-error=implicit-function-declaration
+    -Wno-error=incompatible-function-pointer-types
+    -Wno-error=incompatible-pointer-types
+  )
 endif()
 target_include_directories(shandalar PRIVATE
   "${SHANDALAR_SRC_ROOT}"

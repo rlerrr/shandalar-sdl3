@@ -3,6 +3,8 @@
 #include "../game_support.h"
 #include "../global_strings.h"
 
+void show_duel_system_error(const char *err_msg);
+
 int dispatch_trigger_twice_once_with_each_player_as_reason(int reason_for_trig, trigger_t trig, const char *prompt, int a4);
 void record_ai_action_selection(void);
 void replay_ai_action_selection(void);

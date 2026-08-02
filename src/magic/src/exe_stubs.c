@@ -12,6 +12,9 @@
 // referenced by decompiled code but not yet matched/decompiled elsewhere.
 
 int dispatch_trigger_twice_once_with_each_player_as_reason(int reason_for_trig, trigger_t trig, const char *prompt, int a4);
+void append_to_trace_txt(char *text);
+void HideMouseCursorNested(void);
+void ShowMouseCursorNested(void);
 int set_stack_damage_targets(void);
 int raw_do_dialog(int bigcard_player,
                   int bigcard_card,

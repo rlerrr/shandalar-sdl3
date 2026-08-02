@@ -15,8 +15,10 @@ typedef struct CompatTimer {
 static CompatTimer g_timers[MAX_COMPAT_TIMERS];
 static POINT g_cursor;
 static int g_accelerator_sentinel;
+static UINT g_accelerator_resource_id;
 static int g_icon_sentinel;
 static int g_cursor_sentinel;
+static HCURSOR g_current_cursor;
 
 BOOL GetCursorPos(POINT *point)
 {
@@ -134,15 +136,66 @@ int GetSystemMetrics(int index)
 HACCEL LoadAcceleratorsA(HINSTANCE instance, LPCSTR resource_name)
 {
   (void)instance;
-  (void)resource_name;
+  g_accelerator_resource_id = (UINT)(uintptr_t)resource_name & 0xffffu;
   return (HACCEL)&g_accelerator_sentinel;
 }
 
 int TranslateAcceleratorA(HWND window, HACCEL accelerator, MSG *message)
 {
-  (void)window;
-  (void)accelerator;
-  (void)message;
+  UINT key;
+  UINT command = 0;
+  BOOL control;
+  BOOL alt;
+  BOOL shift;
+  if (accelerator != (HACCEL)&g_accelerator_sentinel || !message ||
+      message->message != WM_KEYDOWN || g_accelerator_resource_id != 111)
+    return 0;
+  key = (UINT)message->wParam;
+  control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+  alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+  shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+  if (!control && !alt) {
+    switch (key) {
+    case VK_F1: command = 600; break; case VK_F2: command = 620; break;
+    case VK_F3: command = 622; break; case VK_F4: command = 601; break;
+    case VK_F5: command = 602; break; case VK_F6: command = 603; break;
+    case VK_F8: command = 604; break; case VK_F9: command = 605; break;
+    case VK_F10: command = 606; break; case VK_F12: command = 599; break;
+    }
+  }
+  if (key >= 'A' && key <= 'Z')
+    key += 'a' - 'A';
+  if (command) {
+  } else if (control) {
+    switch (key) {
+    case 'd': command = 617; break; case 'g': command = 619; break;
+    case 'h': command = 621; break; case 'i': command = 634; break;
+    case 'l': command = 623; break; case 's': command = 635; break;
+    case 't': command = 633; break; case 'u': command = 636; break;
+    case 'w': command = 615; break;
+    }
+  } else if (alt) {
+    switch (key) {
+    case 'd': command = 618; break; case 'g': command = 620; break;
+    case 'h': command = 622; break; case 'l': command = 624; break;
+    case 'w': command = 616; break;
+    }
+  } else {
+    switch (key) {
+    case 'a': command = shift ? 628 : 627; break;
+    case 'c': command = 609; break; case 'd': command = 617; break;
+    case 'f': command = 630; break; case 'g': command = 619; break;
+    case 'h': command = 621; break; case 'k': command = 631; break;
+    case 'l': command = 623; break; case 'o': command = 613; break;
+    case 'p': command = 625; break; case 's': command = 607; break;
+    case 't': if (shift) command = 611; break;
+    case 'w': command = 615; break; case 'z': command = 629; break;
+    }
+  }
+  if (command) {
+    SendMessageA(window, WM_COMMAND, command, 0);
+    return 1;
+  }
   return 0;
 }
 
@@ -153,6 +206,19 @@ HICON LoadIconA(HINSTANCE instance, LPCSTR resource_name)
   return (HICON)&g_icon_sentinel;
 }
 
+BOOL DestroyIcon(HICON icon)
+{
+  (void)icon;
+  return TRUE;
+}
+
+HBITMAP LoadBitmapA(HINSTANCE instance, LPCSTR resource_name)
+{
+  (void)instance;
+  (void)resource_name;
+  return CreateBitmap(1, 1, 1, 8, NULL);
+}
+
 HCURSOR LoadCursorA(HINSTANCE instance, LPCSTR resource_name)
 {
   (void)instance;
@@ -160,8 +226,41 @@ HCURSOR LoadCursorA(HINSTANCE instance, LPCSTR resource_name)
   return (HCURSOR)&g_cursor_sentinel;
 }
 
+HCURSOR SetCursor(HCURSOR cursor)
+{
+  HCURSOR previous = g_current_cursor;
+  g_current_cursor = cursor;
+  return previous;
+}
+
+SHORT GetKeyState(int virtual_key)
+{
+  const bool *keys = SDL_GetKeyboardState(NULL);
+  if (virtual_key == VK_SHIFT &&
+      (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT]))
+    return (SHORT)0x8000;
+  if (virtual_key == VK_CONTROL &&
+      (keys[SDL_SCANCODE_LCTRL] || keys[SDL_SCANCODE_RCTRL]))
+    return (SHORT)0x8000;
+  if (virtual_key == VK_MENU &&
+      (keys[SDL_SCANCODE_LALT] || keys[SDL_SCANCODE_RALT]))
+    return (SHORT)0x8000;
+  return 0;
+}
+
+LONG GetMessageTime(void) { return (LONG)SDL_GetTicks(); }
+BOOL IsIconic(HWND window) { (void)window; return FALSE; }
+
 void InitCommonControls(void) {}
 BOOL MessageBeep(UINT type) { (void)type; return TRUE; }
+BOOL WinHelpA(HWND window, LPCSTR help_file, UINT command, ULONG_PTR data)
+{
+  (void)window;
+  (void)help_file;
+  (void)command;
+  (void)data;
+  return TRUE;
+}
 UINT GetDoubleClickTime(void) { return 500; }
 
 BOOL ScrollWindow(HWND window, int dx, int dy, const RECT *scroll, const RECT *clip)

@@ -1,5 +1,3 @@
-#define DUEL_ENGINE_IMPL
-
 #include "defs.h"
 #include "magic/src/duel_engine.h"
 #include "magic/src/global_duel_ui_ids.h"
@@ -22,13 +20,9 @@
 #include <string.h>
 #include <time.h>
 
-int g_reveal_all_world_info;
-int g_duel_selection_pending;
-int g_showlibrary_menu_selection;
 char global_cardart_path[0x110];
 char global_duel_dat_path[0x110];
 char szDeckName[0x104];
-BITMAPINFO g_duel_backbuffer_bmi;
 
 extern void LoadPcxResource(int page, int x, int y, char *path, void *palette);
 extern void LoadPcxIntoPage(int page_number, char *path);
@@ -61,6 +55,8 @@ extern void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
 extern int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root);
 extern void shandalar_host_begin_deckbuilder(void);
 extern void shandalar_host_end_deckbuilder(void);
+extern void deck_register_dialog_resources(void);
+extern void duel_register_dialog_resources(void);
 extern char global_base_directory[0x105];
 extern int global_screen_width;
 extern int global_screen_height;
@@ -83,7 +79,6 @@ static EncodedImage *g_name_entry_portrait_sprite;
 static int g_deckbuilder_attached;
 static int g_card_libraries_initialized;
 
-int internal_rand(int maximum);
 int CardIDFromType(unsigned int type);
 int CardTypeFromID(int csvid);
 int CardInDeck(int deck_entry);
@@ -91,6 +86,18 @@ void SetCardInDeck(int deck_index, int enabled);
 int SellPrice(int card_index);
 int is_card_available_in_expansion(unsigned int card_id, int expansion);
 unsigned int HasExpansion(unsigned char expansion_mask);
+int deckdll_create_fonts(void);
+void deckdll_destroy_create_fonts_resources(void);
+
+#ifdef __EMSCRIPTEN__
+void __cdecl _assert(void *expression, void *filename, unsigned line)
+{
+  fprintf(stderr, "Assertion failed: %s, file %s, line %u\n",
+          expression ? (const char *)expression : "",
+          filename ? (const char *)filename : "", line);
+  abort();
+}
+#endif
 
 static int shandalar_register_deckbuilder_exports(void)
 {
@@ -108,89 +115,12 @@ static int shandalar_register_deckbuilder_exports(void)
   return ok;
 }
 
-DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
-{
-  (void)creature_type;
-  return 1;
-}
-
-void StopWorldLocationMusic(void)
-{
-}
-
 void DrawTextAt(FacemakerWindowBounds *window, int color, int x, int y, char *format, ...)
 {
   va_list args;
   va_start(args, format);
   DrawTextFormattedVa(window, color, 1, 1, 1, 1, x, y, format, args);
   va_end(args);
-}
-
-int DrawRandomCardFromInitialLibrary(int library_index)
-{
-  struct
-  {
-    int rand_pick;    // ebp-0x14
-    int chosen_csvid; // ebp-0x10
-    int total_cards;  // ebp-0xc
-    int running_pick; // ebp-0x8
-    int i;            // ebp-0x4
-  } s;
-
-  if (library_index == -1)
-  {
-    return -1;
-  }
-
-  s.total_cards = 0;
-  for (s.i = 0; s.i < 200; ++s.i)
-  {
-    s.total_cards += g_initial_library[library_index][s.i].numcards;
-  }
-
-  if (s.total_cards == 0)
-  {
-    return -1;
-  }
-
-  s.rand_pick = internal_rand(s.total_cards);
-  s.running_pick = s.rand_pick;
-
-  for (s.i = 0; s.i < 200; ++s.i)
-  {
-    s.running_pick -= g_initial_library[library_index][s.i].numcards;
-    if (s.running_pick < 0)
-    {
-      s.chosen_csvid = g_initial_library[library_index][s.i].csvid;
-      if (g_duel_ai_mode_state != 1)
-      {
-        --g_initial_library[library_index][s.i].numcards;
-      }
-      break;
-    }
-  }
-
-  for (s.i = 0; s.i < g_card_count; ++s.i)
-  {
-    if ((int)global_cards_data[s.i].id == s.chosen_csvid)
-    {
-      return s.i;
-    }
-  }
-
-  return -1;
-}
-
-int show_cardlist(int *graveyard, int *card_counts, int *available, int count,
-                  void *window_title, unsigned int require_selection,
-                  char *prompt)
-{
-  (void)card_counts;
-  (void)available;
-  (void)window_title;
-  (void)require_selection;
-  (void)prompt;
-  return (graveyard && count > 0) ? 0 : -1;
 }
 
 int is_card_available_in_installed_expansion(unsigned int card_id)
@@ -204,110 +134,14 @@ int is_card_available_in_installed_expansion(unsigned int card_id)
   return 0;
 }
 
-void record_ai_action_selection(void)
-{
-}
-
-void replay_ai_action_selection(void)
-{
-}
-
 int create_fonts(void)
 {
-  return 1;
+  return deckdll_create_fonts();
 }
 
 void destroy_create_fonts_resources(void)
 {
-}
-
-int internal_rand(int maximum)
-{
-  return maximum > 0 ? rand() % maximum : 0;
-}
-
-int ClampIntToRange(int value, int min_value, int max_value)
-{
-  if (value < min_value)
-    return min_value;
-  if (value > max_value)
-    return max_value;
-  return value;
-}
-
-int SeedRandomFromTickCount(void)
-{
-  unsigned int seed = (unsigned int)time(NULL);
-  srand(seed);
-  return (int)seed;
-}
-
-int AddCardToDeckSorted(int card_id)
-{
-  int entry_key;
-  int candidate_key;
-  int card_index;
-  int slot;
-  int deck_full;
-
-  entry_key = (int)global_cards_data[card_id].color * 0x20 +
-              (int)global_cards_data[card_id].type * 0x100 +
-              (int)(unsigned char)global_cards_data[card_id].name[0];
-  deck_full = 1;
-  for (slot = 0; slot < 500; slot = slot + 1)
-  {
-    if (deck[slot] == -1)
-    {
-      deck_full = 0;
-    }
-  }
-  if (deck_full != 0)
-  {
-    return -1;
-  }
-  for (slot = 0x1f2; slot >= 0; slot = slot - 1)
-  {
-    if (deck[slot] == -1)
-    {
-      continue;
-    }
-    card_index = deck[slot] & 0xfff;
-    candidate_key = (int)global_cards_data[card_index].color * 0x20 +
-                    (int)global_cards_data[card_index].type * 0x100 +
-                    (int)(unsigned char)global_cards_data[card_index].name[0];
-    if (candidate_key >= entry_key)
-    {
-      deck[slot + 1] = card_id;
-      return slot + 1;
-    }
-    deck[slot + 1] = (unsigned int)deck[slot];
-  }
-  deck[0] = card_id;
-  return 0;
-}
-
-int GetCardRarity(int card_id)
-{
-  if (card_id < 0 || card_id >= 2000)
-    return 0;
-  return ClampIntToRange((int)(signed char)global_cards_data[card_id].rarity, 0, 4);
-}
-
-char *GetCreatureName(int creature_type)
-{
-  if (creature_type < 0 || creature_type >= 0x39)
-    return "";
-  return g_shandalar_monster_definitions[creature_type].name;
-}
-
-int CountDuelPoolEligibleTowns(void)
-{
-  int count = 0;
-  int index;
-  for (index = 0; index < 128; ++index)
-    if (g_town_slots[index].location_type > 1 && g_town_slots[index].location_type != 4)
-      ++count;
-  return count;
+  deckdll_destroy_create_fonts_resources();
 }
 
 void ShandalarLoadPcxIntoPageNoPalette(char *path)
@@ -456,22 +290,6 @@ int shandalar_run_facemaker_flow(void)
   return g_player_is_male;
 }
 
-color_t single_color_test_bit_to_color_t(color_test_t color_test)
-{
-  if ((color_test & COLOR_TEST_BLACK) != 0)
-    return COLOR_BLACK;
-  if ((color_test & COLOR_TEST_BLUE) != 0)
-    return COLOR_BLUE;
-  if ((color_test & COLOR_TEST_GREEN) != 0)
-    return COLOR_GREEN;
-  if ((color_test & COLOR_TEST_RED) != 0)
-    return COLOR_RED;
-  if ((color_test & COLOR_TEST_WHITE) != 0)
-    return COLOR_WHITE;
-
-  return COLOR_COLORLESS;
-}
-
 int shandalar_runtime_init(const char *asset_root)
 {
   char module_path[512];
@@ -494,6 +312,7 @@ int shandalar_runtime_init(const char *asset_root)
   if (!shandalar_register_deckbuilder_exports())
     return 0;
   deck_register_dialog_resources();
+  duel_register_dialog_resources();
   deck_set_host_pump_hooks(shandalar_host_begin_deckbuilder,
                            shandalar_host_end_deckbuilder);
   if (!g_deckbuilder_attached) {

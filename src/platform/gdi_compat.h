@@ -21,11 +21,13 @@ extern "C" {
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
+typedef int16_t SHORT;
 typedef uint32_t DWORD;
 typedef int32_t LONG;
 typedef uint32_t UINT;
 typedef int BOOL;
 typedef uintptr_t WPARAM;
+typedef uintptr_t ULONG_PTR;
 typedef intptr_t LPARAM;
 typedef intptr_t LRESULT;
 typedef uint32_t COLORREF;
@@ -54,10 +56,13 @@ typedef struct ShandalarBitmap *HBITMAP;
 typedef struct ShandalarDC *HDC;
 typedef struct ShandalarPalette *HPALETTE;
 typedef struct ShandalarFont *HFONT;
+typedef void *HRGN;
 
 typedef struct RECT { LONG left, top, right, bottom; } RECT;
+typedef RECT *LPRECT;
 typedef struct POINT { LONG x, y; } POINT;
 typedef struct SIZE { LONG cx, cy; } SIZE;
+typedef struct FILETIME { DWORD dwLowDateTime, dwHighDateTime; } FILETIME;
 typedef SIZE *LPSIZE;
 typedef POINT *LPPOINT;
 typedef struct ABC { int abcA; UINT abcB; int abcC; } ABC;
@@ -167,6 +172,12 @@ typedef struct MEASUREITEMSTRUCT {
 #define NULL_BRUSH 5
 #define HOLLOW_BRUSH NULL_BRUSH
 #define NULL_PEN 8
+#define PS_SOLID 0
+#define PS_INSIDEFRAME 6
+#define HS_DIAGCROSS 5
+#define R2_COPYPEN 13
+#define TA_RIGHT 2
+#define TA_CENTER 6
 #define BLACK_PEN 7
 #define HORZRES 8
 #define VERTRES 10
@@ -227,8 +238,10 @@ COLORREF GetPixel(HDC dc, int x, int y);
 COLORREF SetPixel(HDC dc, int x, int y, COLORREF color);
 BOOL SetPixelV(HDC dc, int x, int y, COLORREF color);
 int FillRect(HDC dc, const RECT *rect, HBRUSH brush);
+int FrameRect(HDC dc, const RECT *rect, HBRUSH brush);
 HBRUSH CreateSolidBrush(COLORREF color);
 HBRUSH CreateBrushIndirect(const LOGBRUSH *brush);
+HBRUSH CreateHatchBrush(int hatch, COLORREF color);
 HPEN CreatePen(int style, int width, COLORREF color);
 HPEN CreatePenIndirect(const LOGPEN *pen);
 BOOL MoveToEx(HDC dc, int x, int y, POINT *old);
@@ -241,6 +254,7 @@ int SaveDC(HDC dc);
 BOOL RestoreDC(HDC dc, int saved);
 int IntersectClipRect(HDC dc, int left, int top, int right, int bottom);
 void *CreateRectRgn(int left, int top, int right, int bottom);
+HRGN CreateRectRgnIndirect(const RECT *rect);
 BOOL SetRectRgn(void *region, int left, int top, int right, int bottom);
 int SelectClipRgn(HDC dc, void *region);
 BOOL SetRect(RECT *rect, int left, int top, int right, int bottom);
@@ -248,12 +262,15 @@ BOOL CopyRect(RECT *dst, const RECT *src);
 BOOL OffsetRect(RECT *rect, int dx, int dy);
 BOOL InflateRect(RECT *rect, int dx, int dy);
 BOOL PtInRect(const RECT *rect, POINT point);
+BOOL IsRectEmpty(const RECT *rect);
+BOOL UnionRect(RECT *destination, const RECT *first, const RECT *second);
 BOOL DrawFocusRect(HDC dc, const RECT *rect);
 int SetMapMode(HDC dc, int mode);
 BOOL SetWindowExtEx(HDC dc, int x, int y, LPSIZE old);
 BOOL SetViewportExtEx(HDC dc, int x, int y, LPSIZE old);
 BOOL SetWindowOrgEx(HDC dc, int x, int y, LPPOINT old);
 BOOL SetViewportOrgEx(HDC dc, int x, int y, LPPOINT old);
+BOOL OffsetViewportOrgEx(HDC dc, int x, int y, LPPOINT old);
 BOOL LPtoDP(HDC dc, LPPOINT points, int count);
 BOOL DPtoLP(HDC dc, LPPOINT points, int count);
 UINT SetTextAlign(HDC dc, UINT align);
@@ -270,9 +287,11 @@ int SetStretchBltMode(HDC dc, int mode);
 COLORREF SetTextColor(HDC dc, COLORREF color);
 COLORREF SetBkColor(HDC dc, COLORREF color);
 int SetBkMode(HDC dc, int mode);
+int SetROP2(HDC dc, int mode);
 BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length);
 int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format);
 BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size);
+BOOL GetCharWidthA(HDC dc, UINT first, UINT last, int *widths);
 #define TextOut TextOutA
 #define GetTextExtentPoint32 GetTextExtentPoint32A
 BOOL GetTextMetricsA(HDC dc, TEXTMETRICA *metrics);
@@ -323,6 +342,7 @@ DWORD GdiGetBatchLimit(void);
 DWORD GdiSetBatchLimit(DWORD limit);
 void checked_DeleteDC_DeleteObject(HDC dc, HGDIOBJ obj);
 int GetDeviceCaps(HDC dc, int index);
+HDC CreateDCA(LPCSTR driver, LPCSTR device, LPCSTR output, const void *init_data);
 void InitializeCriticalSection(CRITICAL_SECTION *section);
 void DeleteCriticalSection(CRITICAL_SECTION *section);
 void EnterCriticalSection(CRITICAL_SECTION *section);

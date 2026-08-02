@@ -498,7 +498,7 @@ undefined4 IsPlayerAvatarFemale(void)
 }
 
 // FUNCTION: SHANDALAR 0x0042811a
-void ShowCardImageDialog(int card_index, int text_color, char *button_text, int unused)
+void show_card_image_dialog(unsigned int card_index, int text_color, char *button_text, int unused)
 {
   char button_text_copy[100];
   int text_height;
@@ -629,7 +629,7 @@ void ShowCardImageOrUpdatePreview(uint card_index, undefined4 text_color, char *
   }
   else
   {
-    ShowCardImageDialog(card_index, text_color, button_text, show_ok_button);
+    show_card_image_dialog((unsigned int)card_index, text_color, button_text, show_ok_button);
   }
 }
 

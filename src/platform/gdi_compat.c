@@ -706,6 +706,7 @@ static PaintObject *create_paint(int kind, COLORREF color, int is_null)
 
 HBRUSH CreateSolidBrush(COLORREF color) { return create_paint(OBJECT_BRUSH, color, 0); }
 HBRUSH CreateBrushIndirect(const LOGBRUSH *brush) { return CreateSolidBrush(brush ? brush->lbColor : 0); }
+HBRUSH CreateHatchBrush(int hatch, COLORREF color) { (void)hatch; return CreateSolidBrush(color); }
 HPEN CreatePen(int style, int width, COLORREF color) { (void)style; (void)width; return create_paint(OBJECT_PEN, color, 0); }
 HPEN CreatePenIndirect(const LOGPEN *pen) { return CreatePen(0, 1, pen ? pen->lopnColor : 0); }
 
@@ -733,6 +734,22 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
         if (pixel) *pixel = index;
       }
   }
+  return 1;
+}
+
+int FrameRect(HDC dc, const RECT *rect, HBRUSH brush)
+{
+  RECT edge;
+  if (!dc || !rect || rect->right <= rect->left || rect->bottom <= rect->top)
+    return 0;
+  SetRect(&edge, rect->left, rect->top, rect->right, rect->top + 1);
+  FillRect(dc, &edge, brush);
+  SetRect(&edge, rect->left, rect->bottom - 1, rect->right, rect->bottom);
+  FillRect(dc, &edge, brush);
+  SetRect(&edge, rect->left, rect->top + 1, rect->left + 1, rect->bottom - 1);
+  FillRect(dc, &edge, brush);
+  SetRect(&edge, rect->right - 1, rect->top + 1, rect->right, rect->bottom - 1);
+  FillRect(dc, &edge, brush);
   return 1;
 }
 
@@ -906,6 +923,12 @@ void *CreateRectRgn(int left, int top, int right, int bottom)
   return region;
 }
 
+HRGN CreateRectRgnIndirect(const RECT *rect)
+{
+  return rect ? CreateRectRgn(rect->left, rect->top, rect->right, rect->bottom)
+              : NULL;
+}
+
 BOOL SetRectRgn(void *handle, int left, int top, int right, int bottom)
 {
   CompatRegion *region = (CompatRegion *)handle;
@@ -965,6 +988,7 @@ BOOL SetWindowExtEx(HDC dc, int x, int y, LPSIZE old) { if (!dc || !x || !y) ret
 BOOL SetViewportExtEx(HDC dc, int x, int y, LPSIZE old) { if (!dc) return FALSE; if (old) { old->cx = dc->viewport_ext_x; old->cy = dc->viewport_ext_y; } dc->viewport_ext_x = x; dc->viewport_ext_y = y; return TRUE; }
 BOOL SetWindowOrgEx(HDC dc, int x, int y, LPPOINT old) { if (!dc) return FALSE; if (old) { old->x = dc->window_org_x; old->y = dc->window_org_y; } dc->window_org_x = x; dc->window_org_y = y; return TRUE; }
 BOOL SetViewportOrgEx(HDC dc, int x, int y, LPPOINT old) { if (!dc) return FALSE; if (old) { old->x = dc->viewport_org_x; old->y = dc->viewport_org_y; } dc->viewport_org_x = x; dc->viewport_org_y = y; return TRUE; }
+BOOL OffsetViewportOrgEx(HDC dc, int x, int y, LPPOINT old) { if (!dc) return FALSE; if (old) { old->x = dc->viewport_org_x; old->y = dc->viewport_org_y; } dc->viewport_org_x += x; dc->viewport_org_y += y; return TRUE; }
 BOOL LPtoDP(HDC dc, LPPOINT points, int count) { int i; if (!dc || !points) return FALSE; for (i = 0; i < count; ++i) { points[i].x = map_x(dc, points[i].x); points[i].y = map_y(dc, points[i].y); } return TRUE; }
 BOOL DPtoLP(HDC dc, LPPOINT points, int count)
 {
@@ -1077,6 +1101,7 @@ int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
 COLORREF SetTextColor(HDC dc, COLORREF color) { COLORREF old = dc ? dc->text_color : 0; if (dc) dc->text_color = color; return old; }
 COLORREF SetBkColor(HDC dc, COLORREF color) { COLORREF old = dc ? dc->background_color : 0; if (dc) dc->background_color = color; return old; }
 int SetBkMode(HDC dc, int mode) { int old = dc ? dc->background_mode : 0; if (dc) dc->background_mode = mode; return old; }
+int SetROP2(HDC dc, int mode) { (void)dc; return mode; }
 
 BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size)
 {
@@ -1553,6 +1578,31 @@ void *GlobalFree(void *memory) { free(memory); return NULL; }
 BOOL GdiFlush(void) { return TRUE; }
 DWORD GdiGetBatchLimit(void) { return 0; }
 DWORD GdiSetBatchLimit(DWORD limit) { return limit; }
+
+HDC CreateDCA(LPCSTR driver, LPCSTR device, LPCSTR output, const void *init_data)
+{
+  (void)driver;
+  (void)device;
+  (void)output;
+  (void)init_data;
+  return shandalar_create_screen_dc(1024, 768);
+}
+
+BOOL GetCharWidthA(HDC dc, UINT first, UINT last, int *widths)
+{
+  UINT character;
+  if (!widths || last < first)
+    return FALSE;
+  for (character = first; character <= last; ++character) {
+    char text[2] = {(char)character, '\0'};
+    SIZE size;
+    if (!GetTextExtentPoint32A(dc, text, 1, &size))
+      return FALSE;
+    widths[character - first] = size.cx;
+  }
+  return TRUE;
+}
+
 int GetDeviceCaps(HDC dc, int index)
 {
   if (index == RASTERCAPS)
@@ -1687,6 +1737,23 @@ BOOL PtInRect(const RECT *rect, POINT point)
 {
   return rect && point.x >= rect->left && point.x < rect->right &&
          point.y >= rect->top && point.y < rect->bottom;
+}
+
+BOOL IsRectEmpty(const RECT *rect)
+{
+  return !rect || rect->right <= rect->left || rect->bottom <= rect->top;
+}
+
+BOOL UnionRect(RECT *destination, const RECT *first, const RECT *second)
+{
+  if (!destination || !first || !second)
+    return FALSE;
+  destination->left = min(first->left, second->left);
+  destination->top = min(first->top, second->top);
+  destination->right = max(first->right, second->right);
+  destination->bottom = max(first->bottom, second->bottom);
+  return destination->right > destination->left &&
+         destination->bottom > destination->top;
 }
 
 double shandalar_set_font_device_scale(double scale)

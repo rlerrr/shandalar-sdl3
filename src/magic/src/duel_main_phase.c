@@ -40,15 +40,15 @@ int process_response_actions(int player, const char *prompt);
 int choose_ai_main_phase_action(int player);
 int put_card_on_stack(int player, int card, int pay_costs);
 int resolve_card_on_stack(int player, int card);
-int dispatch_event_to_single_card(int player, int card, int event, int a4, int a5);
+int dispatch_event_to_single_card(int player, int card, event_t event, int a4, int a5);
 int activate(int player, int a2, int card);
-void resolve_activated_ability(int player, int card);
+int resolve_activated_ability(int player, int card);
 void request_duel_display_refresh_if_human(int player, int card, int a3, int a4);
 int can_attack(int player, int card);
 int get_recorded_action_count(void);
 void push_affected_card_stack(void);
 void pop_affected_card_stack(void);
-int C_get_abilities(int player, int card, int event, int a4);
+int C_get_abilities(int player, int card, event_t event, int a4);
 void set_duel_prompt_text(char *text);
 void process_damage_prevention(int player);
 unsigned int choose_attackers_ai(int player);
@@ -66,7 +66,7 @@ int assign_blocker_to_attacker(int blocker_player, int blocker_card, int attacke
 void get_landwalk_evasion_masks(unsigned int *out_landwalk_mask, unsigned int *out_basic_land_mask);
 int can_block_attacker_with_abilities(int blocker_player, int blocker_card, int attacker_player, int attacker_card, unsigned int attacker_abilities,
                                       unsigned int evasion_mask);
-int play_sound_effect(int sound_id);
+int play_sound_effect(wav_t sound_id);
 void save_combat_simulation_state(void);
 void restore_combat_simulation_state(void);
 void setup_combat_damage_simulation(int player);

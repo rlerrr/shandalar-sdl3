@@ -12,6 +12,8 @@ int find_highest_value_library_card_by_type(int player, int library_player, unsi
 int titanias_song_count_animations(int player, int card, int internal_card_id);
 int titanias_song_uncount_animations(int player, int card, int internal_card_id);
 int power_struggle_exchange_permanents(int first_player, int first_card, int second_player, int second_card);
+void get_landwalk_evasion_masks(unsigned int *out_landwalk_mask,
+                                unsigned int *out_basic_land_mask);
 
 // FUNCTION: MAGIC 0x00517370
 // FUNCTION: SHANDALAR 0x004ceb50

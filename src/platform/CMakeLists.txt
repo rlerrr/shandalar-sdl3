@@ -5,6 +5,7 @@ add_library(shandalar_platform STATIC
   legacy_io.c
   dictionary.c
   iniparser.c
+  vfw_compat.c
   winbase_compat.c
   wincontrols_compat.c
   windialog_compat.c

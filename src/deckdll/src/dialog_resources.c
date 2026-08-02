@@ -122,7 +122,13 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
 
 void deck_register_dialog_resources(void)
 {
-  shandalar_win32_set_dialog_factory(create_deck_dialog);
+  static const UINT resource_ids[] = {
+      RES_DIALOG_ASK_VALUE, RES_DIALOG_FILTER_LIST, RES_DIALOG_DECKINFO,
+      RES_DIALOG_DECKSTATS, RES_DIALOG_INFOBOX, RES_DIALOG_GROUPMOVE,
+      RES_DIALOG_LOADDECK};
+  size_t index;
+  for (index = 0; index < sizeof(resource_ids) / sizeof(resource_ids[0]); ++index)
+    shandalar_win32_register_dialog_factory(resource_ids[index], create_deck_dialog);
 }
 
 #endif

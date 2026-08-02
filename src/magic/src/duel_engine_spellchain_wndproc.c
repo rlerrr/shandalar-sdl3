@@ -38,7 +38,7 @@ extern spell_chain_display_entry_t g_duel_cached_stack_entries[32];
 int load_text_with_tab_escapes(char *filename, char *section_name);
 HBITMAP load_pic(char *filename);
 void ApplyCardArtPaletteToDc(HDC dc);
-void TileBitmapIntoRect(HDC dc, RECT *rect, HBITMAP bitmap);
+BOOL TileBitmapIntoRect(HDC dc, RECT *rect, HBITMAP bitmap);
 int handle_button_palette_message(int hwnd, unsigned int msg, int wparam, int lparam);
 int card_window_matches_card_id(HWND hwnd, card_id_t card_id);
 int card_window_matches_player_and_card(HWND hwnd, int *player_and_card);

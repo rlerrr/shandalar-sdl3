@@ -132,6 +132,29 @@ void draw_builtin_control(HWND window)
         SetFocus(window);
         send_control_command(window, BN_CLICKED);
       }
+    } else if (type == 9) {
+      bool checked = SendMessageA(window, BM_GETCHECK, 0, 0) == BST_CHECKED;
+      if (ImGui::RadioButton(text[0] ? text : " ", checked)) {
+        HWND group = window;
+        HWND candidate;
+        while ((candidate = GetWindow(group, GW_HWNDPREV)) != nullptr) {
+          group = candidate;
+          if (GetWindowLongA(group, GWL_STYLE) & WS_GROUP)
+            break;
+        }
+        for (candidate = group; candidate; candidate = GetWindow(candidate, GW_HWNDNEXT)) {
+          if (candidate != group && (GetWindowLongA(candidate, GWL_STYLE) & WS_GROUP))
+            break;
+          char sibling_class[32] = {};
+          GetClassNameA(candidate, sibling_class, sizeof(sibling_class));
+          if (SDL_strcasecmp(sibling_class, "BUTTON") == 0 &&
+              (GetWindowLongA(candidate, GWL_STYLE) & BS_TYPEMASK) == 9)
+            SendMessageA(candidate, BM_SETCHECK,
+                         candidate == window ? BST_CHECKED : BST_UNCHECKED, 0);
+        }
+        SetFocus(window);
+        send_control_command(window, BN_CLICKED);
+      }
     } else if (ImGui::Button(text[0] ? text : " ", ImVec2(width, height))) {
       SetFocus(window);
       send_control_command(window, BN_CLICKED);
@@ -169,6 +192,8 @@ void draw_builtin_control(HWND window)
             SendMessageA(window, LB_SETCURSEL, i, 0);
           SetFocus(window);
           send_control_command(window, LBN_SELCHANGE);
+          if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            send_control_command(window, LBN_DBLCLK);
         }
         ImGui::PopID();
       }
@@ -192,6 +217,12 @@ void draw_builtin_control(HWND window)
       }
       ImGui::EndCombo();
     }
+  } else if (SDL_strcasecmp(class_name, "msctls_updown32") == 0) {
+    int position = static_cast<short>(SendMessageA(window, WM_USER + 104, 0, 0));
+    if (ImGui::ArrowButton("##up", ImGuiDir_Up))
+      SendMessageA(window, WM_USER + 103, 0, MAKELONG(position + 1, 0));
+    if (ImGui::ArrowButton("##down", ImGuiDir_Down))
+      SendMessageA(window, WM_USER + 103, 0, MAKELONG(position - 1, 0));
   }
   ImGui::PopID();
 }
@@ -298,6 +329,55 @@ void draw_dialog_caption(HWND dialog)
   ImGui::PopID();
 }
 
+bool draw_popup_menu_items(HMENU menu)
+{
+  int count = shandalar_win32_menu_item_count(menu);
+  for (int i = 0; i < count; ++i) {
+    UINT flags;
+    UINT_PTR id;
+    LPCSTR text;
+    if (!shandalar_win32_menu_item(menu, i, &flags, &id, &text))
+      continue;
+    if (flags & MF_SEPARATOR) {
+      ImGui::Separator();
+      continue;
+    }
+    char label[1024];
+    size_t source_index = 0;
+    size_t label_index = 0;
+    bool enabled = (flags & (MF_DISABLED | MF_GRAYED)) == 0;
+    bool checked = (flags & MF_CHECKED) != 0;
+    text = text && text[0] ? text : " ";
+    while (text[source_index] && label_index + 1 < sizeof(label)) {
+      if (text[source_index] == '&' && text[source_index + 1] != '&') {
+        ++source_index;
+        continue;
+      }
+      label[label_index++] = text[source_index++];
+      if (text[source_index - 1] == '&' && text[source_index] == '&')
+        ++source_index;
+    }
+    label[label_index] = '\0';
+    ImGui::PushID(i);
+    if (flags & MF_POPUP) {
+      if (ImGui::BeginMenu(label, enabled)) {
+        if (draw_popup_menu_items(reinterpret_cast<HMENU>(id))) {
+          ImGui::EndMenu();
+          ImGui::PopID();
+          return true;
+        }
+        ImGui::EndMenu();
+      }
+    } else if (ImGui::MenuItem(label, nullptr, checked, enabled)) {
+      shandalar_win32_choose_menu_item(id);
+      ImGui::PopID();
+      return true;
+    }
+    ImGui::PopID();
+  }
+  return false;
+}
+
 void draw_popup_menu(void)
 {
   static HMENU opened_menu;
@@ -315,42 +395,9 @@ void draw_popup_menu(void)
     opened_menu = menu;
   }
   if (ImGui::BeginPopup("##win32-popup")) {
-    int count = shandalar_win32_menu_item_count(menu);
-    for (int i = 0; i < count; ++i) {
-      UINT flags;
-      UINT_PTR id;
-      LPCSTR text;
-      if (!shandalar_win32_menu_item(menu, i, &flags, &id, &text))
-        continue;
-      if (flags & MF_SEPARATOR) {
-        ImGui::Separator();
-      } else {
-        char label[1024];
-        size_t source_index = 0;
-        size_t label_index = 0;
-        bool enabled = (flags & (MF_DISABLED | MF_GRAYED)) == 0;
-        bool checked = (flags & MF_CHECKED) != 0;
-        text = text && text[0] ? text : " ";
-        while (text[source_index] && label_index + 1 < sizeof(label)) {
-          if (text[source_index] == '&' && text[source_index + 1] != '&') {
-            ++source_index;
-            continue;
-          }
-          label[label_index++] = text[source_index++];
-          if (text[source_index - 1] == '&' && text[source_index] == '&')
-            ++source_index;
-        }
-        label[label_index] = '\0';
-        ImGui::PushID(i);
-        if (ImGui::MenuItem(label, nullptr, checked, enabled)) {
-          shandalar_win32_choose_menu_item(id);
-          opened_menu = nullptr;
-          ImGui::CloseCurrentPopup();
-          ImGui::PopID();
-          break;
-        }
-        ImGui::PopID();
-      }
+    if (draw_popup_menu_items(menu)) {
+      opened_menu = nullptr;
+      ImGui::CloseCurrentPopup();
     }
     ImGui::EndPopup();
   } else if (opened_menu == menu) {

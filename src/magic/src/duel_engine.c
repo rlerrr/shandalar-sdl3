@@ -28,6 +28,8 @@ HWND global_main_hwnd;
 extern HINSTANCE g_app_instance;
 extern int global_screen_width;
 extern int global_screen_height;
+void shandalar_host_begin_duel(void);
+void shandalar_host_end_duel(void);
 #endif
 
 extern int g_duel_modal_action_active;
@@ -642,7 +644,6 @@ int initialize_duel_engine_window(void)
   } s;
 
   s.created_window = 1;
-  SetThreadPriority(GetCurrentThread(), 1);
   InitializeCriticalSection(&g_duel_render_lock);
 #ifdef _DEBUG
   // This is annoying to toggle since F12 is the debugger pause hotkey in VS, so start enabled
@@ -775,7 +776,6 @@ void shutdown_duel_engine_window(void)
   destroy_windowclasses();
   DeleteCriticalSection(&g_duel_render_lock);
   GdiFlush();
-  SetThreadPriority(GetCurrentThread(), 0);
 }
 
 // FUNCTION: MAGIC 0x00421830
@@ -788,6 +788,7 @@ DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
     WPARAM result;
   } s;
 
+  s.result = (WPARAM)-1;
   g_duel_mode_flags = 1;
   g_duel_network_state = 0;
   g_duel_extra_turn_player = -1;
@@ -796,6 +797,9 @@ DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
   InitializeDuelUiGlobalIds();
   g_duel_run_mode = 4;
   g_duel_creature_type = (int)creature_type;
+#ifdef SHANDALAR
+  shandalar_host_begin_duel();
+#endif
 
   if (g_duel_creature_type != -1)
   {
@@ -813,6 +817,9 @@ DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
     s.result = run_duel_engine_message_loop();
     shutdown_duel_engine_window();
   }
+#ifdef SHANDALAR
+  shandalar_host_end_duel();
+#endif
 
   return s.result;
 }

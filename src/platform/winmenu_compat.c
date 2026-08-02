@@ -103,6 +103,27 @@ BOOL InsertMenuA(HMENU handle, UINT position, UINT flags, UINT_PTR item, LPCSTR 
   return TRUE;
 }
 
+BOOL ModifyMenuA(HMENU handle, UINT position, UINT flags, UINT_PTR item, LPCSTR text)
+{
+  CompatMenu *menu = as_menu(handle);
+  int index;
+  char *copy = NULL;
+  if (!menu || (index = find_item(menu, position, flags)) < 0)
+    return FALSE;
+  if (text) {
+    size_t size = strlen(text) + 1;
+    copy = (char *)malloc(size);
+    if (!copy)
+      return FALSE;
+    memcpy(copy, text, size);
+  }
+  free(menu->items[index].text);
+  menu->items[index].flags = flags;
+  menu->items[index].id = item;
+  menu->items[index].text = copy;
+  return TRUE;
+}
+
 static int find_item(CompatMenu *menu, UINT item, UINT flags)
 {
   size_t i;
@@ -168,6 +189,12 @@ BOOL DestroyMenu(HMENU handle)
   menu->magic = 0;
   free(menu);
   return TRUE;
+}
+
+int GetMenuItemCount(HMENU handle)
+{
+  CompatMenu *menu = as_menu(handle);
+  return menu ? (int)menu->count : -1;
 }
 
 BOOL TrackPopupMenu(HMENU handle, UINT flags, int x, int y, int reserved,

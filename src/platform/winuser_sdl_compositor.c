@@ -273,7 +273,9 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   screen.x = (LONG)x;
   screen.y = (LONG)y;
   shandalar_win32_set_cursor_position(screen.x, screen.y);
-  target = WindowFromPoint(screen);
+  target = GetCapture();
+  if (!target)
+    target = WindowFromPoint(screen);
   if (!target || target == GetDesktopWindow())
     return 0;
   modal = shandalar_win32_active_dialog();

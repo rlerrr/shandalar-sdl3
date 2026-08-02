@@ -22,6 +22,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     MODERN_FIXES
     SHANDALAR_SDL_WIN32_COMPAT
     global_hinstance=deckdll_global_hinstance
+    global_main_hwnd=deckdll_global_main_hwnd
     LoadFontFromIni=deckdll_LoadFontFromIni
     load_text=deckdll_load_text
     deck=deckdll_deck

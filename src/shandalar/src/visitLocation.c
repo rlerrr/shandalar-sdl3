@@ -2380,9 +2380,6 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
 
   (void)card_id;
 
-  // TODO: Remove. We win every duel currently
-  return 1;
-
   g_duel_state_00742fc0 = 1;
   DestroyCachedCardArt();
 
@@ -2880,13 +2877,6 @@ void RemoveCardFromDeckById(unsigned int card_id)
       break;
     }
   }
-}
-
-// FUNCTION: SHANDALAR 0x005224a0
-void show_opponent_library_window(int unused_color)
-{
-  (void)unused_color;
-  SelectAdventureListCardIndex(g_active_player, global_library[1], 500, gs_showlibrary_text_0074bcc0.accept_keys, 0, &g_showlibrary_menu_selection);
 }
 
 // FUNCTION: SHANDALAR 0x0053114a

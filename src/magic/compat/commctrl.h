@@ -1,0 +1,11 @@
+#ifndef SHANDALAR_MAGIC_COMMCTRL_COMPAT_H
+#define SHANDALAR_MAGIC_COMMCTRL_COMPAT_H
+
+#include "windows.h"
+
+#define UDM_SETRANGE (WM_USER + 101)
+#define UDM_GETRANGE (WM_USER + 102)
+#define UDM_SETPOS (WM_USER + 103)
+#define UDM_GETPOS (WM_USER + 104)
+
+#endif

@@ -105,6 +105,16 @@ BOOL SetCurrentDirectoryA(LPCSTR path)
 #endif
 }
 
+BOOL CopyFileA(LPCSTR existing_filename, LPCSTR new_filename, BOOL fail_if_exists)
+{
+  SDL_PathInfo info;
+  if (!existing_filename || !new_filename)
+    return FALSE;
+  if (fail_if_exists && SDL_GetPathInfo(new_filename, &info))
+    return FALSE;
+  return SDL_CopyFile(existing_filename, new_filename) ? TRUE : FALSE;
+}
+
 void Sleep(DWORD milliseconds) { SDL_Delay(milliseconds); }
 
 DWORD GetTickCount(void)
@@ -120,6 +130,24 @@ HANDLE GetCurrentProcess(void)
 HANDLE GetCurrentThread(void)
 {
   return (HANDLE)(uintptr_t)SDL_GetCurrentThreadID();
+}
+
+BOOL GetThreadTimes(HANDLE thread, FILETIME *creation, FILETIME *exit,
+                    FILETIME *kernel, FILETIME *user)
+{
+  uint64_t ticks = SDL_GetTicks() * 10000u;
+  (void)thread;
+  if (creation)
+    memset(creation, 0, sizeof(*creation));
+  if (exit)
+    memset(exit, 0, sizeof(*exit));
+  if (kernel)
+    memset(kernel, 0, sizeof(*kernel));
+  if (user) {
+    user->dwLowDateTime = (DWORD)ticks;
+    user->dwHighDateTime = (DWORD)(ticks >> 32);
+  }
+  return TRUE;
 }
 
 BOOL DuplicateHandle(HANDLE source_process, HANDLE source_handle,

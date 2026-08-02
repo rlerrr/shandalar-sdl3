@@ -961,16 +961,20 @@ void redraw_ante_wait_for_opponent_mulligan_thread(void *hwnd)
   } s;
 
   s.thread_hwnd = (HWND)hwnd;
+#ifndef SHANDALAR
   while (WaitForSingleObject(global_mutex_GameInit, 0xffffffff) != 0)
   {
   }
+#endif
   TENTATIVE_wait_for_network_result(1, 6);
   s.network_choice = g_network_result_packet.result;
   if (s.thread_hwnd != (HWND)0)
   {
     SendMessageA(s.thread_hwnd, WM_COMMAND, 0x401, s.network_choice);
   }
+#ifndef SHANDALAR
   ReleaseMutex(global_mutex_GameInit);
+#endif
   return;
 }
 
@@ -985,16 +989,20 @@ void redraw_ante_wait_for_opponent_done_thread(void *hwnd)
   } s;
 
   s.thread_hwnd = (HWND)hwnd;
+#ifndef SHANDALAR
   while (WaitForSingleObject(global_mutex_GameInit, 0xffffffff) != 0)
   {
   }
+#endif
   TENTATIVE_wait_for_network_result(1, 6);
   s.network_choice = g_network_result_packet.result;
   if (s.thread_hwnd != (HWND)0)
   {
     SendMessageA(s.thread_hwnd, WM_COMMAND, 0x402, s.network_choice);
   }
+#ifndef SHANDALAR
   ReleaseMutex(global_mutex_GameInit);
+#endif
   return;
 }
 
@@ -1161,13 +1169,17 @@ void coin_flip_wait_for_network_choice_thread(void *hwnd)
   } s;
 
   s.thread_hwnd = (HWND)hwnd;
+#ifndef SHANDALAR
   while (WaitForSingleObject(global_mutex_GameInit, 0xffffffff) != 0)
   {
   }
+#endif
   TENTATIVE_wait_for_network_result(1, 5);
   s.network_choice = g_network_result_packet.result;
   SendMessageA(s.thread_hwnd, WM_COMMAND, 0x401, s.network_choice);
+#ifndef SHANDALAR
   ReleaseMutex(global_mutex_GameInit);
+#endif
   return;
 }
 

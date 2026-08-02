@@ -19,6 +19,9 @@ typedef struct ControlState {
   int top;
   UINT check;
   UINT text_limit;
+  int updown_min;
+  int updown_max;
+  int updown_position;
 } ControlState;
 
 static ControlState *g_controls;
@@ -111,6 +114,39 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
     return 0;
   is_list = SDL_strcasecmp(class_name, "LISTBOX") == 0;
   is_combo = SDL_strcasecmp(class_name, "COMBOBOX") == 0;
+  if (SDL_strcasecmp(class_name, "msctls_updown32") == 0) {
+    HWND buddy;
+    char text[32];
+    state = get_state(window, TRUE);
+    switch (message) {
+    case WM_USER + 101:
+      state->updown_max = (short)LOWORD(lparam);
+      state->updown_min = (short)HIWORD(lparam);
+      *handled = TRUE;
+      return 0;
+    case WM_USER + 102:
+      *handled = TRUE;
+      return MAKELONG(state->updown_max, state->updown_min);
+    case WM_USER + 103:
+      state->updown_position = (short)LOWORD(lparam);
+      if (state->updown_position < state->updown_min)
+        state->updown_position = state->updown_min;
+      if (state->updown_position > state->updown_max)
+        state->updown_position = state->updown_max;
+      buddy = GetWindow(window, GW_HWNDPREV);
+      if (buddy) {
+        SDL_snprintf(text, sizeof(text), "%d", state->updown_position);
+        SetWindowTextA(buddy, text);
+      }
+      *handled = TRUE;
+      return state->updown_position;
+    case WM_USER + 104:
+      *handled = TRUE;
+      return state->updown_position;
+    default:
+      return 0;
+    }
+  }
   if (SDL_strcasecmp(class_name, "BUTTON") == 0) {
     state = get_state(window, TRUE);
     if (message == BM_SETCHECK) {

@@ -49,6 +49,8 @@ static RegisteredClass *g_classes;
 static struct ShandalarWindow *g_allocations;
 static struct ShandalarWindow g_desktop;
 static HWND g_focus;
+static HWND g_active;
+static HWND g_capture;
 static MSG g_queue[MESSAGE_QUEUE_CAPACITY];
 static size_t g_queue_head;
 static size_t g_queue_count;
@@ -108,7 +110,8 @@ static LRESULT CALLBACK builtin_wndproc(HWND window, UINT message, WPARAM wparam
 
 static RegisteredClass *find_or_create_builtin(LPCSTR name)
 {
-  static const char *builtins[] = {"BUTTON", "LISTBOX", "COMBOBOX", "EDIT", "STATIC", "SCROLLBAR"};
+  static const char *builtins[] = {"BUTTON", "LISTBOX", "COMBOBOX", "EDIT", "STATIC",
+                                   "SCROLLBAR", "msctls_updown32"};
   size_t i;
   RegisteredClass *registered = find_class(name);
   if (registered)
@@ -527,6 +530,26 @@ LONG SetWindowLongA(HWND window, int index, LONG value)
   return old;
 }
 
+DWORD GetClassLongA(HWND window, int index)
+{
+  if (!valid_window(window) || !window->window_class)
+    return 0;
+  if (index == GCL_HBRBACKGROUND)
+    return (DWORD)(uintptr_t)window->window_class->value.hbrBackground;
+  return 0;
+}
+
+DWORD SetClassLongA(HWND window, int index, LONG value)
+{
+  DWORD old;
+  if (!valid_window(window) || !window->window_class)
+    return 0;
+  old = GetClassLongA(window, index);
+  if (index == GCL_HBRBACKGROUND)
+    window->window_class->value.hbrBackground = (HBRUSH)(uintptr_t)(DWORD)value;
+  return old;
+}
+
 WORD GetWindowWord(HWND window, int index) { return (WORD)extra_get(window, index, sizeof(WORD)); }
 WORD SetWindowWord(HWND window, int index, WORD value) { return (WORD)extra_set(window, index, value, sizeof(WORD)); }
 HWND GetParent(HWND window) { return valid_window(window) && window->parent != &g_desktop ? window->parent : NULL; }
@@ -639,6 +662,13 @@ BOOL GetWindowRect(HWND window, RECT *rect)
   absolute_origin(window, &x, &y);
   SetRect(rect, x, y, x + window->width, y + window->height);
   return TRUE;
+}
+
+BOOL AdjustWindowRect(RECT *rect, DWORD style, BOOL menu)
+{
+  (void)style;
+  (void)menu;
+  return rect != NULL;
 }
 
 BOOL SetWindowPos(HWND window, HWND insert_after, int x, int y, int width, int height, UINT flags)
@@ -822,6 +852,38 @@ HWND SetFocus(HWND window)
 
 HWND GetFocus(void) { return g_focus; }
 
+HWND SetActiveWindow(HWND window)
+{
+  HWND old = g_active;
+  if (!window || valid_window(window)) {
+    g_active = window;
+    if (window)
+      BringWindowToTop(window);
+  }
+  return old;
+}
+
+HWND SetCapture(HWND window)
+{
+  HWND old = g_capture;
+  if (valid_window(window))
+    g_capture = window;
+  return old;
+}
+
+HWND GetCapture(void)
+{
+  return valid_window(g_capture) ? g_capture : NULL;
+}
+
+BOOL ReleaseCapture(void)
+{
+  if (!g_capture)
+    return FALSE;
+  g_capture = NULL;
+  return TRUE;
+}
+
 BOOL BringWindowToTop(HWND window)
 {
   return SetWindowPos(window, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
@@ -876,6 +938,11 @@ HDC BeginPaint(HWND window, PAINTSTRUCT *paint)
 BOOL EndPaint(HWND window, const PAINTSTRUCT *paint)
 {
   return valid_window(window) && paint != NULL;
+}
+
+HDC GetWindowDC(HWND window)
+{
+  return GetDC(window);
 }
 
 HWND GetDesktopWindow(void)
@@ -979,6 +1046,8 @@ void shandalar_win32_reset(void)
   free(g_desktop.text);
   memset(&g_desktop, 0, sizeof(g_desktop));
   g_focus = NULL;
+  g_active = NULL;
+  g_capture = NULL;
   g_queue_head = 0;
   g_queue_count = 0;
   g_quit_posted = 0;

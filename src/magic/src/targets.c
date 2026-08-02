@@ -3,6 +3,7 @@
 #include <string.h>
 #include "cardartlib/src/palette.h"
 #include "game_support.h"
+#include "magic/src/duel_runtime.h"
 #include "global_state.h"
 #include "global_strings.h"
 
@@ -374,8 +375,7 @@ int run_target_selection_modal(int who_chooses,
 
   if (s.action_result.selection_code == -5)
   {
-    PostMessageA(g_duel_window_hwnd, 0x401, s.thread_exit_code, 0);
-    ExitThread((DWORD)s.thread_exit_code);
+    abort_duel_run((DWORD)s.thread_exit_code);
   }
 
   {

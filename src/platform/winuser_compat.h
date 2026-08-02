@@ -17,7 +17,6 @@ typedef uintptr_t UINT_PTR;
 typedef INT_PTR(CALLBACK *DLGPROC)(HWND, UINT, WPARAM, LPARAM);
 typedef void(CALLBACK *TIMERPROC)(HWND, UINT, UINT_PTR, DWORD);
 typedef void(CALLBACK *LPTIMECALLBACK)(UINT, UINT, DWORD, DWORD, DWORD);
-typedef void *HRGN;
 
 typedef struct tagWNDCLASSA {
   UINT style;
@@ -145,6 +144,7 @@ typedef struct tagWINDOWPOS {
 #define WS_SYSMENU 0x00080000L
 #define WS_THICKFRAME 0x00040000L
 #define WS_TABSTOP 0x00010000L
+#define WS_GROUP 0x00020000L
 #define WS_CHILDWINDOW WS_CHILD
 #define WS_EX_TOPMOST 0x00000008L
 
@@ -193,6 +193,10 @@ typedef struct tagWINDOWPOS {
 #define GWL_STYLE (-16)
 #define GWL_EXSTYLE (-20)
 #define GWL_USERDATA (-21)
+#define GCL_HBRBACKGROUND (-10)
+#define DWL_MSGRESULT 0
+#define DWL_DLGPROC 4
+#define DWL_USER 8
 
 #define GW_HWNDFIRST 0
 #define GW_HWNDLAST 1
@@ -216,10 +220,20 @@ typedef struct tagWINDOWPOS {
 #define WM_PAINT 0x000f
 #define WM_CLOSE 0x0010
 #define WM_QUERYENDSESSION 0x0011
+#define WM_QUERYOPEN 0x0013
 #define WM_QUIT 0x0012
 #define WM_ERASEBKGND 0x0014
 #define WM_SHOWWINDOW 0x0018
 #define WM_SETCURSOR 0x0020
+#define WM_NCHITTEST 0x0084
+#define WM_NCPAINT 0x0085
+#define WM_NCACTIVATE 0x0086
+#define WM_GETDLGCODE 0x0087
+#define WM_NCCALCSIZE 0x0083
+#define WM_GETMINMAXINFO 0x0024
+#define WM_NCMOUSEMOVE 0x00a0
+#define WM_NCLBUTTONDOWN 0x00a1
+#define WM_NCRBUTTONDOWN 0x00a4
 #define WM_DRAWITEM 0x002b
 #define WM_MEASUREITEM 0x002c
 #define WM_DELETEITEM 0x002d
@@ -238,6 +252,10 @@ typedef struct tagWINDOWPOS {
 #define WM_HSCROLL 0x0114
 #define WM_VSCROLL 0x0115
 #define WM_INITMENU 0x0116
+#define WM_MENUSELECT 0x011f
+#define WM_PARENTNOTIFY 0x0210
+#define WM_NOTIFY 0x004e
+#define WM_WINDOWPOSCHANGING 0x0046
 #define WM_KEYDOWN 0x0100
 #define WM_KEYUP 0x0101
 #define WM_CHAR 0x0102
@@ -259,6 +277,14 @@ typedef struct tagWINDOWPOS {
 #define WM_PALETTECHANGED 0x0311
 #define WM_USER 0x0400
 
+#define HTCAPTION 2
+#define HTMINBUTTON 8
+#define DLGC_BUTTON 0x2000
+#define WA_ACTIVE 1
+#define WA_CLICKACTIVE 2
+#define HELP_CONTEXT 1
+#define HELP_QUIT 2
+
 #define PM_NOREMOVE 0x0000
 #define PM_REMOVE 0x0001
 
@@ -268,12 +294,16 @@ typedef struct tagWINDOWPOS {
 #define BST_CHECKED 1
 #define BN_CLICKED 0
 #define LBN_SELCHANGE 1
+#define LBN_DBLCLK 2
 #define CBN_SELCHANGE 1
 #define EN_CHANGE 0x0300
 
 #define EM_LIMITTEXT 0x00c5
+#define EM_SETSEL 0x00b1
 
 #define LB_ADDSTRING 0x0180
+#define LB_ERRSPACE (-2)
+#define LB_ERR (-1)
 #define LB_INSERTSTRING 0x0181
 #define LB_DELETESTRING 0x0182
 #define LB_RESETCONTENT 0x0184
@@ -352,6 +382,23 @@ typedef struct tagWINDOWPOS {
 #define VK_RIGHT 0x27
 #define VK_DOWN 0x28
 #define VK_ESCAPE 0x1b
+#define VK_RETURN 0x0d
+#define VK_SPACE 0x20
+#define VK_SHIFT 0x10
+#define VK_CONTROL 0x11
+#define VK_MENU 0x12
+#define VK_TAB 0x09
+#define VK_BACK 0x08
+#define VK_F1 0x70
+#define VK_F2 0x71
+#define VK_F3 0x72
+#define VK_F4 0x73
+#define VK_F5 0x74
+#define VK_F6 0x75
+#define VK_F8 0x77
+#define VK_F9 0x78
+#define VK_F10 0x79
+#define VK_F12 0x7b
 
 #define SB_HORZ 0
 #define SB_VERT 1
@@ -371,6 +418,10 @@ typedef struct tagWINDOWPOS {
 #define SB_BOTTOM 7
 #define SB_RIGHT 7
 #define SB_ENDSCROLL 8
+#define SBM_GETPOS 0x00e1
+#define SBM_SETRANGE 0x00e2
+#define SBM_SETPOS 0x00e0
+#define SBM_GETRANGE 0x00e3
 
 #define MK_LBUTTON 0x0001
 #define MK_SHIFT 0x0004
@@ -399,12 +450,22 @@ typedef struct tagWINDOWPOS {
 #define WAIT_OBJECT_0 0
 #define WAIT_TIMEOUT 258
 #define STILL_ACTIVE 259
+#define THREAD_PRIORITY_NORMAL 0
 
 #define SM_CXSCREEN 0
 #define SM_CYSCREEN 1
 #define SM_CXBORDER 5
 #define SM_CYCAPTION 4
 #define SM_CYHSCROLL 3
+#define SM_CXSIZE 30
+#define SM_CXCURSOR 13
+#define SM_SLOWMACHINE 73
+
+#define SIZE_RESTORED 0
+#define SIZE_MINIMIZED 1
+#define MB_YESNO 0x00000004u
+#define ODS_GRAYED 0x0002
+#define ODS_DISABLED 0x0004
 
 #define MAKEINTRESOURCEA(id) ((LPSTR)(uintptr_t)(WORD)(id))
 #define MAKEINTRESOURCE MAKEINTRESOURCEA
@@ -440,6 +501,8 @@ int TranslateAcceleratorA(HWND window, HACCEL accelerator, MSG *message);
 
 LONG GetWindowLongA(HWND window, int index);
 LONG SetWindowLongA(HWND window, int index, LONG value);
+DWORD GetClassLongA(HWND window, int index);
+DWORD SetClassLongA(HWND window, int index, LONG value);
 WORD GetWindowWord(HWND window, int index);
 WORD SetWindowWord(HWND window, int index, WORD value);
 HWND GetParent(HWND window);
@@ -454,6 +517,7 @@ DWORD GetWindowThreadProcessId(HWND window, DWORD *process_id);
 
 BOOL GetClientRect(HWND window, RECT *rect);
 BOOL GetWindowRect(HWND window, RECT *rect);
+BOOL AdjustWindowRect(RECT *rect, DWORD style, BOOL menu);
 BOOL MoveWindow(HWND window, int x, int y, int width, int height, BOOL repaint);
 BOOL SetWindowPos(HWND window, HWND insert_after, int x, int y, int width, int height, UINT flags);
 BOOL ShowWindow(HWND window, int command);
@@ -471,6 +535,10 @@ int GetWindowTextA(HWND window, LPSTR text, int max_count);
 int GetWindowTextLengthA(HWND window);
 HWND SetFocus(HWND window);
 HWND GetFocus(void);
+HWND SetActiveWindow(HWND window);
+HWND SetCapture(HWND window);
+HWND GetCapture(void);
+BOOL ReleaseCapture(void);
 BOOL BringWindowToTop(HWND window);
 BOOL SetForegroundWindow(HWND window);
 
@@ -478,6 +546,7 @@ BOOL InvalidateRect(HWND window, const RECT *rect, BOOL erase);
 BOOL UpdateWindow(HWND window);
 HDC BeginPaint(HWND window, PAINTSTRUCT *paint);
 BOOL EndPaint(HWND window, const PAINTSTRUCT *paint);
+HDC GetWindowDC(HWND window);
 HWND GetDesktopWindow(void);
 HWND FindWindowA(LPCSTR class_name, LPCSTR window_name);
 HWND FindWindowExA(HWND parent, HWND child_after, LPCSTR class_name, LPCSTR window_name);
@@ -489,18 +558,27 @@ BOOL KillTimer(HWND window, UINT_PTR id);
 int GetSystemMetrics(int index);
 HACCEL LoadAcceleratorsA(HINSTANCE instance, LPCSTR resource_name);
 HICON LoadIconA(HINSTANCE instance, LPCSTR resource_name);
+BOOL DestroyIcon(HICON icon);
+HBITMAP LoadBitmapA(HINSTANCE instance, LPCSTR resource_name);
 HCURSOR LoadCursorA(HINSTANCE instance, LPCSTR resource_name);
+HCURSOR SetCursor(HCURSOR cursor);
+SHORT GetKeyState(int virtual_key);
+LONG GetMessageTime(void);
+BOOL IsIconic(HWND window);
 void InitCommonControls(void);
 BOOL MessageBeep(UINT type);
+BOOL WinHelpA(HWND window, LPCSTR help_file, UINT command, ULONG_PTR data);
 
 HMENU CreatePopupMenu(void);
 BOOL AppendMenuA(HMENU menu, UINT flags, UINT_PTR item, LPCSTR text);
 BOOL InsertMenuA(HMENU menu, UINT position, UINT flags, UINT_PTR item, LPCSTR text);
+BOOL ModifyMenuA(HMENU menu, UINT position, UINT flags, UINT_PTR item, LPCSTR text);
 UINT CheckMenuItem(HMENU menu, UINT item, UINT flags);
 UINT EnableMenuItem(HMENU menu, UINT item, UINT flags);
 BOOL DeleteMenu(HMENU menu, UINT item, UINT flags);
 BOOL RemoveMenu(HMENU menu, UINT item, UINT flags);
 BOOL DestroyMenu(HMENU menu);
+int GetMenuItemCount(HMENU menu);
 BOOL TrackPopupMenu(HMENU menu, UINT flags, int x, int y, int reserved,
                     HWND window, const RECT *exclude);
 HMENU shandalar_win32_active_popup(HWND *owner, int *x, int *y);
@@ -525,11 +603,18 @@ INT_PTR DialogBoxParamA(HINSTANCE instance, LPCSTR template_name, HWND parent,
 BOOL EndDialog(HWND dialog, INT_PTR result);
 HWND shandalar_win32_active_dialog(void);
 LRESULT SendDlgItemMessageA(HWND dialog, int id, UINT message, WPARAM wparam, LPARAM lparam);
+BOOL SetDlgItemTextA(HWND dialog, int id, LPCSTR text);
+UINT GetDlgItemTextA(HWND dialog, int id, LPSTR text, int max_count);
+BOOL SetDlgItemInt(HWND dialog, int id, UINT value, BOOL is_signed);
+UINT GetDlgItemInt(HWND dialog, int id, BOOL *translated, BOOL is_signed);
 UINT IsDlgButtonChecked(HWND dialog, int id);
 BOOL CheckDlgButton(HWND dialog, int id, UINT check);
+BOOL CheckRadioButton(HWND dialog, int first_id, int last_id, int check_id);
 
 typedef HWND (*ShandalarDialogFactory)(HINSTANCE instance, LPCSTR template_name, HWND parent);
 void shandalar_win32_set_dialog_factory(ShandalarDialogFactory factory);
+BOOL shandalar_win32_register_dialog_factory(UINT resource_id,
+                                             ShandalarDialogFactory factory);
 HWND shandalar_win32_create_dialog(HINSTANCE instance, HWND parent, LPCSTR title,
                                    int x, int y, int width, int height);
 
@@ -538,10 +623,13 @@ FARPROC GetProcAddress(HMODULE module, LPCSTR proc_name);
 BOOL shandalar_win32_register_proc(LPCSTR proc_name, FARPROC proc);
 DWORD GetCurrentDirectoryA(DWORD size, LPSTR buffer);
 BOOL SetCurrentDirectoryA(LPCSTR path);
+BOOL CopyFileA(LPCSTR existing_filename, LPCSTR new_filename, BOOL fail_if_exists);
 void Sleep(DWORD milliseconds);
 DWORD GetTickCount(void);
 HANDLE GetCurrentProcess(void);
 HANDLE GetCurrentThread(void);
+BOOL GetThreadTimes(HANDLE thread, FILETIME *creation, FILETIME *exit,
+                    FILETIME *kernel, FILETIME *user);
 BOOL DuplicateHandle(HANDLE source_process, HANDLE source_handle,
                      HANDLE target_process, HANDLE *target_handle,
                      DWORD access, BOOL inherit, DWORD options);

@@ -8,6 +8,7 @@
 #include "cardartlib/src/palette.h"
 #include "defs.h"
 #include "magic/src/duel_engine.h"
+#include "magic/src/duel_runtime.h"
 #include "magic/src/game_support.h"
 #include "magic/src/global_duel_ui_ids.h"
 #include "magic/src/global_other.h"
@@ -54,7 +55,6 @@ void resize_duel_hand_window(HWND hwnd);
 void set_player_directive_value(int player, int value);
 void get_current_duel_selection(int *selected_player, int *selected_card);
 void copy_autosave_to_save_file(LPCSTR save_path);
-DWORD WINAPI start_duel_thread(LPVOID unused);
 void StopWorldLocationMusic(void);
 void reset_duel_globals(void);
 void reset_timestamp_players(void);
@@ -111,7 +111,7 @@ extern int g_random_seed_tick_value;
 // GLOBAL: SHANDALAR 0x0058e048
 // GLOBAL: SHANDALAR 0x0058e04c
 int g_showlibrary_menu_selection = 0;
-int single_color_test_bit_to_color_t(int color_mask);
+color_t single_color_test_bit_to_color_t(color_test_t color_mask);
 void AddJournalEntry(int entry_type, int entry_arg);
 int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char *title, int require_card_click, int *out_selection);
 #endif
@@ -2907,11 +2907,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     s.done = 0;
     while (s.done == 0)
     {
-      GetExitCodeThread(g_duel_thread_handle, &s.thread_exit_code);
-      if (s.thread_exit_code != STILL_ACTIVE)
-      {
-        s.done = 1;
-      }
       s.have_message = PeekMessageA(&s.modal_msg, (HWND)0, 0, 0, PM_REMOVE);
       if (g_duel_main_window_closing != 0)
       {
@@ -2964,12 +2959,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
   case 0x401:
     s.duel_result = (HWND)wparam;
     s.should_quit = 1;
-    if (g_duel_thread_handle != (HANDLE)0)
-    {
-      WaitForSingleObject(g_duel_thread_handle, INFINITE);
-      CloseHandle(g_duel_thread_handle);
-      g_duel_thread_handle = (HANDLE)0;
-    }
     if ((g_duel_mode_flags & 1) != 0)
     {
       if (g_duel_interface_options.see_next_draws_at_end_of_duel != 0)
@@ -3181,13 +3170,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     }
     else
     {
-      g_duel_thread_handle = CreateThread((LPSECURITY_ATTRIBUTES)0,
-                                          0,
-                                          start_duel_thread,
-                                          (LPVOID)0,
-                                          0,
-                                          (LPDWORD)&s.enemy_backdrop_color);
-      SetThreadPriority(g_duel_thread_handle, THREAD_PRIORITY_NORMAL);
+      g_duel_thread_handle = (HANDLE)0;
+      s.thread_exit_code = start_duel_thread((LPVOID)0);
+      SendMessageA(hwnd, 0x401, s.thread_exit_code, 0);
     }
     return 0;
 

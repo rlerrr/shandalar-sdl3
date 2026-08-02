@@ -37,6 +37,43 @@ through the shared SDL compositor, while the generic ImGui bridge and
 Deck-specific interaction code are independently consumable by the future
 Duel host.
 
+## Implementation Status
+
+The initial integration is implemented:
+
+- The complete embedded Duel and card source set is synchronized from the
+  recorded decomp baseline. `exe_stubs.c` and `exe_stubs_44xx.c` remain in the
+  source list because they contain required game implementations despite
+  their provisional names.
+- `magic_runtime_stubs.c` has been eliminated. Its remaining valid SDL host
+  glue now lives in `magic_runtime.c`, and Duel resource initialization uses
+  the real shared font/card-overlay implementation.
+- `RunDuelEngine` no longer returns a synthetic win. Duel execution is
+  synchronous, with a Duel-local `setjmp`/`longjmp` replacing both deep
+  `ExitThread` paths and a single completion message after return.
+- The Duel has an explicit 1024x768 SDL compositor/ImGui host lifecycle which
+  restores the Shandalar title, logical resolution, input, and event pump on
+  exit.
+- The Win32 compatibility layer now covers the additional GDI, capture,
+  cursor, key-state, accelerator, scrollbar/up-down, menu, dialog, and
+  lifecycle calls reached by the imported code.
+- Dialog factories are registered by resource ID, allowing Deck and Duel
+  dialogs to coexist. The embedded-Duel dialog set listed below is registered
+  with its original control IDs and dialog procedures.
+- Popup submenus, radio/check state, list double-click, default/cancel keys,
+  focus traversal, and accelerator table 111 are supported by the shared
+  overlay.
+- Coin playback remains intentionally inert through the 320x240 MCI
+  compatibility child.
+- Native x86 and Emscripten Shandalar both compile and link. The native
+  compatibility and Statwin asset tests pass, and native startup remains
+  stable in a timed process smoke test.
+
+Interactive encounter/outcome coverage is still required before calling the
+full gameplay acceptance matrix complete. The in-app browser surface was not
+available for the current Web smoke run, so the Web result is build/link
+verification only.
+
 ## Implementation Changes
 
 ### Original source and stub replacement
