@@ -556,7 +556,7 @@ unsigned int save_or_load_ver1(void)
   result &= save_or_load_data(g_life, 8);
   result &= save_or_load_data(g_poison_counters, 8);
   result &= save_or_load_data(&g_player_duel_state_00938e38, 8);
-  result &= save_or_load_data(g_global_power_bonus, 0x10);
+  result &= save_or_load_data(g_global_stats_bonus, 0x10);
   result &= save_or_load_data(&g_current_player, 4);
   result &= save_or_load_data(&g_current_encounter_color, 4);
   result &= save_or_load_data(&g_ai_modifier, 4);
@@ -600,7 +600,7 @@ unsigned int save_or_load_ver1(void)
   result &= save_or_load_data(&g_duel_state_00925ac4, 4);
   result &= save_or_load_data(&g_ai_action_score_table, 0x40);
   result &= save_or_load_data(&g_duel_state_008a8de4, 4);
-  result &= save_or_load_data(&g_ai_side_score_player_0, 8);
+  result &= save_or_load_data(g_ai_side_scores, 8);
   result &= save_or_load_data(&g_nested_trigger_stack, 0x40);
   result &= save_or_load_data(&g_ai_search_best_score, 4);
   result &= save_or_load_data(&g_current_spell_state, 4);
@@ -764,7 +764,7 @@ unsigned int save_or_load_ver2(void)
   result &= save_or_load_data(g_poison_counters, 8);
   result &= save_or_load_data(g_lich_active, 8);
   result &= save_or_load_data(&g_player_duel_state_00938e38, 8);
-  result &= save_or_load_data(g_global_power_bonus, 0x10);
+  result &= save_or_load_data(g_global_stats_bonus, 0x10);
   result &= save_or_load_data(&g_current_player, 4);
   result &= save_or_load_data(&g_current_encounter_color, 4);
   result &= save_or_load_data(&g_ai_modifier, 4);
@@ -808,7 +808,7 @@ unsigned int save_or_load_ver2(void)
   result &= save_or_load_data(&g_duel_state_00925ac4, 4);
   result &= save_or_load_data(&g_ai_action_score_table, 0x40);
   result &= save_or_load_data(&g_duel_state_008a8de4, 4);
-  result &= save_or_load_data(&g_ai_side_score_player_0, 8);
+  result &= save_or_load_data(g_ai_side_scores, 8);
   result &= save_or_load_data(&g_nested_trigger_stack, 0x40);
   result &= save_or_load_data(&g_ai_search_best_score, 4);
   result &= save_or_load_data(&g_current_spell_state, 4);
