@@ -273,6 +273,23 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   screen.x = (LONG)x;
   screen.y = (LONG)y;
   shandalar_win32_set_cursor_position(screen.x, screen.y);
+  /*
+   * ImGui owns mouse input while it is displaying a Win32 popup menu.  Keep
+   * our button-state bookkeeping current, but do not route the same event to
+   * the legacy window underneath the menu.
+   */
+  if (shandalar_win32_active_popup(NULL, NULL, NULL)) {
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
+        event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+      WPARAM button = event->button.button == SDL_BUTTON_LEFT ? MK_LBUTTON :
+                      event->button.button == SDL_BUTTON_RIGHT ? MK_RBUTTON : 0;
+      if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+        g_mouse_buttons |= button;
+      else
+        g_mouse_buttons &= ~button;
+    }
+    return 1;
+  }
   target = GetCapture();
   if (!target)
     target = WindowFromPoint(screen);
@@ -326,7 +343,7 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   } else {
     return 0;
   }
-  SendMessageA(target, message, g_mouse_buttons, local);
+  PostMessageA(target, message, g_mouse_buttons, local);
   return 1;
 }
 

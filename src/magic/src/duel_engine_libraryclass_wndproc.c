@@ -22,6 +22,7 @@ extern int g_duel_cached_library_count_player_1;
 extern char global_base_directory[];
 extern int is_invalid_duel_player(int player);
 extern LRESULT handle_duel_inactive_cursor(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+int load_text_with_tab_escapes(char *filename, char *section_name);
 
 // GLOBAL: MAGIC 0x0055e0b8
 // GLOBAL: SHANDALAR 0x0057f098
@@ -236,6 +237,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
       if (s.shuffle_windows[s.shuffle_index] != (HWND)0)
       {
         UpdateWindow(s.shuffle_windows[s.shuffle_index]);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+        shandalar_win32_pump(TRUE);
+#endif
         s.shuffle_x += (s.shuffle_card_width * 0xf) / 100;
       }
     }
@@ -246,6 +250,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
         DestroyWindow(s.shuffle_windows[s.shuffle_index]);
       }
       UpdateWindow(DUEL_MAIN_WINDOW_HWND);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+      shandalar_win32_pump(TRUE);
+#endif
     }
     return 0;
 

@@ -26,6 +26,14 @@ extern const char *g_duel_sound_filenames[];
 extern char global_duelsounds_path[0x110];
 
 int GetNextManaSymbol(char **text);
+int raw_do_dialog(int bigcard_player, int bigcard_card, int smallcard_player, int smallcard_card,
+                  char *prompt, int dialog_mode);
+int ReadPalette(char *palette_text_path, char *palette_binary_path);
+int legacy_clear_graphics_page_stub(int page, int color);
+int legacy_load_pcx_into_page_no_palette_stub(const char *filename);
+int legacy_load_pcx_into_page_stub(int page, int x, int y, const char *filename, void *palette);
+int legacy_blit_graphics_rect_stub(int dst, int dst_x, int dst_y, int width, int height,
+                                   int src, int src_x, int src_y, int src_width, int src_height);
 void append_to_trace_txt(char *text);
 int choose_a_color_dialog(int player, const char *prompt, int use_color_names_instead_of_land, int ai_choice, unsigned int available_colors);
 
@@ -49,6 +57,7 @@ int process_killed_card(int player, int card);
 char *get_displayed_card_name(int player, int card);
 int dispatch_trigger_twice_once_with_each_player_as_reason(int reason_for_trig, trigger_t trig, const char *prompt, int a4);
 int allow_response(int response_player, int phase, char *prompt, int event_code);
+int prompt_for_life_total(int player, char *prompt, int initial_life_total);
 
 void position_duel_prompt_context_window(HWND prompt_hwnd);
 void setup_duel_prompt_context_text_dc(HWND prompt_hwnd, HDC dc, int *rect_values);
@@ -1254,7 +1263,7 @@ int choose_best_card_from_library(int player, unsigned int type_mask)
 
 // FUNCTION: MAGIC 0x00481e25
 // FUNCTION: SHANDALAR 0x0048592f
-int card_two_headed_giant_of_foriys_legacy(int player, int card, int event)
+int card_two_headed_giant_of_foriys_legacy(int player, int card, event_t event)
 {
   if (event == 0x78 && card == g_affected_card && player == g_affected_card_controller)
   {
@@ -3133,25 +3142,26 @@ int choose_a_color(int player, const char *prompt, int use_color_names_instead_o
 
 // FUNCTION: MOK 0x0044e050
 // FUNCTION: MAGIC 0x004e1d6d
-int legacy_blit_graphics_rect_stub()
+int legacy_blit_graphics_rect_stub(int dst, int dst_x, int dst_y, int width, int height,
+                                   int src, int src_x, int src_y, int src_width, int src_height)
 {
   return 0;
 }
 
 // FUNCTION: MAGIC 0x004e1d91
-int legacy_load_pcx_into_page_stub()
+int legacy_load_pcx_into_page_stub(int page, int x, int y, const char *filename, void *palette)
 {
   return 1;
 }
 
 // FUNCTION: MAGIC 0x004e1da6
-int legacy_load_pcx_into_page_no_palette_stub()
+int legacy_load_pcx_into_page_no_palette_stub(const char *filename)
 {
   return 1;
 }
 
 // FUNCTION: MAGIC 0x004e1c81
-int legacy_clear_graphics_page_stub()
+int legacy_clear_graphics_page_stub(int page, int color)
 {
 }
 

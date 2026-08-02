@@ -24,6 +24,9 @@ target_link_libraries(shandalar_platform PUBLIC
   SDL3::SDL3
   SDL3_ttf::SDL3_ttf
 )
+if(SHANDALAR_BUILD_SHANDALAR)
+  target_link_libraries(shandalar_platform PUBLIC SDL3_image::SDL3_image)
+endif()
 
 if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_SHANDALAR)
   add_library(legacy_imgui STATIC

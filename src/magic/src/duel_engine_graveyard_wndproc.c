@@ -42,7 +42,7 @@ int load_text_with_tab_escapes(char *filename, char *section_name);
 LRESULT CALLBACK wndproc_ExpandedGraveyard(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 LRESULT CALLBACK wndproc_GraveyardCards(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-BOOL CALLBACK dlgproc_ViewAntes(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK dlgproc_ViewAntes(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 // GLOBAL: MAGIC 0x0055e00c
 int g_graveyard_window_long_offset = 0;
@@ -437,7 +437,7 @@ void get_view_antes_card_rect(RECT *rect, HWND hwnd, int opponent, int index)
 }
 
 // FUNCTION: MAGIC 0x00452059
-BOOL CALLBACK dlgproc_ViewAntes(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_ViewAntes(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {

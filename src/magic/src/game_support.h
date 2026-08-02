@@ -394,7 +394,7 @@ int select_card_from_graveyard(int player,
 int choose_best_card_from_library(int player, unsigned int type_mask);
 int select_best_land_target_by_score(int preferred_player, int only_player, int *target_data);
 int drain_power_draw_mana_from_land(int player, int card, int internal_card_id);
-int card_two_headed_giant_of_foriys_legacy(int player, int card, int event);
+int card_two_headed_giant_of_foriys_legacy(int player, int card, event_t event);
 int reattach_if_attached_to_source(int source_player, int source_card, int test_player, int test_card, int internal_card_id);
 void remove_card_from_deck(int player, int position);
 void shuffle_duel_library(int player, int deck_owner);

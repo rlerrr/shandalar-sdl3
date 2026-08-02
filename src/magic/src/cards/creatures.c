@@ -12,6 +12,7 @@ void replace_text_token(char *text, char *search, int case_sensitive, char *repl
 int AddCardToDeckSorted(int card_id);
 void remove_card_from_shandalar_deck_by_id(unsigned int card_id);
 extern int combat_eval_abilities;
+int create_damage_effect_copy_for_target_player(int player, int card);
 #ifdef SHANDALAR
 int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char *title,
                                  int require_card_click, int *out_selection);

@@ -122,8 +122,8 @@ void copy_opponent_name_prefix(char *name);
 void delete_and_close_object(HANDLE obj);
 void change_buttonclass_wndproc(HWND hwnd);
 void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item, HBRUSH brush, HPEN pen1, HPEN pen2, COLORREF color, int draw_focus);
-BOOL CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-BOOL CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 #define PICK_CARD_FULLCARD_ID 1030
 #define PICK_CARD_LISTBOX_ID 1031
@@ -1373,7 +1373,7 @@ void show_post_duel_draws(int duel_result)
 
 // FUNCTION: MAGIC 0x0049d9b4
 // FUNCTION: SHANDALAR 0x00539361
-BOOL CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -1748,7 +1748,7 @@ void cleanup_post_duel_draws_dialog_resources(HBITMAP background, HBRUSH button_
 
 // FUNCTION: MAGIC 0x004ddc39
 // FUNCTION: SHANDALAR 0x005448ea
-BOOL CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -2106,7 +2106,7 @@ static __inline void select_first_pick_card(HWND hwnd)
 }
 
 // FUNCTION: MAGIC 0x0050630c
-static BOOL CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -2908,6 +2908,20 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     while (s.done == 0)
     {
       s.have_message = PeekMessageA(&s.modal_msg, (HWND)0, 0, 0, PM_REMOVE);
+#ifdef SHANDALAR
+      /*
+       * The original duel worker left the Win32 UI thread free to enqueue
+       * selection input. Shandalar runs the duel synchronously, so an empty
+       * PeekMessage loop would starve the SDL/browser pump. GetMessageA uses
+       * the compatibility pump while it waits and still returns the same
+       * queued message for the modal loop to dispatch below.
+       */
+      if (s.have_message == 0)
+      {
+        GetMessageA(&s.modal_msg, (HWND)0, 0, 0);
+        s.have_message = 1;
+      }
+#endif
       if (g_duel_main_window_closing != 0)
       {
         if ((s.have_message != 0) && (s.modal_msg.message == 0x464))

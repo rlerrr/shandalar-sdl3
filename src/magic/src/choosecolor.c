@@ -71,8 +71,8 @@ card_id_t get_displayed_card_id(int player, int card);
 unsigned int draw_displayed_full_card(HDC dc, RECT *rect, card_ptr_t *raw_card, int player, int card,
                                       int draw_mode, int expand_text_box);
 
-BOOL WINAPI dlgproc_choose_color(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-BOOL WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR WINAPI dlgproc_choose_color(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void setup_magical_hack_dialog_resources(HBITMAP *background, COLORREF *label_text_color,
                                          HBRUSH *button_brush, HPEN *button_pen1, HPEN *button_pen2,
                                          COLORREF *button_unfocus_text_color,
@@ -318,7 +318,7 @@ int choose_a_color_dialog(int player, const char *prompt, int use_color_names_in
 
 // FUNCTION: MAGIC 0x004a142c
 // FUNCTION: SHANDALAR 0x0053cdc4
-BOOL WINAPI dlgproc_choose_color(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR WINAPI dlgproc_choose_color(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -858,7 +858,7 @@ int choose_magical_hack_colors(int player, target_t *target, const char *prompt,
 
 // FUNCTION: MAGIC 0x004a2855
 // FUNCTION: SHANDALAR 0x0053e1d9
-BOOL WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {

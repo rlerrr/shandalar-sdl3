@@ -5,6 +5,7 @@
 #define MAX_COMPAT_TIMERS 64
 
 typedef struct CompatTimer {
+  int active;
   HWND window;
   UINT_PTR id;
   UINT interval;
@@ -13,6 +14,7 @@ typedef struct CompatTimer {
 } CompatTimer;
 
 static CompatTimer g_timers[MAX_COMPAT_TIMERS];
+static UINT_PTR g_next_thread_timer_id = 1;
 static POINT g_cursor;
 static int g_accelerator_sentinel;
 static UINT g_accelerator_resource_id;
@@ -64,19 +66,27 @@ HWND WindowFromPoint(POINT point)
 
 UINT_PTR SetTimer(HWND window, UINT_PTR id, UINT interval_ms, TIMERPROC proc)
 {
+  UINT_PTR assigned_id = id;
   size_t i;
-  if (!window || !IsWindow(window))
+  if (window && !IsWindow(window))
     return 0;
+  if (!window && !assigned_id) {
+    assigned_id = g_next_thread_timer_id++;
+    if (!g_next_thread_timer_id)
+      g_next_thread_timer_id = 1;
+  }
   if (!interval_ms)
     interval_ms = 1;
   for (i = 0; i < MAX_COMPAT_TIMERS; ++i) {
-    if ((g_timers[i].window == window && g_timers[i].id == id) || !g_timers[i].window) {
+    if ((g_timers[i].active && g_timers[i].window == window &&
+         g_timers[i].id == assigned_id) || !g_timers[i].active) {
+      g_timers[i].active = 1;
       g_timers[i].window = window;
-      g_timers[i].id = id;
+      g_timers[i].id = assigned_id;
       g_timers[i].interval = interval_ms;
       g_timers[i].proc = proc;
       g_timers[i].next_tick = SDL_GetTicks() + interval_ms;
-      return id ? id : 1;
+      return assigned_id ? assigned_id : 1;
     }
   }
   return 0;
@@ -86,7 +96,8 @@ BOOL KillTimer(HWND window, UINT_PTR id)
 {
   size_t i;
   for (i = 0; i < MAX_COMPAT_TIMERS; ++i) {
-    if (g_timers[i].window == window && g_timers[i].id == id) {
+    if (g_timers[i].active && g_timers[i].window == window &&
+        g_timers[i].id == id) {
       memset(&g_timers[i], 0, sizeof(g_timers[i]));
       return TRUE;
     }
@@ -100,9 +111,9 @@ void shandalar_win32_runtime_tick(void)
   size_t i;
   for (i = 0; i < MAX_COMPAT_TIMERS; ++i) {
     CompatTimer *timer = &g_timers[i];
-    if (!timer->window)
+    if (!timer->active)
       continue;
-    if (!IsWindow(timer->window)) {
+    if (timer->window && !IsWindow(timer->window)) {
       memset(timer, 0, sizeof(*timer));
       continue;
     }
@@ -116,6 +127,7 @@ void shandalar_win32_runtime_tick(void)
 void shandalar_win32_runtime_reset(void)
 {
   memset(g_timers, 0, sizeof(g_timers));
+  g_next_thread_timer_id = 1;
   memset(&g_cursor, 0, sizeof(g_cursor));
 }
 

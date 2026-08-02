@@ -39,9 +39,6 @@ target_compile_definitions(shandalar PRIVATE
 if(EMSCRIPTEN)
   target_compile_options(shandalar PRIVATE
     -include platform/legacy_io.h
-    -Wno-error=implicit-function-declaration
-    -Wno-error=incompatible-function-pointer-types
-    -Wno-error=incompatible-pointer-types
   )
 endif()
 target_include_directories(shandalar PRIVATE

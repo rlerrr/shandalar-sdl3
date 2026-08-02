@@ -18,8 +18,8 @@ enum { CT_STATIC, CT_BUTTON, CT_EDIT, CT_LIST, CT_ICON, CT_FULLCARD,
 #define GROUP 7
 #define CHECK BS_AUTOCHECKBOX
 #define OWNER BS_OWNERDRAW
-#define SX(value) ((value) * 3 / 2)
-#define SY(value) ((value) * 5 / 3)
+#define SX(value) ((value) * 5 / 2)
+#define SY(value) ((value) * 19 / 8)
 
 static const char *control_class(unsigned char type)
 {
@@ -66,24 +66,31 @@ static const char *control_text(int id)
 }
 
 static HWND make_dialog(HINSTANCE instance, HWND parent, const char *title,
-                        int width, int height, const ControlSpec *specs,
-                        size_t count)
+                        int width, int height, DWORD style,
+                        const ControlSpec *specs, size_t count)
 {
   RECT desktop;
   HWND dialog;
   size_t i;
   int pixel_width = SX(width);
-  int pixel_height = SY(height) + GetSystemMetrics(SM_CYCAPTION);
+  int pixel_height = SY(height) +
+                     (((style & WS_CAPTION) == WS_CAPTION) ?
+                          GetSystemMetrics(SM_CYCAPTION) : 0);
   GetClientRect(GetDesktopWindow(), &desktop);
   dialog = shandalar_win32_create_dialog(instance, parent, title,
                                          (desktop.right - pixel_width) / 2,
                                          (desktop.bottom - pixel_height) / 2,
                                          pixel_width, pixel_height);
+  if (dialog)
+    SetWindowLongA(dialog, GWL_STYLE, style);
   for (i = 0; dialog && i < count; ++i) {
     const ControlSpec *s = &specs[i];
-    CreateWindowExA(0, control_class(s->type), control_text(s->id),
+    const char *text = control_text(s->id);
+    if (s->type == CT_BIGCHOICE && text[0] == '\0')
+      text = NULL;
+    CreateWindowExA(0, control_class(s->type), text,
                     WS_CHILD | WS_VISIBLE | s->style, SX(s->x),
-                    SY(s->y) + GetSystemMetrics(SM_CYCAPTION), SX(s->width),
+                    SY(s->y), SX(s->width),
                     SY(s->height), dialog, (HMENU)(intptr_t)s->id, instance, NULL);
   }
   return dialog;
@@ -97,6 +104,7 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   size_t count = 0;
   int width = 180, height = 120;
   const char *title = "";
+  DWORD style = 0x80800840;
   static const ControlSpec d220[] = {
       C(CT_STATIC,1101,27,11,113,56,0), C(CT_EDIT,1100,64,73,40,12,WS_BORDER),
       C(CT_BUTTON,IDOK,27,95,50,14,OWNER), C(CT_BUTTON,IDCANCEL,88,95,50,14,OWNER)};
@@ -135,7 +143,7 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   static const ControlSpec d227[] = {
       C(CT_STATIC,1090,7,7,172,8,0), C(CT_STATIC,1095,7,32,69,8,0),
       C(CT_STATIC,1097,7,45,73,114,0), C(CT_STATIC,1094,93,32,95,8,0),
-      C(CT_STATIC,1096,93,45,73,114,0), C(CT_STATIC,1091,203,7,99,26,0),
+      C(CT_STATIC,1096,93,45,73,114,0), C(CT_STATIC,1091,203,7,99,26,SS_CENTER),
       C(CT_BUTTON,1092,211,52,73,20,OWNER), C(CT_STATIC,1093,209,86,86,28,0),
       C(CT_BUTTON,IDOK,210,164,73,20,OWNER)};
   static const ControlSpec d234[] = {
@@ -187,7 +195,7 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   default: return NULL;
   }
 #undef D
-  return make_dialog(instance, parent, title, width, height, specs, count);
+  return make_dialog(instance, parent, title, width, height, style, specs, count);
 }
 
 void duel_register_dialog_resources(void)

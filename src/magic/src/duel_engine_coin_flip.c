@@ -40,9 +40,12 @@ void draw_duel_dialog_bitmap_button(DRAWITEMSTRUCT *draw_item,
                                     HBITMAP disabled_bitmap,
                                     COLORREF text_color,
                                     int draw_focus);
-BOOL CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void load_coin_flip_animation_dialog_assets(HBRUSH *brush, COLORREF *text_color);
 void cleanup_coin_flip_animation_dialog_assets(HGDIOBJ brush);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+static BOOL CALLBACK restore_coin_flip_palette(HWND hwnd, LPARAM palette);
+#endif
 void load_redraw_ante_dialog_assets(HBITMAP *background,
                                     int *text_color,
                                     HBITMAP *normal_button_bitmap,
@@ -214,6 +217,7 @@ int coin_flip(int player, char *dialog_title, int show_dialog_if_animation_is_of
   {
     s.show_dialog = 0;
   }
+
   if (s.show_dialog != 0)
   {
     strcpy(s.animation_context.title, dialog_title);
@@ -237,10 +241,35 @@ int coin_flip(int player, char *dialog_title, int show_dialog_if_animation_is_of
     InvalidateRect(g_duel_help_owner_hwnd, (RECT *)0, 1);
     global_cart_art_hpalette = s.old_palette;
     ApplyCardArtPaletteToDc(g_shared_offscreen_dc);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    restore_coin_flip_palette(g_duel_window_hwnd, (LPARAM)s.old_palette);
+    EnumChildWindows(g_duel_window_hwnd, restore_coin_flip_palette,
+                     (LPARAM)s.old_palette);
+#endif
     DeleteObject(s.coin_flip_palette);
   }
   return s.animation_context.coin_result;
 }
+
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+static BOOL CALLBACK restore_coin_flip_palette(HWND hwnd, LPARAM palette)
+{
+  HDC dc = GetDC(hwnd);
+  if (dc != NULL)
+  {
+    SelectPalette(dc, (HPALETTE)palette, FALSE);
+    ReleaseDC(hwnd, dc);
+  }
+  /*
+   * The coin palette is cloned from the card-art palette, so the existing
+   * indexed pixels remain valid after this swap. Repainting every window here
+   * exposes partially covered backing surfaces during dialog teardown; the
+   * two battlefield windows that need refreshing are invalidated explicitly
+   * by coin_flip().
+   */
+  return TRUE;
+}
+#endif
 
 // FUNCTION: MAGIC 0x004a44b7
 // FUNCTION: SHANDALAR 0x0053fe44
@@ -262,7 +291,7 @@ void cleanup_coin_flip_animation_dialog_assets(HGDIOBJ brush)
 
 // FUNCTION: MAGIC 0x004a3d9c
 // FUNCTION: SHANDALAR 0x0053f72a
-BOOL CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -454,7 +483,7 @@ BOOL CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wpara
 
 // FUNCTION: MAGIC 0x0049a6c8
 // FUNCTION: SHANDALAR 0x00536086
-BOOL CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -1185,7 +1214,7 @@ void coin_flip_wait_for_network_choice_thread(void *hwnd)
 
 // FUNCTION: MAGIC 0x00499984
 // FUNCTION: SHANDALAR 0x00535344
-BOOL CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {

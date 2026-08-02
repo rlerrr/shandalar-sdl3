@@ -78,6 +78,23 @@ int restore_duel_turn_resume_state(void);
 int upkeep_phase(unsigned int player);
 int end_turn_phase(unsigned int player);
 int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int *phase_value);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+static void pump_ai_thinking_host(void)
+{
+  static DWORD last_pump_tick;
+  DWORD now = GetTickCount();
+
+  if (last_pump_tick == 0 || (DWORD)(now - last_pump_tick) >= 16)
+  {
+    /* The original AI ran off the UI thread.  Yield and service the SDL host
+     * while the synchronous port walks simulated turns. */
+    shandalar_win32_pump(FALSE);
+    last_pump_tick = GetTickCount();
+  }
+}
+#else
+#define pump_ai_thinking_host() ((void)0)
+#endif
 #ifndef SHANDALAR
 extern HANDLE global_mutex_GameInit;
 #endif
@@ -364,6 +381,9 @@ void run_duel_turn(unsigned int player)
 
   while (s.next_state != -1)
   {
+    if (g_duel_ai_mode_state == 1)
+      pump_ai_thinking_host();
+
     switch (s.next_state)
     {
     case 0:
@@ -1672,6 +1692,8 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
   *next_state = -1;
   if (g_duel_ai_mode_state == 1)
   {
+    pump_ai_thinking_host();
+
     s.opponent = 1 - player;
     for (s.index = 0; s.index <= 7; s.index = s.index + 1)
     {

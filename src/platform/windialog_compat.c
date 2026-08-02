@@ -99,6 +99,7 @@ HWND shandalar_win32_create_dialog(HINSTANCE instance, HWND parent, LPCSTR title
   WNDCLASSA window_class;
   memset(&window_class, 0, sizeof(window_class));
   window_class.lpfnWndProc = dialog_window_proc;
+  window_class.cbWndExtra = DLGWINDOWEXTRA;
   window_class.lpszClassName = "#32770";
   window_class.hInstance = instance;
   RegisterClassA(&window_class);

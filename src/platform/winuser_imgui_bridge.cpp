@@ -8,6 +8,8 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
+#include <cctype>
+
 namespace {
 
 SDL_Renderer *g_renderer;
@@ -23,6 +25,17 @@ bool is_descendant_or_self(HWND window, HWND ancestor)
     if (window == ancestor)
       return true;
     window = GetParent(window);
+  }
+  return false;
+}
+
+bool is_dialog_control(HWND window)
+{
+  char class_name[32] = {};
+  for (window = GetParent(window); window; window = GetParent(window)) {
+    GetClassNameA(window, class_name, sizeof(class_name));
+    if (SDL_strcasecmp(class_name, "#32770") == 0)
+      return true;
   }
   return false;
 }
@@ -45,7 +58,8 @@ void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list
                                                 &texture_height);
     if (texture) {
       GetClassNameA(window, class_name, sizeof(class_name));
-      if (SDL_strcasecmp(class_name, "#32770") == 0) {
+      if (SDL_strcasecmp(class_name, "#32770") == 0 &&
+          (GetWindowLongA(window, GWL_STYLE) & WS_CAPTION) == WS_CAPTION) {
         int caption_height = GetSystemMetrics(SM_CYCAPTION);
         draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left),
@@ -105,6 +119,99 @@ void draw_window_scrollbars(HWND window)
   ImGui::PopID();
 }
 
+void draw_static_text(const char *text, const RECT &rect, LONG style)
+{
+  constexpr LONG static_type_mask = 0x1fL;
+  constexpr LONG static_center = 0x01L;
+  constexpr LONG static_right = 0x02L;
+  constexpr LONG static_simple = 0x0bL;
+  constexpr LONG static_left_no_word_wrap = 0x0cL;
+  const LONG type = style & static_type_mask;
+  const float left = static_cast<float>(rect.left);
+  const float top = static_cast<float>(rect.top);
+  const float right = static_cast<float>(rect.right);
+  const float bottom = static_cast<float>(rect.bottom);
+  const float width = right - left;
+  const float line_height = ImGui::GetTextLineHeight();
+  const ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+  ImDrawList *draw_list = ImGui::GetWindowDrawList();
+  const char *cursor = text;
+  float y = top;
+
+  draw_list->PushClipRect(ImVec2(left, top), ImVec2(right, bottom), true);
+  while (*cursor && y < bottom) {
+    const char *line_start = cursor;
+    const char *line_end = cursor;
+    const char *last_space = nullptr;
+
+    while (*line_end && *line_end != '\n') {
+      const char *candidate_end = line_end + 1;
+      if (type != static_simple && type != static_left_no_word_wrap &&
+          ImGui::CalcTextSize(line_start, candidate_end).x > width) {
+        if (last_space && last_space > line_start)
+          line_end = last_space;
+        else if (line_end == line_start)
+          line_end = candidate_end;
+        break;
+      }
+      if (std::isspace(static_cast<unsigned char>(*line_end)))
+        last_space = line_end;
+      line_end = candidate_end;
+    }
+
+    const char *visible_end = line_end;
+    while (visible_end > line_start &&
+           std::isspace(static_cast<unsigned char>(visible_end[-1])))
+      --visible_end;
+    const float line_width = ImGui::CalcTextSize(line_start, visible_end).x;
+    float x = left;
+    if (type == static_center)
+      x += (width - line_width) * 0.5f;
+    else if (type == static_right)
+      x += width - line_width;
+    draw_list->AddText(ImVec2(x, y), color, line_start, visible_end);
+    y += line_height;
+
+    cursor = line_end;
+    if (*cursor == '\n')
+      ++cursor;
+    else
+      while (*cursor && std::isspace(static_cast<unsigned char>(*cursor)))
+        ++cursor;
+    if (type == static_simple || type == static_left_no_word_wrap)
+      break;
+  }
+  draw_list->PopClipRect();
+}
+
+bool draw_coin_flip_title(HWND window, const char *text, const RECT &rect)
+{
+  if (GetDlgCtrlID(window) != 0x41b)
+    return false;
+
+  HWND parent = GetParent(window);
+  char parent_class[32] = {};
+  RECT parent_rect = {};
+  if (!parent ||
+      !GetClassNameA(parent, parent_class, sizeof(parent_class)) ||
+      SDL_strcasecmp(parent_class, "#32770") != 0 ||
+      !GetWindowRect(parent, &parent_rect))
+    return false;
+
+  const ImVec2 text_size = ImGui::CalcTextSize(text);
+  const float x = (static_cast<float>(parent_rect.left + parent_rect.right) -
+                   text_size.x) * 0.5f;
+  const float y = static_cast<float>(rect.top);
+  ImDrawList *draw_list = ImGui::GetWindowDrawList();
+  draw_list->AddRectFilled(ImVec2(x - 10.0f, y - 3.0f),
+                           ImVec2(x + text_size.x + 10.0f,
+                                  y + text_size.y + 3.0f),
+                           IM_COL32(48, 32, 80, 255));
+  draw_list->AddText(ImVec2(x + 1.0f, y), IM_COL32_WHITE, text);
+  draw_list->AddText(ImVec2(x, y), IM_COL32_WHITE, text);
+  return true;
+}
+
 void draw_builtin_control(HWND window)
 {
   if (!IsWindowVisible(window) || !IsWindowEnabled(window))
@@ -122,33 +229,63 @@ void draw_builtin_control(HWND window)
 
   ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)));
   ImGui::PushID(window);
+  const bool use_dialog_text_color = is_dialog_control(window);
+  if (use_dialog_text_color)
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32_BLACK);
   LONG style = GetWindowLongA(window, GWL_STYLE);
   if (SDL_strcasecmp(class_name, "BUTTON") == 0) {
     LONG type = style & BS_TYPEMASK;
-    if (type == BS_CHECKBOX || type == BS_AUTOCHECKBOX) {
+    if (type == BS_GROUPBOX) {
+      ImDrawList *draw_list = ImGui::GetWindowDrawList();
+      const float label_x = static_cast<float>(rect.left + 10);
+      const float label_y = static_cast<float>(rect.top);
+      const float border_y = label_y + ImGui::GetTextLineHeight() * 0.5f;
+      const float label_right = label_x + ImGui::CalcTextSize(text).x;
+      const ImU32 border_color = ImGui::GetColorU32(ImGuiCol_Border);
+      draw_list->AddLine(ImVec2(static_cast<float>(rect.left), border_y),
+                         ImVec2(label_x - 3.0f, border_y), border_color);
+      draw_list->AddLine(ImVec2(label_right + 3.0f, border_y),
+                         ImVec2(static_cast<float>(rect.right), border_y),
+                         border_color);
+      draw_list->AddLine(ImVec2(static_cast<float>(rect.left), border_y),
+                         ImVec2(static_cast<float>(rect.left),
+                                static_cast<float>(rect.bottom)),
+                         border_color);
+      draw_list->AddLine(ImVec2(static_cast<float>(rect.right), border_y),
+                         ImVec2(static_cast<float>(rect.right),
+                                static_cast<float>(rect.bottom)),
+                         border_color);
+      draw_list->AddLine(ImVec2(static_cast<float>(rect.left),
+                                static_cast<float>(rect.bottom)),
+                         ImVec2(static_cast<float>(rect.right),
+                                static_cast<float>(rect.bottom)),
+                         border_color);
+      draw_list->AddText(ImVec2(label_x, label_y),
+                         ImGui::GetColorU32(ImGuiCol_Text), text);
+    } else if (type == BS_CHECKBOX || type == BS_AUTOCHECKBOX) {
       bool checked = SendMessageA(window, BM_GETCHECK, 0, 0) == BST_CHECKED;
       if (ImGui::Checkbox(text[0] ? text : "##check", &checked)) {
         SendMessageA(window, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
         SetFocus(window);
         send_control_command(window, BN_CLICKED);
       }
-    } else if (type == 9) {
+    } else if (type == BS_AUTORADIOBUTTON) {
       bool checked = SendMessageA(window, BM_GETCHECK, 0, 0) == BST_CHECKED;
       if (ImGui::RadioButton(text[0] ? text : " ", checked)) {
         HWND group = window;
         HWND candidate;
-        while ((candidate = GetWindow(group, GW_HWNDPREV)) != nullptr) {
+        while (!(GetWindowLongA(group, GWL_STYLE) & WS_GROUP) &&
+               (candidate = GetWindow(group, GW_HWNDNEXT)) != nullptr) {
           group = candidate;
-          if (GetWindowLongA(group, GWL_STYLE) & WS_GROUP)
-            break;
         }
-        for (candidate = group; candidate; candidate = GetWindow(candidate, GW_HWNDNEXT)) {
+        for (candidate = group; candidate; candidate = GetWindow(candidate, GW_HWNDPREV)) {
           if (candidate != group && (GetWindowLongA(candidate, GWL_STYLE) & WS_GROUP))
             break;
           char sibling_class[32] = {};
           GetClassNameA(candidate, sibling_class, sizeof(sibling_class));
           if (SDL_strcasecmp(sibling_class, "BUTTON") == 0 &&
-              (GetWindowLongA(candidate, GWL_STYLE) & BS_TYPEMASK) == 9)
+              (GetWindowLongA(candidate, GWL_STYLE) & BS_TYPEMASK) ==
+                  BS_AUTORADIOBUTTON)
             SendMessageA(candidate, BM_SETCHECK,
                          candidate == window ? BST_CHECKED : BST_UNCHECKED, 0);
         }
@@ -160,7 +297,8 @@ void draw_builtin_control(HWND window)
       send_control_command(window, BN_CLICKED);
     }
   } else if (SDL_strcasecmp(class_name, "STATIC") == 0) {
-    ImGui::TextUnformatted(text);
+    if (!draw_coin_flip_title(window, text, rect))
+      draw_static_text(text, rect, style);
   } else if (SDL_strcasecmp(class_name, "EDIT") == 0) {
     ImGuiInputTextFlags flags = 0;
     if (style & ES_READONLY) flags |= ImGuiInputTextFlags_ReadOnly;
@@ -224,6 +362,8 @@ void draw_builtin_control(HWND window)
     if (ImGui::ArrowButton("##down", ImGuiDir_Down))
       SendMessageA(window, WM_USER + 103, 0, MAKELONG(position - 1, 0));
   }
+  if (use_dialog_text_color)
+    ImGui::PopStyleColor();
   ImGui::PopID();
 }
 
@@ -266,7 +406,8 @@ void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
                                                 &texture_height);
     if (texture && texture_width > 0 && texture_height > 0) {
       GetClassNameA(window, class_name, sizeof(class_name));
-      if (SDL_strcasecmp(class_name, "#32770") == 0) {
+      if (SDL_strcasecmp(class_name, "#32770") == 0 &&
+          (GetWindowLongA(window, GWL_STYLE) & WS_CAPTION) == WS_CAPTION) {
         int caption_height = GetSystemMetrics(SM_CYCAPTION);
         draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left),
@@ -295,6 +436,8 @@ void draw_dialog_caption(HWND dialog)
   int caption_height;
   if (!dialog || !GetWindowRect(dialog, &rect))
     return;
+  if ((GetWindowLongA(dialog, GWL_STYLE) & WS_CAPTION) != WS_CAPTION)
+    return;
   caption_height = GetSystemMetrics(SM_CYCAPTION);
   GetWindowTextA(dialog, title, sizeof(title));
   ImGui::PushID(dialog);
@@ -310,7 +453,7 @@ void draw_dialog_caption(HWND dialog)
                            IM_COL32(35, 70, 120, 255));
   draw_list->AddText(ImVec2(static_cast<float>(rect.left + 6),
                             static_cast<float>(rect.top + 2)),
-                     IM_COL32_WHITE, title[0] ? title : "Dialog");
+                     IM_COL32_WHITE, title);
   if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
     ImVec2 delta = ImGui::GetIO().MouseDelta;
     POINT position = {rect.left + static_cast<int>(delta.x),
@@ -464,6 +607,7 @@ extern "C" int shandalar_win32_imgui_process_event(SDL_Renderer *renderer,
     SDL_RenderCoordinatesFromWindow(renderer, event->button.x, event->button.y,
                                     &logical_event.button.x, &logical_event.button.y);
   ImGui_ImplSDL3_ProcessEvent(&logical_event);
+  shandalar_win32_sdl_compositor_process_event(renderer, event);
   return 1;
 }
 

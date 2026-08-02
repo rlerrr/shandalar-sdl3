@@ -34,8 +34,8 @@ int activate_mana_source_card(int player, int card);
 int resolve_activated_ability(int player, int card);
 void prompt_player_for_stop_action(int player, char *prompt);
 void show_mana_burn_dialog(int player, int amount);
-BOOL CALLBACK dlgproc_mana_burn(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-BOOL CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK dlgproc_mana_burn(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void delete_and_close_object(HANDLE obj);
 HBITMAP load_pic(char *filename);
 void ApplyCardArtPaletteToDc(HDC hdc);
@@ -47,6 +47,11 @@ void change_buttonclass_wndproc(HWND hwnd);
 void save_duel_interface_options_to_registry(void);
 void FUN_0044a796(int player, int card);
 int card_ball_lightning(int player, int card, event_t event);
+int process_response_actions(int reason_for_trigger_controller, const char *prompt);
+int get_card_response_action_type(int player, int card);
+int allow_response(int response_player, int phase, char *prompt, int event_code);
+int refresh_stack_proxy_card(int prompt_flag);
+
 void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item_struct,
                                      HBRUSH brush,
                                      HPEN pen1,
@@ -180,7 +185,7 @@ static void cleanup_duel_options_dialog_resources(HBITMAP background,
 
 // FUNCTION: MAGIC 0x0048958a
 // FUNCTION: SHANDALAR 0x004a521a
-BOOL CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -3042,7 +3047,7 @@ void show_mana_burn_dialog(int player, int amount)
 
 // FUNCTION: MAGIC 0x004a36ac
 // FUNCTION: SHANDALAR 0x0053f03a
-BOOL CALLBACK dlgproc_mana_burn(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_mana_burn(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {
@@ -3165,7 +3170,7 @@ int prompt_for_life_total(int player, char *prompt, int initial_life_total)
 }
 
 // FUNCTION: MAGIC 0x004a0a29
-BOOL CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {

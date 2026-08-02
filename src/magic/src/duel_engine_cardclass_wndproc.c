@@ -3693,7 +3693,24 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     s.counter_power = GetDoubleClickTime();
     s.scratch = GetMessageTime();
     s.damage_on_card = GetTickCount();
+#ifdef SHANDALAR
+    /*
+     * Windows continues collecting input while this handler waits for a
+     * possible double-click.  The browser has a single event thread, so pump
+     * SDL here long enough for the second click to enter the Win32 queue.
+     */
+    s.damage_on_card += s.counter_power;
+    while ((int)(s.damage_on_card - GetTickCount()) > 0)
+    {
+      if (PeekMessageA((MSG *)&s.paint_struct, hwnd,
+                       WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0))
+        break;
+      if (!shandalar_win32_pump(TRUE))
+        break;
+    }
+#else
     Sleep(s.counter_power - (s.scratch - s.damage_on_card));
+#endif
     s.cuecard_found = PeekMessageA((MSG *)&s.paint_struct, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
     if (GetParent(hwnd) == g_duel_player_battlefield_window_hwnd ||
         GetParent(hwnd) == g_duel_help_owner_hwnd)

@@ -7,6 +7,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "platform/legacy_io.h"
+
 enum ObjectKind {
   OBJECT_BITMAP = 0x424d,
   OBJECT_PALETTE = 0x504c,
@@ -32,6 +34,7 @@ struct ShandalarBitmap {
 struct ShandalarPalette {
   ObjectHeader header;
   PALETTEENTRY entries[256];
+  unsigned int revision;
 };
 
 struct ShandalarFont {
@@ -51,6 +54,7 @@ typedef struct DCState {
   COLORREF text_color;
   COLORREF background_color;
   int background_mode;
+  UINT text_align;
   int cursor_x;
   int cursor_y;
   HPEN pen;
@@ -86,6 +90,7 @@ struct ShandalarDC {
   COLORREF text_color;
   COLORREF background_color;
   int background_mode;
+  UINT text_align;
   int cursor_x;
   int cursor_y;
   HPEN pen;
@@ -233,11 +238,22 @@ static char *utf8_from_windows_text(LPCSTR text, int length, int *out_length)
 
 #define COLOR_CACHE_SIZE 256
 #define COLOR_CACHE_MASK (COLOR_CACHE_SIZE - 1)
-static struct { COLORREF color; unsigned char index; unsigned int gen; } g_color_cache[COLOR_CACHE_SIZE];
-static unsigned int g_palette_gen;
+static struct {
+  COLORREF color;
+  HPALETTE palette;
+  unsigned int palette_revision;
+  unsigned char index;
+} g_color_cache[COLOR_CACHE_SIZE];
+static HPALETTE g_realized_palette;
+
+static HPALETTE effective_palette(HDC dc)
+{
+  return dc && dc->palette ? dc->palette : g_realized_palette;
+}
 
 static unsigned char color_to_index(HDC dc, COLORREF color)
 {
+  HPALETTE palette;
   unsigned int i;
   unsigned int slot;
   unsigned int best = 0;
@@ -250,20 +266,23 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
     return (unsigned char)(color & 0xffu);
   color &= 0x00ffffffu;
 
+  palette = effective_palette(dc);
   slot = (color >> 2) & COLOR_CACHE_MASK;
-  if (g_color_cache[slot].color == color && g_color_cache[slot].gen == g_palette_gen)
+  if (g_color_cache[slot].color == color &&
+      g_color_cache[slot].palette == palette &&
+      g_color_cache[slot].palette_revision == (palette ? palette->revision : 0))
     return g_color_cache[slot].index;
 
   r = color & 0xff;
   g = (color >> 8) & 0xff;
   b = (color >> 16) & 0xff;
-  if (!dc || !dc->palette)
+  if (!palette)
     return (unsigned char)((r + g + b) / 3);
 
   for (i = 0; i < 256; ++i) {
-    int dr = r - dc->palette->entries[i].peRed;
-    int dg = g - dc->palette->entries[i].peGreen;
-    int db = b - dc->palette->entries[i].peBlue;
+    int dr = r - palette->entries[i].peRed;
+    int dg = g - palette->entries[i].peGreen;
+    int db = b - palette->entries[i].peBlue;
     unsigned int distance = (unsigned int)(dr * dr + dg * dg + db * db);
     if (distance < best_distance) {
       best_distance = distance;
@@ -271,8 +290,9 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
     }
   }
   g_color_cache[slot].color = color;
+  g_color_cache[slot].palette = palette;
+  g_color_cache[slot].palette_revision = palette ? palette->revision : 0;
   g_color_cache[slot].index = (unsigned char)best;
-  g_color_cache[slot].gen = g_palette_gen;
   return (unsigned char)best;
 }
 
@@ -289,13 +309,15 @@ static unsigned char *pixel_at(HBITMAP bitmap, int x, int y)
 
 static COLORREF read_pixel_color(HDC dc, int x, int y)
 {
+  HPALETTE palette;
   unsigned char *pixel = dc && dc->bitmap ? pixel_at(dc->bitmap, x, y) : NULL;
   if (!pixel)
     return UINT32_MAX;
   if (dc->bitmap->bits_per_pixel == 24)
     return RGB(pixel[2], pixel[1], pixel[0]);
-  if (dc->palette) {
-    PALETTEENTRY *entry = &dc->palette->entries[*pixel];
+  palette = effective_palette(dc);
+  if (palette) {
+    PALETTEENTRY *entry = &palette->entries[*pixel];
     return RGB(entry->peRed, entry->peGreen, entry->peBlue);
   }
   return RGB(*pixel, *pixel, *pixel);
@@ -303,8 +325,9 @@ static COLORREF read_pixel_color(HDC dc, int x, int y)
 
 static COLORREF resolve_color(HDC dc, COLORREF color)
 {
-  if ((color & 0xff000000u) == 0x01000000u && dc && dc->palette) {
-    PALETTEENTRY *entry = &dc->palette->entries[color & 0xff];
+  HPALETTE palette = effective_palette(dc);
+  if ((color & 0xff000000u) == 0x01000000u && palette) {
+    PALETTEENTRY *entry = &palette->entries[color & 0xff];
     return RGB(entry->peRed, entry->peGreen, entry->peBlue);
   }
   return color & 0x00ffffffu;
@@ -336,7 +359,7 @@ HDC CreateCompatibleDC(HDC unused)
 {
   HDC dc = (HDC)calloc(1, sizeof(*dc));
   if (dc) {
-    dc->text_color = PALETTEINDEX(255);
+    dc->text_color = RGB(0, 0, 0);
     dc->background_color = PALETTEINDEX(0);
     dc->background_mode = OPAQUE;
     dc->window_ext_x = dc->viewport_ext_x = 1;
@@ -515,6 +538,8 @@ BOOL DeleteObject(HGDIOBJ object)
   } else if (header->kind == OBJECT_FONT) {
     HFONT font = (HFONT)object;
     TTF_CloseFont(font->font);
+  } else if (header->kind == OBJECT_PALETTE && (HPALETTE)object == g_realized_palette) {
+    g_realized_palette = NULL;
   }
   free(object);
   return TRUE;
@@ -579,7 +604,7 @@ static int can_copy_indexed_pixels_directly(HDC dst, HDC src)
 {
   if (!dst || !src)
     return 0;
-  return dst->palette == src->palette;
+  return effective_palette(dst) == effective_palette(src);
 }
 
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop)
@@ -726,7 +751,18 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
   top = map_y(dc, rect->top);
   right = map_x(dc, rect->right);
   bottom = map_y(dc, rect->bottom);
-  {
+  if (dc->bitmap->bits_per_pixel == 24) {
+    COLORREF color = resolve_color(dc, paint->color);
+    for (y = top; y < bottom; ++y)
+      for (x = left; x < right; ++x) {
+        unsigned char *pixel = pixel_at(dc->bitmap, x, y);
+        if (pixel) {
+          pixel[0] = (unsigned char)((color >> 16) & 0xff);
+          pixel[1] = (unsigned char)((color >> 8) & 0xff);
+          pixel[2] = (unsigned char)(color & 0xff);
+        }
+      }
+  } else {
     unsigned char index = color_to_index(dc, paint->color);
     for (y = top; y < bottom; ++y)
       for (x = left; x < right; ++x) {
@@ -805,20 +841,127 @@ BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
 BOOL Ellipse(HDC dc, int left, int top, int right, int bottom)
 {
   int i;
-  double rx = (right - left) / 2.0, ry = (bottom - top) / 2.0;
-  double cx = left + rx, cy = top + ry;
-  for (i = 0; i < 360; ++i)
-    SetPixelV(dc, (int)(cx + cos(i * 3.141592653589793 / 180.0) * rx),
-              (int)(cy + sin(i * 3.141592653589793 / 180.0) * ry),
-              dc && dc->pen ? ((PaintObject *)dc->pen)->color : PALETTEINDEX(255));
+  int x;
+  int y;
+  double rx;
+  double ry;
+  double cx;
+  double cy;
+  PaintObject *brush;
+  PaintObject *pen;
+  if (!dc || right <= left || bottom <= top)
+    return FALSE;
+  left = map_x(dc, left);
+  top = map_y(dc, top);
+  right = map_x(dc, right);
+  bottom = map_y(dc, bottom);
+  if (right < left) {
+    i = left; left = right; right = i;
+  }
+  if (bottom < top) {
+    i = top; top = bottom; bottom = i;
+  }
+  rx = (right - left) / 2.0;
+  ry = (bottom - top) / 2.0;
+  cx = left + rx;
+  cy = top + ry;
+  brush = (PaintObject *)dc->brush;
+  pen = (PaintObject *)dc->pen;
+  if (brush && !brush->is_null) {
+    for (y = top; y < bottom; ++y) {
+      double dy = ((y + 0.5) - cy) / ry;
+      for (x = left; x < right; ++x) {
+        double dx = ((x + 0.5) - cx) / rx;
+        if (dx * dx + dy * dy <= 1.0)
+          SetPixelV(dc, x, y, brush->color);
+      }
+    }
+  }
+  if (!pen || !pen->is_null) {
+    COLORREF color = pen ? pen->color : PALETTEINDEX(255);
+    for (i = 0; i < 360; ++i)
+      SetPixelV(dc, (int)(cx + cos(i * 3.141592653589793 / 180.0) * (rx - 0.5)),
+                (int)(cy + sin(i * 3.141592653589793 / 180.0) * (ry - 0.5)),
+                color);
+  }
   return TRUE;
 }
 
-BOOL RoundRect(HDC dc, int left, int top, int right, int bottom, int ellipse_width, int ellipse_height)
+static int point_in_round_rect(double x, double y, int left, int top,
+                               int right, int bottom, double rx, double ry)
 {
-  (void)ellipse_width;
-  (void)ellipse_height;
-  return Rectangle(dc, left, top, right, bottom);
+  double cx;
+  double cy;
+  double dx;
+  double dy;
+  if (x >= left + rx && x < right - rx)
+    return y >= top && y < bottom;
+  if (y >= top + ry && y < bottom - ry)
+    return x >= left && x < right;
+  cx = x < left + rx ? left + rx : right - rx;
+  cy = y < top + ry ? top + ry : bottom - ry;
+  dx = (x - cx) / rx;
+  dy = (y - cy) / ry;
+  return dx * dx + dy * dy <= 1.0;
+}
+
+BOOL RoundRect(HDC dc, int left, int top, int right, int bottom,
+               int ellipse_width, int ellipse_height)
+{
+  int logical_left = left;
+  int logical_top = top;
+  int x;
+  int y;
+  int mapped_ellipse_width;
+  int mapped_ellipse_height;
+  double rx;
+  double ry;
+  PaintObject *brush;
+  PaintObject *pen;
+  if (!dc || right <= left || bottom <= top)
+    return FALSE;
+  left = map_x(dc, left);
+  top = map_y(dc, top);
+  right = map_x(dc, right);
+  bottom = map_y(dc, bottom);
+  mapped_ellipse_width = abs(map_x(dc, logical_left + ellipse_width) -
+                             map_x(dc, logical_left));
+  mapped_ellipse_height = abs(map_y(dc, logical_top + ellipse_height) -
+                              map_y(dc, logical_top));
+  if (right < left) {
+    x = left; left = right; right = x;
+  }
+  if (bottom < top) {
+    y = top; top = bottom; bottom = y;
+  }
+  rx = max(mapped_ellipse_width / 2.0, 0.5);
+  ry = max(mapped_ellipse_height / 2.0, 0.5);
+  if (rx > (right - left) / 2.0)
+    rx = (right - left) / 2.0;
+  if (ry > (bottom - top) / 2.0)
+    ry = (bottom - top) / 2.0;
+  brush = (PaintObject *)dc->brush;
+  pen = (PaintObject *)dc->pen;
+  for (y = top; y < bottom; ++y) {
+    for (x = left; x < right; ++x) {
+      if (point_in_round_rect(x + 0.5, y + 0.5, left, top, right, bottom,
+                              rx, ry)) {
+        int edge = !point_in_round_rect(x - 0.5, y + 0.5, left, top, right,
+                                        bottom, rx, ry) ||
+                   !point_in_round_rect(x + 1.5, y + 0.5, left, top, right,
+                                        bottom, rx, ry) ||
+                   !point_in_round_rect(x + 0.5, y - 0.5, left, top, right,
+                                        bottom, rx, ry) ||
+                   !point_in_round_rect(x + 0.5, y + 1.5, left, top, right,
+                                        bottom, rx, ry);
+        if (edge && pen && !pen->is_null)
+          SetPixelV(dc, x, y, pen->color);
+        else if (brush && !brush->is_null)
+          SetPixelV(dc, x, y, brush->color);
+      }
+    }
+  }
+  return TRUE;
 }
 
 static void copy_dc_to_state(DCState *state, const HDC dc)
@@ -829,6 +972,7 @@ static void copy_dc_to_state(DCState *state, const HDC dc)
   state->text_color = dc->text_color;
   state->background_color = dc->background_color;
   state->background_mode = dc->background_mode;
+  state->text_align = dc->text_align;
   state->cursor_x = dc->cursor_x;
   state->cursor_y = dc->cursor_y;
   state->pen = dc->pen;
@@ -854,6 +998,7 @@ static void copy_state_to_dc(HDC dc, const DCState *state)
   dc->text_color = state->text_color;
   dc->background_color = state->background_color;
   dc->background_mode = state->background_mode;
+  dc->text_align = state->text_align;
   dc->cursor_x = state->cursor_x;
   dc->cursor_y = state->cursor_y;
   dc->pen = state->pen;
@@ -1014,7 +1159,15 @@ BOOL DPtoLP(HDC dc, LPPOINT points, int count)
   }
   return TRUE;
 }
-UINT SetTextAlign(HDC dc, UINT align) { (void)dc; return align; }
+UINT SetTextAlign(HDC dc, UINT align)
+{
+  UINT old;
+  if (!dc)
+    return GDI_ERROR;
+  old = dc->text_align;
+  dc->text_align = align;
+  return old;
+}
 
 HGDIOBJ GetStockObject(int object)
 {
@@ -1039,6 +1192,7 @@ HPALETTE CreatePalette(const LOGPALETTE *palette)
   unsigned int count;
   if (!result) return NULL;
   result->header.kind = OBJECT_PALETTE;
+  result->revision = 1;
   count = palette ? palette->palNumEntries : 0;
   if (count > 256) count = 256;
   if (palette) memcpy(result->entries, palette->palPalEntry, count * sizeof(PALETTEENTRY));
@@ -1053,7 +1207,13 @@ HPALETTE SelectPalette(HDC dc, HPALETTE palette, BOOL background)
   previous = dc->palette; dc->palette = palette;
   return previous;
 }
-UINT RealizePalette(HDC dc) { return dc && dc->palette ? 256 : 0; }
+UINT RealizePalette(HDC dc)
+{
+  if (!dc || !dc->palette)
+    return 0;
+  g_realized_palette = dc->palette;
+  return 256;
+}
 BOOL UnrealizeObject(HGDIOBJ object) { return object != NULL; }
 
 UINT GetPaletteEntries(HPALETTE palette, UINT start, UINT count, PALETTEENTRY *entries)
@@ -1069,6 +1229,7 @@ UINT SetPaletteEntries(HPALETTE palette, UINT start, UINT count, const PALETTEEN
   if (!palette || !entries || start >= 256) return 0;
   if (count > 256 - start) count = 256 - start;
   memcpy(palette->entries + start, entries, count * sizeof(*entries));
+  ++palette->revision;
   return count;
 }
 
@@ -1093,7 +1254,7 @@ UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
     dc->palette->entries[start + i].peGreen = colors[i].rgbGreen;
     dc->palette->entries[start + i].peBlue = colors[i].rgbBlue;
   }
-  ++g_palette_gen;
+  ++dc->palette->revision;
   return count;
 }
 int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
@@ -1254,6 +1415,14 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
     return FALSE;
   }
   free(utf8);
+  if ((dc->text_align & TA_CENTER) == TA_CENTER)
+    x -= surface->w / 2;
+  else if ((dc->text_align & TA_RIGHT) == TA_RIGHT)
+    x -= surface->w;
+  if ((dc->text_align & TA_BASELINE) == TA_BASELINE)
+    y -= TTF_GetFontAscent(dc->font->font);
+  else if ((dc->text_align & TA_BOTTOM) == TA_BOTTOM)
+    y -= surface->h;
   draw_text_surface(dc, surface, x, y, dc->bitmap->width, dc->bitmap->height);
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
@@ -1662,6 +1831,69 @@ const void *shandalar_dc_pixels(HDC dc, int *pitch)
   if (pitch) *pitch = dc->bitmap->pitch;
   return dc->bitmap->pixels;
 }
+BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
+                                int pitch_bytes, int width, int height)
+{
+  static HPALETTE cached_palette;
+  static unsigned int cached_revision;
+  static unsigned int cached_palette_hash;
+  static unsigned char palette_indices[32768];
+  static unsigned char palette_indices_valid[32768];
+  HPALETTE palette;
+  unsigned int palette_hash = 2166136261u;
+  int x;
+  int y;
+  if (!dc || !dc->bitmap || !pixels || pitch_bytes < width * 4)
+    return FALSE;
+  if (width > dc->bitmap->width)
+    width = dc->bitmap->width;
+  if (height > dc->bitmap->height)
+    height = dc->bitmap->height;
+  palette = effective_palette(dc);
+  if (palette) {
+    const unsigned char *palette_bytes = (const unsigned char *)palette->entries;
+    size_t byte_index;
+    for (byte_index = 0; byte_index < sizeof(palette->entries); ++byte_index)
+      palette_hash = (palette_hash ^ palette_bytes[byte_index]) * 16777619u;
+  } else {
+    palette_hash = 0;
+  }
+  if (cached_palette != palette ||
+      cached_revision != (palette ? palette->revision : 0) ||
+      cached_palette_hash != palette_hash) {
+    cached_palette = palette;
+    cached_revision = palette ? palette->revision : 0;
+    cached_palette_hash = palette_hash;
+    memset(palette_indices_valid, 0, sizeof(palette_indices_valid));
+  }
+  for (y = 0; y < height; ++y) {
+    const uint32_t *source =
+        (const uint32_t *)((const unsigned char *)pixels + y * pitch_bytes);
+    for (x = 0; x < width; ++x) {
+      uint32_t pixel = source[x];
+      unsigned int r = (pixel >> 16) & 0xff;
+      unsigned int g = (pixel >> 8) & 0xff;
+      unsigned int b = pixel & 0xff;
+      if (dc->bitmap->bits_per_pixel == 24) {
+        write_pixel_color(dc, x, y, RGB(r, g, b), SRCCOPY);
+      } else {
+        unsigned int key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+        unsigned char *destination = pixel_at(dc->bitmap, x, y);
+        if (!palette_indices_valid[key]) {
+          palette_indices[key] = color_to_index(
+              dc, RGB((r >> 3) * 255 / 31,
+                      (g >> 3) * 255 / 31,
+                      (b >> 3) * 255 / 31));
+          palette_indices_valid[key] = 1;
+        }
+        if (destination)
+          *destination = palette_indices[key];
+      }
+    }
+  }
+  return TRUE;
+}
+
 void shandalar_set_default_font_root(const char *root)
 {
   char *cursor;
@@ -1693,8 +1925,8 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
         dst[x] = 0xff000000u | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0];
       }
     }
-  } else if (dc->palette) {
-    PALETTEENTRY *entries = dc->palette->entries;
+  } else if (effective_palette(dc)) {
+    PALETTEENTRY *entries = effective_palette(dc)->entries;
     unsigned char *base = bitmap->pixels;
     int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
     for (y = 0; y < height; ++y) {

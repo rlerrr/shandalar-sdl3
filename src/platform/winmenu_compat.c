@@ -204,8 +204,8 @@ BOOL TrackPopupMenu(HMENU handle, UINT flags, int x, int y, int reserved,
   (void)flags; (void)reserved; (void)exclude;
   if (!menu || !IsWindow(window))
     return FALSE;
-  SendMessageA(window, WM_INITMENU, (WPARAM)handle, 0);
   shandalar_win32_dismiss_popup();
+  SendMessageA(window, WM_INITMENU, (WPARAM)handle, 0);
   g_active_popup = clone_menu(menu);
   if (!g_active_popup)
     return FALSE;
@@ -244,8 +244,17 @@ BOOL shandalar_win32_menu_item(HMENU handle, int index, UINT *flags,
 void shandalar_win32_dismiss_popup(void)
 {
   CompatMenu *menu = g_active_popup;
+  HWND owner = g_popup_owner;
   g_active_popup = NULL;
   g_popup_owner = NULL;
+  /*
+   * Native TrackPopupMenu() does not return until the menu closes.  The duel
+   * window procedures use WM_MENUSELECT's closing notification to empty their
+   * reusable popup menus after TrackPopupMenu() returns.  Our popup is
+   * asynchronous, so synthesize that notification here instead.
+   */
+  if (owner)
+    SendMessageA(owner, WM_MENUSELECT, MAKEWPARAM(0, 0xffff), 0);
   if (menu)
     DestroyMenu((HMENU)menu);
 }

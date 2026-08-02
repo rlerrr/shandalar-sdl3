@@ -45,7 +45,7 @@ void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item, HBRUSH brush,
                                      HPEN pen1, HPEN pen2, COLORREF color, int draw_focus);
 int handle_button_palette_message(int hwnd, unsigned int msg, int wparam, int lparam);
 
-BOOL WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void setup_fireball_dialog_resources(HBITMAP *background, COLORREF *label_text_color,
                                      HBRUSH *button_brush, HPEN *button_pen1, HPEN *button_pen2,
                                      COLORREF *button_unfocus_text_color,
@@ -167,7 +167,7 @@ int choose_fireball_options(int player, int internal_card_id, int maximum_mana, 
 
 // FUNCTION: MAGIC 0x004a4691
 // FUNCTION: SHANDALAR 0x0054001c
-BOOL WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   struct
   {

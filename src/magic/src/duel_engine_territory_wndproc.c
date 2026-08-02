@@ -40,7 +40,7 @@ void get_next_battlefield_card_position(HWND parent, int *rect, int value, int *
 int count_hidden_battlefield_descendants(HWND hwnd, HWND hidden_parent);
 int get_displayed_card_blocking(int player, int card);
 void get_current_duel_selection(int *selected_player, int *selected_card);
-void get_next_phase_stop(int *player, int *phase, char *unused);
+void get_next_phase_stop(int *player, phase_t *phase, char *unused);
 void show_territory_options_dialog(HWND hwnd);
 void refresh_duel_window(HWND hwnd);
 void set_player_directive_value(int player, int value);
@@ -49,7 +49,7 @@ void position_duel_prompt_context_window(HWND hwnd);
 void resize_duel_hand_window(HWND hwnd);
 void save_duel_interface_options_to_registry(void);
 void apply_duel_backdrop_art(int player, int color, int variant);
-BOOL CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 #ifndef SHANDALAR
 extern HWND global_main_hwnd;
@@ -175,7 +175,7 @@ char g_custom_duel_action_text[0x100];
 
 // FUNCTION: MAGIC 0x00538e3d
 // FUNCTION: SHANDALAR 0x0055d661
-void get_next_phase_stop(int *player, int *phase, char *text)
+void get_next_phase_stop(int *player, phase_t *phase, char *text)
 {
   struct
   {
@@ -183,7 +183,7 @@ void get_next_phase_stop(int *player, int *phase, char *text)
     int next_player;
     char phase_text[100];
     int current_player;
-    int next_phase;
+    phase_t next_phase;
     int current_phase;
   } s;
 

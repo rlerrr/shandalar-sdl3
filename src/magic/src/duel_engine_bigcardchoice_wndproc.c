@@ -117,6 +117,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     int was_dragged;
     TEXTMETRICA mouse_metrics;
     RECT after_drag_rect;
+    RECT child_rect;
+    RECT parent_rect;
+    HDC parent_dc;
     RECT mouse_rect;
     int command_selected;
     union
@@ -172,6 +175,34 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_ERASEBKGND:
+#ifdef SHANDALAR
+    ApplyCardArtPaletteToDc((HDC)wparam);
+    /*
+     * This control is intentionally transparent in the original UI.  Win32
+     * paints it directly over the dialog, while the SDL compatibility layer
+     * gives every child its own backing surface.  Seed that surface with the
+     * corresponding dialog pixels before drawing the prompt and choices.
+     */
+    s.parent_dc = GetDC(GetParent(hwnd));
+    if (s.parent_dc != (HDC)0 &&
+        GetWindowRect(hwnd, &s.child_rect) &&
+        GetWindowRect(GetParent(hwnd), &s.parent_rect))
+    {
+      BitBlt((HDC)wparam, 0, 0,
+             s.child_rect.right - s.child_rect.left,
+             s.child_rect.bottom - s.child_rect.top,
+             s.parent_dc,
+             s.child_rect.left - s.parent_rect.left,
+             s.child_rect.top - s.parent_rect.top -
+                 (((GetWindowLongA(GetParent(hwnd), GWL_STYLE) & WS_CAPTION) ==
+                   WS_CAPTION) ? GetSystemMetrics(SM_CYCAPTION) : 0),
+             SRCCOPY);
+    }
+    if (s.parent_dc != (HDC)0)
+    {
+      ReleaseDC(GetParent(hwnd), s.parent_dc);
+    }
+#endif
     return 1;
 
   case WM_GETDLGCODE:
@@ -499,7 +530,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     }
 
     g_big_card_choice_window_text_buffer[s.text_index] = '\0';
-    while (g_big_card_choice_window_text_buffer[strlen(g_big_card_choice_window_text_buffer) - 2] == '\n')
+    while (strlen(g_big_card_choice_window_text_buffer) >= 2 &&
+           g_big_card_choice_window_text_buffer[strlen(g_big_card_choice_window_text_buffer) - 2] == '\n')
     {
       s.strlen_result = strlen(g_big_card_choice_window_text_buffer);
       g_big_card_choice_window_text_buffer[s.strlen_result - 2] = '\0';

@@ -1628,7 +1628,6 @@ INT_PTR CALLBACK big_card_choice_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_PAINT:
-    UpdateWindow(GetDlgItem(hwnd, 0x3fd));
     s.paint_dc = BeginPaint(hwnd, &s.paint_struct);
     if (s.paint_dc != 0)
     {
@@ -1726,6 +1725,8 @@ INT_PTR CALLBACK big_card_choice_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
 
       EndPaint(hwnd, &s.paint_struct);
     }
+    InvalidateRect(GetDlgItem(hwnd, 0x3fd), NULL, TRUE);
+    UpdateWindow(GetDlgItem(hwnd, 0x3fd));
     return 1;
 
   case WM_TIMER:

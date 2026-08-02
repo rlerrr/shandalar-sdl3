@@ -176,8 +176,13 @@ typedef struct MEASUREITEMSTRUCT {
 #define PS_INSIDEFRAME 6
 #define HS_DIAGCROSS 5
 #define R2_COPYPEN 13
+#define TA_LEFT 0
 #define TA_RIGHT 2
 #define TA_CENTER 6
+#define TA_TOP 0
+#define TA_BOTTOM 8
+#define TA_BASELINE 24
+#define GDI_ERROR 0xffffffffL
 #define BLACK_PEN 7
 #define HORZRES 8
 #define VERTRES 10
@@ -353,6 +358,8 @@ HDC shandalar_create_screen_dc(int width, int height);
 void shandalar_destroy_screen_dc(HDC dc);
 const void *shandalar_dc_pixels(HDC dc, int *pitch);
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes);
+BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
+                                int pitch_bytes, int width, int height);
 void shandalar_set_default_font_root(const char *root);
 double shandalar_set_font_device_scale(double scale);
 

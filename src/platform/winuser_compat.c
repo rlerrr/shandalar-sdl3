@@ -75,8 +75,18 @@ static char *copy_string(const char *text)
 
 static int valid_window(HWND window)
 {
+  /*
+   * HWND_TOPMOST and HWND_NOTOPMOST are pointer-shaped sentinel values.
+   * Dereferencing either one traps under WebAssembly instead of merely
+   * reading invalid native memory.
+   */
+  if (window == HWND_TOP || window == HWND_BOTTOM ||
+      window == HWND_TOPMOST || window == HWND_NOTOPMOST)
+    return 0;
   return window && window->magic == WINDOW_MAGIC && window->alive;
 }
+
+static BOOL set_window_text_storage(HWND window, LPCSTR text);
 
 static int effectively_visible(HWND window)
 {
@@ -143,6 +153,19 @@ static void link_child(HWND parent, HWND child)
   parent->first_child = child;
 }
 
+static void link_child_at_bottom(HWND parent, HWND child)
+{
+  if (!parent)
+    parent = GetDesktopWindow();
+  child->parent = parent;
+  child->previous_sibling = parent->last_child;
+  if (parent->last_child)
+    parent->last_child->next_sibling = child;
+  else
+    parent->first_child = child;
+  parent->last_child = child;
+}
+
 static void unlink_child(HWND child)
 {
   HWND parent = child->parent;
@@ -165,15 +188,29 @@ static void absolute_origin(HWND window, int *x, int *y)
 {
   int ax = 0;
   int ay = 0;
-  while (valid_window(window) && window != &g_desktop) {
-    ax += window->x;
-    ay += window->y;
-    window = window->parent;
+  if (valid_window(window) && window != &g_desktop) {
+    ax = window->x;
+    ay = window->y;
+    if ((window->style & WS_CHILD) == WS_CHILD &&
+        valid_window(window->parent) && window->parent != &g_desktop) {
+      absolute_origin(window->parent, &ax, &ay);
+      ax += window->x;
+      ay += window->y;
+      if ((window->parent->style & WS_CAPTION) == WS_CAPTION)
+        ay += GetSystemMetrics(SM_CYCAPTION);
+    }
   }
   if (x)
     *x = ax;
   if (y)
     *y = ay;
+}
+
+static void client_origin(HWND window, int *x, int *y)
+{
+  absolute_origin(window, x, y);
+  if (valid_window(window) && (window->style & WS_CAPTION) == WS_CAPTION && y)
+    *y += GetSystemMetrics(SM_CYCAPTION);
 }
 
 ATOM RegisterClassA(const WNDCLASSA *window_class)
@@ -329,7 +366,7 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
   case WM_CLOSE:
     return DestroyWindow(window);
   case WM_SETTEXT:
-    return SetWindowTextA(window, (LPCSTR)lparam);
+    return set_window_text_storage(window, (LPCSTR)lparam);
   case WM_GETTEXT:
     return GetWindowTextA(window, (LPSTR)lparam, (int)wparam);
   case WM_GETTEXTLENGTH:
@@ -339,6 +376,38 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
       shandalar_win32_set_cursor_position(g_system_drag_endpoint.x,
                                          g_system_drag_endpoint.y);
       g_has_system_drag_endpoint = 0;
+    } else if ((wparam & 0xfff0) == SC_MOVE) {
+      MSG drag_message;
+      POINT drag_origin;
+      POINT cursor;
+      RECT window_rect;
+      HWND parent;
+      int width;
+      int height;
+      GetCursorPos(&drag_origin);
+      GetWindowRect(window, &window_rect);
+      width = window_rect.right - window_rect.left;
+      height = window_rect.bottom - window_rect.top;
+      SetCapture(window);
+      while (GetMessageA(&drag_message, NULL, 0, 0)) {
+        if (drag_message.message == WM_MOUSEMOVE) {
+          POINT destination;
+          GetCursorPos(&cursor);
+          destination.x = window_rect.left + cursor.x - drag_origin.x;
+          destination.y = window_rect.top + cursor.y - drag_origin.y;
+          parent = GetParent(window);
+          if (parent)
+            ScreenToClient(parent, &destination);
+          MoveWindow(window, destination.x, destination.y, width, height, TRUE);
+        }
+        if (drag_message.message == WM_LBUTTONUP)
+          break;
+        TranslateMessage(&drag_message);
+        DispatchMessageA(&drag_message);
+      }
+      if (drag_message.message == WM_QUIT)
+        PostQuitMessage((int)drag_message.wParam);
+      ReleaseCapture();
     }
     return 0;
   case WM_PAINT:
@@ -692,12 +761,22 @@ BOOL SetWindowPos(HWND window, HWND insert_after, int x, int y, int width, int h
       window->backing_dc = shandalar_create_screen_dc(window->width > 0 ? window->width : 1,
                                                        window->height > 0 ? window->height : 1);
       SendMessageA(window, WM_SIZE, 0, MAKELPARAM(window->width, window->height));
+      InvalidateRect(window, NULL, TRUE);
     }
   }
   if (!(flags & SWP_NOZORDER) && insert_after != window && window->parent) {
     HWND parent = window->parent;
     unlink_child(window);
-    if (!insert_after || insert_after == (HWND)1) {
+    if (insert_after == HWND_TOPMOST) {
+      window->ex_style |= WS_EX_TOPMOST;
+      link_child(parent == &g_desktop ? NULL : parent, window);
+    } else if (insert_after == HWND_NOTOPMOST) {
+      window->ex_style &= ~WS_EX_TOPMOST;
+      link_child(parent == &g_desktop ? NULL : parent, window);
+    } else if (insert_after == HWND_BOTTOM) {
+      window->ex_style &= ~WS_EX_TOPMOST;
+      link_child_at_bottom(parent == &g_desktop ? NULL : parent, window);
+    } else if (insert_after == HWND_TOP) {
       link_child(parent == &g_desktop ? NULL : parent, window);
     } else if (valid_window(insert_after) && insert_after->parent == parent) {
       window->parent = parent;
@@ -736,8 +815,11 @@ BOOL ShowWindow(HWND window, int command)
   window->visible = command != SW_HIDE;
   if (old != window->visible) {
     SendMessageA(window, WM_SHOWWINDOW, window->visible, 0);
-    if (window->visible)
+    if (window->visible) {
+      if ((window->style & WS_POPUP) == WS_POPUP)
+        BringWindowToTop(window);
       InvalidateRect(window, NULL, TRUE);
+    }
   }
   return old;
 }
@@ -769,7 +851,7 @@ BOOL ClientToScreen(HWND window, POINT *point)
   int y;
   if (!valid_window(window) || !point)
     return FALSE;
-  absolute_origin(window, &x, &y);
+  client_origin(window, &x, &y);
   point->x += x;
   point->y += y;
   return TRUE;
@@ -781,7 +863,7 @@ BOOL ScreenToClient(HWND window, POINT *point)
   int y;
   if (!valid_window(window) || !point)
     return FALSE;
-  absolute_origin(window, &x, &y);
+  client_origin(window, &x, &y);
   point->x -= x;
   point->y -= y;
   return TRUE;
@@ -797,9 +879,9 @@ int MapWindowPoints(HWND from, HWND to, POINT *points, UINT count)
   if (!points)
     return 0;
   if (from)
-    absolute_origin(from, &from_x, &from_y);
+    client_origin(from, &from_x, &from_y);
   if (to)
-    absolute_origin(to, &to_x, &to_y);
+    client_origin(to, &to_x, &to_y);
   for (i = 0; i < count; ++i) {
     points[i].x += from_x - to_x;
     points[i].y += from_y - to_y;
@@ -807,7 +889,7 @@ int MapWindowPoints(HWND from, HWND to, POINT *points, UINT count)
   return MAKELONG(from_x - to_x, from_y - to_y);
 }
 
-BOOL SetWindowTextA(HWND window, LPCSTR text)
+static BOOL set_window_text_storage(HWND window, LPCSTR text)
 {
   char *copy;
   if (!valid_window(window))
@@ -817,7 +899,15 @@ BOOL SetWindowTextA(HWND window, LPCSTR text)
     return FALSE;
   free(window->text);
   window->text = copy;
+  InvalidateRect(window, NULL, TRUE);
   return TRUE;
+}
+
+BOOL SetWindowTextA(HWND window, LPCSTR text)
+{
+  if (!valid_window(window))
+    return FALSE;
+  return (BOOL)SendMessageA(window, WM_SETTEXT, 0, (LPARAM)text);
 }
 
 int GetWindowTextA(HWND window, LPSTR text, int max_count)
