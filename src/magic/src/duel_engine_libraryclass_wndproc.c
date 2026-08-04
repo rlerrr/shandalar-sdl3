@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "cardartlib/src/palette.h"
+#include "deckdll/src/shared_resources.h"
 #include "drawcardlib/Drawcardlib.h"
 #include "magic/src/duel_engine.h"
 #include "magic/src/game_support.h"
@@ -142,6 +143,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
   {
     int unused;
     int menu_item_count;
+    int saved_dc;
+    int count_text_length;
     char menu_count_text[12];
     POINT menu_point;
     RECT menu_rect;
@@ -337,14 +340,17 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
         DrawCardBack(g_shared_offscreen_dc, &s.top_card_rect);
         BitBlt(s.paint_dc, 0, 0, s.client_rect.right, s.client_rect.bottom,
                g_shared_offscreen_dc, 0, 0, SRCCOPY);
-        if (g_duel_dialog_refresh_state != 0)
-        {
-          sprintf(s.count_overlay_text, "%d", s.library_count);
-          SetBkMode(s.paint_dc, TRANSPARENT);
-          SetTextColor(s.paint_dc, 0xffffff);
-          TextOutA(s.paint_dc, 0, 0, s.count_overlay_text, strlen(s.count_overlay_text));
-        }
       }
+      s.saved_dc = SaveDC(s.paint_dc);
+      SelectObject(s.paint_dc, global_idtag_font);
+      sprintf(s.count_overlay_text, "%d", s.library_count);
+      s.count_text_length = strlen(s.count_overlay_text);
+      SetBkMode(s.paint_dc, TRANSPARENT);
+      SetTextColor(s.paint_dc, 0x000000);
+      TextOutA(s.paint_dc, 6, 1, s.count_overlay_text, s.count_text_length);
+      SetTextColor(s.paint_dc, 0xffffff);
+      TextOutA(s.paint_dc, 5, 0, s.count_overlay_text, s.count_text_length);
+      RestoreDC(s.paint_dc, s.saved_dc);
       EndPaint(hwnd, &s.paint_struct);
       s.previous_count = s.library_count;
       SetWindowLongA(hwnd, g_library_window_long_offset, s.previous_count);
