@@ -91,73 +91,70 @@ unsigned int save_or_load_duel_mode_state(void)
 // FUNCTION: SHANDALAR 0x004a6dd4
 void __stdcall LoadSoloDuelRegistryOptions(void)
 {
-  struct
-  {
-    HKEY options_key;
-    BYTE value_buffer[0x34];
-    DWORD value_size;
-  } s;
+  HKEY options_key;
+  BYTE value_buffer[0x34];
+  DWORD value_size;
 
   if (RegOpenKeyExA(HKEY_CURRENT_USER, s_solo_options_registry_path_00571284, 0, KEY_QUERY_VALUE,
-                    &s.options_key) == ERROR_SUCCESS)
+                    &options_key) == ERROR_SUCCESS)
   {
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Difficulty", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_solo_duel_options.difficulty);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Difficulty", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_solo_duel_options.difficulty);
     else
       g_solo_duel_options.difficulty = 1;
 
-    s.value_size = 0x32;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "PlayerDeck", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sprintf(g_solo_duel_options.player_deck, "%s", s.value_buffer);
+    value_size = 0x32;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "PlayerDeck", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sprintf(g_solo_duel_options.player_deck, "%s", value_buffer);
     else
       g_solo_duel_options.player_deck[0] = '\0';
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "PlayerRandom", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_solo_duel_options.player_random);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "PlayerRandom", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_solo_duel_options.player_random);
     else
       g_solo_duel_options.player_random = 1;
 
-    s.value_size = 0x32;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "OpponentDeck", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sprintf(g_solo_duel_options.opponent_deck, "%s", s.value_buffer);
+    value_size = 0x32;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "OpponentDeck", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sprintf(g_solo_duel_options.opponent_deck, "%s", value_buffer);
     else
       g_solo_duel_options.opponent_deck[0] = '\0';
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "OpponentRandom", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_solo_duel_options.opponent_random);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "OpponentRandom", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_solo_duel_options.opponent_random);
     else
       g_solo_duel_options.opponent_random = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "BestOf", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_solo_duel_options.best_of);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "BestOf", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_solo_duel_options.best_of);
     else
       g_solo_duel_options.best_of = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Ante", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_solo_duel_options.ante);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Ante", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_solo_duel_options.ante);
     else
       g_solo_duel_options.ante = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "AllowSideboarding", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_solo_duel_options.allow_sideboarding);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "AllowSideboarding", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_solo_duel_options.allow_sideboarding);
     else
       g_solo_duel_options.allow_sideboarding = 1;
 
-    RegCloseKey(s.options_key);
+    RegCloseKey(options_key);
   }
   else
   {
@@ -176,59 +173,56 @@ void __stdcall LoadSoloDuelRegistryOptions(void)
 // FUNCTION: SHANDALAR 0x004a732e
 void __stdcall LoadGauntletRegistryOptions(void)
 {
-  struct
-  {
-    HKEY options_key;
-    BYTE value_buffer[0x34];
-    DWORD value_size;
-  } s;
+  HKEY options_key;
+  BYTE value_buffer[0x34];
+  DWORD value_size;
 
   if (RegOpenKeyExA(HKEY_CURRENT_USER, s_gauntlet_options_registry_path_00571338, 0, KEY_QUERY_VALUE,
-                    &s.options_key) == ERROR_SUCCESS)
+                    &options_key) == ERROR_SUCCESS)
   {
-    s.value_size = 0x32;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "PlayerDeck", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sprintf(g_gauntlet_options.player_deck, "%s", s.value_buffer);
+    value_size = 0x32;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "PlayerDeck", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sprintf(g_gauntlet_options.player_deck, "%s", value_buffer);
     else
       g_gauntlet_options.player_deck[0] = '\0';
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "PlayerRandom", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_gauntlet_options.player_random);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "PlayerRandom", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_gauntlet_options.player_random);
     else
       g_gauntlet_options.player_random = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "BestOf", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_gauntlet_options.best_of);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "BestOf", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_gauntlet_options.best_of);
     else
       g_gauntlet_options.best_of = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Ante", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_gauntlet_options.ante);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Ante", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_gauntlet_options.ante);
     else
       g_gauntlet_options.ante = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "AllowSideboarding", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_gauntlet_options.allow_sideboarding);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "AllowSideboarding", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_gauntlet_options.allow_sideboarding);
     else
       g_gauntlet_options.allow_sideboarding = 1;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "GauntletLength", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.value_buffer, "%d", &g_gauntlet_options.gauntlet_length);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "GauntletLength", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)value_buffer, "%d", &g_gauntlet_options.gauntlet_length);
     else
       g_gauntlet_options.gauntlet_length = 0x14;
 
-    RegCloseKey(s.options_key);
+    RegCloseKey(options_key);
   }
   else
   {
@@ -245,48 +239,45 @@ void __stdcall LoadGauntletRegistryOptions(void)
 // FUNCTION: SHANDALAR 0x004a775e
 void __stdcall LoadSealedDeckRegistryOptions(void)
 {
-  struct
-  {
-    int booster_pack_index;
-    char *booster_value_scan;
-    int starter_pack_index;
-    char *starter_value_scan;
-    HKEY options_key;
-    char value_buffer[0x34];
-    DWORD value_size;
-  } s;
+  int booster_pack_index;
+  char *booster_value_scan;
+  int starter_pack_index;
+  char *starter_value_scan;
+  HKEY options_key;
+  char value_buffer[0x34];
+  DWORD value_size;
 
   if (RegOpenKeyExA(HKEY_CURRENT_USER, s_sealed_deck_registry_path_005710e0, 0, KEY_QUERY_VALUE,
-                    &s.options_key) == ERROR_SUCCESS)
+                    &options_key) == ERROR_SUCCESS)
   {
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Rounds", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.rounds);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Rounds", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.rounds);
     else
       g_sealed_deck_options.rounds = 5;
 
-    s.value_size = 0x32;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Starters", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
+    value_size = 0x32;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Starters", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
     {
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.starter_count);
-      s.starter_value_scan = s.value_buffer;
-      s.starter_pack_index = 0;
-      while (s.starter_value_scan != NULL && *s.starter_value_scan != '\0' &&
-             !(g_sealed_deck_options.starter_count <= s.starter_pack_index))
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.starter_count);
+      starter_value_scan = value_buffer;
+      starter_pack_index = 0;
+      while (starter_value_scan != NULL && *starter_value_scan != '\0' &&
+             !(g_sealed_deck_options.starter_count <= starter_pack_index))
       {
-        while (*s.starter_value_scan >= '0' && *s.starter_value_scan <= '9')
-          s.starter_value_scan++;
-        while (*s.starter_value_scan == ' ' || *s.starter_value_scan == ',')
-          s.starter_value_scan++;
-        if (*s.starter_value_scan != '\0')
+        while (*starter_value_scan >= '0' && *starter_value_scan <= '9')
+          starter_value_scan++;
+        while (*starter_value_scan == ' ' || *starter_value_scan == ',')
+          starter_value_scan++;
+        if (*starter_value_scan != '\0')
         {
-          sscanf(s.starter_value_scan, "%d", &g_sealed_deck_options.starter_packs[s.starter_pack_index++]);
+          sscanf(starter_value_scan, "%d", &g_sealed_deck_options.starter_packs[starter_pack_index++]);
         }
       }
-      for (; !(g_sealed_deck_options.starter_count <= s.starter_pack_index); s.starter_pack_index++)
-        g_sealed_deck_options.starter_packs[s.starter_pack_index] = 2;
+      for (; !(g_sealed_deck_options.starter_count <= starter_pack_index); starter_pack_index++)
+        g_sealed_deck_options.starter_packs[starter_pack_index] = 2;
     }
     else
     {
@@ -295,27 +286,27 @@ void __stdcall LoadSealedDeckRegistryOptions(void)
       g_sealed_deck_options.starter_packs[1] = 2;
     }
 
-    s.value_size = 0x32;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Boosters", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
+    value_size = 0x32;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Boosters", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
     {
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.booster_count);
-      s.booster_value_scan = s.value_buffer;
-      s.booster_pack_index = 0;
-      while (s.booster_value_scan != NULL && *s.booster_value_scan != '\0' &&
-             !(g_sealed_deck_options.booster_count <= s.booster_pack_index))
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.booster_count);
+      booster_value_scan = value_buffer;
+      booster_pack_index = 0;
+      while (booster_value_scan != NULL && *booster_value_scan != '\0' &&
+             !(g_sealed_deck_options.booster_count <= booster_pack_index))
       {
-        while (*s.booster_value_scan >= '0' && *s.booster_value_scan <= '9')
-          s.booster_value_scan++;
-        while (*s.booster_value_scan == ' ' || *s.booster_value_scan == ',')
-          s.booster_value_scan++;
-        if (*s.booster_value_scan != '\0')
+        while (*booster_value_scan >= '0' && *booster_value_scan <= '9')
+          booster_value_scan++;
+        while (*booster_value_scan == ' ' || *booster_value_scan == ',')
+          booster_value_scan++;
+        if (*booster_value_scan != '\0')
         {
-          sscanf(s.booster_value_scan, "%d", &g_sealed_deck_options.booster_packs[s.booster_pack_index++]);
+          sscanf(booster_value_scan, "%d", &g_sealed_deck_options.booster_packs[booster_pack_index++]);
         }
       }
-      for (; !(g_sealed_deck_options.booster_count <= s.booster_pack_index); s.booster_pack_index++)
-        g_sealed_deck_options.booster_packs[s.booster_pack_index] = 2;
+      for (; !(g_sealed_deck_options.booster_count <= booster_pack_index); booster_pack_index++)
+        g_sealed_deck_options.booster_packs[booster_pack_index] = 2;
     }
     else
     {
@@ -324,35 +315,35 @@ void __stdcall LoadSealedDeckRegistryOptions(void)
       g_sealed_deck_options.booster_packs[1] = 2;
     }
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "FreeLands", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.free_lands);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "FreeLands", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.free_lands);
     else
       g_sealed_deck_options.free_lands = 5;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "BestOf", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.best_of);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "BestOf", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.best_of);
     else
       g_sealed_deck_options.best_of = 3;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Ante", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.ante);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Ante", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.ante);
     else
       g_sealed_deck_options.ante = 0;
 
-    s.value_size = 10;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "MinDeckSize", NULL, NULL, (BYTE *)s.value_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf(s.value_buffer, "%d", &g_sealed_deck_options.minimum_deck_size);
+    value_size = 10;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "MinDeckSize", NULL, NULL, (BYTE *)value_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf(value_buffer, "%d", &g_sealed_deck_options.minimum_deck_size);
     else
       g_sealed_deck_options.minimum_deck_size = 0x28;
 
-    RegCloseKey(s.options_key);
+    RegCloseKey(options_key);
   }
   else
   {
@@ -373,95 +364,92 @@ void __stdcall LoadSealedDeckRegistryOptions(void)
 // FUNCTION: SHANDALAR 0x004a657e
 void save_duel_interface_options_to_registry(void)
 {
-  struct
-  {
-    BYTE *phase_stop_text;
-    BYTE phase_stoppers[100];
-    int step;
-    int player;
-    HKEY options_key;
-    BYTE value_buffer[12];
-    DWORD disposition;
-  } s;
+  BYTE *phase_stop_text;
+  BYTE phase_stoppers[100];
+  int step;
+  int player;
+  HKEY options_key;
+  BYTE value_buffer[12];
+  DWORD disposition;
 
   if (RegCreateKeyExA(HKEY_CURRENT_USER, s_duel_options_registry_path_00588100, 0, NULL, 0, 0xf003f,
-                      NULL, &s.options_key, &s.disposition) == ERROR_SUCCESS)
+                      NULL, &options_key, &disposition) == ERROR_SUCCESS)
   {
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.layout);
-    RegSetValueExA(s.options_key, "Layout", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.layout);
+    RegSetValueExA(options_key, "Layout", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.directive_tracks_mouse);
-    RegSetValueExA(s.options_key, "DirectiveTracksMouse", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.directive_tracks_mouse);
+    RegSetValueExA(options_key, "DirectiveTracksMouse", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_coin_flips);
-    RegSetValueExA(s.options_key, "ShowCoinFlips", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_coin_flips);
+    RegSetValueExA(options_key, "ShowCoinFlips", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_cue_cards);
-    RegSetValueExA(s.options_key, "ShowCueCards", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_cue_cards);
+    RegSetValueExA(options_key, "ShowCueCards", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_power_toughness_on_cards);
-    RegSetValueExA(s.options_key, "ShowPowerToughnessOnCards", 0, REG_SZ, s.value_buffer,
-                   strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_power_toughness_on_cards);
+    RegSetValueExA(options_key, "ShowPowerToughnessOnCards", 0, REG_SZ, value_buffer,
+                   strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_abilities_on_cards);
-    RegSetValueExA(s.options_key, "ShowAbilitiesOnCards", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_abilities_on_cards);
+    RegSetValueExA(options_key, "ShowAbilitiesOnCards", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_id_tags_on_cards);
-    RegSetValueExA(s.options_key, "ShowIDTagsOnCards", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_id_tags_on_cards);
+    RegSetValueExA(options_key, "ShowIDTagsOnCards", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_invisible_effect_cards);
-    RegSetValueExA(s.options_key, "ShowInvisibleEffectCards", 0, REG_SZ, s.value_buffer,
-                   strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_invisible_effect_cards);
+    RegSetValueExA(options_key, "ShowInvisibleEffectCards", 0, REG_SZ, value_buffer,
+                   strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.show_all_cards_summon_sickness);
-    RegSetValueExA(s.options_key, "ShowAllCardsSummonSickness", 0, REG_SZ, s.value_buffer,
-                   strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.show_all_cards_summon_sickness);
+    RegSetValueExA(options_key, "ShowAllCardsSummonSickness", 0, REG_SZ, value_buffer,
+                   strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.expand_text_box_on_big_card);
-    RegSetValueExA(s.options_key, "ExpandTextBoxOnBigCard", 0, REG_SZ, s.value_buffer,
-                   strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.expand_text_box_on_big_card);
+    RegSetValueExA(options_key, "ExpandTextBoxOnBigCard", 0, REG_SZ, value_buffer,
+                   strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.see_next_draws_at_end_of_duel);
-    RegSetValueExA(s.options_key, "SeeNextDrawsAtEndOfDuel", 0, REG_SZ, s.value_buffer,
-                   strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.see_next_draws_at_end_of_duel);
+    RegSetValueExA(options_key, "SeeNextDrawsAtEndOfDuel", 0, REG_SZ, value_buffer,
+                   strlen((char *)value_buffer) + 1);
 
-    s.phase_stop_text = s.phase_stoppers;
-    for (s.player = 0; s.player < 2; s.player++)
+    phase_stop_text = phase_stoppers;
+    for (player = 0; player < 2; player++)
     {
-      for (s.step = 0; s.step < 0x25; s.step++)
+      for (step = 0; step < 0x25; step++)
       {
-        if (((int)(char)g_duel_phase_stop_settings[s.player].phase_flags[s.step] & PHASE_STOP_ENABLED) != 0)
+        if (((int)(char)g_duel_phase_stop_settings[player].phase_flags[step] & PHASE_STOP_ENABLED) != 0)
         {
-          *s.phase_stop_text = 'S';
-          s.phase_stop_text++;
+          *phase_stop_text = 'S';
+          phase_stop_text++;
         }
         else
         {
-          *s.phase_stop_text = '-';
-          s.phase_stop_text++;
+          *phase_stop_text = '-';
+          phase_stop_text++;
         }
       }
     }
-    *s.phase_stop_text = '\0';
-    RegSetValueExA(s.options_key, "PhaseStoppers", 0, REG_SZ, s.phase_stoppers,
-                   strlen((char *)s.phase_stoppers) + 1);
+    *phase_stop_text = '\0';
+    RegSetValueExA(options_key, "PhaseStoppers", 0, REG_SZ, phase_stoppers,
+                   strlen((char *)phase_stoppers) + 1);
 
     if ((g_duel_mode_flags & 1) == 0)
     {
-      wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.player_territory_color);
-      RegSetValueExA(s.options_key, "PlayerTerritoryColor", 0, REG_SZ, s.value_buffer,
-                     strlen((char *)s.value_buffer) + 1);
+      wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.player_territory_color);
+      RegSetValueExA(options_key, "PlayerTerritoryColor", 0, REG_SZ, value_buffer,
+                     strlen((char *)value_buffer) + 1);
     }
 
     if ((g_duel_mode_flags & 1) == 0)
     {
-      wsprintfA((char *)s.value_buffer, "%d", g_duel_interface_options.player_territory_type);
-      RegSetValueExA(s.options_key, "PlayerTerritoryType", 0, REG_SZ, s.value_buffer,
-                     strlen((char *)s.value_buffer) + 1);
+      wsprintfA((char *)value_buffer, "%d", g_duel_interface_options.player_territory_type);
+      RegSetValueExA(options_key, "PlayerTerritoryType", 0, REG_SZ, value_buffer,
+                     strlen((char *)value_buffer) + 1);
     }
 
-    RegFlushKey(s.options_key);
-    RegCloseKey(s.options_key);
+    RegFlushKey(options_key);
+    RegCloseKey(options_key);
   }
 }
 
@@ -699,11 +687,8 @@ unsigned int save_or_load_ver1(void)
 unsigned int save_or_load_ver2(void)
 {
   unsigned int result;
-  struct
-  {
-    int card_index;
-    int card_type;
-  } s;
+  int card_index;
+  int card_type;
 
   result = 1;
   result &= save_or_load_data((char *)global_cards_data + g_card_count * 0x48, 0x480);
@@ -876,13 +861,13 @@ unsigned int save_or_load_ver2(void)
 
   if (global_saveload_loading == 1)
   {
-    for (s.card_index = g_card_count; g_card_count + 0x10 > s.card_index; ++s.card_index)
+    for (card_index = g_card_count; g_card_count + 0x10 > card_index; ++card_index)
     {
-      if (*(int *)((char *)global_cards_data + s.card_index * 0x48 + 0x24) != -1)
+      if (*(int *)((char *)global_cards_data + card_index * 0x48 + 0x24) != -1)
       {
-        s.card_type = CardTypeFromID(*(int *)((char *)global_cards_data + s.card_index * 0x48 + 0x24));
-        *(int *)((char *)global_cards_data + s.card_index * 0x48 + 0x34) =
-            *(int *)((char *)global_cards_data + s.card_type * 0x48 + 0x34);
+        card_type = CardTypeFromID(*(int *)((char *)global_cards_data + card_index * 0x48 + 0x24));
+        *(int *)((char *)global_cards_data + card_index * 0x48 + 0x34) =
+            *(int *)((char *)global_cards_data + card_type * 0x48 + 0x34);
       }
     }
   }
@@ -991,28 +976,25 @@ unsigned int load_or_probe_duel_save_slot(char *path, int probe_only)
 int load_selected_duel_save_slot(int player)
 {
 #ifdef SHANDALAR
-  struct
-  {
-    int save_drive_index;
-    unsigned int slot_index;
-  } s;
+  int save_drive_index;
+  unsigned int slot_index;
 
   global_saveload_loading = 1;
   HideMouseCursorNested();
-  s.save_drive_index = GetSaveDriveIndex();
-  if (s.save_drive_index != -1)
+  save_drive_index = GetSaveDriveIndex();
+  if (save_drive_index != -1)
   {
     if (player == -1)
     {
       strcpy(g_ui_message_buffer, "\x8cSelect Load File...\n");
       g_load_menu_valid_slot_mask = 0;
 
-      for (s.slot_index = 0; s.slot_index < 10; s.slot_index = s.slot_index + 1)
+      for (slot_index = 0; slot_index < 10; slot_index = slot_index + 1)
       {
-        g_save_file_path[7] = (char)int_to_hex_digit(s.slot_index);
+        g_save_file_path[7] = (char)int_to_hex_digit(slot_index);
         if (load_or_probe_duel_save_slot(g_save_file_path, 1) != 0)
         {
-          g_load_menu_valid_slot_mask |= (1 << (unsigned char)s.slot_index);
+          g_load_menu_valid_slot_mask |= (1 << (unsigned char)slot_index);
         }
       }
 
@@ -1053,25 +1035,22 @@ int load_selected_duel_save_slot(int player)
     return -1;
   }
 #else
-  struct
-  {
-    int save_slot_source;
-    unsigned int slot;
-  } s;
+  int save_slot_source;
+  unsigned int slot;
 
   global_saveload_loading = 1;
-  s.save_slot_source = get_duel_save_slot_source();
-  if (s.save_slot_source != -1)
+  save_slot_source = get_duel_save_slot_source();
+  if (save_slot_source != -1)
   {
     if (player == -1)
     {
       strcpy(g_ui_message_buffer, "\x8cSelect Load File...\n");
       g_load_menu_valid_slot_mask = 0;
-      for (s.slot = 0; s.slot < 10; s.slot++)
+      for (slot = 0; slot < 10; slot++)
       {
-        g_save_file_path[7] = (char)int_to_hex_digit(s.slot);
+        g_save_file_path[7] = (char)int_to_hex_digit(slot);
         if (load_or_probe_duel_save_slot(g_save_file_path, 1) != 0)
-          g_load_menu_valid_slot_mask |= 1 << (char)s.slot;
+          g_load_menu_valid_slot_mask |= 1 << (char)slot;
       }
       g_selected_save_slot_index = 0;
       if ((g_load_menu_valid_slot_mask & (1 << (char)g_selected_save_slot_index)) == 0)
@@ -1104,50 +1083,47 @@ int load_selected_duel_save_slot(int player)
 // FUNCTION: SHANDALAR 0x0050325f
 unsigned int load_gametype0(char *path)
 {
-  struct
-  {
-    int card_index;
-    unsigned int result;
-    int save_version;
-    int card_type;
-  } s;
+  int card_index;
+  unsigned int result;
+  int save_version;
+  int card_type;
 
-  s.result = 1;
+  result = 1;
   g_save_file_fd = _open(path, 0x8000);
   if (g_save_file_fd != -1)
   {
     global_saveload_loading = 1;
-    s.result &= save_or_load_data(&s.save_version, 4);
-    if (g_save_format_version == s.save_version)
+    result &= save_or_load_data(&save_version, 4);
+    if (g_save_format_version == save_version)
     {
-      s.result &= save_or_load_ver1();
-      s.result &= save_or_load_data(&_PlayerFace, 4);
-      s.result &= save_or_load_data(&_OpponFace, 4);
-      s.result &= save_or_load_data(g_saved_player_name, 0x32);
+      result &= save_or_load_ver1();
+      result &= save_or_load_data(&_PlayerFace, 4);
+      result &= save_or_load_data(&_OpponFace, 4);
+      result &= save_or_load_data(g_saved_player_name, 0x32);
       g_saved_player_name_terminator = 0;
-      s.result &= save_or_load_data(g_player_name, 0x32);
+      result &= save_or_load_data(g_player_name, 0x32);
       g_player_name_terminator = 0;
-      for (s.card_index = g_card_count; s.card_index < g_card_count + 0x10; s.card_index++)
+      for (card_index = g_card_count; card_index < g_card_count + 0x10; card_index++)
       {
-        if (global_cards_data[s.card_index].id != -1)
+        if (global_cards_data[card_index].id != -1)
         {
-          s.card_type = CardTypeFromID(global_cards_data[s.card_index].id);
-          global_cards_data[s.card_index].code_pointer = global_cards_data[s.card_type].code_pointer;
+          card_type = CardTypeFromID(global_cards_data[card_index].id);
+          global_cards_data[card_index].code_pointer = global_cards_data[card_type].code_pointer;
         }
       }
     }
     else
     {
-      s.result = 0;
+      result = 0;
     }
     _close(g_save_file_fd);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004ef0ea
@@ -1214,42 +1190,39 @@ void save_sealeddeck(char *path)
 // FUNCTION: SHANDALAR 0x004a7112
 void save_solo_duel_options_to_registry(void)
 {
-  struct
-  {
-    HKEY options_key;
-    BYTE value_buffer[12];
-    DWORD disposition;
-  } s;
+  HKEY options_key;
+  BYTE value_buffer[12];
+  DWORD disposition;
 
   if (RegCreateKeyExA(HKEY_CURRENT_USER, s_solo_options_registry_path_00571284, 0, NULL, 0, 0xf003f,
-                      NULL, &s.options_key, &s.disposition) == ERROR_SUCCESS)
+                      NULL, &options_key, &disposition) == ERROR_SUCCESS)
   {
-    wsprintfA((char *)s.value_buffer, "%d", g_solo_duel_options.difficulty);
-    RegSetValueExA(s.options_key, "Difficulty", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_solo_duel_options.difficulty);
+    RegSetValueExA(options_key, "Difficulty", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    RegSetValueExA(s.options_key, "PlayerDeck", 0, REG_SZ, (BYTE *)g_solo_duel_options.player_deck,
+    RegSetValueExA(options_key, "PlayerDeck", 0, REG_SZ, (BYTE *)g_solo_duel_options.player_deck,
                    strlen(g_solo_duel_options.player_deck) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_solo_duel_options.player_random);
-    RegSetValueExA(s.options_key, "PlayerRandom", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_solo_duel_options.player_random);
+    RegSetValueExA(options_key, "PlayerRandom", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    RegSetValueExA(s.options_key, "OpponentDeck", 0, REG_SZ, (BYTE *)g_solo_duel_options.opponent_deck,
+    RegSetValueExA(options_key, "OpponentDeck", 0, REG_SZ, (BYTE *)g_solo_duel_options.opponent_deck,
                    strlen(g_solo_duel_options.opponent_deck) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_solo_duel_options.opponent_random);
-    RegSetValueExA(s.options_key, "OpponentRandom", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_solo_duel_options.opponent_random);
+    RegSetValueExA(options_key, "OpponentRandom", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_solo_duel_options.best_of);
-    RegSetValueExA(s.options_key, "BestOf", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_solo_duel_options.best_of);
+    RegSetValueExA(options_key, "BestOf", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_solo_duel_options.ante);
-    RegSetValueExA(s.options_key, "Ante", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_solo_duel_options.ante);
+    RegSetValueExA(options_key, "Ante", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_solo_duel_options.allow_sideboarding);
-    RegSetValueExA(s.options_key, "AllowSideboarding", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_solo_duel_options.allow_sideboarding);
+    RegSetValueExA(options_key, "AllowSideboarding", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    RegFlushKey(s.options_key);
-    RegCloseKey(s.options_key);
+    RegFlushKey(options_key);
+    RegCloseKey(options_key);
   }
 }
 
@@ -1257,36 +1230,33 @@ void save_solo_duel_options_to_registry(void)
 // FUNCTION: SHANDALAR 0x004a75af
 void save_gauntlet_options_to_registry(void)
 {
-  struct
-  {
-    HKEY options_key;
-    BYTE value_buffer[12];
-    DWORD disposition;
-  } s;
+  HKEY options_key;
+  BYTE value_buffer[12];
+  DWORD disposition;
 
   if (RegCreateKeyExA(HKEY_CURRENT_USER, s_gauntlet_options_registry_path_00571338, 0, NULL, 0,
-                      0xf003f, NULL, &s.options_key, &s.disposition) == ERROR_SUCCESS)
+                      0xf003f, NULL, &options_key, &disposition) == ERROR_SUCCESS)
   {
-    RegSetValueExA(s.options_key, "PlayerDeck", 0, REG_SZ, (BYTE *)g_gauntlet_options.player_deck,
+    RegSetValueExA(options_key, "PlayerDeck", 0, REG_SZ, (BYTE *)g_gauntlet_options.player_deck,
                    strlen(g_gauntlet_options.player_deck) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_gauntlet_options.player_random);
-    RegSetValueExA(s.options_key, "PlayerRandom", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_gauntlet_options.player_random);
+    RegSetValueExA(options_key, "PlayerRandom", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_gauntlet_options.best_of);
-    RegSetValueExA(s.options_key, "BestOf", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_gauntlet_options.best_of);
+    RegSetValueExA(options_key, "BestOf", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_gauntlet_options.ante);
-    RegSetValueExA(s.options_key, "Ante", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_gauntlet_options.ante);
+    RegSetValueExA(options_key, "Ante", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_gauntlet_options.allow_sideboarding);
-    RegSetValueExA(s.options_key, "AllowSideboarding", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_gauntlet_options.allow_sideboarding);
+    RegSetValueExA(options_key, "AllowSideboarding", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    wsprintfA((char *)s.value_buffer, "%d", g_gauntlet_options.gauntlet_length);
-    RegSetValueExA(s.options_key, "GauntletLength", 0, REG_SZ, s.value_buffer, strlen((char *)s.value_buffer) + 1);
+    wsprintfA((char *)value_buffer, "%d", g_gauntlet_options.gauntlet_length);
+    RegSetValueExA(options_key, "GauntletLength", 0, REG_SZ, value_buffer, strlen((char *)value_buffer) + 1);
 
-    RegFlushKey(s.options_key);
-    RegCloseKey(s.options_key);
+    RegFlushKey(options_key);
+    RegCloseKey(options_key);
   }
 }
 
@@ -1294,172 +1264,160 @@ void save_gauntlet_options_to_registry(void)
 // FUNCTION: SHANDALAR 0x00504614
 int validate_loaded_duel_card_availability(void)
 {
-  struct
-  {
-    unsigned int card_id;
-    int result;
-    int card;
-    int player;
-    int internal_card_id;
-  } s;
+  unsigned int card_id;
+  int result;
+  int card;
+  int player;
+  int internal_card_id;
 
-  s.result = 1;
-  for (s.player = 0; s.player <= 1; s.player++)
+  result = 1;
+  for (player = 0; player <= 1; player++)
   {
-    for (s.card = 0; s.card < 0x97 && s.card <= g_active_cards_count[s.player]; s.card++)
+    for (card = 0; card < 0x97 && card <= g_active_cards_count[player]; card++)
     {
-      s.internal_card_id = global_card_instances[s.player][s.card].original_internal_card_id;
-      if (s.internal_card_id < g_damage_card_internal_card_id || g_damage_card_internal_card_id + 0x2d <= s.internal_card_id)
+      internal_card_id = global_card_instances[player][card].original_internal_card_id;
+      if (internal_card_id < g_damage_card_internal_card_id || g_damage_card_internal_card_id + 0x2d <= internal_card_id)
       {
-        if (s.internal_card_id > -1)
-          s.card_id = global_cards_data[s.internal_card_id].id;
+        if (internal_card_id > -1)
+          card_id = global_cards_data[internal_card_id].id;
         else
-          s.card_id = 0xffffffff;
-        if (s.card_id != 0xffffffff && s.card_id != 0x38d && is_card_available_in_installed_expansion(s.card_id) == 0)
-          s.result = 0;
+          card_id = 0xffffffff;
+        if (card_id != 0xffffffff && card_id != 0x38d && is_card_available_in_installed_expansion(card_id) == 0)
+          result = 0;
       }
     }
 
-    for (s.card = 0; s.card < 500 && global_graveyard_slots[s.player][s.card] != -1; s.card++)
+    for (card = 0; card < 500 && global_graveyard_slots[player][card] != -1; card++)
     {
-      s.card_id = CardIDFromType(global_graveyard_slots[s.player][s.card]);
-      if (s.card_id != 0xffffffff && is_card_available_in_installed_expansion(s.card_id) == 0)
-        s.result = 0;
+      card_id = CardIDFromType(global_graveyard_slots[player][card]);
+      if (card_id != 0xffffffff && is_card_available_in_installed_expansion(card_id) == 0)
+        result = 0;
     }
 
-    for (s.card = 0; s.card < 500 && global_library[s.player][s.card] != -1; s.card++)
+    for (card = 0; card < 500 && global_library[player][card] != -1; card++)
     {
-      s.card_id = CardIDFromType(global_library[s.player][s.card]);
-      if (s.card_id != 0xffffffff && is_card_available_in_installed_expansion(s.card_id) == 0)
-        s.result = 0;
+      card_id = CardIDFromType(global_library[player][card]);
+      if (card_id != 0xffffffff && is_card_available_in_installed_expansion(card_id) == 0)
+        result = 0;
     }
   }
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004ef17b
 // FUNCTION: SHANDALAR 0x0050416b
 unsigned int load_duel_run_mode_1_save(char *path)
 {
-  struct
-  {
-    unsigned int result;
-    int save_version;
-  } s;
+  unsigned int result;
+  int save_version;
 
-  s.result = 1;
+  result = 1;
   g_save_file_fd = _open(path, 0x8000);
   if (g_save_file_fd != -1)
   {
     global_saveload_loading = 1;
-    s.result &= save_or_load_data(&s.save_version, 4);
-    if (g_savegame_version == s.save_version)
+    result &= save_or_load_data(&save_version, 4);
+    if (g_savegame_version == save_version)
     {
-      s.result &= save_or_load_ver2();
-      s.result &= save_or_load_duel_mode_state();
-      s.result &= save_or_load_data(&g_solo_duel_options.best_of, 4);
-      s.result &= save_or_load_data(&g_solo_duel_options.allow_sideboarding, 4);
+      result &= save_or_load_ver2();
+      result &= save_or_load_duel_mode_state();
+      result &= save_or_load_data(&g_solo_duel_options.best_of, 4);
+      result &= save_or_load_data(&g_solo_duel_options.allow_sideboarding, 4);
       save_solo_duel_options_to_registry();
     }
     else
     {
-      s.result = 0;
+      result = 0;
     }
     _close(g_save_file_fd);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
 
-  if (s.result != 0 && validate_loaded_duel_card_availability() == 0)
-    s.result = 0;
+  if (result != 0 && validate_loaded_duel_card_availability() == 0)
+    result = 0;
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004ef35a
 // FUNCTION: SHANDALAR 0x0050434b
 unsigned int load_duel_run_mode_2_save(char *path)
 {
-  struct
-  {
-    unsigned int result;
-    int save_version;
-  } s;
+  unsigned int result;
+  int save_version;
 
-  s.result = 1;
+  result = 1;
   g_save_file_fd = _open(path, 0x8000);
   if (g_save_file_fd != -1)
   {
     global_saveload_loading = 1;
-    s.result &= save_or_load_data(&s.save_version, 4);
-    if (s.save_version == g_savegame_version)
+    result &= save_or_load_data(&save_version, 4);
+    if (save_version == g_savegame_version)
     {
-      s.result &= save_or_load_ver2();
-      s.result &= save_or_load_duel_mode_state();
-      s.result &= save_or_load_data(&g_gauntlet_options.best_of, 4);
-      s.result &= save_or_load_data(&g_gauntlet_options.allow_sideboarding, 4);
-      s.result &= save_or_load_data(&g_gauntlet_options.gauntlet_length, 4);
+      result &= save_or_load_ver2();
+      result &= save_or_load_duel_mode_state();
+      result &= save_or_load_data(&g_gauntlet_options.best_of, 4);
+      result &= save_or_load_data(&g_gauntlet_options.allow_sideboarding, 4);
+      result &= save_or_load_data(&g_gauntlet_options.gauntlet_length, 4);
       save_gauntlet_options_to_registry();
-      s.result &= save_or_load_data(&g_duel_options_state, 4);
-      s.result &= save_or_load_data(&g_current_spell_internal_card_id, 4);
-      s.result &= save_or_load_data(&g_duel_state_00925bf8, 4);
-      s.result &= save_or_load_data(&g_duel_state_00777c10, 4);
-      s.result &= save_or_load_data(&g_duel_state_00777c08, 4);
+      result &= save_or_load_data(&g_duel_options_state, 4);
+      result &= save_or_load_data(&g_current_spell_internal_card_id, 4);
+      result &= save_or_load_data(&g_duel_state_00925bf8, 4);
+      result &= save_or_load_data(&g_duel_state_00777c10, 4);
+      result &= save_or_load_data(&g_duel_state_00777c08, 4);
     }
     else
     {
-      s.result = 0;
+      result = 0;
     }
     _close(g_save_file_fd);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
 
-  if (s.result != 0 && validate_loaded_duel_card_availability() == 0)
-    s.result = 0;
+  if (result != 0 && validate_loaded_duel_card_availability() == 0)
+    result = 0;
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004ef54b
 // FUNCTION: SHANDALAR 0x0050453d
 unsigned int load_duel_run_mode_3_save(char *path)
 {
-  struct
-  {
-    unsigned int result;
-    int save_version;
-  } s;
+  unsigned int result;
+  int save_version;
 
-  s.result = 1;
+  result = 1;
   g_save_file_fd = _open(path, 0x8000);
   if (g_save_file_fd != -1)
   {
     global_saveload_loading = 1;
-    s.result &= save_or_load_data(&s.save_version, 4);
-    if (s.save_version == g_savegame_version)
+    result &= save_or_load_data(&save_version, 4);
+    if (save_version == g_savegame_version)
     {
-      s.result &= save_or_load_ver2();
-      s.result &= save_or_load_duel_mode_state();
-      s.result &= save_or_load_data(&g_sealed_deck_options.best_of, 4);
-      s.result &= save_or_load_data(g_savegame_data_buffer, 0x4ae64);
+      result &= save_or_load_ver2();
+      result &= save_or_load_duel_mode_state();
+      result &= save_or_load_data(&g_sealed_deck_options.best_of, 4);
+      result &= save_or_load_data(g_savegame_data_buffer, 0x4ae64);
       g_savegame_data_pointer = g_savegame_data_buffer;
     }
     else
     {
-      s.result = 0;
+      result = 0;
     }
     _close(g_save_file_fd);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
 
-  return s.result;
+  return result;
 }

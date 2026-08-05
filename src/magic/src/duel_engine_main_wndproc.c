@@ -307,26 +307,23 @@ int g_battlefield_draw_placeholder_y[2];
 // FUNCTION: SHANDALAR 0x004511a5
 void notify_duel_action(int player, unsigned int value)
 {
-  struct
-  {
-    HWND other_life_window;
-    HWND life_window;
-    int selected_card;
-    HWND primary_battlefield_window;
-    HWND child_window;
-    HWND secondary_battlefield_window;
-    int attached_player_and_card[2];
-    int action_player_and_card[2];
-    card_id_t card_id;
-    int card_index;
-    int zone;
-    int internal_card_id;
-    unsigned int display_flags;
-    int player_index;
-    unsigned int need_redraw;
-    unsigned int card_flags;
-    WPARAM attack_phase_refresh_flag;
-  } s;
+  HWND other_life_window;
+  HWND life_window;
+  int selected_card;
+  HWND primary_battlefield_window;
+  HWND child_window;
+  HWND secondary_battlefield_window;
+  int attached_player_and_card[2];
+  int action_player_and_card[2];
+  card_id_t card_id;
+  int card_index;
+  int zone;
+  int internal_card_id;
+  unsigned int display_flags;
+  int player_index;
+  unsigned int need_redraw;
+  unsigned int card_flags;
+  WPARAM attack_phase_refresh_flag;
 
   KillTimer(g_duel_window_hwnd, g_duel_timer_id);
   EnterCriticalSection(&g_duel_render_lock);
@@ -337,16 +334,16 @@ void notify_duel_action(int player, unsigned int value)
   }
   LeaveCriticalSection(&g_duel_render_lock);
 
-  s.need_redraw = refresh_duel_display_cache();
+  need_redraw = refresh_duel_display_cache();
 
   EnterCriticalSection(&g_duel_render_lock);
-  for (s.player_index = 0; s.player_index < 2; s.player_index++)
+  for (player_index = 0; player_index < 2; player_index++)
   {
-    for (s.card_index = 0; s.card_index < 0x96; s.card_index++)
+    for (card_index = 0; card_index < 0x96; card_index++)
     {
-      if (get_displayed_card_id(s.player_index, s.card_index) == g_card_back_display_internal_card_id)
+      if (get_displayed_card_id(player_index, card_index) == g_card_back_display_internal_card_id)
       {
-        global_displayed_card_instances[s.player_index][s.card_index].state &= ~STATE_IN_PLAY;
+        global_displayed_card_instances[player_index][card_index].state &= ~STATE_IN_PLAY;
       }
     }
   }
@@ -354,140 +351,140 @@ void notify_duel_action(int player, unsigned int value)
 
   if ((value == 0) || ((value & 0x30) != 0))
   {
-    if (s.need_redraw != 0)
+    if (need_redraw != 0)
     {
-      for (s.player_index = 0; s.player_index < 2; s.player_index++)
+      for (player_index = 0; player_index < 2; player_index++)
       {
-        for (s.card_index = 0; s.card_index < 0x96; s.card_index++)
+        for (card_index = 0; card_index < 0x96; card_index++)
         {
-          s.action_player_and_card[0] = s.player_index;
-          s.action_player_and_card[1] = s.card_index;
-          s.zone = get_displayed_card_zone(s.player_index, s.card_index);
-          s.internal_card_id = get_displayed_card_internal_id(s.player_index, s.card_index);
-          s.card_id = get_displayed_card_id(s.player_index, s.card_index);
-          s.display_flags = get_displayed_card_display_flags(s.player_index, s.card_index);
-          s.card_flags = get_displayed_card_ui_flags(s.player_index, s.card_index);
+          action_player_and_card[0] = player_index;
+          action_player_and_card[1] = card_index;
+          zone = get_displayed_card_zone(player_index, card_index);
+          internal_card_id = get_displayed_card_internal_id(player_index, card_index);
+          card_id = get_displayed_card_id(player_index, card_index);
+          display_flags = get_displayed_card_display_flags(player_index, card_index);
+          card_flags = get_displayed_card_ui_flags(player_index, card_index);
 
-          if (((s.internal_card_id == -1) ||
-               (((s.display_flags & 0x10000) != 0) && (g_duel_interface_options.show_invisible_effect_cards == 0))) ||
-              ((g_damage_card_internal_card_id == s.internal_card_id) && (get_displayed_card_special_counters(s.player_index, s.card_index) == 0)))
+          if (((internal_card_id == -1) ||
+               (((display_flags & 0x10000) != 0) && (g_duel_interface_options.show_invisible_effect_cards == 0))) ||
+              ((g_damage_card_internal_card_id == internal_card_id) && (get_displayed_card_special_counters(player_index, card_index) == 0)))
           {
-            SendMessageA(g_duel_full_card_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_life_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_player_battlefield_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_help_owner_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_card_preview_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
+            SendMessageA(g_duel_full_card_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_life_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_player_battlefield_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_help_owner_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_card_preview_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
             if ((IsWindowVisible(g_duel_attack_phase_window_hwnd) != 0) || (is_attack_phase_window_enabled() != 0))
             {
-              SendMessageA(g_duel_attack_phase_window_hwnd, 0x403, (WPARAM)s.action_player_and_card, 0);
-              SendMessageA(g_duel_attack_phase_window_hwnd, 0x402, (WPARAM)s.action_player_and_card, 0);
+              SendMessageA(g_duel_attack_phase_window_hwnd, 0x403, (WPARAM)action_player_and_card, 0);
+              SendMessageA(g_duel_attack_phase_window_hwnd, 0x402, (WPARAM)action_player_and_card, 0);
             }
           }
-          else if (s.zone == 2)
+          else if (zone == 2)
           {
-            SendMessageA(g_duel_full_card_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_life_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_player_battlefield_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-            SendMessageA(g_duel_help_owner_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
+            SendMessageA(g_duel_full_card_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_life_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_player_battlefield_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+            SendMessageA(g_duel_help_owner_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
           }
-          else if (g_stack_proxy_internal_card_id == s.internal_card_id)
+          else if (g_stack_proxy_internal_card_id == internal_card_id)
           {
           }
           else
           {
-            if (s.zone == 1)
+            if (zone == 1)
             {
-              SendMessageA(g_duel_full_card_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-              SendMessageA(g_duel_life_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-              if (((s.card_flags & 0x10) != 0) &&
-                  ((g_damage_display_internal_card_id <= s.card_id ||
-                    ((global_raw_cards_storage[s.card_id].card_type == 2 &&
-                      (global_raw_cards_storage[s.card_id].subtype != 0xd3))))))
+              SendMessageA(g_duel_full_card_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+              SendMessageA(g_duel_life_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+              if (((card_flags & 0x10) != 0) &&
+                  ((g_damage_display_internal_card_id <= card_id ||
+                    ((global_raw_cards_storage[card_id].card_type == 2 &&
+                      (global_raw_cards_storage[card_id].subtype != 0xd3))))))
               {
-                get_displayed_card_attachment(s.attached_player_and_card, s.player_index, s.card_index);
-                while (((get_displayed_card_ui_flags(s.attached_player_and_card[0], s.attached_player_and_card[1]) & 0x10) != 0 &&
-                        ((s.card_id = get_displayed_card_id(s.attached_player_and_card[0], s.attached_player_and_card[1])) != -1)) &&
-                       (g_damage_display_internal_card_id <= s.card_id ||
-                        ((global_raw_cards_storage[s.card_id].card_type == 2 &&
-                          (global_raw_cards_storage[s.card_id].subtype != 0xd3)))))
+                get_displayed_card_attachment(attached_player_and_card, player_index, card_index);
+                while (((get_displayed_card_ui_flags(attached_player_and_card[0], attached_player_and_card[1]) & 0x10) != 0 &&
+                        ((card_id = get_displayed_card_id(attached_player_and_card[0], attached_player_and_card[1])) != -1)) &&
+                       (g_damage_display_internal_card_id <= card_id ||
+                        ((global_raw_cards_storage[card_id].card_type == 2 &&
+                          (global_raw_cards_storage[card_id].subtype != 0xd3)))))
                 {
-                  get_displayed_card_attachment(s.attached_player_and_card, s.attached_player_and_card[0], s.attached_player_and_card[1]);
+                  get_displayed_card_attachment(attached_player_and_card, attached_player_and_card[0], attached_player_and_card[1]);
                 }
-                if (s.attached_player_and_card[0] == 0)
+                if (attached_player_and_card[0] == 0)
                 {
-                  s.secondary_battlefield_window = g_duel_player_battlefield_window_hwnd;
-                }
-                else
-                {
-                  s.secondary_battlefield_window = g_duel_help_owner_hwnd;
-                }
-                if (s.attached_player_and_card[0] == 0)
-                {
-                  s.primary_battlefield_window = g_duel_help_owner_hwnd;
+                  secondary_battlefield_window = g_duel_player_battlefield_window_hwnd;
                 }
                 else
                 {
-                  s.primary_battlefield_window = g_duel_player_battlefield_window_hwnd;
+                  secondary_battlefield_window = g_duel_help_owner_hwnd;
                 }
-                SendMessageA(s.primary_battlefield_window, 0x40b, (WPARAM)s.action_player_and_card, 0);
-                SendMessageA(s.secondary_battlefield_window, 0x40a, (WPARAM)s.action_player_and_card, 0);
-                if (find_attack_phase_card_window(g_duel_attack_phase_window_hwnd, s.attached_player_and_card, (int *)0, &s.child_window, (int *)0) != 0)
+                if (attached_player_and_card[0] == 0)
                 {
-                  SendMessageA(g_duel_attack_phase_window_hwnd, 0x406, (WPARAM)s.action_player_and_card, (LPARAM)s.child_window);
-                  SendMessageA(g_duel_attack_phase_window_hwnd, 0x410, (WPARAM)s.child_window, 0);
-                  s.attack_phase_refresh_flag = 1;
-                  if (((find_battlefield_card_window(s.secondary_battlefield_window, s.attached_player_and_card, (int *)0, &s.child_window) != 0) &&
-                       (IsWindowVisible(s.child_window) == 0)) &&
-                      (find_battlefield_card_window(s.secondary_battlefield_window, s.action_player_and_card, (int *)0, &s.child_window) != 0))
+                  primary_battlefield_window = g_duel_help_owner_hwnd;
+                }
+                else
+                {
+                  primary_battlefield_window = g_duel_player_battlefield_window_hwnd;
+                }
+                SendMessageA(primary_battlefield_window, 0x40b, (WPARAM)action_player_and_card, 0);
+                SendMessageA(secondary_battlefield_window, 0x40a, (WPARAM)action_player_and_card, 0);
+                if (find_attack_phase_card_window(g_duel_attack_phase_window_hwnd, attached_player_and_card, (int *)0, &child_window, (int *)0) != 0)
+                {
+                  SendMessageA(g_duel_attack_phase_window_hwnd, 0x406, (WPARAM)action_player_and_card, (LPARAM)child_window);
+                  SendMessageA(g_duel_attack_phase_window_hwnd, 0x410, (WPARAM)child_window, 0);
+                  attack_phase_refresh_flag = 1;
+                  if (((find_battlefield_card_window(secondary_battlefield_window, attached_player_and_card, (int *)0, &child_window) != 0) &&
+                       (IsWindowVisible(child_window) == 0)) &&
+                      (find_battlefield_card_window(secondary_battlefield_window, action_player_and_card, (int *)0, &child_window) != 0))
                   {
-                    ShowWindow(s.child_window, SW_HIDE);
+                    ShowWindow(child_window, SW_HIDE);
                   }
                 }
               }
               else
               {
-                if (s.player_index == 0)
+                if (player_index == 0)
                 {
-                  s.secondary_battlefield_window = g_duel_player_battlefield_window_hwnd;
+                  secondary_battlefield_window = g_duel_player_battlefield_window_hwnd;
                 }
                 else
                 {
-                  s.secondary_battlefield_window = g_duel_help_owner_hwnd;
+                  secondary_battlefield_window = g_duel_help_owner_hwnd;
                 }
-                if (s.player_index == 0)
+                if (player_index == 0)
                 {
-                  s.primary_battlefield_window = g_duel_help_owner_hwnd;
+                  primary_battlefield_window = g_duel_help_owner_hwnd;
                 }
                 else
                 {
-                  s.primary_battlefield_window = g_duel_player_battlefield_window_hwnd;
+                  primary_battlefield_window = g_duel_player_battlefield_window_hwnd;
                 }
-                SendMessageA(s.primary_battlefield_window, 0x40b, (WPARAM)s.action_player_and_card, 0);
-                SendMessageA(s.secondary_battlefield_window, 0x40a, (WPARAM)s.action_player_and_card, 0);
+                SendMessageA(primary_battlefield_window, 0x40b, (WPARAM)action_player_and_card, 0);
+                SendMessageA(secondary_battlefield_window, 0x40a, (WPARAM)action_player_and_card, 0);
               }
             }
-            else if (s.zone == 0)
+            else if (zone == 0)
             {
-              SendMessageA(g_duel_player_battlefield_window_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-              SendMessageA(g_duel_help_owner_hwnd, 0x40b, (WPARAM)s.action_player_and_card, 0);
-              if (s.player_index == 0)
+              SendMessageA(g_duel_player_battlefield_window_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+              SendMessageA(g_duel_help_owner_hwnd, 0x40b, (WPARAM)action_player_and_card, 0);
+              if (player_index == 0)
               {
-                s.life_window = g_duel_life_window_hwnd;
+                life_window = g_duel_life_window_hwnd;
               }
               else
               {
-                s.life_window = g_duel_full_card_window_hwnd;
+                life_window = g_duel_full_card_window_hwnd;
               }
-              SendMessageA(s.life_window, 0x40b, (WPARAM)s.action_player_and_card, 0);
-              if (s.player_index == 0)
+              SendMessageA(life_window, 0x40b, (WPARAM)action_player_and_card, 0);
+              if (player_index == 0)
               {
-                s.other_life_window = g_duel_full_card_window_hwnd;
+                other_life_window = g_duel_full_card_window_hwnd;
               }
               else
               {
-                s.other_life_window = g_duel_life_window_hwnd;
+                other_life_window = g_duel_life_window_hwnd;
               }
-              SendMessageA(s.other_life_window, 0x40a, (WPARAM)s.action_player_and_card, 0);
+              SendMessageA(other_life_window, 0x40a, (WPARAM)action_player_and_card, 0);
             }
           }
         }
@@ -496,10 +493,10 @@ void notify_duel_action(int player, unsigned int value)
 
     SendMessageA(g_duel_player_battlefield_window_hwnd, 0x400, 0, 0);
     SendMessageA(g_duel_help_owner_hwnd, 0x400, 0, 0);
-    get_current_duel_selection((int *)0, &s.selected_card);
-    if ((0x14 < s.selected_card) && (s.selected_card < 0x1e))
+    get_current_duel_selection((int *)0, &selected_card);
+    if ((0x14 < selected_card) && (selected_card < 0x1e))
     {
-      SendMessageA(g_duel_attack_phase_window_hwnd, 0x412, s.attack_phase_refresh_flag, 0);
+      SendMessageA(g_duel_attack_phase_window_hwnd, 0x412, attack_phase_refresh_flag, 0);
     }
     else
     {
@@ -870,329 +867,323 @@ void get_next_battlefield_card_position(HWND parent, int *rect, int value, int *
 // FUNCTION: SHANDALAR 0x00506c5a
 void resize_battlefield_child_card_windows(HWND hwnd)
 {
-  struct
-  {
-    int card_count;
-    int index;
-    HWND *card_windows;
-    RECT rect;
-    HWND snapshot_window;
-  } s;
+  int card_count;
+  int index;
+  HWND *card_windows;
+  RECT rect;
+  HWND snapshot_window;
 
-  GetClientRect(hwnd, &s.rect);
-  s.card_count = GetWindowLongA(hwnd, g_duel_window_userdata_card_offset);
-  s.card_windows = (HWND *)GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
-  s.snapshot_window = (HWND)GetWindowLongA(hwnd, g_duel_window_userdata_snapshot_offset);
+  GetClientRect(hwnd, &rect);
+  card_count = GetWindowLongA(hwnd, g_duel_window_userdata_card_offset);
+  card_windows = (HWND *)GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
+  snapshot_window = (HWND)GetWindowLongA(hwnd, g_duel_window_userdata_snapshot_offset);
 
-  for (s.index = 0; s.index < s.card_count; s.index++)
+  for (index = 0; index < card_count; index++)
   {
-    SetWindowPos(s.card_windows[s.index], (HWND)0, 0, 0,
+    SetWindowPos(card_windows[index], (HWND)0, 0, 0,
                  g_showlist_smallcard_width, g_showlist_smallcard_height,
                  SWP_NOMOVE | SWP_NOZORDER);
   }
-  for (s.index = 0; s.index < s.card_count; s.index++)
+  for (index = 0; index < card_count; index++)
   {
-    SendMessageA(hwnd, 0x410, (WPARAM)s.card_windows[s.index], 0);
+    SendMessageA(hwnd, 0x410, (WPARAM)card_windows[index], 0);
   }
-  SetWindowPos(s.snapshot_window, (HWND)0, 0, 0,
+  SetWindowPos(snapshot_window, (HWND)0, 0, 0,
                g_showlist_smallcard_width, g_showlist_smallcard_height,
                SWP_NOMOVE | SWP_NOZORDER);
-  SendMessageA(hwnd, 0x410, (WPARAM)s.snapshot_window, 0);
+  SendMessageA(hwnd, 0x410, (WPARAM)snapshot_window, 0);
 }
 
 // FUNCTION: MAGIC 0x004dc512
 // FUNCTION: SHANDALAR 0x005431cd
 void layout_duel_child_windows(HWND hwnd, int layout)
 {
-  struct
-  {
-    char chat_text2[200];
-    unsigned int chat_text2_length;
-    CHAR tooltip_text2[100];
-    char chat_text1[200];
-    unsigned int chat_text1_length;
-    CHAR tooltip_text1[100];
-    int left_phasebar_x;
-    int preview_height;
-    int opponent_chat_y;
-    int lower_life_y;
-    int phasebar_width;
-    int opponent_chat_x;
-    int center_column_width;
-    int preview_x;
-    int preview_y;
-    int half_phasebar_height;
-    int chat_y;
-    int left_phasebar_width;
-    int bottom_half_y;
-    int client_height;       // ebp - 0xb8
-    POINT point;             // ebp - 0xb4
-    int lower_middle_height; // ebp - 0xac
-    int left_phasebar_x_copy; // ebp - 0xa8
-    int divider_width;       // ebp - 0xa4
-    int chat_height;         // ebp - 0xa0
-    int client_width;        // ebp - 0x9c
-    int top_middle_height;   // ebp - 0x98
-    int face_y;              // ebp - 0x94
-    int face_height;         // ebp - 0x90
-    int player_life_x;       // ebp - 0x8c
-    int preview_left;        // ebp - 0x88
-    int preview_top;         // ebp - 0x84
-    int right_column_y;      // ebp - 0x80
-    int player_row_y_copy;   // ebp - 0x7c
-    int lower_phasebar_y;
-    int right_chat_x;
-    int player_chat_y;
-    int opponent_life_y;
-    int player_row_y;
-    int lower_phasebar_height;
-    int small_chat_height;
-    int battlefield_width;
-    int player_face_x;
-    int lower_middle_y;
-    int face_x;
-    int opponent_phasebar_x;
-    int face_top;
-    int right_column_x;
-    int preview_width;
-    int prompt_x;
-    int top_battlefield_height;
-    int bottom_battlefield_height;
-    int top_face_height;
-    int right_column_width;
-    RECT rect;
-    int player_life_height;
-    int phasebar_height;
-    int right_phasebar_x;
-    int player_battlefield_width;
-    int opponent_life_x;
-    int right_battlefield_x;
-  } s;
+  char chat_text2[200];
+  unsigned int chat_text2_length;
+  CHAR tooltip_text2[100];
+  char chat_text1[200];
+  unsigned int chat_text1_length;
+  CHAR tooltip_text1[100];
+  int left_phasebar_x;
+  int preview_height;
+  int opponent_chat_y;
+  int lower_life_y;
+  int phasebar_width;
+  int opponent_chat_x;
+  int center_column_width;
+  int preview_x;
+  int preview_y;
+  int half_phasebar_height;
+  int chat_y;
+  int left_phasebar_width;
+  int bottom_half_y;
+  int client_height;        // ebp - 0xb8
+  POINT point;              // ebp - 0xb4
+  int lower_middle_height;  // ebp - 0xac
+  int left_phasebar_x_copy; // ebp - 0xa8
+  int divider_width;        // ebp - 0xa4
+  int chat_height;          // ebp - 0xa0
+  int client_width;         // ebp - 0x9c
+  int top_middle_height;    // ebp - 0x98
+  int face_y;               // ebp - 0x94
+  int face_height;          // ebp - 0x90
+  int player_life_x;        // ebp - 0x8c
+  int preview_left;         // ebp - 0x88
+  int preview_top;          // ebp - 0x84
+  int right_column_y;       // ebp - 0x80
+  int player_row_y_copy;    // ebp - 0x7c
+  int lower_phasebar_y;
+  int right_chat_x;
+  int player_chat_y;
+  int opponent_life_y;
+  int player_row_y;
+  int lower_phasebar_height;
+  int small_chat_height;
+  int battlefield_width;
+  int player_face_x;
+  int lower_middle_y;
+  int face_x;
+  int opponent_phasebar_x;
+  int face_top;
+  int right_column_x;
+  int preview_width;
+  int prompt_x;
+  int top_battlefield_height;
+  int bottom_battlefield_height;
+  int top_face_height;
+  int right_column_width;
+  RECT rect;
+  int player_life_height;
+  int phasebar_height;
+  int right_phasebar_x;
+  int player_battlefield_width;
+  int opponent_life_x;
+  int right_battlefield_x;
 
-  GetClientRect(hwnd, &s.rect);
-  g_showlist_smallcard_width = s.rect.right / 8;
+  GetClientRect(hwnd, &rect);
+  g_showlist_smallcard_width = rect.right / 8;
   g_showlist_smallcard_height = g_showlist_smallcard_width;
   g_duel_selected_card_window = (g_showlist_smallcard_height * 0x21) / 0x118;
 
   if (layout == 1)
   {
-    GetWindowTextA((HWND)g_duel_tooltip_window, s.tooltip_text1, 100);
-    set_duel_tooltip_text(s.tooltip_text1);
-    GetClientRect(hwnd, &s.rect);
-    s.client_width = s.rect.right;
-    s.client_height = s.rect.bottom;
-    s.preview_width = s.client_width / 4;
-    s.preview_height = s.client_height / 2;
-    s.preview_left = s.rect.left;
-    s.preview_top = s.rect.top + (s.client_height - s.preview_height) / 2;
-    s.point.x = s.preview_left;
-    s.point.y = s.preview_top;
-    ClientToScreen(hwnd, &s.point);
-    MoveWindow(g_duel_card_preview_window_hwnd, s.point.x, s.point.y, s.preview_width, s.preview_height, 1);
-    GetWindowRect(g_duel_card_preview_window_hwnd, &s.rect);
-    s.preview_width = s.rect.right - s.rect.left;
-    s.preview_height = s.rect.bottom - s.rect.top;
-    GetClientRect(hwnd, &s.rect);
-    s.client_width = s.rect.right;
-    s.client_height = s.rect.bottom;
-    s.left_phasebar_width = s.preview_width / 2;
-    s.preview_y = s.rect.top;
-    s.player_face_x = s.preview_height + s.preview_top;
-    s.battlefield_width = (s.preview_width + s.preview_left) - s.left_phasebar_width;
-    s.preview_x = s.battlefield_width;
-    s.top_face_height = s.preview_top - s.preview_y;
-    s.lower_middle_height = s.rect.bottom - s.player_face_x;
-    s.phasebar_width = s.preview_width / 4;
-    s.lower_phasebar_y = (s.preview_width - s.left_phasebar_width) - s.phasebar_width;
-    s.half_phasebar_height = s.top_face_height / 2;
-    s.phasebar_height = s.half_phasebar_height;
-    s.face_x = s.preview_x - s.phasebar_width;
-    s.right_phasebar_x = s.face_x;
-    s.left_phasebar_x = s.right_phasebar_x - s.lower_phasebar_y;
-    s.left_phasebar_x_copy = s.left_phasebar_x;
-    s.opponent_phasebar_x = s.preview_top - s.half_phasebar_height;
-    s.lower_middle_y = s.opponent_phasebar_x;
-    s.player_row_y = s.preview_height + s.preview_top;
-    s.player_row_y_copy = s.player_row_y;
-    s.small_chat_height = s.preview_width - s.left_phasebar_width;
-    s.player_life_x = s.rect.left;
-    s.opponent_life_x = s.player_life_x;
-    s.opponent_life_y = s.rect.top;
-    s.lower_life_y = s.half_phasebar_height + s.player_row_y;
-    s.top_middle_height = s.opponent_phasebar_x - s.opponent_life_y;
-    s.player_life_height = s.rect.bottom - s.lower_life_y;
-    s.face_top = s.preview_width + s.preview_left;
-    s.face_y = s.rect.top;
-    s.divider_width = s.small_chat_height / 3;
-    s.face_height = s.client_height;
-    s.player_battlefield_width = (s.client_width - s.preview_width) - s.divider_width;
-    s.top_battlefield_height = s.client_height / 2;
-    s.bottom_battlefield_height = s.client_height - s.top_battlefield_height;
-    s.right_battlefield_x = s.divider_width + s.face_top;
-    s.prompt_x = s.right_battlefield_x;
-    s.bottom_half_y = s.rect.bottom - s.bottom_battlefield_height;
-    s.right_column_y = s.rect.top;
-    s.right_column_width = s.player_battlefield_width;
-    s.chat_height = (s.bottom_battlefield_height * 9) / 100;
-    s.right_column_x = s.prompt_x;
-    s.chat_y = s.bottom_half_y - s.chat_height / 2;
-    s.center_column_width = s.player_battlefield_width;
-    s.lower_phasebar_height = s.client_height / 0x28;
-    s.opponent_chat_x = s.right_battlefield_x;
-    s.opponent_chat_y = s.right_column_y;
-    s.right_chat_x = s.prompt_x;
-    s.player_chat_y = s.bottom_half_y - s.lower_phasebar_height;
+    GetWindowTextA((HWND)g_duel_tooltip_window, tooltip_text1, 100);
+    set_duel_tooltip_text(tooltip_text1);
+    GetClientRect(hwnd, &rect);
+    client_width = rect.right;
+    client_height = rect.bottom;
+    preview_width = client_width / 4;
+    preview_height = client_height / 2;
+    preview_left = rect.left;
+    preview_top = rect.top + (client_height - preview_height) / 2;
+    point.x = preview_left;
+    point.y = preview_top;
+    ClientToScreen(hwnd, &point);
+    MoveWindow(g_duel_card_preview_window_hwnd, point.x, point.y, preview_width, preview_height, 1);
+    GetWindowRect(g_duel_card_preview_window_hwnd, &rect);
+    preview_width = rect.right - rect.left;
+    preview_height = rect.bottom - rect.top;
+    GetClientRect(hwnd, &rect);
+    client_width = rect.right;
+    client_height = rect.bottom;
+    left_phasebar_width = preview_width / 2;
+    preview_y = rect.top;
+    player_face_x = preview_height + preview_top;
+    battlefield_width = (preview_width + preview_left) - left_phasebar_width;
+    preview_x = battlefield_width;
+    top_face_height = preview_top - preview_y;
+    lower_middle_height = rect.bottom - player_face_x;
+    phasebar_width = preview_width / 4;
+    lower_phasebar_y = (preview_width - left_phasebar_width) - phasebar_width;
+    half_phasebar_height = top_face_height / 2;
+    phasebar_height = half_phasebar_height;
+    face_x = preview_x - phasebar_width;
+    right_phasebar_x = face_x;
+    left_phasebar_x = right_phasebar_x - lower_phasebar_y;
+    left_phasebar_x_copy = left_phasebar_x;
+    opponent_phasebar_x = preview_top - half_phasebar_height;
+    lower_middle_y = opponent_phasebar_x;
+    player_row_y = preview_height + preview_top;
+    player_row_y_copy = player_row_y;
+    small_chat_height = preview_width - left_phasebar_width;
+    player_life_x = rect.left;
+    opponent_life_x = player_life_x;
+    opponent_life_y = rect.top;
+    lower_life_y = half_phasebar_height + player_row_y;
+    top_middle_height = opponent_phasebar_x - opponent_life_y;
+    player_life_height = rect.bottom - lower_life_y;
+    face_top = preview_width + preview_left;
+    face_y = rect.top;
+    divider_width = small_chat_height / 3;
+    face_height = client_height;
+    player_battlefield_width = (client_width - preview_width) - divider_width;
+    top_battlefield_height = client_height / 2;
+    bottom_battlefield_height = client_height - top_battlefield_height;
+    right_battlefield_x = divider_width + face_top;
+    prompt_x = right_battlefield_x;
+    bottom_half_y = rect.bottom - bottom_battlefield_height;
+    right_column_y = rect.top;
+    right_column_width = player_battlefield_width;
+    chat_height = (bottom_battlefield_height * 9) / 100;
+    right_column_x = prompt_x;
+    chat_y = bottom_half_y - chat_height / 2;
+    center_column_width = player_battlefield_width;
+    lower_phasebar_height = client_height / 0x28;
+    opponent_chat_x = right_battlefield_x;
+    opponent_chat_y = right_column_y;
+    right_chat_x = prompt_x;
+    player_chat_y = bottom_half_y - lower_phasebar_height;
 
     ShowWindow(g_duel_card_preview_window_hwnd, SW_SHOW);
-    MoveWindow(g_duel_life_status_window_2_hwnd, s.opponent_life_x, s.opponent_life_y, s.small_chat_height, s.top_middle_height, 1);
-    MoveWindow(g_duel_life_status_window_1_hwnd, s.player_life_x, s.lower_life_y, s.small_chat_height, s.player_life_height, 1);
-    MoveWindow(g_duel_last_active_window, s.preview_x, s.preview_y, s.left_phasebar_width, s.top_face_height, 1);
-    MoveWindow(g_duel_active_popup_window, s.battlefield_width, s.player_face_x, s.left_phasebar_width, s.lower_middle_height, 1);
-    MoveWindow(g_duel_status_window_hwnd, s.left_phasebar_x_copy, s.lower_middle_y, s.lower_phasebar_y, s.phasebar_height, 1);
-    MoveWindow(g_duel_main_window_hwnd, s.left_phasebar_x, s.player_row_y_copy, s.lower_phasebar_y, s.phasebar_height, 1);
-    MoveWindow(g_phasebar_your_untap_window_hwnd, s.right_phasebar_x, s.opponent_phasebar_x, s.phasebar_width, s.half_phasebar_height, 1);
-    MoveWindow(g_duel_player_graveyard_window_hwnd, s.face_x, s.player_row_y, s.phasebar_width, s.half_phasebar_height, 1);
-    s.point.x = s.preview_left;
-    s.point.y = s.preview_top;
-    ClientToScreen(hwnd, &s.point);
-    MoveWindow(g_duel_card_preview_window_hwnd, s.point.x, s.point.y, s.preview_width, s.preview_height, 1);
-    MoveWindow(g_duel_help_owner_hwnd, s.right_battlefield_x, s.right_column_y, s.player_battlefield_width, s.top_battlefield_height, 1);
+    MoveWindow(g_duel_life_status_window_2_hwnd, opponent_life_x, opponent_life_y, small_chat_height, top_middle_height, 1);
+    MoveWindow(g_duel_life_status_window_1_hwnd, player_life_x, lower_life_y, small_chat_height, player_life_height, 1);
+    MoveWindow(g_duel_last_active_window, preview_x, preview_y, left_phasebar_width, top_face_height, 1);
+    MoveWindow(g_duel_active_popup_window, battlefield_width, player_face_x, left_phasebar_width, lower_middle_height, 1);
+    MoveWindow(g_duel_status_window_hwnd, left_phasebar_x_copy, lower_middle_y, lower_phasebar_y, phasebar_height, 1);
+    MoveWindow(g_duel_main_window_hwnd, left_phasebar_x, player_row_y_copy, lower_phasebar_y, phasebar_height, 1);
+    MoveWindow(g_phasebar_your_untap_window_hwnd, right_phasebar_x, opponent_phasebar_x, phasebar_width, half_phasebar_height, 1);
+    MoveWindow(g_duel_player_graveyard_window_hwnd, face_x, player_row_y, phasebar_width, half_phasebar_height, 1);
+    point.x = preview_left;
+    point.y = preview_top;
+    ClientToScreen(hwnd, &point);
+    MoveWindow(g_duel_card_preview_window_hwnd, point.x, point.y, preview_width, preview_height, 1);
+    MoveWindow(g_duel_help_owner_hwnd, right_battlefield_x, right_column_y, player_battlefield_width, top_battlefield_height, 1);
     SendMessageA(g_duel_help_owner_hwnd, 0x412, 0, 0);
-    MoveWindow(g_duel_player_battlefield_window_hwnd, s.prompt_x, s.bottom_half_y, s.player_battlefield_width, s.bottom_battlefield_height, 1);
+    MoveWindow(g_duel_player_battlefield_window_hwnd, prompt_x, bottom_half_y, player_battlefield_width, bottom_battlefield_height, 1);
     SendMessageA(g_duel_player_battlefield_window_hwnd, 0x412, 0, 0);
-    s.point.x = s.right_column_x;
-    s.point.y = s.chat_y;
-    ClientToScreen(hwnd, &s.point);
-    s.right_column_x = s.point.x;
-    s.chat_y = s.point.y;
-    MoveWindow(g_duel_prompt_context_hwnd, s.right_column_x, s.chat_y, s.right_column_width, s.chat_height, 1);
-    s.chat_text1_length = SendMessageA(g_duel_prompt_context_hwnd, 0x402, (WPARAM)s.chat_text1, 0);
-    set_duel_prompt_context(g_duel_prompt_context_hwnd, s.chat_text1, s.chat_text1_length);
-    MoveWindow(g_duel_opponent_battlefield_window, s.face_top, s.face_y, s.divider_width, s.face_height, 1);
-    MoveWindow(g_duel_player_battlefield_window, s.face_top, s.face_y, s.divider_width, s.face_height, 1);
-    MoveWindow(g_duel_opponent_face_window_hwnd, s.opponent_life_x, s.opponent_life_y, s.left_phasebar_width + s.small_chat_height, s.top_face_height, 1);
-    MoveWindow(g_duel_player_face_window_hwnd, s.player_life_x, s.player_row_y_copy, s.left_phasebar_width + s.small_chat_height, s.lower_middle_height, 1);
-    s.point.x = s.opponent_chat_x;
-    s.point.y = s.opponent_chat_y;
-    ClientToScreen(hwnd, &s.point);
-    s.opponent_chat_x = s.point.x;
-    s.opponent_chat_y = s.point.y;
+    point.x = right_column_x;
+    point.y = chat_y;
+    ClientToScreen(hwnd, &point);
+    right_column_x = point.x;
+    chat_y = point.y;
+    MoveWindow(g_duel_prompt_context_hwnd, right_column_x, chat_y, right_column_width, chat_height, 1);
+    chat_text1_length = SendMessageA(g_duel_prompt_context_hwnd, 0x402, (WPARAM)chat_text1, 0);
+    set_duel_prompt_context(g_duel_prompt_context_hwnd, chat_text1, chat_text1_length);
+    MoveWindow(g_duel_opponent_battlefield_window, face_top, face_y, divider_width, face_height, 1);
+    MoveWindow(g_duel_player_battlefield_window, face_top, face_y, divider_width, face_height, 1);
+    MoveWindow(g_duel_opponent_face_window_hwnd, opponent_life_x, opponent_life_y, left_phasebar_width + small_chat_height, top_face_height, 1);
+    MoveWindow(g_duel_player_face_window_hwnd, player_life_x, player_row_y_copy, left_phasebar_width + small_chat_height, lower_middle_height, 1);
+    point.x = opponent_chat_x;
+    point.y = opponent_chat_y;
+    ClientToScreen(hwnd, &point);
+    opponent_chat_x = point.x;
+    opponent_chat_y = point.y;
     ShowWindow(global_opponent_chat_hwnd, SW_HIDE);
-    MoveWindow(global_opponent_chat_hwnd, s.opponent_chat_x, s.opponent_chat_y, s.center_column_width, s.lower_phasebar_height, 1);
-    s.point.x = s.right_chat_x;
-    s.point.y = s.player_chat_y;
-    ClientToScreen(hwnd, &s.point);
-    s.right_chat_x = s.point.x;
-    s.player_chat_y = s.point.y;
+    MoveWindow(global_opponent_chat_hwnd, opponent_chat_x, opponent_chat_y, center_column_width, lower_phasebar_height, 1);
+    point.x = right_chat_x;
+    point.y = player_chat_y;
+    ClientToScreen(hwnd, &point);
+    right_chat_x = point.x;
+    player_chat_y = point.y;
     ShowWindow(g_duel_player_chat_window_hwnd, SW_HIDE);
-    MoveWindow(g_duel_player_chat_window_hwnd, s.right_chat_x, s.player_chat_y, s.center_column_width, s.lower_phasebar_height, 1);
+    MoveWindow(g_duel_player_chat_window_hwnd, right_chat_x, player_chat_y, center_column_width, lower_phasebar_height, 1);
   }
   else if (layout == 2)
   {
-    GetWindowTextA((HWND)g_duel_tooltip_window, s.tooltip_text2, 100);
-    set_duel_tooltip_text(s.tooltip_text2);
-    GetClientRect(hwnd, &s.rect);
-    s.client_width = s.rect.right;
-    s.client_height = s.rect.bottom;
-    s.preview_width = (s.client_width * 0x23) / 100;
-    s.preview_height = (s.client_height * 0x3c) / 100;
-    s.preview_left = s.rect.left;
-    s.preview_top = s.rect.top;
-    MoveWindow(g_duel_card_preview_window_hwnd, s.rect.left, s.rect.top, s.preview_width, s.preview_height, 0);
-    GetWindowRect(g_duel_card_preview_window_hwnd, &s.rect);
-    s.preview_width = s.rect.right - s.rect.left;
-    s.preview_height = s.rect.bottom - s.rect.top;
-    GetClientRect(hwnd, &s.rect);
-    s.client_width = s.rect.right;
-    s.client_height = s.rect.bottom;
-    s.small_chat_height = s.client_width / 8;
-    s.player_life_height = s.client_height / 8;
-    s.top_middle_height = s.player_life_height;
-    s.player_life_x = s.rect.left;
-    s.opponent_life_x = s.player_life_x;
-    s.opponent_life_y = s.client_height / 2 - s.top_middle_height;
-    s.lower_life_y = s.client_height / 2;
-    s.lower_phasebar_y = s.small_chat_height / 2;
-    s.phasebar_width = s.small_chat_height - s.lower_phasebar_y;
-    s.half_phasebar_height = s.client_height / 8;
-    s.phasebar_height = s.half_phasebar_height;
-    s.face_x = (s.small_chat_height + s.opponent_life_x) - s.phasebar_width;
-    s.right_phasebar_x = s.face_x;
-    s.left_phasebar_x = s.opponent_life_x;
-    s.left_phasebar_x_copy = s.left_phasebar_x;
-    s.opponent_phasebar_x = s.opponent_life_y - s.phasebar_height;
-    s.lower_middle_y = s.opponent_phasebar_x;
-    s.player_row_y = s.player_life_height + s.lower_life_y;
-    s.player_row_y_copy = s.player_row_y;
-    s.left_phasebar_width = s.small_chat_height;
-    s.battlefield_width = s.opponent_life_x;
-    s.preview_x = s.battlefield_width;
-    s.preview_y = s.rect.top;
-    s.player_face_x = s.player_row_y_copy + s.phasebar_height;
-    s.top_face_height = s.lower_middle_y - s.rect.top;
-    s.lower_middle_height = s.rect.bottom - s.player_face_x;
-    s.face_top = s.left_phasebar_width + s.preview_x;
-    s.face_y = s.rect.top;
-    s.divider_width = s.left_phasebar_width / 3;
-    s.face_height = s.client_height;
-    s.bottom_half_y = s.lower_life_y;
-    s.right_column_y = s.rect.top;
-    s.top_battlefield_height = (s.top_middle_height + s.opponent_life_y) - s.rect.top;
-    s.bottom_battlefield_height = s.rect.bottom - s.bottom_half_y;
-    s.right_battlefield_x = s.divider_width + s.face_top;
-    s.prompt_x = s.right_battlefield_x;
-    s.player_battlefield_width = (s.client_width - s.left_phasebar_width) - s.divider_width;
-    s.right_column_width = s.player_battlefield_width;
-    s.chat_height = (s.bottom_battlefield_height * 9) / 100;
-    s.right_column_x = s.prompt_x;
-    s.chat_y = s.bottom_half_y - s.chat_height / 2;
-    s.center_column_width = s.player_battlefield_width;
-    s.lower_phasebar_height = s.client_height / 0x28;
-    s.opponent_chat_x = s.right_battlefield_x;
-    s.opponent_chat_y = s.right_column_y;
-    s.right_chat_x = s.prompt_x;
-    s.player_chat_y = s.bottom_half_y - s.lower_phasebar_height;
+    GetWindowTextA((HWND)g_duel_tooltip_window, tooltip_text2, 100);
+    set_duel_tooltip_text(tooltip_text2);
+    GetClientRect(hwnd, &rect);
+    client_width = rect.right;
+    client_height = rect.bottom;
+    preview_width = (client_width * 0x23) / 100;
+    preview_height = (client_height * 0x3c) / 100;
+    preview_left = rect.left;
+    preview_top = rect.top;
+    MoveWindow(g_duel_card_preview_window_hwnd, rect.left, rect.top, preview_width, preview_height, 0);
+    GetWindowRect(g_duel_card_preview_window_hwnd, &rect);
+    preview_width = rect.right - rect.left;
+    preview_height = rect.bottom - rect.top;
+    GetClientRect(hwnd, &rect);
+    client_width = rect.right;
+    client_height = rect.bottom;
+    small_chat_height = client_width / 8;
+    player_life_height = client_height / 8;
+    top_middle_height = player_life_height;
+    player_life_x = rect.left;
+    opponent_life_x = player_life_x;
+    opponent_life_y = client_height / 2 - top_middle_height;
+    lower_life_y = client_height / 2;
+    lower_phasebar_y = small_chat_height / 2;
+    phasebar_width = small_chat_height - lower_phasebar_y;
+    half_phasebar_height = client_height / 8;
+    phasebar_height = half_phasebar_height;
+    face_x = (small_chat_height + opponent_life_x) - phasebar_width;
+    right_phasebar_x = face_x;
+    left_phasebar_x = opponent_life_x;
+    left_phasebar_x_copy = left_phasebar_x;
+    opponent_phasebar_x = opponent_life_y - phasebar_height;
+    lower_middle_y = opponent_phasebar_x;
+    player_row_y = player_life_height + lower_life_y;
+    player_row_y_copy = player_row_y;
+    left_phasebar_width = small_chat_height;
+    battlefield_width = opponent_life_x;
+    preview_x = battlefield_width;
+    preview_y = rect.top;
+    player_face_x = player_row_y_copy + phasebar_height;
+    top_face_height = lower_middle_y - rect.top;
+    lower_middle_height = rect.bottom - player_face_x;
+    face_top = left_phasebar_width + preview_x;
+    face_y = rect.top;
+    divider_width = left_phasebar_width / 3;
+    face_height = client_height;
+    bottom_half_y = lower_life_y;
+    right_column_y = rect.top;
+    top_battlefield_height = (top_middle_height + opponent_life_y) - rect.top;
+    bottom_battlefield_height = rect.bottom - bottom_half_y;
+    right_battlefield_x = divider_width + face_top;
+    prompt_x = right_battlefield_x;
+    player_battlefield_width = (client_width - left_phasebar_width) - divider_width;
+    right_column_width = player_battlefield_width;
+    chat_height = (bottom_battlefield_height * 9) / 100;
+    right_column_x = prompt_x;
+    chat_y = bottom_half_y - chat_height / 2;
+    center_column_width = player_battlefield_width;
+    lower_phasebar_height = client_height / 0x28;
+    opponent_chat_x = right_battlefield_x;
+    opponent_chat_y = right_column_y;
+    right_chat_x = prompt_x;
+    player_chat_y = bottom_half_y - lower_phasebar_height;
 
     ShowWindow(g_duel_card_preview_window_hwnd, SW_HIDE);
-    MoveWindow(g_duel_life_status_window_2_hwnd, s.opponent_life_x, s.opponent_life_y, s.small_chat_height, s.top_middle_height, 1);
-    MoveWindow(g_duel_life_status_window_1_hwnd, s.player_life_x, s.lower_life_y, s.small_chat_height, s.player_life_height, 1);
-    MoveWindow(g_duel_last_active_window, s.preview_x, s.preview_y, s.left_phasebar_width, s.top_face_height, 1);
-    MoveWindow(g_duel_active_popup_window, s.battlefield_width, s.player_face_x, s.left_phasebar_width, s.lower_middle_height, 1);
-    MoveWindow(g_duel_status_window_hwnd, s.left_phasebar_x_copy, s.lower_middle_y, s.lower_phasebar_y, s.phasebar_height, 1);
-    MoveWindow(g_duel_main_window_hwnd, s.left_phasebar_x, s.player_row_y_copy, s.lower_phasebar_y, s.phasebar_height, 1);
-    MoveWindow(g_phasebar_your_untap_window_hwnd, s.right_phasebar_x, s.opponent_phasebar_x, s.phasebar_width, s.half_phasebar_height, 1);
-    MoveWindow(g_duel_player_graveyard_window_hwnd, s.face_x, s.player_row_y, s.phasebar_width, s.half_phasebar_height, 1);
-    MoveWindow(g_duel_card_preview_window_hwnd, s.preview_left, s.preview_top, s.preview_width, s.preview_height, 1);
-    MoveWindow(g_duel_help_owner_hwnd, s.right_battlefield_x, s.right_column_y, s.player_battlefield_width, s.top_battlefield_height, 1);
+    MoveWindow(g_duel_life_status_window_2_hwnd, opponent_life_x, opponent_life_y, small_chat_height, top_middle_height, 1);
+    MoveWindow(g_duel_life_status_window_1_hwnd, player_life_x, lower_life_y, small_chat_height, player_life_height, 1);
+    MoveWindow(g_duel_last_active_window, preview_x, preview_y, left_phasebar_width, top_face_height, 1);
+    MoveWindow(g_duel_active_popup_window, battlefield_width, player_face_x, left_phasebar_width, lower_middle_height, 1);
+    MoveWindow(g_duel_status_window_hwnd, left_phasebar_x_copy, lower_middle_y, lower_phasebar_y, phasebar_height, 1);
+    MoveWindow(g_duel_main_window_hwnd, left_phasebar_x, player_row_y_copy, lower_phasebar_y, phasebar_height, 1);
+    MoveWindow(g_phasebar_your_untap_window_hwnd, right_phasebar_x, opponent_phasebar_x, phasebar_width, half_phasebar_height, 1);
+    MoveWindow(g_duel_player_graveyard_window_hwnd, face_x, player_row_y, phasebar_width, half_phasebar_height, 1);
+    MoveWindow(g_duel_card_preview_window_hwnd, preview_left, preview_top, preview_width, preview_height, 1);
+    MoveWindow(g_duel_help_owner_hwnd, right_battlefield_x, right_column_y, player_battlefield_width, top_battlefield_height, 1);
     SendMessageA(g_duel_help_owner_hwnd, 0x412, 0, 0);
-    MoveWindow(g_duel_player_battlefield_window_hwnd, s.prompt_x, s.bottom_half_y, s.player_battlefield_width, s.bottom_battlefield_height, 1);
+    MoveWindow(g_duel_player_battlefield_window_hwnd, prompt_x, bottom_half_y, player_battlefield_width, bottom_battlefield_height, 1);
     SendMessageA(g_duel_player_battlefield_window_hwnd, 0x412, 0, 0);
-    s.point.x = s.right_column_x;
-    s.point.y = s.chat_y;
-    ClientToScreen(hwnd, &s.point);
-    s.right_column_x = s.point.x;
-    s.chat_y = s.point.y;
-    MoveWindow(g_duel_prompt_context_hwnd, s.right_column_x, s.chat_y, s.right_column_width, s.chat_height, 1);
-    s.chat_text2_length = SendMessageA(g_duel_prompt_context_hwnd, 0x402, (WPARAM)s.chat_text2, 0);
-    set_duel_prompt_context(g_duel_prompt_context_hwnd, s.chat_text2, s.chat_text2_length);
-    MoveWindow(g_duel_opponent_battlefield_window, s.face_top, s.face_y, s.divider_width, s.face_height, 1);
-    MoveWindow(g_duel_player_battlefield_window, s.face_top, s.face_y, s.divider_width, s.face_height, 1);
-    MoveWindow(g_duel_opponent_face_window_hwnd, s.opponent_life_x, s.opponent_life_y, s.small_chat_height, s.top_middle_height, 1);
-    MoveWindow(g_duel_player_face_window_hwnd, s.player_life_x, s.lower_life_y, s.small_chat_height, s.player_life_height, 1);
-    s.point.x = s.opponent_chat_x;
-    s.point.y = s.opponent_chat_y;
-    ClientToScreen(hwnd, &s.point);
-    s.opponent_chat_x = s.point.x;
-    s.opponent_chat_y = s.point.y;
+    point.x = right_column_x;
+    point.y = chat_y;
+    ClientToScreen(hwnd, &point);
+    right_column_x = point.x;
+    chat_y = point.y;
+    MoveWindow(g_duel_prompt_context_hwnd, right_column_x, chat_y, right_column_width, chat_height, 1);
+    chat_text2_length = SendMessageA(g_duel_prompt_context_hwnd, 0x402, (WPARAM)chat_text2, 0);
+    set_duel_prompt_context(g_duel_prompt_context_hwnd, chat_text2, chat_text2_length);
+    MoveWindow(g_duel_opponent_battlefield_window, face_top, face_y, divider_width, face_height, 1);
+    MoveWindow(g_duel_player_battlefield_window, face_top, face_y, divider_width, face_height, 1);
+    MoveWindow(g_duel_opponent_face_window_hwnd, opponent_life_x, opponent_life_y, small_chat_height, top_middle_height, 1);
+    MoveWindow(g_duel_player_face_window_hwnd, player_life_x, lower_life_y, small_chat_height, player_life_height, 1);
+    point.x = opponent_chat_x;
+    point.y = opponent_chat_y;
+    ClientToScreen(hwnd, &point);
+    opponent_chat_x = point.x;
+    opponent_chat_y = point.y;
     ShowWindow(global_opponent_chat_hwnd, SW_HIDE);
-    MoveWindow(global_opponent_chat_hwnd, s.opponent_chat_x, s.opponent_chat_y, s.center_column_width, s.lower_phasebar_height, 1);
-    s.point.x = s.right_chat_x;
-    s.point.y = s.player_chat_y;
-    ClientToScreen(hwnd, &s.point);
-    s.right_chat_x = s.point.x;
-    s.player_chat_y = s.point.y;
+    MoveWindow(global_opponent_chat_hwnd, opponent_chat_x, opponent_chat_y, center_column_width, lower_phasebar_height, 1);
+    point.x = right_chat_x;
+    point.y = player_chat_y;
+    ClientToScreen(hwnd, &point);
+    right_chat_x = point.x;
+    player_chat_y = point.y;
     ShowWindow(g_duel_player_chat_window_hwnd, SW_HIDE);
-    MoveWindow(g_duel_player_chat_window_hwnd, s.right_chat_x, s.player_chat_y, s.center_column_width, s.lower_phasebar_height, 1);
+    MoveWindow(g_duel_player_chat_window_hwnd, right_chat_x, player_chat_y, center_column_width, lower_phasebar_height, 1);
   }
 
   resize_duel_hand_window(g_duel_full_card_window_hwnd);
@@ -1209,50 +1200,47 @@ void layout_duel_child_windows(HWND hwnd, int layout)
 // FUNCTION: SHANDALAR 0x00506d61
 void refresh_duel_window(HWND hwnd)
 {
-  struct
-  {
-    int child_rect[2];
-    LONG user_data_4;
-    int child_count;
-    int child_index;
-    int y;
-    int x;
-    LONG user_data_0;
-    HWND child_window;
-    HWND child_windows[200];
-    RECT client_rect;
-  } s;
+  int child_rect[2];
+  LONG user_data_4;
+  int child_count;
+  int child_index;
+  int y;
+  int x;
+  LONG user_data_0;
+  HWND child_window;
+  HWND child_windows[200];
+  RECT client_rect;
 
-  s.user_data_4 = GetWindowLongA(hwnd, g_duel_window_userdata_card_offset);
-  s.user_data_0 = GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
-  GetClientRect(hwnd, &s.client_rect);
+  user_data_4 = GetWindowLongA(hwnd, g_duel_window_userdata_card_offset);
+  user_data_0 = GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
+  GetClientRect(hwnd, &client_rect);
   reset_battlefield_layout_positions(hwnd);
-  s.child_window = GetWindow(GetWindow(hwnd, 5), 1);
-  s.child_count = 0;
-  while (s.child_window != (HWND)0)
+  child_window = GetWindow(GetWindow(hwnd, 5), 1);
+  child_count = 0;
+  while (child_window != (HWND)0)
   {
-    if (get_card_window_hidden_flag(s.child_window) == 0)
+    if (get_card_window_hidden_flag(child_window) == 0)
     {
-      s.child_windows[s.child_count] = s.child_window;
-      s.child_count++;
+      child_windows[child_count] = child_window;
+      child_count++;
     }
-    s.child_window = GetWindow(s.child_window, 3);
+    child_window = GetWindow(child_window, 3);
   }
-  for (s.child_index = 0; s.child_index < s.child_count; s.child_index++)
+  for (child_index = 0; child_index < child_count; child_index++)
   {
-    s.child_window = s.child_windows[s.child_index];
-    if (get_card_window_hidden_flag(s.child_window) == 0)
+    child_window = child_windows[child_index];
+    if (get_card_window_hidden_flag(child_window) == 0)
     {
-      SendMessageA(s.child_window, 0x401, (WPARAM)s.child_rect, 0);
-      get_next_battlefield_card_position(hwnd, s.child_rect, get_battlefield_card_stagger_offset(s.child_window), &s.x, &s.y, 1);
-      SetWindowPos(s.child_window, (HWND)0, s.x, s.y, 0, 0, 5);
-      BringWindowToTop(s.child_window);
+      SendMessageA(child_window, 0x401, (WPARAM)child_rect, 0);
+      get_next_battlefield_card_position(hwnd, child_rect, get_battlefield_card_stagger_offset(child_window), &x, &y, 1);
+      SetWindowPos(child_window, (HWND)0, x, y, 0, 0, 5);
+      BringWindowToTop(child_window);
     }
   }
-  for (s.child_index = 0; s.child_index < s.child_count; s.child_index++)
+  for (child_index = 0; child_index < child_count; child_index++)
   {
-    s.child_window = s.child_windows[s.child_index];
-    SendMessageA(hwnd, 0x410, (WPARAM)s.child_window, 0);
+    child_window = child_windows[child_index];
+    SendMessageA(hwnd, 0x410, (WPARAM)child_window, 0);
   }
   SendMessageA(hwnd, 0x412, 0, 0);
 }
@@ -1322,95 +1310,89 @@ void cleanup_post_duel_draws_dialog_resources(HBITMAP background, HBRUSH button_
 // FUNCTION: SHANDALAR 0x00539128
 void show_post_duel_draws(int duel_result)
 {
-  struct
-  {
-    post_duel_draws_dialog_params_t dialog_params;
-    int cached_library_cards[500];
-    int opponent_top_card;
-    char opponent_name[100];
-    int player_top_card;
-    int unused;
-  } s;
+  post_duel_draws_dialog_params_t dialog_params;
+  int cached_library_cards[500];
+  int opponent_top_card;
+  char opponent_name[100];
+  int player_top_card;
+  int unused;
 
   KillTimer(g_duel_window_hwnd, g_duel_timer_id);
-  if (copy_cached_library_cards_and_get_count(s.cached_library_cards, 0) != 0)
+  if (copy_cached_library_cards_and_get_count(cached_library_cards, 0) != 0)
   {
-    s.player_top_card = s.cached_library_cards[0];
+    player_top_card = cached_library_cards[0];
   }
   else
   {
-    s.player_top_card = -1;
+    player_top_card = -1;
   }
-  if (copy_cached_library_cards_and_get_count(s.cached_library_cards, 1) != 0)
+  if (copy_cached_library_cards_and_get_count(cached_library_cards, 1) != 0)
   {
-    s.opponent_top_card = s.cached_library_cards[0];
+    opponent_top_card = cached_library_cards[0];
   }
   else
   {
-    s.opponent_top_card = -1;
+    opponent_top_card = -1;
   }
   load_text(global_ui_strings_filename, "DIALOG_SHANDALARENDDUEL");
   if (duel_result == 0)
   {
-    copy_opponent_name_prefix(s.opponent_name);
-    sprintf(s.dialog_params.message, g_text_lines[0], s.opponent_name);
+    copy_opponent_name_prefix(opponent_name);
+    sprintf(dialog_params.message, g_text_lines[0], opponent_name);
   }
   else if (duel_result == 1)
   {
-    strcpy(s.dialog_params.message, g_text_lines[1]);
+    strcpy(dialog_params.message, g_text_lines[1]);
   }
   else
   {
-    strcpy(s.dialog_params.message, g_text_lines[2]);
+    strcpy(dialog_params.message, g_text_lines[2]);
   }
-  s.dialog_params.show_continue_button = 0;
-  s.dialog_params.show_keep_button = 0;
-  s.dialog_params.player_top_card = s.player_top_card;
-  s.dialog_params.opponent_top_card = s.opponent_top_card;
-  s.unused = DialogBoxParamA(g_app_instance, (LPCSTR)0xf6, g_duel_window_hwnd, post_duel_draws_dialog_proc,
-                             (LPARAM)&s.dialog_params);
+  dialog_params.show_continue_button = 0;
+  dialog_params.show_keep_button = 0;
+  dialog_params.player_top_card = player_top_card;
+  dialog_params.opponent_top_card = opponent_top_card;
+  unused = DialogBoxParamA(g_app_instance, (LPCSTR)0xf6, g_duel_window_hwnd, post_duel_draws_dialog_proc,
+                           (LPARAM)&dialog_params);
 }
 
 // FUNCTION: MAGIC 0x0049d9b4
 // FUNCTION: SHANDALAR 0x00539361
 INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    HDC paint_dc;
-    PAINTSTRUCT paint;
-    int control_id;
-    RECT card_rect;
-    int selected_player;
-    int card_id;
-    int preview_player_card;
-    POINT mouse_point;
-    RECT opponent_card_rect;
-    RECT player_card_rect;
-    int preview_opponent_card;
-    RECT drag_after_rect;
-    RECT drag_before_rect;
-    HDC erase_dc;
-    RECT erase_rect;
-    COLORREF draw_color;
-    DRAWITEMSTRUCT *draw_item;
-    HWND ctl_hwnd;
-    int ctl_id;
-    HDC ctl_hdc;
-    HBRUSH brush;
-    HWND previous_control;
-    HWND current_control;
-    int selected_control;
-    char text[200];
-    char opponent_name[200];
-    post_duel_draws_dialog_params_t *dialog_params;
-  } s;
+  HDC paint_dc;
+  PAINTSTRUCT paint;
+  int control_id;
+  RECT card_rect;
+  int selected_player;
+  int card_id;
+  int preview_player_card;
+  POINT mouse_point;
+  RECT opponent_card_rect;
+  RECT player_card_rect;
+  int preview_opponent_card;
+  RECT drag_after_rect;
+  RECT drag_before_rect;
+  HDC erase_dc;
+  RECT erase_rect;
+  COLORREF draw_color;
+  DRAWITEMSTRUCT *draw_item;
+  HWND ctl_hwnd;
+  int ctl_id;
+  HDC ctl_hdc;
+  HBRUSH brush;
+  HWND previous_control;
+  HWND current_control;
+  int selected_control;
+  char text[200];
+  char opponent_name[200];
+  post_duel_draws_dialog_params_t *dialog_params;
 
   switch (msg)
   {
   case WM_INITDIALOG:
-    s.dialog_params = (post_duel_draws_dialog_params_t *)lparam;
-    SetWindowLongA(hwnd, DWL_USER, (LONG)s.dialog_params);
+    dialog_params = (post_duel_draws_dialog_params_t *)lparam;
+    SetWindowLongA(hwnd, DWL_USER, (LONG)dialog_params);
     setup_post_duel_draws_dialog_resources(&g_post_duel_draws_background_bitmap,
                                            &g_post_duel_draws_text_color,
                                            &g_post_duel_draws_button_text_color,
@@ -1423,33 +1405,33 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     ShowWindow(GetDlgItem(hwnd, 0x4e6), SW_HIDE);
     SetDlgItemTextA(hwnd, IDOK, gs_ok_00924800);
     load_text(global_ui_strings_filename, "DIALOG_ENDDUEL");
-    copy_opponent_name_prefix(s.opponent_name);
-    sprintf(s.text, g_text_lines[0], s.opponent_name);
-    SetDlgItemTextA(hwnd, 0x4e3, s.text);
+    copy_opponent_name_prefix(opponent_name);
+    sprintf(text, g_text_lines[0], opponent_name);
+    SetDlgItemTextA(hwnd, 0x4e3, text);
     SetDlgItemTextA(hwnd, 0x4e2, g_text_lines[1]);
-    SetDlgItemTextA(hwnd, 0x4e4, s.dialog_params->message);
+    SetDlgItemTextA(hwnd, 0x4e4, dialog_params->message);
     load_text(global_ui_strings_filename, "DIALOG_GAUNTLETENDDUEL");
     SetDlgItemTextA(hwnd, 0x4e7, g_text_lines[2]);
     SetDlgItemTextA(hwnd, 0x4e8, g_text_lines[3]);
-    if (s.dialog_params->show_continue_button == 0)
+    if (dialog_params->show_continue_button == 0)
     {
       ShowWindow(GetDlgItem(hwnd, 0x4e7), SW_HIDE);
       ShowWindow(GetDlgItem(hwnd, 0x4e8), SW_HIDE);
     }
     else
     {
-      if (s.dialog_params->show_keep_button != 0)
+      if (dialog_params->show_keep_button != 0)
       {
-        s.selected_control = 0x4e7;
+        selected_control = 0x4e7;
       }
       else
       {
         ShowWindow(GetDlgItem(hwnd, 0x4e7), SW_HIDE);
         SetDlgItemTextA(hwnd, 0x4e8, gs_ok_00924800);
-        s.selected_control = 0x4e8;
+        selected_control = 0x4e8;
       }
-      SetFocus(GetDlgItem(hwnd, s.selected_control));
-      SendMessageA(hwnd, 0x401, s.selected_control, 0);
+      SetFocus(GetDlgItem(hwnd, selected_control));
+      SendMessageA(hwnd, 0x401, selected_control, 0);
       change_buttonclass_wndproc(hwnd);
     }
     return FALSE;
@@ -1474,69 +1456,69 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     return TRUE;
 
   case 0x4c8:
-    s.current_control = (HWND)wparam;
-    s.previous_control = (HWND)lparam;
-    if (s.current_control != (HWND)0)
+    current_control = (HWND)wparam;
+    previous_control = (HWND)lparam;
+    if (current_control != (HWND)0)
     {
-      SendMessageA(hwnd, 0x401, (WPARAM)s.current_control, 0);
+      SendMessageA(hwnd, 0x401, (WPARAM)current_control, 0);
     }
-    if (s.current_control != (HWND)0)
+    if (current_control != (HWND)0)
     {
-      InvalidateRect(s.current_control, (RECT *)0, TRUE);
+      InvalidateRect(current_control, (RECT *)0, TRUE);
     }
-    if (s.previous_control != (HWND)0)
+    if (previous_control != (HWND)0)
     {
-      InvalidateRect(s.previous_control, (RECT *)0, TRUE);
+      InvalidateRect(previous_control, (RECT *)0, TRUE);
     }
     return FALSE;
 
   case WM_CTLCOLORBTN:
   case WM_CTLCOLORSTATIC:
-    s.ctl_hdc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.ctl_hdc);
-    s.ctl_hwnd = (HWND)lparam;
-    s.ctl_id = GetDlgCtrlID(s.ctl_hwnd);
-    if ((s.ctl_id == 0x4e7) || (s.ctl_id == 0x4e8))
+    ctl_hdc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(ctl_hdc);
+    ctl_hwnd = (HWND)lparam;
+    ctl_id = GetDlgCtrlID(ctl_hwnd);
+    if ((ctl_id == 0x4e7) || (ctl_id == 0x4e8))
     {
-      if (GetFocus() == s.ctl_hwnd)
+      if (GetFocus() == ctl_hwnd)
       {
-        SetTextColor(s.ctl_hdc, g_post_duel_draws_button_focus_color);
+        SetTextColor(ctl_hdc, g_post_duel_draws_button_focus_color);
       }
       else
       {
-        SetTextColor(s.ctl_hdc, g_post_duel_draws_button_text_color);
+        SetTextColor(ctl_hdc, g_post_duel_draws_button_text_color);
       }
-      SetBkMode(s.ctl_hdc, TRANSPARENT);
-      s.brush = GetStockObject(NULL_BRUSH);
+      SetBkMode(ctl_hdc, TRANSPARENT);
+      brush = GetStockObject(NULL_BRUSH);
     }
     else
     {
-      SetTextColor(s.ctl_hdc, g_post_duel_draws_text_color);
-      SetBkMode(s.ctl_hdc, TRANSPARENT);
-      s.brush = GetStockObject(NULL_BRUSH);
+      SetTextColor(ctl_hdc, g_post_duel_draws_text_color);
+      SetBkMode(ctl_hdc, TRANSPARENT);
+      brush = GetStockObject(NULL_BRUSH);
     }
-    return (BOOL)s.brush;
+    return (BOOL)brush;
 
   case WM_DRAWITEM:
-    s.draw_item = (DRAWITEMSTRUCT *)lparam;
-    if (GetFocus() == s.draw_item->hwndItem)
+    draw_item = (DRAWITEMSTRUCT *)lparam;
+    if (GetFocus() == draw_item->hwndItem)
     {
-      s.draw_color = g_post_duel_draws_button_focus_color;
+      draw_color = g_post_duel_draws_button_focus_color;
     }
     else
     {
-      s.draw_color = g_post_duel_draws_button_unfocus_color;
+      draw_color = g_post_duel_draws_button_unfocus_color;
     }
     if (*(int *)&gs_window_title_your_hand_00777bf0[20] == 0)
     {
-      s.draw_color = g_post_duel_draws_button_unfocus_color;
+      draw_color = g_post_duel_draws_button_unfocus_color;
     }
-    draw_owner_draw_button_centered(s.draw_item,
-                 g_post_duel_draws_button_brush,
-                 g_post_duel_draws_button_pen1,
-                 g_post_duel_draws_button_pen2,
-                 s.draw_color,
-                 0);
+    draw_owner_draw_button_centered(draw_item,
+                                    g_post_duel_draws_button_brush,
+                                    g_post_duel_draws_button_pen1,
+                                    g_post_duel_draws_button_pen2,
+                                    draw_color,
+                                    0);
     return TRUE;
 
   case WM_QUERYNEWPALETTE:
@@ -1545,22 +1527,22 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
 
   case WM_ERASEBKGND:
-    s.erase_dc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.erase_dc);
-    GetClientRect(hwnd, &s.erase_rect);
+    erase_dc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(erase_dc);
+    GetClientRect(hwnd, &erase_rect);
     if (g_post_duel_draws_background_bitmap != (HBITMAP)0)
     {
-      DrawBitmapToRect(s.erase_dc, &s.erase_rect, g_post_duel_draws_background_bitmap);
+      DrawBitmapToRect(erase_dc, &erase_rect, g_post_duel_draws_background_bitmap);
     }
     else
     {
-      FillRect(s.erase_dc, &s.erase_rect, GetStockObject(GRAY_BRUSH));
+      FillRect(erase_dc, &erase_rect, GetStockObject(GRAY_BRUSH));
     }
     return TRUE;
 
   case WM_CHAR:
-    s.dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
-    if (s.dialog_params->show_continue_button == 0)
+    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+    if (dialog_params->show_continue_button == 0)
     {
       if ((wparam == 0xd) || (wparam == 0x20) || (wparam == 0x1b))
       {
@@ -1574,16 +1556,16 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     return TRUE;
 
   case WM_LBUTTONDOWN:
-    GetWindowRect(hwnd, &s.drag_before_rect);
+    GetWindowRect(hwnd, &drag_before_rect);
     SendMessageA(hwnd, WM_SYSCOMMAND, 0xf012, 0);
-    GetWindowRect(hwnd, &s.drag_after_rect);
-    if (abs(s.drag_after_rect.left - s.drag_before_rect.left) + abs(s.drag_after_rect.top - s.drag_before_rect.top) > 5)
+    GetWindowRect(hwnd, &drag_after_rect);
+    if (abs(drag_after_rect.left - drag_before_rect.left) + abs(drag_after_rect.top - drag_before_rect.top) > 5)
     {
     }
     else
     {
-      s.dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
-      if (s.dialog_params->show_continue_button == 0)
+      dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+      if (dialog_params->show_continue_button == 0)
       {
         cleanup_post_duel_draws_dialog_resources(g_post_duel_draws_background_bitmap,
                                                  g_post_duel_draws_button_brush,
@@ -1596,34 +1578,34 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
 
   case WM_MOUSEMOVE:
   case WM_RBUTTONDOWN:
-    s.mouse_point.x = lparam & 0xffff;
-    s.mouse_point.y = (unsigned short)(((unsigned int)lparam >> 16) & 0xffff);
-    s.dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+    mouse_point.x = lparam & 0xffff;
+    mouse_point.y = (unsigned short)(((unsigned int)lparam >> 16) & 0xffff);
+    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
     if (((msg == WM_MOUSEMOVE) && (g_duel_interface_options.layout != 2)) ||
         ((msg == WM_RBUTTONDOWN) && (g_duel_interface_options.layout == 2)))
     {
-      s.preview_opponent_card = s.dialog_params->player_top_card;
-      GetWindowRect(GetDlgItem(hwnd, 0x4e6), &s.opponent_card_rect);
-      MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.opponent_card_rect, 2);
-      s.preview_player_card = s.dialog_params->opponent_top_card;
-      GetWindowRect(GetDlgItem(hwnd, 0x4e5), &s.player_card_rect);
-      MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.player_card_rect, 2);
-      if ((s.preview_opponent_card != -1) && (PtInRect(&s.opponent_card_rect, s.mouse_point) != 0))
+      preview_opponent_card = dialog_params->player_top_card;
+      GetWindowRect(GetDlgItem(hwnd, 0x4e6), &opponent_card_rect);
+      MapWindowPoints((HWND)0, hwnd, (LPPOINT)&opponent_card_rect, 2);
+      preview_player_card = dialog_params->opponent_top_card;
+      GetWindowRect(GetDlgItem(hwnd, 0x4e5), &player_card_rect);
+      MapWindowPoints((HWND)0, hwnd, (LPPOINT)&player_card_rect, 2);
+      if ((preview_opponent_card != -1) && (PtInRect(&opponent_card_rect, mouse_point) != 0))
       {
-        SendMessageA(g_duel_card_preview_window_hwnd, 0x401, s.preview_opponent_card, 0);
+        SendMessageA(g_duel_card_preview_window_hwnd, 0x401, preview_opponent_card, 0);
       }
-      else if ((s.preview_player_card != -1) && (PtInRect(&s.player_card_rect, s.mouse_point) != 0))
+      else if ((preview_player_card != -1) && (PtInRect(&player_card_rect, mouse_point) != 0))
       {
-        SendMessageA(g_duel_card_preview_window_hwnd, 0x401, s.preview_player_card, 0);
+        SendMessageA(g_duel_card_preview_window_hwnd, 0x401, preview_player_card, 0);
       }
     }
     return FALSE;
 
   case WM_PAINT:
-    s.dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
     UpdateWindow(GetDlgItem(hwnd, 0x4e4));
-    get_current_duel_selection(&s.selected_player, (int *)0);
-    if (s.selected_player == 0)
+    get_current_duel_selection(&selected_player, (int *)0);
+    if (selected_player == 0)
     {
       UpdateWindow(GetDlgItem(hwnd, 0x4e2));
     }
@@ -1631,55 +1613,55 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     {
       UpdateWindow(GetDlgItem(hwnd, 0x4e3));
     }
-    s.paint_dc = BeginPaint(hwnd, &s.paint);
-    if (s.paint_dc != (HDC)0)
+    paint_dc = BeginPaint(hwnd, &paint);
+    if (paint_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      if (s.selected_player == 0)
+      ApplyCardArtPaletteToDc(paint_dc);
+      if (selected_player == 0)
       {
-        s.card_id = s.dialog_params->player_top_card;
+        card_id = dialog_params->player_top_card;
       }
       else
       {
-        s.card_id = s.dialog_params->opponent_top_card;
+        card_id = dialog_params->opponent_top_card;
       }
-      if (s.selected_player == 0)
+      if (selected_player == 0)
       {
-        s.control_id = 0x4e6;
+        control_id = 0x4e6;
       }
       else
       {
-        s.control_id = 0x4e5;
+        control_id = 0x4e5;
       }
-      if (s.card_id != -1)
+      if (card_id != -1)
       {
-        GetWindowRect(GetDlgItem(hwnd, s.control_id), &s.card_rect);
-        MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.card_rect, 2);
-        DrawFullCard(s.paint_dc, &s.card_rect, global_raw_cards_storage + s.card_id, 0, 0x12, 0, gs_illus_00789130);
+        GetWindowRect(GetDlgItem(hwnd, control_id), &card_rect);
+        MapWindowPoints((HWND)0, hwnd, (LPPOINT)&card_rect, 2);
+        DrawFullCard(paint_dc, &card_rect, global_raw_cards_storage + card_id, 0, 0x12, 0, gs_illus_00789130);
       }
-      if (s.selected_player == 0)
+      if (selected_player == 0)
       {
-        s.card_id = s.dialog_params->opponent_top_card;
+        card_id = dialog_params->opponent_top_card;
       }
       else
       {
-        s.card_id = s.dialog_params->player_top_card;
+        card_id = dialog_params->player_top_card;
       }
-      if (s.selected_player == 0)
+      if (selected_player == 0)
       {
-        s.control_id = 0x4e5;
+        control_id = 0x4e5;
       }
       else
       {
-        s.control_id = 0x4e6;
+        control_id = 0x4e6;
       }
-      if (s.card_id != -1)
+      if (card_id != -1)
       {
-        GetWindowRect(GetDlgItem(hwnd, s.control_id), &s.card_rect);
-        MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.card_rect, 2);
-        DrawFullCard(s.paint_dc, &s.card_rect, global_raw_cards_storage + s.card_id, 0, 0x12, 0, gs_illus_00789130);
+        GetWindowRect(GetDlgItem(hwnd, control_id), &card_rect);
+        MapWindowPoints((HWND)0, hwnd, (LPPOINT)&card_rect, 2);
+        DrawFullCard(paint_dc, &card_rect, global_raw_cards_storage + card_id, 0, 0x12, 0, gs_illus_00789130);
       }
-      EndPaint(hwnd, &s.paint);
+      EndPaint(hwnd, &paint);
     }
     return TRUE;
 
@@ -1750,17 +1732,14 @@ void cleanup_post_duel_draws_dialog_resources(HBITMAP background, HBRUSH button_
 // FUNCTION: SHANDALAR 0x005448ea
 INT_PTR CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    char text[100];
-    HDC dc;
-    HGDIOBJ font;
-    RECT rect;
-    int player;
-    int card;
-    HWND card_window;
-    RECT client_rect;
-  } s;
+  char text[100];
+  HDC dc;
+  HGDIOBJ font;
+  RECT rect;
+  int player;
+  int card;
+  HWND card_window;
+  RECT client_rect;
 
   switch (msg)
   {
@@ -1769,13 +1748,13 @@ INT_PTR CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, 
     g_still_thinking_shadow_color = 0x100009a;
     g_still_thinking_text_color = 0x10000c9;
     SetDlgItemTextA(hwnd, 0x402, gs_still_thinking_0091bd10);
-    s.player = 1;
-    s.card = -1;
-    GetClientRect(hwnd, &s.client_rect);
-    s.card_window = CreateWindowExA(0, "MAGICGAME_CardClass", "StillThinking small card", WS_CHILD | WS_VISIBLE,
-                                    (s.client_rect.right - g_showlist_smallcard_width) / 2,
-                                    (s.client_rect.bottom - g_showlist_smallcard_height) - 10,
-                                    g_showlist_smallcard_width, g_showlist_smallcard_height, hwnd, (HMENU)1, g_app_instance, &s.player);
+    player = 1;
+    card = -1;
+    GetClientRect(hwnd, &client_rect);
+    card_window = CreateWindowExA(0, "MAGICGAME_CardClass", "StillThinking small card", WS_CHILD | WS_VISIBLE,
+                                  (client_rect.right - g_showlist_smallcard_width) / 2,
+                                  (client_rect.bottom - g_showlist_smallcard_height) - 10,
+                                  g_showlist_smallcard_width, g_showlist_smallcard_height, hwnd, (HMENU)1, g_app_instance, &player);
     SetTimer(hwnd, 1, 3000, (TIMERPROC)0);
     return TRUE;
 
@@ -1785,22 +1764,22 @@ INT_PTR CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, 
     return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
 
   case WM_ERASEBKGND:
-    s.dc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.dc);
-    GetClientRect(hwnd, &s.rect);
-    FillRect(s.dc, &s.rect, GetStockObject(BLACK_BRUSH));
-    s.font = (HGDIOBJ)SendDlgItemMessageA(hwnd, 0x402, WM_GETFONT, 0, 0);
-    SelectObject(s.dc, s.font);
-    SetBkMode(s.dc, TRANSPARENT);
-    SetTextColor(s.dc, g_still_thinking_shadow_color);
-    GetWindowRect(GetDlgItem(hwnd, 0x402), &s.rect);
-    MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.rect, 2);
-    GetDlgItemTextA(hwnd, 0x402, s.text, 100);
-    SetTextColor(s.dc, g_still_thinking_text_color);
-    DrawTextA(s.dc, s.text, -1, &s.rect, DT_CENTER);
-    OffsetRect(&s.rect, -2, -2);
-    SetTextColor(s.dc, g_still_thinking_shadow_color);
-    DrawTextA(s.dc, s.text, -1, &s.rect, DT_CENTER);
+    dc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(dc);
+    GetClientRect(hwnd, &rect);
+    FillRect(dc, &rect, GetStockObject(BLACK_BRUSH));
+    font = (HGDIOBJ)SendDlgItemMessageA(hwnd, 0x402, WM_GETFONT, 0, 0);
+    SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, g_still_thinking_shadow_color);
+    GetWindowRect(GetDlgItem(hwnd, 0x402), &rect);
+    MapWindowPoints((HWND)0, hwnd, (LPPOINT)&rect, 2);
+    GetDlgItemTextA(hwnd, 0x402, text, 100);
+    SetTextColor(dc, g_still_thinking_text_color);
+    DrawTextA(dc, text, -1, &rect, DT_CENTER);
+    OffsetRect(&rect, -2, -2);
+    SetTextColor(dc, g_still_thinking_shadow_color);
+    DrawTextA(dc, text, -1, &rect, DT_CENTER);
     return TRUE;
 
   case WM_COMMAND:
@@ -1938,34 +1917,31 @@ static __inline int pick_card_is_available(csvid_t csvid)
 // FUNCTION: MAGIC 0x00506b4c
 static void populate_pick_card_list(HWND listbox, unsigned int color_filter, unsigned int type_filter)
 {
-  struct
-  {
-    int card_index;
-    int list_index;
-  } s;
+  int card_index;
+  int list_index;
 
   SendMessageA(listbox, LB_RESETCONTENT, 0, 0);
-  for (s.card_index = 0; s.card_index < global_available_slots; ++s.card_index)
+  for (card_index = 0; card_index < global_available_slots; ++card_index)
   {
-    if (!pick_card_color_matches(&global_raw_cards_storage[s.card_index], color_filter))
+    if (!pick_card_color_matches(&global_raw_cards_storage[card_index], color_filter))
     {
       continue;
     }
 
-    if (!pick_card_type_matches(&global_raw_cards_storage[s.card_index], type_filter))
+    if (!pick_card_type_matches(&global_raw_cards_storage[card_index], type_filter))
     {
       continue;
     }
 
-    if (!pick_card_is_available(global_raw_cards_storage[s.card_index].id))
+    if (!pick_card_is_available(global_raw_cards_storage[card_index].id))
     {
       continue;
     }
 
-    s.list_index = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)global_raw_cards_storage[s.card_index].full_name);
-    if (s.list_index != LB_ERR)
+    list_index = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)global_raw_cards_storage[card_index].full_name);
+    if (list_index != LB_ERR)
     {
-      SendMessageA(listbox, LB_SETITEMDATA, s.list_index, s.card_index);
+      SendMessageA(listbox, LB_SETITEMDATA, list_index, card_index);
     }
   }
 }
@@ -2068,36 +2044,30 @@ static __inline void set_pick_card_filter_from_command(PickCardDialogContext *co
 
 static __inline int get_selected_pick_card_csvid(HWND hwnd)
 {
-  struct
-  {
-    HWND listbox;
-    int selected_index;
-  } s;
+  HWND listbox;
+  int selected_index;
 
-  s.listbox = GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID);
-  s.selected_index = SendMessageA(s.listbox, LB_GETCURSEL, 0, 0);
-  if (s.selected_index == LB_ERR)
+  listbox = GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID);
+  selected_index = SendMessageA(listbox, LB_GETCURSEL, 0, 0);
+  if (selected_index == LB_ERR)
   {
     return -1;
   }
 
-  return SendMessageA(s.listbox, LB_GETITEMDATA, s.selected_index, 0);
+  return SendMessageA(listbox, LB_GETITEMDATA, selected_index, 0);
 }
 
 static __inline void select_first_pick_card(HWND hwnd)
 {
-  struct
-  {
-    HWND listbox;
-    int selected_csvid;
-  } s;
+  HWND listbox;
+  int selected_csvid;
 
-  s.listbox = GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID);
-  if (SendMessageA(s.listbox, LB_GETCOUNT, 0, 0) > 0)
+  listbox = GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID);
+  if (SendMessageA(listbox, LB_GETCOUNT, 0, 0) > 0)
   {
-    SendMessageA(s.listbox, LB_SETCURSEL, 0, 0);
-    s.selected_csvid = get_selected_pick_card_csvid(hwnd);
-    SendMessageA(GetDlgItem(hwnd, PICK_CARD_FULLCARD_ID), 0x401, s.selected_csvid, 0);
+    SendMessageA(listbox, LB_SETCURSEL, 0, 0);
+    selected_csvid = get_selected_pick_card_csvid(hwnd);
+    SendMessageA(GetDlgItem(hwnd, PICK_CARD_FULLCARD_ID), 0x401, selected_csvid, 0);
   }
   else
   {
@@ -2108,16 +2078,13 @@ static __inline void select_first_pick_card(HWND hwnd)
 // FUNCTION: MAGIC 0x0050630c
 static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int selected_index;
-    int selected_card;
-    int show_color_filters;
-    int list_selected_index;
-    int list_selected_card;
-    int color_count;
-    int color_index;
-  } s;
+  int selected_index;
+  int selected_card;
+  int show_color_filters;
+  int list_selected_index;
+  int list_selected_card;
+  int color_count;
+  int color_index;
 
   switch (msg)
   {
@@ -2130,16 +2097,16 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
     SendDlgItemMessageA(hwnd, PICK_CARD_FULLCARD_ID, 0x401, (WPARAM)-1, 0);
     SetWindowLongA(GetDlgItem(hwnd, PICK_CARD_FULLCARD_ID), 0xc, 1);
 
-    s.color_count = 0;
-    for (s.color_index = 0; s.color_index < 5; ++s.color_index)
+    color_count = 0;
+    for (color_index = 0; color_index < 5; ++color_index)
     {
-      if ((g_pick_card_dialog_context_ptr->color_filter & (1 << (byte)s.color_index)) != 0)
+      if ((g_pick_card_dialog_context_ptr->color_filter & (1 << (byte)color_index)) != 0)
       {
-        ++s.color_count;
+        ++color_count;
       }
     }
 
-    if (s.color_count > 1)
+    if (color_count > 1)
     {
       CheckDlgButton(hwnd, PICK_CARD_COLOR_GOLD_ID, 1);
     }
@@ -2213,9 +2180,9 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
     case PICK_CARD_LISTBOX_ID:
       if (HIWORD(wparam) == LBN_SELCHANGE)
       {
-        s.list_selected_index = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETCURSEL, 0, 0);
-        s.list_selected_card = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETITEMDATA, s.list_selected_index, 0);
-        SendDlgItemMessageA(hwnd, PICK_CARD_FULLCARD_ID, 0x401, s.list_selected_card, 0);
+        list_selected_index = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETCURSEL, 0, 0);
+        list_selected_card = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETITEMDATA, list_selected_index, 0);
+        SendDlgItemMessageA(hwnd, PICK_CARD_FULLCARD_ID, 0x401, list_selected_card, 0);
       }
       else if (HIWORD(wparam) == LBN_DBLCLK)
       {
@@ -2305,25 +2272,25 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
 
         if ((wparam & 0xffff) == PICK_CARD_TYPE_LAND_ID || (wparam & 0xffff) == PICK_CARD_TYPE_ARTIFACT_ID)
         {
-          s.show_color_filters = 0;
+          show_color_filters = 0;
         }
         else
         {
-          s.show_color_filters = 1;
+          show_color_filters = 1;
         }
-        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_BLACK_ID), s.show_color_filters);
-        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_BLUE_ID), s.show_color_filters);
-        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_GREEN_ID), s.show_color_filters);
-        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_RED_ID), s.show_color_filters);
-        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_WHITE_ID), s.show_color_filters);
-        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_GOLD_ID), s.show_color_filters);
+        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_BLACK_ID), show_color_filters);
+        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_BLUE_ID), show_color_filters);
+        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_GREEN_ID), show_color_filters);
+        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_RED_ID), show_color_filters);
+        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_WHITE_ID), show_color_filters);
+        ShowWindow(GetDlgItem(hwnd, PICK_CARD_COLOR_GOLD_ID), show_color_filters);
       }
       break;
 
     case IDOK:
-      s.selected_index = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETCURSEL, 0, 0);
-      s.selected_card = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETITEMDATA, s.selected_index, 0);
-      EndDialog(hwnd, s.selected_card);
+      selected_index = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETCURSEL, 0, 0);
+      selected_card = SendDlgItemMessageA(hwnd, PICK_CARD_LISTBOX_ID, LB_GETITEMDATA, selected_index, 0);
+      EndDialog(hwnd, selected_card);
       break;
 
     case IDCANCEL:
@@ -2349,11 +2316,8 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
 // FUNCTION: SHANDALAR 0x00411e30
 int pick_internal_card_from_list_dialog(char *prompt, int initial_card_id, int filter)
 {
-  struct
-  {
-    int dialog_result;
-    int card_index;
-  } s;
+  int dialog_result;
+  int card_index;
 
   g_pick_card_dialog_context.prompt = prompt;
   if (initial_card_id != -1)
@@ -2365,21 +2329,21 @@ int pick_internal_card_from_list_dialog(char *prompt, int initial_card_id, int f
     g_pick_card_dialog_context.type_filter = filter;
   }
 
-  s.dialog_result = DialogBoxParamA(g_app_instance,
-                                    (LPCSTR)0xe0,
-                                    g_duel_window_hwnd,
-                                    dlgproc_pick_card_from_list,
-                                    (LPARAM)&g_pick_card_dialog_context);
-  if (s.dialog_result == -1)
+  dialog_result = DialogBoxParamA(g_app_instance,
+                                  (LPCSTR)0xe0,
+                                  g_duel_window_hwnd,
+                                  dlgproc_pick_card_from_list,
+                                  (LPARAM)&g_pick_card_dialog_context);
+  if (dialog_result == -1)
   {
     return -1;
   }
 
-  for (s.card_index = 0; s.card_index < g_card_count; ++s.card_index)
+  for (card_index = 0; card_index < g_card_count; ++card_index)
   {
-    if (global_cards_data[s.card_index].id == s.dialog_result)
+    if (global_cards_data[card_index].id == dialog_result)
     {
-      return s.card_index;
+      return card_index;
     }
   }
 
@@ -2421,79 +2385,73 @@ void AddJournalEntry(int entry_type, int entry_arg)
 // FUNCTION: SHANDALAR 0x00417946
 void ReadCsvFieldByCsvid(char *out, int csvid, int field, const char *csv_name)
 {
-  struct
-  {
-    char in_quotes;
-    int current_id;
-    char delim[12];
-    char token[512];
-    char field_idx;
-    FILE *fp;
-    int fscanf_ret;
-  } s;
+  char in_quotes;
+  int current_id;
+  char delim[12];
+  char token[512];
+  char field_idx;
+  FILE *fp;
+  int fscanf_ret;
 
-  s.fp = fopen(csv_name, "rb");
-  s.in_quotes = 0;
-  s.field_idx = s.in_quotes;
+  fp = fopen(csv_name, "rb");
+  in_quotes = 0;
+  field_idx = in_quotes;
   *out = '\0';
 
   if ((g_master_csv_offsets[csvid] != -1) && (strcmp(csv_name, "master.csv") == 0))
   {
-    fseek(s.fp, (long)g_master_csv_offsets[csvid], 0);
+    fseek(fp, (long)g_master_csv_offsets[csvid], 0);
   }
 
   do
   {
-    s.fscanf_ret = fscanf(s.fp, "%[^,\n] %[,\n]", s.token, s.delim);
-    if (s.fscanf_ret == 0)
+    fscanf_ret = fscanf(fp, "%[^,\n] %[,\n]", token, delim);
+    if (fscanf_ret == 0)
     {
       break;
     }
 
-    if (s.token[0] == '0')
+    if (token[0] == '0')
     {
-      s.current_id = atoi(s.token);
+      current_id = atoi(token);
     }
 
-    if (s.current_id == csvid)
+    if (current_id == csvid)
     {
-      ++s.field_idx;
-      if ((s.field_idx == field) && s.in_quotes)
+      ++field_idx;
+      if ((field_idx == field) && in_quotes)
       {
         strcat(out, ",");
       }
-      if (s.token[0] == '\"')
+      if (token[0] == '\"')
       {
-        s.in_quotes = 1;
+        in_quotes = 1;
       }
-      if (s.field_idx == field)
+      if (field_idx == field)
       {
-        strcat(out, s.token);
+        strcat(out, token);
       }
-      if (s.token[strlen(s.token) - 1] == '\"')
+      if (token[strlen(token) - 1] == '\"')
       {
-        s.in_quotes = 0;
+        in_quotes = 0;
       }
-      if (s.in_quotes)
+      if (in_quotes)
       {
-        --s.field_idx;
+        --field_idx;
       }
     }
 
-  } while ((s.fscanf_ret != -1) && ((s.field_idx == '\0') || (s.current_id == csvid)));
+  } while ((fscanf_ret != -1) && ((field_idx == '\0') || (current_id == csvid)));
 
-  fclose(s.fp);
+  fclose(fp);
 }
 
 // FUNCTION: MAGIC 0x004b5de8
 // FUNCTION: SHANDALAR 0x0056c5ea
 int GetCardRarity(int internal_card_id)
 {
-  struct
-  {
-    char rarity_str[32];
-    int rarity;
-  } s;
+  char rarity_str[32];
+  int rarity;
 
   if (((global_cards_data[internal_card_id].extra_ability & 0x180U) != 0) || (global_cards_data[internal_card_id].expansion == '@'))
   {
@@ -2502,326 +2460,320 @@ int GetCardRarity(int internal_card_id)
 
   if ((signed char)global_cards_data[internal_card_id].rarity != -1)
   {
-    s.rarity = (int)(signed char)global_cards_data[internal_card_id].rarity;
+    rarity = (int)(signed char)global_cards_data[internal_card_id].rarity;
 
-    return s.rarity;
+    return rarity;
   }
 
-  ReadCsvFieldByCsvid(s.rarity_str, global_cards_data[internal_card_id].id, 9, "info.csv");
+  ReadCsvFieldByCsvid(rarity_str, global_cards_data[internal_card_id].id, 9, "info.csv");
 
-  s.rarity = 1;
+  rarity = 1;
 
-  if (strcmp(s.rarity_str, "Special") == 0)
+  if (strcmp(rarity_str, "Special") == 0)
   {
-    s.rarity = 3;
+    rarity = 3;
   }
 
-  if (strcmp(s.rarity_str, "Rare") == 0)
+  if (strcmp(rarity_str, "Rare") == 0)
   {
-    s.rarity = 3;
+    rarity = 3;
   }
 
-  if (strcmp(s.rarity_str, "Uncommon") == 0)
+  if (strcmp(rarity_str, "Uncommon") == 0)
   {
-    s.rarity = 2;
+    rarity = 2;
   }
 
-  global_cards_data[internal_card_id].rarity = (unsigned char)s.rarity;
+  global_cards_data[internal_card_id].rarity = (unsigned char)rarity;
 
-  return s.rarity;
+  return rarity;
 }
 
 // FUNCTION: MAGIC 0x004dd413
 // FUNCTION: SHANDALAR 0x005440c4
 int get_primary_color_from_duel_deck(int player)
 {
-  struct
-  {
-    int white_count;      // ebp - 0x2c
-    int card_id;          // ebp - 0x28
-    int red_count;        // ebp - 0x24
-    int card_count;       // ebp - 0x20
-    color_test_t color;   // ebp - 0x1c
-    int card_index;       // ebp - 0x18
-    int internal_card_id; // ebp - 0x14
-    int result;           // ebp - 0x10
-    int green_count;      // ebp - 0xc
-    int blue_count;       // ebp - 0x8
-    int black_count;      // ebp - 0x4
-  } s;
+  int white_count;      // ebp - 0x2c
+  int card_id;          // ebp - 0x28
+  int red_count;        // ebp - 0x24
+  int card_count;       // ebp - 0x20
+  color_test_t color;   // ebp - 0x1c
+  int card_index;       // ebp - 0x18
+  int internal_card_id; // ebp - 0x14
+  int result;           // ebp - 0x10
+  int green_count;      // ebp - 0xc
+  int blue_count;       // ebp - 0x8
+  int black_count;      // ebp - 0x4
 
-  s.black_count = s.white_count = s.green_count = s.red_count = s.blue_count = 0;
+  black_count = white_count = green_count = red_count = blue_count = 0;
 
   if (player == -1)
   {
-    for (s.card_index = 0; s.card_index < 500; s.card_index++)
+    for (card_index = 0; card_index < 500; card_index++)
     {
-      if ((deck[s.card_index] != -1) && ((deck[s.card_index] & 0xc000) == 0))
+      if ((deck[card_index] != -1) && ((deck[card_index] & 0xc000) == 0))
       {
-        s.internal_card_id = deck[s.card_index] & 0xfff;
-        s.color = global_cards_data[s.internal_card_id].color;
-        s.card_count = 1;
-        if ((s.color & COLOR_TEST_BLACK) != 0)
+        internal_card_id = deck[card_index] & 0xfff;
+        color = global_cards_data[internal_card_id].color;
+        card_count = 1;
+        if ((color & COLOR_TEST_BLACK) != 0)
         {
-          s.black_count += s.card_count;
+          black_count += card_count;
         }
-        if ((s.color & COLOR_TEST_WHITE) != 0)
+        if ((color & COLOR_TEST_WHITE) != 0)
         {
-          s.white_count += s.card_count;
+          white_count += card_count;
         }
-        if ((s.color & COLOR_TEST_GREEN) != 0)
+        if ((color & COLOR_TEST_GREEN) != 0)
         {
-          s.green_count += s.card_count;
+          green_count += card_count;
         }
-        if ((s.color & COLOR_TEST_RED) != 0)
+        if ((color & COLOR_TEST_RED) != 0)
         {
-          s.red_count += s.card_count;
+          red_count += card_count;
         }
-        if ((s.color & COLOR_TEST_BLUE) != 0)
+        if ((color & COLOR_TEST_BLUE) != 0)
         {
-          s.blue_count += s.card_count;
+          blue_count += card_count;
         }
       }
     }
   }
   else
   {
-    for (s.card_index = 0; s.card_index < 200; s.card_index++)
+    for (card_index = 0; card_index < 200; card_index++)
     {
-      s.card_id = g_initial_library[player][s.card_index].csvid;
-      s.card_count = g_initial_library[player][s.card_index].numcards;
-      if ((s.card_id != -1) && (s.card_count != 0))
+      card_id = g_initial_library[player][card_index].csvid;
+      card_count = g_initial_library[player][card_index].numcards;
+      if ((card_id != -1) && (card_count != 0))
       {
-        s.internal_card_id = CardTypeFromID(s.card_id);
-        s.color = global_cards_data[s.internal_card_id].color;
-        if ((s.color & COLOR_TEST_BLACK) != 0)
+        internal_card_id = CardTypeFromID(card_id);
+        color = global_cards_data[internal_card_id].color;
+        if ((color & COLOR_TEST_BLACK) != 0)
         {
-          s.black_count += s.card_count;
+          black_count += card_count;
         }
-        if ((s.color & COLOR_TEST_WHITE) != 0)
+        if ((color & COLOR_TEST_WHITE) != 0)
         {
-          s.white_count += s.card_count;
+          white_count += card_count;
         }
-        if ((s.color & COLOR_TEST_GREEN) != 0)
+        if ((color & COLOR_TEST_GREEN) != 0)
         {
-          s.green_count += s.card_count;
+          green_count += card_count;
         }
-        if ((s.color & COLOR_TEST_RED) != 0)
+        if ((color & COLOR_TEST_RED) != 0)
         {
-          s.red_count += s.card_count;
+          red_count += card_count;
         }
-        if ((s.color & COLOR_TEST_BLUE) != 0)
+        if ((color & COLOR_TEST_BLUE) != 0)
         {
-          s.blue_count += s.card_count;
+          blue_count += card_count;
         }
       }
     }
   }
 
-  s.result = COLOR_COLORLESS;
-  if ((((s.black_count >= s.white_count) && (s.black_count >= s.green_count)) &&
-       (s.black_count >= s.red_count)) &&
-      (s.black_count >= s.blue_count))
+  result = COLOR_COLORLESS;
+  if ((((black_count >= white_count) && (black_count >= green_count)) &&
+       (black_count >= red_count)) &&
+      (black_count >= blue_count))
   {
-    s.result = COLOR_BLACK;
+    result = COLOR_BLACK;
   }
-  else if (((s.white_count >= s.black_count) && (s.white_count >= s.green_count)) &&
-           ((s.white_count >= s.red_count) && (s.white_count >= s.blue_count)))
+  else if (((white_count >= black_count) && (white_count >= green_count)) &&
+           ((white_count >= red_count) && (white_count >= blue_count)))
   {
-    s.result = COLOR_WHITE;
+    result = COLOR_WHITE;
   }
-  else if (((s.green_count >= s.black_count) && (s.green_count >= s.white_count)) &&
-           ((s.green_count >= s.red_count) && (s.green_count >= s.blue_count)))
+  else if (((green_count >= black_count) && (green_count >= white_count)) &&
+           ((green_count >= red_count) && (green_count >= blue_count)))
   {
-    s.result = COLOR_GREEN;
+    result = COLOR_GREEN;
   }
-  else if ((((s.red_count >= s.black_count) && (s.red_count >= s.green_count)) &&
-            (s.red_count >= s.white_count)) &&
-           (s.red_count >= s.blue_count))
+  else if ((((red_count >= black_count) && (red_count >= green_count)) &&
+            (red_count >= white_count)) &&
+           (red_count >= blue_count))
   {
-    s.result = COLOR_RED;
+    result = COLOR_RED;
   }
-  else if (((s.blue_count >= s.black_count) && (s.blue_count >= s.green_count)) &&
-           ((s.blue_count >= s.red_count) && (s.blue_count >= s.white_count)))
+  else if (((blue_count >= black_count) && (blue_count >= green_count)) &&
+           ((blue_count >= red_count) && (blue_count >= white_count)))
   {
-    s.result = COLOR_BLUE;
+    result = COLOR_BLUE;
   }
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004dd719
 // FUNCTION: SHANDALAR 0x005443ca
 void apply_duel_backdrop_art(int player, int color, int variant)
 {
-  struct
-  {
-    HWND hand_window;
-    HWND graveyard_window;
-    HWND life_window;
-    HWND battlefield_window;
-    char path[264];
-    HBITMAP bitmap;
-    char asset_name[52];
-    BITMAP bitmap_info;
-    RECT hand_rect;
-  } s;
+  HWND hand_window;
+  HWND graveyard_window;
+  HWND life_window;
+  HWND battlefield_window;
+  char path[264];
+  HBITMAP bitmap;
+  char asset_name[52];
+  BITMAP bitmap_info;
+  RECT hand_rect;
 
   if (color == 1)
   {
-    strcpy(s.asset_name, "TERR_BLACK");
+    strcpy(asset_name, "TERR_BLACK");
   }
   else if (color == 5)
   {
-    strcpy(s.asset_name, "TERR_WHITE");
+    strcpy(asset_name, "TERR_WHITE");
   }
   else if (color == 3)
   {
-    strcpy(s.asset_name, "TERR_GREEN");
+    strcpy(asset_name, "TERR_GREEN");
   }
   else if (color == 2)
   {
-    strcpy(s.asset_name, "TERR_BLUE");
+    strcpy(asset_name, "TERR_BLUE");
   }
   else
   {
-    strcpy(s.asset_name, "TERR_RED");
+    strcpy(asset_name, "TERR_RED");
   }
   if (variant == 0)
   {
-    strcat(s.asset_name, "pict");
+    strcat(asset_name, "pict");
   }
   else if (variant == 1)
   {
-    strcat(s.asset_name, "patt");
+    strcat(asset_name, "patt");
   }
   else
   {
-    strcat(s.asset_name, "mana");
+    strcat(asset_name, "mana");
   }
-  sprintf(s.path, "%s\\%s.pic", global_duelart_path, s.asset_name);
-  s.bitmap = load_pic(s.path);
+  sprintf(path, "%s\\%s.pic", global_duelart_path, asset_name);
+  bitmap = load_pic(path);
   if (player == 0)
   {
-    s.battlefield_window = g_duel_player_battlefield_window_hwnd;
+    battlefield_window = g_duel_player_battlefield_window_hwnd;
   }
   else
   {
-    s.battlefield_window = g_duel_help_owner_hwnd;
+    battlefield_window = g_duel_help_owner_hwnd;
   }
-  SendMessageA(s.battlefield_window, 0x439, (WPARAM)s.bitmap, 0);
+  SendMessageA(battlefield_window, 0x439, (WPARAM)bitmap, 0);
 
   if (color == 1)
   {
-    strcpy(s.asset_name, "LIFE_BLACK");
+    strcpy(asset_name, "LIFE_BLACK");
   }
   else if (color == 5)
   {
-    strcpy(s.asset_name, "LIFE_WHITE");
+    strcpy(asset_name, "LIFE_WHITE");
   }
   else if (color == 3)
   {
-    strcpy(s.asset_name, "LIFE_GREEN");
+    strcpy(asset_name, "LIFE_GREEN");
   }
   else if (color == 2)
   {
-    strcpy(s.asset_name, "LIFE_BLUE");
+    strcpy(asset_name, "LIFE_BLUE");
   }
   else
   {
-    strcpy(s.asset_name, "LIFE_RED");
+    strcpy(asset_name, "LIFE_RED");
   }
   if (variant == 0)
   {
-    strcat(s.asset_name, "pict");
+    strcat(asset_name, "pict");
   }
   else if (variant == 1)
   {
-    strcat(s.asset_name, "patt");
+    strcat(asset_name, "patt");
   }
   else
   {
-    strcat(s.asset_name, "mana");
+    strcat(asset_name, "mana");
   }
-  sprintf(s.path, "%s\\%s.pic", global_duelart_path, s.asset_name);
-  s.bitmap = load_pic(s.path);
+  sprintf(path, "%s\\%s.pic", global_duelart_path, asset_name);
+  bitmap = load_pic(path);
   if (player == 0)
   {
-    s.life_window = g_duel_life_status_window_1_hwnd;
+    life_window = g_duel_life_status_window_1_hwnd;
   }
   else
   {
-    s.life_window = g_duel_life_status_window_2_hwnd;
+    life_window = g_duel_life_status_window_2_hwnd;
   }
-  SendMessageA(s.life_window, 0x439, (WPARAM)s.bitmap, 0);
+  SendMessageA(life_window, 0x439, (WPARAM)bitmap, 0);
 
   if (color == 1)
   {
-    strcpy(s.asset_name, "GRAVE_BLACK");
+    strcpy(asset_name, "GRAVE_BLACK");
   }
   else if (color == 5)
   {
-    strcpy(s.asset_name, "GRAVE_WHITE");
+    strcpy(asset_name, "GRAVE_WHITE");
   }
   else if (color == 3)
   {
-    strcpy(s.asset_name, "GRAVE_GREEN");
+    strcpy(asset_name, "GRAVE_GREEN");
   }
   else if (color == 2)
   {
-    strcpy(s.asset_name, "GRAVE_BLUE");
+    strcpy(asset_name, "GRAVE_BLUE");
   }
   else
   {
-    strcpy(s.asset_name, "GRAVE_RED");
+    strcpy(asset_name, "GRAVE_RED");
   }
-  sprintf(s.path, "%s\\%s.pic", global_duelart_path, s.asset_name);
-  s.bitmap = load_pic(s.path);
+  sprintf(path, "%s\\%s.pic", global_duelart_path, asset_name);
+  bitmap = load_pic(path);
   if (player == 0)
   {
-    s.graveyard_window = g_duel_player_graveyard_window_hwnd;
+    graveyard_window = g_duel_player_graveyard_window_hwnd;
   }
   else
   {
-    s.graveyard_window = g_phasebar_your_untap_window_hwnd;
+    graveyard_window = g_phasebar_your_untap_window_hwnd;
   }
-  SendMessageA(s.graveyard_window, 0x439, (WPARAM)s.bitmap, 0);
+  SendMessageA(graveyard_window, 0x439, (WPARAM)bitmap, 0);
 
   if (color == 1)
   {
-    strcpy(s.asset_name, "HAND_BLACK");
+    strcpy(asset_name, "HAND_BLACK");
   }
   else if (color == 5)
   {
-    strcpy(s.asset_name, "HAND_WHITE");
+    strcpy(asset_name, "HAND_WHITE");
   }
   else if (color == 3)
   {
-    strcpy(s.asset_name, "HAND_GREEN");
+    strcpy(asset_name, "HAND_GREEN");
   }
   else if (color == 2)
   {
-    strcpy(s.asset_name, "HAND_BLUE");
+    strcpy(asset_name, "HAND_BLUE");
   }
   else
   {
-    strcpy(s.asset_name, "HAND_RED");
+    strcpy(asset_name, "HAND_RED");
   }
-  sprintf(s.path, "%s\\%s.pic", global_duelart_path, s.asset_name);
-  s.bitmap = load_pic(s.path);
-  GetObjectA(s.bitmap, sizeof(BITMAP), &s.bitmap_info);
-  s.hand_rect.top = 0xb;
-  s.hand_rect.left = s.bitmap_info.bmHeight - s.hand_rect.top;
-  s.hand_rect.right = 7;
-  s.hand_rect.bottom = 4;
+  sprintf(path, "%s\\%s.pic", global_duelart_path, asset_name);
+  bitmap = load_pic(path);
+  GetObjectA(bitmap, sizeof(BITMAP), &bitmap_info);
+  hand_rect.top = 0xb;
+  hand_rect.left = bitmap_info.bmHeight - hand_rect.top;
+  hand_rect.right = 7;
+  hand_rect.bottom = 4;
   if (player == 0)
   {
-    s.hand_window = g_duel_full_card_window_hwnd;
+    hand_window = g_duel_full_card_window_hwnd;
   }
   else
   {
-    s.hand_window = g_duel_life_window_hwnd;
+    hand_window = g_duel_life_window_hwnd;
   }
-  SendMessageA(s.hand_window, 0x439, (WPARAM)s.bitmap, (LPARAM)&s.hand_rect);
+  SendMessageA(hand_window, 0x439, (WPARAM)bitmap, (LPARAM)&hand_rect);
 }
 
 void dispatch_duel_engine_message(MSG *message);
@@ -2830,45 +2782,42 @@ void dispatch_duel_engine_message(MSG *message);
 // FUNCTION: SHANDALAR 0x005410d1
 LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int minmaxinfo;
-    char pad_0004[0x108];
-    int command_player;
-    int command_selected_card;
-    int command_saved_phase_flags;
-    int enemy_backdrop_result;
-    int player_backdrop_color;
-    int enemy_backdrop_color;
-    int player_backdrop_result;
+  int minmaxinfo;
+  char pad_0004[0x108];
+  int command_player;
+  int command_selected_card;
+  int command_saved_phase_flags;
+  int enemy_backdrop_result;
+  int player_backdrop_color;
+  int enemy_backdrop_color;
+  int player_backdrop_result;
 
-    int backdrop_player_color;
-    int backdrop_enemy_color;
-    int backdrop_player_variant;
-    char backdrop_path[252];
+  int backdrop_player_color;
+  int backdrop_enemy_color;
+  int backdrop_player_variant;
+  char backdrop_path[252];
 
-    int slot_index;
-    BOOL visible;
-    int screen_height;
-    int screen_width;
-    int has_replay_prompt;
-    char replay_prompt[100];
-    int should_quit;
-    HWND duel_result;
-    target_selection_result_t *posted_action_result;
-    int selected_card;
-    int selected_player;
-    POINT cursor_pos;
-    unsigned int hit_test;
-    HWND cursor_window;
-    target_selection_request_t *action_request;
-    MSG modal_msg;
-    DWORD thread_exit_code;
-    target_selection_result_t *action_result;
-    BOOL have_message;
-    unsigned int action_result_ok;
-    int done;
-  } s;
+  int slot_index;
+  BOOL visible;
+  int screen_height;
+  int screen_width;
+  int has_replay_prompt;
+  char replay_prompt[100];
+  int should_quit;
+  HWND duel_result;
+  target_selection_result_t *posted_action_result;
+  int selected_card;
+  int selected_player;
+  POINT cursor_pos;
+  unsigned int hit_test;
+  HWND cursor_window;
+  target_selection_request_t *action_request;
+  MSG modal_msg;
+  DWORD thread_exit_code;
+  target_selection_result_t *action_result;
+  BOOL have_message;
+  unsigned int action_result_ok;
+  int done;
 
   if (msg == 0x464)
   {
@@ -2888,26 +2837,26 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       SendMessageA(g_your_attack_window_hwnd, WM_CLOSE, 0, 0);
     }
     KillTimer(hwnd, g_duel_timer_id);
-    s.action_request = (target_selection_request_t *)wparam;
-    s.action_result = (target_selection_result_t *)lparam;
+    action_request = (target_selection_request_t *)wparam;
+    action_result = (target_selection_result_t *)lparam;
     g_duel_modal_action_active = 1;
-    memcpy(&g_duel_action_request_copy, s.action_request, sizeof(*s.action_request));
-    GetCursorPos(&s.cursor_pos);
-    s.cursor_window = WindowFromPoint(s.cursor_pos);
-    s.hit_test = SendMessageA(s.cursor_window, WM_NCHITTEST, 0, MAKELONG(s.cursor_pos.x, s.cursor_pos.y));
-    SendMessageA(s.cursor_window, WM_SETCURSOR, (WPARAM)s.cursor_window, (s.hit_test & 0xffff) | 0x2000000);
-    set_player_directive_value(1, s.action_request->allow_ai_player);
-    set_player_directive_value(0, s.action_request->allow_human_player);
-    set_duel_prompt_context(g_duel_prompt_context_hwnd, s.action_request->prompt, s.action_request->allow_cancel);
-    get_current_duel_selection(&s.selected_player, &s.selected_card);
-    if (((s.selected_card == 0x15) && (s.selected_player == 1)) && (can_use_current_duel_selection() != 0))
+    memcpy(&g_duel_action_request_copy, action_request, sizeof(*action_request));
+    GetCursorPos(&cursor_pos);
+    cursor_window = WindowFromPoint(cursor_pos);
+    hit_test = SendMessageA(cursor_window, WM_NCHITTEST, 0, MAKELONG(cursor_pos.x, cursor_pos.y));
+    SendMessageA(cursor_window, WM_SETCURSOR, (WPARAM)cursor_window, (hit_test & 0xffff) | 0x2000000);
+    set_player_directive_value(1, action_request->allow_ai_player);
+    set_player_directive_value(0, action_request->allow_human_player);
+    set_duel_prompt_context(g_duel_prompt_context_hwnd, action_request->prompt, action_request->allow_cancel);
+    get_current_duel_selection(&selected_player, &selected_card);
+    if (((selected_card == 0x15) && (selected_player == 1)) && (can_use_current_duel_selection() != 0))
     {
       g_duel_current_selection_forced = 1;
     }
-    s.done = 0;
-    while (s.done == 0)
+    done = 0;
+    while (done == 0)
     {
-      s.have_message = PeekMessageA(&s.modal_msg, (HWND)0, 0, 0, PM_REMOVE);
+      have_message = PeekMessageA(&modal_msg, (HWND)0, 0, 0, PM_REMOVE);
 #ifdef SHANDALAR
       /*
        * The original duel worker left the Win32 UI thread free to enqueue
@@ -2916,50 +2865,50 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
        * the compatibility pump while it waits and still returns the same
        * queued message for the modal loop to dispatch below.
        */
-      if (s.have_message == 0)
+      if (have_message == 0)
       {
-        GetMessageA(&s.modal_msg, (HWND)0, 0, 0);
-        s.have_message = 1;
+        GetMessageA(&modal_msg, (HWND)0, 0, 0);
+        have_message = 1;
       }
 #endif
       if (g_duel_main_window_closing != 0)
       {
-        if ((s.have_message != 0) && (s.modal_msg.message == 0x464))
+        if ((have_message != 0) && (modal_msg.message == 0x464))
         {
-          s.have_message = 0;
+          have_message = 0;
         }
-        s.done = 1;
-        s.action_result->selection_code = -5;
-        s.action_result->target_player = -1;
-        s.action_result->target_card = -1;
-        if (s.action_result->selection_code == 0)
+        done = 1;
+        action_result->selection_code = -5;
+        action_result->target_player = -1;
+        action_result->target_card = -1;
+        if (action_result->selection_code == 0)
         {
-          s.action_result_ok = 1;
+          action_result_ok = 1;
         }
         else
         {
-          s.action_result_ok = 0;
+          action_result_ok = 0;
         }
       }
-      if (s.have_message != 0)
+      if (have_message != 0)
       {
-        if (s.modal_msg.message == 0x464)
+        if (modal_msg.message == 0x464)
         {
-          s.posted_action_result = (target_selection_result_t *)s.modal_msg.lParam;
-          s.done = 1;
-          s.action_result_ok = (unsigned int)(s.posted_action_result->selection_code == 0);
-          memcpy(s.action_result, s.posted_action_result, sizeof(*s.action_result));
+          posted_action_result = (target_selection_result_t *)modal_msg.lParam;
+          done = 1;
+          action_result_ok = (unsigned int)(posted_action_result->selection_code == 0);
+          memcpy(action_result, posted_action_result, sizeof(*action_result));
         }
-        else if (s.modal_msg.message == WM_QUIT)
+        else if (modal_msg.message == WM_QUIT)
         {
-          PostQuitMessage(s.modal_msg.wParam);
-          s.done = 1;
-          s.action_result_ok = 0;
-          s.action_result->selection_code = -2;
+          PostQuitMessage(modal_msg.wParam);
+          done = 1;
+          action_result_ok = 0;
+          action_result->selection_code = -2;
         }
         else
         {
-          dispatch_duel_engine_message(&s.modal_msg);
+          dispatch_duel_engine_message(&modal_msg);
         }
       }
     }
@@ -2968,51 +2917,51 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     set_player_directive_value(0, 0);
     g_duel_modal_action_active = 0;
     SetTimer(hwnd, g_duel_timer_id, 45000, (TIMERPROC)0);
-    return s.action_result_ok;
+    return action_result_ok;
 
   case 0x401:
-    s.duel_result = (HWND)wparam;
-    s.should_quit = 1;
+    duel_result = (HWND)wparam;
+    should_quit = 1;
     if ((g_duel_mode_flags & 1) != 0)
     {
       if (g_duel_interface_options.see_next_draws_at_end_of_duel != 0)
       {
-        show_post_duel_draws((int)s.duel_result);
+        show_post_duel_draws((int)duel_result);
       }
     }
     else if ((g_duel_mode_flags & 2) != 0)
     {
-      s.has_replay_prompt = 1;
-      if (s.duel_result == (HWND)1)
+      has_replay_prompt = 1;
+      if (duel_result == (HWND)1)
       {
-        strcpy(s.replay_prompt, "Congratulations!");
+        strcpy(replay_prompt, "Congratulations!");
       }
-      else if (s.duel_result == (HWND)0)
+      else if (duel_result == (HWND)0)
       {
-        strcpy(s.replay_prompt, "Too bad");
+        strcpy(replay_prompt, "Too bad");
       }
-      else if (s.duel_result == (HWND)-1)
+      else if (duel_result == (HWND)-1)
       {
-        strcpy(s.replay_prompt, "Oh well...");
+        strcpy(replay_prompt, "Oh well...");
       }
       else
       {
-        s.has_replay_prompt = 0;
+        has_replay_prompt = 0;
       }
-      if (s.has_replay_prompt != 0)
+      if (has_replay_prompt != 0)
       {
-        strcat(s.replay_prompt, "\n\nWant to play again?");
-        if (MessageBoxA(hwnd, s.replay_prompt, "End of duel", MB_YESNO) == IDYES)
+        strcat(replay_prompt, "\n\nWant to play again?");
+        if (MessageBoxA(hwnd, replay_prompt, "End of duel", MB_YESNO) == IDYES)
         {
-          s.should_quit = 0;
+          should_quit = 0;
           SendMessageA(hwnd, 0x400, 0, 0);
         }
       }
     }
-    if (s.should_quit != 0)
+    if (should_quit != 0)
     {
-      g_duel_exit_code = (int)s.duel_result;
-      PostQuitMessage((int)s.duel_result);
+      g_duel_exit_code = (int)duel_result;
+      PostQuitMessage((int)duel_result);
     }
     return 0;
 
@@ -3049,10 +2998,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     g_duel_cached_unk_008b44d0_player_0 = g_duel_cached_unk_008b44d0_player_1;
     SendMessageA(g_duel_life_status_window_1_hwnd, 0x432, 0, 0);
     SendMessageA(g_duel_life_status_window_2_hwnd, 0x432, 0, 0);
-    for (s.screen_width = 0; s.screen_width < 7; s.screen_width = s.screen_width + 1)
+    for (screen_width = 0; screen_width < 7; screen_width = screen_width + 1)
     {
-      g_duel_cached_raw_mana_player_1[s.screen_width] = 0;
-      g_duel_cached_raw_mana_player_0[s.screen_width] = g_duel_cached_raw_mana_player_1[s.screen_width];
+      g_duel_cached_raw_mana_player_1[screen_width] = 0;
+      g_duel_cached_raw_mana_player_0[screen_width] = g_duel_cached_raw_mana_player_1[screen_width];
     }
     SendMessageA(g_duel_active_popup_window, 0x432, 0, 0);
     SendMessageA(g_duel_last_active_window, 0x432, 0, 0);
@@ -3104,71 +3053,71 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     {
       if (g_duel_creature_type != -1)
       {
-        sprintf(s.backdrop_path, "%s\\%03d.pic", global_faces_path, g_duel_creature_type);
-        s.screen_height = (int)load_pic(s.backdrop_path);
+        sprintf(backdrop_path, "%s\\%03d.pic", global_faces_path, g_duel_creature_type);
+        screen_height = (int)load_pic(backdrop_path);
       }
       else
       {
-        s.screen_height = 0;
+        screen_height = 0;
       }
-      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)s.screen_height, 0);
+      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)screen_height, 0);
 #ifdef SHANDALAR
-      s.screen_height = (int)g_facemaker_page4_bitmap;
+      screen_height = (int)g_facemaker_page4_bitmap;
 #else
-      s.screen_height = (int)g_duel_player_face_pic;
+      screen_height = (int)g_duel_player_face_pic;
 #endif
-      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)s.screen_height, 1);
+      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)screen_height, 1);
     }
     else
     {
-      s.screen_height = (int)load_pic((char *)g_duel_state_block_008ce570);
-      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)s.screen_height, 0);
-      s.screen_height = (int)load_pic((char *)g_duel_state_block_008b3fc0);
-      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)s.screen_height, 0);
+      screen_height = (int)load_pic((char *)g_duel_state_block_008ce570);
+      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)screen_height, 0);
+      screen_height = (int)load_pic((char *)g_duel_state_block_008b3fc0);
+      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)screen_height, 0);
     }
     if ((g_duel_mode_flags & 0x10) != 0)
     {
-      s.backdrop_player_color = 1;
-      s.backdrop_enemy_color = s.backdrop_player_color;
-      s.backdrop_player_variant = 2;
-      s.player_backdrop_result = s.backdrop_player_variant;
+      backdrop_player_color = 1;
+      backdrop_enemy_color = backdrop_player_color;
+      backdrop_player_variant = 2;
+      player_backdrop_result = backdrop_player_variant;
     }
     else if (g_duel_use_previous_backdrop_colors != 0)
     {
-      s.backdrop_enemy_color = g_last_duel_enemy_primary_color;
-      s.player_backdrop_result = g_last_duel_result_state;
+      backdrop_enemy_color = g_last_duel_enemy_primary_color;
+      player_backdrop_result = g_last_duel_result_state;
       if (g_duel_interface_options.player_territory_color == -1)
       {
-        s.backdrop_player_color = g_last_duel_player_primary_color;
+        backdrop_player_color = g_last_duel_player_primary_color;
       }
       else
       {
-        s.backdrop_player_color = g_duel_interface_options.player_territory_color;
+        backdrop_player_color = g_duel_interface_options.player_territory_color;
       }
-      s.backdrop_player_variant = g_duel_interface_options.player_territory_type;
+      backdrop_player_variant = g_duel_interface_options.player_territory_type;
     }
     else
     {
-      s.backdrop_enemy_color = g_last_duel_enemy_primary_color;
-      s.player_backdrop_result = rand() % 3;
+      backdrop_enemy_color = g_last_duel_enemy_primary_color;
+      player_backdrop_result = rand() % 3;
       if (g_duel_interface_options.player_territory_color == -1)
       {
-        s.backdrop_player_color = g_last_duel_player_primary_color;
+        backdrop_player_color = g_last_duel_player_primary_color;
       }
       else
       {
-        s.backdrop_player_color = g_duel_interface_options.player_territory_color;
+        backdrop_player_color = g_duel_interface_options.player_territory_color;
       }
-      s.backdrop_player_variant = g_duel_interface_options.player_territory_type;
-      if ((s.backdrop_player_color == s.backdrop_enemy_color) &&
-          (s.backdrop_player_variant == s.player_backdrop_result))
+      backdrop_player_variant = g_duel_interface_options.player_territory_type;
+      if ((backdrop_player_color == backdrop_enemy_color) &&
+          (backdrop_player_variant == player_backdrop_result))
       {
-        s.player_backdrop_result = (s.player_backdrop_result + 1) % 3;
+        player_backdrop_result = (player_backdrop_result + 1) % 3;
       }
-      g_last_duel_result_state = s.player_backdrop_result;
+      g_last_duel_result_state = player_backdrop_result;
     }
-    apply_duel_backdrop_art(1, s.backdrop_enemy_color, s.player_backdrop_result);
-    apply_duel_backdrop_art(0, s.backdrop_player_color, s.backdrop_player_variant);
+    apply_duel_backdrop_art(1, backdrop_enemy_color, player_backdrop_result);
+    apply_duel_backdrop_art(0, backdrop_player_color, backdrop_player_variant);
     if (IsWindowVisible(hwnd) == 0)
     {
       ShowWindow(hwnd, SW_SHOW);
@@ -3185,8 +3134,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     else
     {
       g_duel_thread_handle = (HANDLE)0;
-      s.thread_exit_code = start_duel_thread((LPVOID)0);
-      SendMessageA(hwnd, 0x401, s.thread_exit_code, 0);
+      thread_exit_code = start_duel_thread((LPVOID)0);
+      SendMessageA(hwnd, 0x401, thread_exit_code, 0);
     }
     return 0;
 
@@ -3284,22 +3233,22 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         if (((unsigned int)wparam & 0xffff) == 0x26b)
         {
-          s.player_backdrop_color = 0;
+          player_backdrop_color = 0;
         }
         else
         {
-          s.player_backdrop_color = 1;
+          player_backdrop_color = 1;
         }
-        s.enemy_backdrop_result = pick_internal_card_from_list_dialog("Pick a card to put into play", -1, -1);
-        s.command_selected_card = (int)(char)g_duel_phase_stop_settings[g_current_player].phase_flags[g_current_phase];
+        enemy_backdrop_result = pick_internal_card_from_list_dialog("Pick a card to put into play", -1, -1);
+        command_selected_card = (int)(char)g_duel_phase_stop_settings[g_current_player].phase_flags[g_current_phase];
         g_duel_phase_stop_settings[g_current_player].phase_flags[g_current_phase] =
             (unsigned char)((int)(char)g_duel_phase_stop_settings[g_current_player].phase_flags[g_current_phase] & ~PHASE_STOP_ENABLED);
-        s.command_saved_phase_flags = add_card_to_hand(s.player_backdrop_color, s.enemy_backdrop_result);
-        if (s.command_saved_phase_flags != -1)
+        command_saved_phase_flags = add_card_to_hand(player_backdrop_color, enemy_backdrop_result);
+        if (command_saved_phase_flags != -1)
         {
-          process_card_enters_play(s.player_backdrop_color, s.command_saved_phase_flags);
+          process_card_enters_play(player_backdrop_color, command_saved_phase_flags);
         }
-        g_duel_phase_stop_settings[g_current_player].phase_flags[g_current_phase] = (unsigned char)s.command_selected_card;
+        g_duel_phase_stop_settings[g_current_player].phase_flags[g_current_phase] = (unsigned char)command_selected_card;
         notify_duel_action(0, 0xff);
       }
       break;
@@ -3310,19 +3259,19 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         if (((unsigned int)wparam & 0xffff) == 0x26d)
         {
-          s.player_backdrop_color = 0;
+          player_backdrop_color = 0;
         }
         else
         {
-          s.player_backdrop_color = 1;
+          player_backdrop_color = 1;
         }
-        s.enemy_backdrop_result = pick_internal_card_from_list_dialog("Pick a card to put into hand", -1, -1);
-        s.command_saved_phase_flags = add_card_to_hand(s.player_backdrop_color, s.enemy_backdrop_result);
-        g_duel_summary.hand_counts[s.player_backdrop_color] += 1;
-        if (((g_duel_network_flags & 2) != 0) && (g_active_player == s.player_backdrop_color))
+        enemy_backdrop_result = pick_internal_card_from_list_dialog("Pick a card to put into hand", -1, -1);
+        command_saved_phase_flags = add_card_to_hand(player_backdrop_color, enemy_backdrop_result);
+        g_duel_summary.hand_counts[player_backdrop_color] += 1;
+        if (((g_duel_network_flags & 2) != 0) && (g_active_player == player_backdrop_color))
         {
           g_network_result_packet.packet_type = 0x12;
-          g_network_result_packet.result = s.enemy_backdrop_result;
+          g_network_result_packet.result = enemy_backdrop_result;
           TENTATIVE_send_network_result(g_active_player, 0x12);
         }
         notify_duel_action(0, 0xff);
@@ -3335,13 +3284,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         if (((unsigned int)wparam & 0xffff) == 0x269)
         {
-          s.player_backdrop_color = 0;
+          player_backdrop_color = 0;
         }
         else
         {
-          s.player_backdrop_color = 1;
+          player_backdrop_color = 1;
         }
-        draw_card_for_player(s.player_backdrop_color);
+        draw_card_for_player(player_backdrop_color);
         notify_duel_action(0, 0xff);
       }
       break;
@@ -3352,15 +3301,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         if (((unsigned int)wparam & 0xffff) == 0x26f)
         {
-          s.player_backdrop_color = 0;
+          player_backdrop_color = 0;
         }
         else
         {
-          s.player_backdrop_color = 1;
+          player_backdrop_color = 1;
         }
-        g_life[s.player_backdrop_color] = prompt_for_life_total(0,
-                                                              s.player_backdrop_color == 0 ? "Set player lives to:" : "Set opponent lives tp:",
-                                                              g_life[s.player_backdrop_color]);
+        g_life[player_backdrop_color] = prompt_for_life_total(0,
+                                                              player_backdrop_color == 0 ? "Set player lives to:" : "Set opponent lives tp:",
+                                                              g_life[player_backdrop_color]);
         notify_duel_action(0, 0xff);
       }
       break;
@@ -3371,13 +3320,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         if (((unsigned int)wparam & 0xffff) == 0x267)
         {
-          s.player_backdrop_color = 1;
+          player_backdrop_color = 1;
         }
         else
         {
-          s.player_backdrop_color = 0;
+          player_backdrop_color = 0;
         }
-        g_life[s.player_backdrop_color] = 0;
+        g_life[player_backdrop_color] = 0;
         SendMessageA(g_duel_life_status_window_1_hwnd, 0x432, 0, 0);
         SendMessageA(g_duel_life_status_window_2_hwnd, 0x432, 0, 0);
       }
@@ -3470,10 +3419,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     g_duel_cached_state_007abce0 = g_duel_cached_state_007abce4;
     g_duel_cached_unk_008b44d0_player_1 = 0;
     g_duel_cached_unk_008b44d0_player_0 = g_duel_cached_unk_008b44d0_player_1;
-    for (s.command_player = 0; s.command_player < 7; s.command_player = s.command_player + 1)
+    for (command_player = 0; command_player < 7; command_player = command_player + 1)
     {
-      g_duel_cached_raw_mana_player_1[s.command_player] = 0;
-      g_duel_cached_raw_mana_player_0[s.command_player] = g_duel_cached_raw_mana_player_1[s.command_player];
+      g_duel_cached_raw_mana_player_1[command_player] = 0;
+      g_duel_cached_raw_mana_player_0[command_player] = g_duel_cached_raw_mana_player_1[command_player];
     }
     g_duel_cached_library_count_player_1 = 1;
     g_duel_cached_library_count_player_0 = g_duel_cached_library_count_player_1;
@@ -3495,9 +3444,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_DESTROY:
-    strcpy(s.pad_0004, global_base_directory);
-    strcat(s.pad_0004, "\\duel.hlp");
-    WinHelpA(g_duel_window_hwnd, s.pad_0004, HELP_QUIT, 0);
+    strcpy(pad_0004, global_base_directory);
+    strcat(pad_0004, "\\duel.hlp");
+    WinHelpA(g_duel_window_hwnd, pad_0004, HELP_QUIT, 0);
     KillTimer(hwnd, g_duel_timer_id);
     return 0;
 
@@ -3550,9 +3499,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_GETMINMAXINFO:
-    s.minmaxinfo = (int)lparam;
-    ((int *)s.minmaxinfo)[6] = 0x32;
-    ((int *)s.minmaxinfo)[7] = 0x32;
+    minmaxinfo = (int)lparam;
+    ((int *)minmaxinfo)[6] = 0x32;
+    ((int *)minmaxinfo)[7] = 0x32;
     return 0;
 
   case WM_SIZE:

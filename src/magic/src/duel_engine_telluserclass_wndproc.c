@@ -18,7 +18,7 @@ void draw_item(DRAWITEMSTRUCT *item, HBRUSH brush, HANDLE background_bitmap, HPE
 void position_duel_prompt_context_window(HWND hwnd);
 void setup_duel_prompt_context_text_dc(HWND hwnd, HDC dc, int *rect);
 void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item, HBRUSH brush, HPEN pen1, HPEN pen2,
-                  COLORREF color, int draw_focus);
+                                     COLORREF color, int draw_focus);
 
 extern int g_duel_modal_action_active;
 extern char g_custom_duel_action_text[0x100];
@@ -95,26 +95,23 @@ HPEN g_tell_user_border_pen_2;
 // FUNCTION: SHANDALAR 0x004690e0
 int register_MAGIC_TellUserClass(LPCSTR class_name)
 {
-  struct
-  {
-    char path[264];
-    int result;
-    WNDCLASSA wndclass;
-  } s;
+  char path[264];
+  int result;
+  WNDCLASSA wndclass;
 
-  s.result = 1;
+  result = 1;
   g_tell_user_default_button_state = 2;
   g_tell_user_button_state = 1;
-  SET_DUEL_WNDCLASS(s.wndclass, 1, wndproc_MAGIC_TellUserClass, g_tell_user_window_extra_bytes,
+  SET_DUEL_WNDCLASS(wndclass, 1, wndproc_MAGIC_TellUserClass, g_tell_user_window_extra_bytes,
                     LoadIconA((HINSTANCE)0, (LPCSTR)0x7f00), (HBRUSH)GetStockObject(2), class_name);
-  if (RegisterClassA(&s.wndclass) == 0)
+  if (RegisterClassA(&wndclass) == 0)
   {
-    s.result = 0;
+    result = 0;
   }
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\WINBK_TellUser.pic");
-  g_tell_user_background_bitmap = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\WINBK_TellUser.pic");
+  g_tell_user_background_bitmap = load_pic(path);
   load_text(global_ui_strings_filename, "BUTTONLABELS");
   strcpy(g_duel_status_text, g_text_lines[0]);
   strcpy(g_custom_duel_action_text, g_text_lines[1]);
@@ -138,10 +135,10 @@ int register_MAGIC_TellUserClass(LPCSTR class_name)
       g_tell_user_button_pen_1 == (HPEN)0 ||
       g_tell_user_button_pen_2 == (HPEN)0)
   {
-    s.result = 0;
+    result = 0;
   }
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004eb63c
@@ -199,23 +196,20 @@ void destroy_MAGIC_TellUserClass(LPCSTR class_name)
 // FUNCTION: SHANDALAR 0x0046947a
 LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    char path[264];
-    HDC paint_dc;
-    PAINTSTRUCT paint;
-    char window_text[200];
-    RECT rect;
-    char *button_text;
-    DRAWITEMSTRUCT *draw_item;
-    int unused_1c;
-    int unused_18;
-    int unused_14;
-    int unused_10;
-    unsigned int button_flags;
-    int action_value;
-    HFONT font;
-  } s;
+  char path[264];
+  HDC paint_dc;
+  PAINTSTRUCT paint;
+  char window_text[200];
+  RECT rect;
+  char *button_text;
+  DRAWITEMSTRUCT *draw_item;
+  int unused_1c;
+  int unused_18;
+  int unused_14;
+  int unused_10;
+  unsigned int button_flags;
+  int action_value;
+  HFONT font;
 
   switch (msg)
   {
@@ -227,27 +221,27 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         if (IsWindowVisible(g_duel_main_window) != 0)
         {
-          s.action_value = -2;
+          action_value = -2;
         }
         else
         {
-          s.action_value = -1;
+          action_value = -1;
         }
       }
       else if (wparam == 2)
       {
-        s.action_value = -2;
+        action_value = -2;
       }
       else
       {
-        s.action_value = -1;
+        action_value = -1;
       }
       g_stop_phase_player = -1;
       g_stop_phase = -1;
       g_recorded_action_player = 0;
       g_tell_user_command_packet[0] = -2;
       g_tell_user_command_packet[1] = -1;
-      g_tell_user_command_packet[2] = s.action_value;
+      g_tell_user_command_packet[2] = action_value;
       PostMessageA(g_duel_window_hwnd, 0x464, 0, (LPARAM)g_tell_user_command_packet);
     }
     return 0;
@@ -257,16 +251,16 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     {
       GetWindowTextA(hwnd, (LPSTR)wparam, 200);
     }
-    s.button_flags = 0;
+    button_flags = 0;
     if (IsWindowVisible(g_duel_client_window) != 0)
     {
-      s.button_flags |= 1;
+      button_flags |= 1;
     }
     if (IsWindowVisible(g_duel_main_window) != 0)
     {
-      s.button_flags |= 2;
+      button_flags |= 2;
     }
-    return s.button_flags;
+    return button_flags;
 
   case 0x403:
     position_duel_prompt_context_window(hwnd);
@@ -288,8 +282,8 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_CREATE:
-    s.font = g_tell_user_font;
-    SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)s.font);
+    font = g_tell_user_font;
+    SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)font);
 #ifdef SHANDALAR
     /*
      * The native owner-draw path paints these labels from globals rather than
@@ -297,14 +291,14 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
      * caption, so expose the same text there without changing the command path.
      */
     g_duel_client_window = CreateWindowExA(0, "BUTTON", g_duel_status_text, 0x4080000b,
-                                   0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
+                                           0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
     g_duel_main_window = CreateWindowExA(0, "BUTTON", g_custom_duel_action_text, 0x4080000b,
-                                   0, 0, 0, 0, hwnd, (HMENU)2, g_app_instance, (LPVOID)0);
+                                         0, 0, 0, 0, hwnd, (HMENU)2, g_app_instance, (LPVOID)0);
 #else
     g_duel_client_window = CreateWindowExA(0, "BUTTON", g_telluser_short_text_1, 0x4080000b,
-                                   0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
+                                           0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
     g_duel_main_window = CreateWindowExA(0, "BUTTON", g_telluser_short_text_2, 0x4080000b,
-                                   0, 0, 0, 0, hwnd, (HMENU)2, g_app_instance, (LPVOID)0);
+                                         0, 0, 0, 0, hwnd, (HMENU)2, g_app_instance, (LPVOID)0);
 #endif
     if (g_duel_client_window == (HWND)0 || g_duel_main_window == (HWND)0)
     {
@@ -313,35 +307,35 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_DRAWITEM:
-    s.draw_item = (DRAWITEMSTRUCT *)lparam;
-    s.draw_item->itemState &= ~ODS_FOCUS;
-    draw_owner_draw_button_centered(s.draw_item, g_tell_user_button_brush, g_tell_user_border_pen_1,
-                 g_tell_user_border_pen_3, g_tell_user_button_text_color, 0);
-    if (s.draw_item->CtlID == 1)
+    draw_item = (DRAWITEMSTRUCT *)lparam;
+    draw_item->itemState &= ~ODS_FOCUS;
+    draw_owner_draw_button_centered(draw_item, g_tell_user_button_brush, g_tell_user_border_pen_1,
+                                    g_tell_user_border_pen_3, g_tell_user_button_text_color, 0);
+    if (draw_item->CtlID == 1)
     {
-      s.button_text = g_duel_status_text;
+      button_text = g_duel_status_text;
     }
-    else if (s.draw_item->CtlID == 2)
+    else if (draw_item->CtlID == 2)
     {
-      s.button_text = g_custom_duel_action_text;
+      button_text = g_custom_duel_action_text;
     }
     else
     {
-      s.button_text = g_telluser_short_text_3;
+      button_text = g_telluser_short_text_3;
     }
-    SetMapMode(s.draw_item->hDC, MM_ANISOTROPIC);
-    SetWindowExtEx(s.draw_item->hDC, s.draw_item->rcItem.right - s.draw_item->rcItem.left,
+    SetMapMode(draw_item->hDC, MM_ANISOTROPIC);
+    SetWindowExtEx(draw_item->hDC, draw_item->rcItem.right - draw_item->rcItem.left,
                    0x18, (LPSIZE)0);
-    SetViewportExtEx(s.draw_item->hDC, s.draw_item->rcItem.right - s.draw_item->rcItem.left,
-                     s.draw_item->rcItem.bottom - s.draw_item->rcItem.top, (LPSIZE)0);
-    SelectObject(s.draw_item->hDC, g_tell_user_button_font);
-    SetTextColor(s.draw_item->hDC, g_tell_user_button_text_color);
-    if ((s.draw_item->itemState & ODS_SELECTED) != 0)
+    SetViewportExtEx(draw_item->hDC, draw_item->rcItem.right - draw_item->rcItem.left,
+                     draw_item->rcItem.bottom - draw_item->rcItem.top, (LPSIZE)0);
+    SelectObject(draw_item->hDC, g_tell_user_button_font);
+    SetTextColor(draw_item->hDC, g_tell_user_button_text_color);
+    if ((draw_item->itemState & ODS_SELECTED) != 0)
     {
-      OffsetRect(&s.draw_item->rcItem, 2, 2);
+      OffsetRect(&draw_item->rcItem, 2, 2);
     }
-    DPtoLP(s.draw_item->hDC, (LPPOINT)&s.draw_item->rcItem, 2);
-    DrawTextA(s.draw_item->hDC, s.button_text, -1, &s.draw_item->rcItem,
+    DPtoLP(draw_item->hDC, (LPPOINT)&draw_item->rcItem, 2);
+    DrawTextA(draw_item->hDC, button_text, -1, &draw_item->rcItem,
               DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     return 1;
 
@@ -349,95 +343,95 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_GETFONT:
-    s.font = (HFONT)GetWindowLongA(hwnd, g_duel_ui_initialized);
-    return (LRESULT)s.font;
+    font = (HFONT)GetWindowLongA(hwnd, g_duel_ui_initialized);
+    return (LRESULT)font;
 
   case WM_LBUTTONDOWN:
     SendMessageA(hwnd, WM_SYSCOMMAND, 0xf012, 0);
     return 0;
 
   case WM_PAINT:
-    s.font = (HFONT)GetWindowLongA(hwnd, g_duel_ui_initialized);
-    s.paint_dc = BeginPaint(hwnd, &s.paint);
-    if (s.paint_dc != (HDC)0)
+    font = (HFONT)GetWindowLongA(hwnd, g_duel_ui_initialized);
+    paint_dc = BeginPaint(hwnd, &paint);
+    if (paint_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      GetClientRect(hwnd, &s.rect);
+      ApplyCardArtPaletteToDc(paint_dc);
+      GetClientRect(hwnd, &rect);
       if (g_tell_user_background_bitmap == (HBITMAP)0)
       {
-        strcpy(s.path, global_duelart_path);
-        strcat(s.path, "\\WINBK_TellUser.pic");
-        g_tell_user_background_bitmap = load_pic(s.path);
+        strcpy(path, global_duelart_path);
+        strcat(path, "\\WINBK_TellUser.pic");
+        g_tell_user_background_bitmap = load_pic(path);
       }
       if (g_tell_user_background_bitmap != (HBITMAP)0)
       {
-        TileBitmapIntoRect(s.paint_dc, &s.rect, g_tell_user_background_bitmap);
+        TileBitmapIntoRect(paint_dc, &rect, g_tell_user_background_bitmap);
       }
       else
       {
-        FillRect(s.paint_dc, &s.rect, GetStockObject(1));
+        FillRect(paint_dc, &rect, GetStockObject(1));
       }
-      SelectObject(s.paint_dc, g_tell_user_border_pen_1);
-      MoveToEx(s.paint_dc, 0, 0, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 1, 0);
-      MoveToEx(s.paint_dc, 0, 0, (LPPOINT)0);
-      LineTo(s.paint_dc, 0, s.rect.bottom - 1);
-      SelectObject(s.paint_dc, g_tell_user_border_pen_2);
-      MoveToEx(s.paint_dc, 1, 1, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 2, 1);
-      MoveToEx(s.paint_dc, 1, 1, (LPPOINT)0);
-      LineTo(s.paint_dc, 1, s.rect.bottom - 2);
-      SelectObject(s.paint_dc, g_tell_user_border_pen_3);
-      MoveToEx(s.paint_dc, 2, 2, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 4, 2);
-      MoveToEx(s.paint_dc, 2, 2, (LPPOINT)0);
-      LineTo(s.paint_dc, 2, s.rect.bottom - 4);
-      SelectObject(s.paint_dc, GetStockObject(7));
-      MoveToEx(s.paint_dc, 3, 3, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 4, 3);
-      MoveToEx(s.paint_dc, 3, 3, (LPPOINT)0);
-      LineTo(s.paint_dc, 3, s.rect.bottom - 4);
-      SelectObject(s.paint_dc, GetStockObject(7));
-      MoveToEx(s.paint_dc, 0, s.rect.bottom - 1, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right, s.rect.bottom - 1);
-      MoveToEx(s.paint_dc, s.rect.right - 1, 0, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 1, s.rect.bottom);
-      SelectObject(s.paint_dc, g_tell_user_border_pen_3);
-      MoveToEx(s.paint_dc, 1, s.rect.bottom - 2, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 1, s.rect.bottom - 2);
-      MoveToEx(s.paint_dc, s.rect.right - 2, 1, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 2, s.rect.bottom - 1);
-      SelectObject(s.paint_dc, g_tell_user_border_pen_2);
-      MoveToEx(s.paint_dc, 2, s.rect.bottom - 3, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 2, s.rect.bottom - 3);
-      MoveToEx(s.paint_dc, s.rect.right - 3, 2, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 3, s.rect.bottom - 2);
-      SelectObject(s.paint_dc, g_tell_user_border_pen_1);
-      MoveToEx(s.paint_dc, 2, s.rect.bottom - 4, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 3, s.rect.bottom - 4);
-      MoveToEx(s.paint_dc, s.rect.right - 4, 2, (LPPOINT)0);
-      LineTo(s.paint_dc, s.rect.right - 4, s.rect.bottom - 3);
-      GetWindowTextA(hwnd, s.window_text, 200);
-      SetBkMode(s.paint_dc, TRANSPARENT);
-      setup_duel_prompt_context_text_dc(hwnd, s.paint_dc, (int *)&s.rect.left);
-      DPtoLP(s.paint_dc, (LPPOINT)&s.rect, 2);
-      OffsetRect(&s.rect, 2, 2);
-      SetTextColor(s.paint_dc, g_tell_user_shadow_color);
-      DrawManaText(s.paint_dc, &s.rect, s.window_text, 0);
-      OffsetRect(&s.rect, -2, -2);
-      SetTextColor(s.paint_dc, g_tell_user_text_color);
-      DrawManaText(s.paint_dc, &s.rect, s.window_text, 1);
-      EndPaint(hwnd, &s.paint);
+      SelectObject(paint_dc, g_tell_user_border_pen_1);
+      MoveToEx(paint_dc, 0, 0, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 1, 0);
+      MoveToEx(paint_dc, 0, 0, (LPPOINT)0);
+      LineTo(paint_dc, 0, rect.bottom - 1);
+      SelectObject(paint_dc, g_tell_user_border_pen_2);
+      MoveToEx(paint_dc, 1, 1, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 2, 1);
+      MoveToEx(paint_dc, 1, 1, (LPPOINT)0);
+      LineTo(paint_dc, 1, rect.bottom - 2);
+      SelectObject(paint_dc, g_tell_user_border_pen_3);
+      MoveToEx(paint_dc, 2, 2, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 4, 2);
+      MoveToEx(paint_dc, 2, 2, (LPPOINT)0);
+      LineTo(paint_dc, 2, rect.bottom - 4);
+      SelectObject(paint_dc, GetStockObject(7));
+      MoveToEx(paint_dc, 3, 3, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 4, 3);
+      MoveToEx(paint_dc, 3, 3, (LPPOINT)0);
+      LineTo(paint_dc, 3, rect.bottom - 4);
+      SelectObject(paint_dc, GetStockObject(7));
+      MoveToEx(paint_dc, 0, rect.bottom - 1, (LPPOINT)0);
+      LineTo(paint_dc, rect.right, rect.bottom - 1);
+      MoveToEx(paint_dc, rect.right - 1, 0, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 1, rect.bottom);
+      SelectObject(paint_dc, g_tell_user_border_pen_3);
+      MoveToEx(paint_dc, 1, rect.bottom - 2, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 1, rect.bottom - 2);
+      MoveToEx(paint_dc, rect.right - 2, 1, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 2, rect.bottom - 1);
+      SelectObject(paint_dc, g_tell_user_border_pen_2);
+      MoveToEx(paint_dc, 2, rect.bottom - 3, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 2, rect.bottom - 3);
+      MoveToEx(paint_dc, rect.right - 3, 2, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 3, rect.bottom - 2);
+      SelectObject(paint_dc, g_tell_user_border_pen_1);
+      MoveToEx(paint_dc, 2, rect.bottom - 4, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 3, rect.bottom - 4);
+      MoveToEx(paint_dc, rect.right - 4, 2, (LPPOINT)0);
+      LineTo(paint_dc, rect.right - 4, rect.bottom - 3);
+      GetWindowTextA(hwnd, window_text, 200);
+      SetBkMode(paint_dc, TRANSPARENT);
+      setup_duel_prompt_context_text_dc(hwnd, paint_dc, (int *)&rect.left);
+      DPtoLP(paint_dc, (LPPOINT)&rect, 2);
+      OffsetRect(&rect, 2, 2);
+      SetTextColor(paint_dc, g_tell_user_shadow_color);
+      DrawManaText(paint_dc, &rect, window_text, 0);
+      OffsetRect(&rect, -2, -2);
+      SetTextColor(paint_dc, g_tell_user_text_color);
+      DrawManaText(paint_dc, &rect, window_text, 1);
+      EndPaint(hwnd, &paint);
     }
     return 0;
 
   case WM_SETFONT:
-    s.font = (HFONT)wparam;
-    if (s.font == (HFONT)0)
+    font = (HFONT)wparam;
+    if (font == (HFONT)0)
     {
-      s.font = g_tell_user_font;
+      font = g_tell_user_font;
     }
-    SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)s.font);
+    SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)font);
     InvalidateRect(hwnd, (RECT *)0, 1);
     return 0;
 
@@ -456,7 +450,7 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
 // FUNCTION: MAGIC 0x004955ae
 // FUNCTION: SHANDALAR 0x00466049
 void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item_struct, HBRUSH brush, HPEN pen1, HPEN pen2,
-                  COLORREF color, int draw_focus)
+                                     COLORREF color, int draw_focus)
 {
   draw_item(draw_item_struct, brush, (HANDLE)0, pen1, pen2, color, draw_focus,
             DT_CENTER | DT_VCENTER | DT_SINGLELINE);

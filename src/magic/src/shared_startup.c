@@ -243,14 +243,11 @@ void set_global_base_directory(char *path)
 // FUNCTION: MAGIC 0x004226c0
 int setup_paths_and_load_text_etc(char *message_buffer)
 {
-  struct
-  {
-    char path[264];
-    int ok;
-    HDC desktop_dc;
-  } s;
+  char path[264];
+  int ok;
+  HDC desktop_dc;
 
-  s.ok = 1;
+  ok = 1;
 
   set_global_base_directory(global_base_directory);
   _chdir(global_base_directory);
@@ -274,45 +271,45 @@ int setup_paths_and_load_text_etc(char *message_buffer)
 
   load_global_ui_strings(global_ui_strings_filename);
 
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\CARDS.DAT");
-  global_available_slots = read_db_guts(s.path);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\CARDS.DAT");
+  global_available_slots = read_db_guts(path);
   if (global_available_slots == 0)
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
-    append_startup_error(message_buffer, s.path, 1);
+    append_startup_error(message_buffer, path, 1);
   }
 
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\LEGACY.CSV");
-  if (!ReadLegacyCsv(s.path))
+  strcpy(path, global_base_directory);
+  strcat(path, "\\LEGACY.CSV");
+  if (!ReadLegacyCsv(path))
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
-    append_startup_error(message_buffer, s.path, 2);
+    append_startup_error(message_buffer, path, 2);
   }
 
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\RARITY.CSV");
-  if (!LoadRarityCsv(s.path))
+  strcpy(path, global_base_directory);
+  strcat(path, "\\RARITY.CSV");
+  if (!LoadRarityCsv(path))
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
-    append_startup_error(message_buffer, s.path, 1);
+    append_startup_error(message_buffer, path, 1);
   }
 
   CopyRawCardNamesAndRarities();
 
-  s.desktop_dc = GetDC(NULL);
-  if (s.desktop_dc != NULL)
+  desktop_dc = GetDC(NULL);
+  if (desktop_dc != NULL)
   {
-    g_display_color_depth = GetDeviceCaps(s.desktop_dc, BITSPIXEL) * GetDeviceCaps(s.desktop_dc, PLANES);
-    ReleaseDC(NULL, s.desktop_dc);
+    g_display_color_depth = GetDeviceCaps(desktop_dc, BITSPIXEL) * GetDeviceCaps(desktop_dc, PLANES);
+    ReleaseDC(NULL, desktop_dc);
   }
   else
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
     strcat(message_buffer, g_text_lines[3]);
     strcat(message_buffer, "\n");
@@ -320,7 +317,7 @@ int setup_paths_and_load_text_etc(char *message_buffer)
 
   if (!SetupDuelPalette())
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
     strcat(message_buffer, g_text_lines[4]);
     strcat(message_buffer, "\n");
@@ -334,7 +331,7 @@ int setup_paths_and_load_text_etc(char *message_buffer)
                                       &g_shared_offscreen_prev_object,
                                       &g_shared_offscreen_bits))
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
     strcat(message_buffer, g_text_lines[5]);
     strcat(message_buffer, "\n");
@@ -342,7 +339,7 @@ int setup_paths_and_load_text_etc(char *message_buffer)
 
   if (!create_fonts())
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
     strcat(message_buffer, g_text_lines[6]);
     strcat(message_buffer, "\n");
@@ -350,57 +347,54 @@ int setup_paths_and_load_text_etc(char *message_buffer)
 
   if (!InitCardArtGdiResources())
   {
-    s.ok = 0;
+    ok = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
     strcat(message_buffer, g_text_lines[7]);
     strcat(message_buffer, "\n");
   }
 
   InitMpstimeVxdTimer();
-  return s.ok;
+  return ok;
 }
 
 // FUNCTION: SHANDALAR 0x00468a60
 // FUNCTION: MAGIC 0x00509210
 int CopyRawCardNamesAndRarities(void)
 {
-  struct
-  {
-    int card_index;
-    int card_type;
-  } s;
+  int card_index;
+  int card_type;
 
-  for (s.card_index = 0; s.card_index < global_available_slots; ++s.card_index)
+  for (card_index = 0; card_index < global_available_slots; ++card_index)
   {
-    s.card_type = CardTypeFromID(s.card_index);
-    if (s.card_type == -1)
+    card_type = CardTypeFromID(card_index);
+    if (card_type == -1)
     {
       continue;
     }
 
-    if (global_raw_cards_storage[s.card_index].rarity == 1)
+    if (global_raw_cards_storage[card_index].rarity == 1)
     {
-      global_cards_data[s.card_type].rarity = 1;
+      global_cards_data[card_type].rarity = 1;
     }
-    else if (global_raw_cards_storage[s.card_index].rarity == 2)
+    else if (global_raw_cards_storage[card_index].rarity == 2)
     {
-      global_cards_data[s.card_type].rarity = 3;
+      global_cards_data[card_type].rarity = 3;
     }
-    else if (global_raw_cards_storage[s.card_index].rarity == 3)
+    else if (global_raw_cards_storage[card_index].rarity == 3)
     {
-      global_cards_data[s.card_type].rarity = 4;
+      global_cards_data[card_type].rarity = 4;
     }
-    else if (global_raw_cards_storage[s.card_index].rarity == 4)
+    else if (global_raw_cards_storage[card_index].rarity == 4)
     {
-      global_cards_data[s.card_type].rarity = 2;
+      global_cards_data[card_type].rarity = 2;
     }
     else
     {
-      global_cards_data[s.card_type].rarity = 1;
+      global_cards_data[card_type].rarity = 1;
     }
 
-    strncpy(global_cards_data[s.card_type].name, global_raw_cards_storage[s.card_index].full_name, 0x23);
-    global_cards_data[s.card_type].name[0x22] = '\0';
+    strncpy(global_cards_data[card_type].name, global_raw_cards_storage[card_index].full_name, 0x23);
+    global_cards_data[card_type].name[0x22] = '\0';
   }
 
   return 1;
@@ -453,139 +447,136 @@ void free_duel_interface_resource_buffer(void)
 // FUNCTION: MAGIC 0x0048a0e2
 void LoadDuelInterfaceRegistryOptions(void)
 {
-  struct
-  {
-    unsigned int has_expansion;
-    int unused_008c;
-    int unused_0088;
-    BYTE *phase_value;
-    BYTE value_buffer[100];
-    int step;
-    int phase;
-    HKEY options_key;
-    BYTE integer_buffer[12];
-    DWORD value_size;
-  } s;
+  unsigned int has_expansion;
+  int unused_008c;
+  int unused_0088;
+  BYTE *phase_value;
+  BYTE value_buffer[100];
+  int step;
+  int phase;
+  HKEY options_key;
+  BYTE integer_buffer[12];
+  DWORD value_size;
 
-  if (RegOpenKeyExA(HKEY_CURRENT_USER, s_duel_options_registry_path_00588100, 0, KEY_QUERY_VALUE, &s.options_key) == ERROR_SUCCESS)
+  if (RegOpenKeyExA(HKEY_CURRENT_USER, s_duel_options_registry_path_00588100, 0, KEY_QUERY_VALUE, &options_key) == ERROR_SUCCESS)
   {
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "Layout", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.layout);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "Layout", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.layout);
     else
       g_duel_interface_options.layout = 1;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "DirectiveTracksMouse", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.directive_tracks_mouse);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "DirectiveTracksMouse", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.directive_tracks_mouse);
     else
       g_duel_interface_options.directive_tracks_mouse = 0;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ShowCoinFlips", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_coin_flips);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ShowCoinFlips", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_coin_flips);
     else
       g_duel_interface_options.show_coin_flips = 1;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ShowCueCards", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_cue_cards);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ShowCueCards", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_cue_cards);
     else
       g_duel_interface_options.show_cue_cards = 1;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ShowPowerToughnessOnCards", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_power_toughness_on_cards);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ShowPowerToughnessOnCards", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_power_toughness_on_cards);
     else
       g_duel_interface_options.show_power_toughness_on_cards = 1;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ShowIDTagsOnCards", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_id_tags_on_cards);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ShowIDTagsOnCards", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_id_tags_on_cards);
     else
       g_duel_interface_options.show_id_tags_on_cards = 0;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ShowInvisibleEffectCards", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_invisible_effect_cards);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ShowInvisibleEffectCards", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_invisible_effect_cards);
     else
       g_duel_interface_options.show_invisible_effect_cards = 0;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ShowAllCardsSummonSickness", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_all_cards_summon_sickness);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ShowAllCardsSummonSickness", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_all_cards_summon_sickness);
     else
       g_duel_interface_options.show_all_cards_summon_sickness = 0;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    RegQueryValueExA(s.options_key, "ShowAbilitiesOnCards", NULL, NULL, s.integer_buffer, &s.value_size);
-    if (s.integer_buffer[0] == '\0')
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    RegQueryValueExA(options_key, "ShowAbilitiesOnCards", NULL, NULL, integer_buffer, &value_size);
+    if (integer_buffer[0] == '\0')
       g_duel_interface_options.show_abilities_on_cards = 1;
     else
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.show_abilities_on_cards);
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.show_abilities_on_cards);
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "ExpandTextBoxOnBigCard", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.expand_text_box_on_big_card);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "ExpandTextBoxOnBigCard", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.expand_text_box_on_big_card);
     else
       g_duel_interface_options.expand_text_box_on_big_card = 0;
 
-    s.value_size = 10;
-    s.integer_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "SeeNextDrawsAtEndOfDuel", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-      sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.see_next_draws_at_end_of_duel);
+    value_size = 10;
+    integer_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "SeeNextDrawsAtEndOfDuel", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+      sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.see_next_draws_at_end_of_duel);
     else
       g_duel_interface_options.see_next_draws_at_end_of_duel = 0;
 
-    s.value_size = 100;
-    s.value_buffer[0] = '\0';
-    if (RegQueryValueExA(s.options_key, "PhaseStoppers", NULL, NULL, s.value_buffer, &s.value_size) == ERROR_SUCCESS)
+    value_size = 100;
+    value_buffer[0] = '\0';
+    if (RegQueryValueExA(options_key, "PhaseStoppers", NULL, NULL, value_buffer, &value_size) == ERROR_SUCCESS)
     {
-      s.phase_value = s.value_buffer;
-      s.phase = 0;
-      while (s.phase < 2 && *s.phase_value != '\0')
+      phase_value = value_buffer;
+      phase = 0;
+      while (phase < 2 && *phase_value != '\0')
       {
-        s.step = 0;
-        while (s.step < 0x25 && *s.phase_value != '\0')
+        step = 0;
+        while (step < 0x25 && *phase_value != '\0')
         {
           if (g_duel_active == 0)
           {
-            if (*s.phase_value == 'S')
-              g_duel_phase_stop_settings[s.phase].phase_flags[s.step] = 1;
+            if (*phase_value == 'S')
+              g_duel_phase_stop_settings[phase].phase_flags[step] = 1;
             else
-              g_duel_phase_stop_settings[s.phase].phase_flags[s.step] = 0;
+              g_duel_phase_stop_settings[phase].phase_flags[step] = 0;
           }
-          else if (*s.phase_value == 'S')
+          else if (*phase_value == 'S')
           {
-            g_duel_phase_stop_settings[s.phase].phase_flags[s.step] |= 1;
+            g_duel_phase_stop_settings[phase].phase_flags[step] |= 1;
           }
           else
           {
-            g_duel_phase_stop_settings[s.phase].phase_flags[s.step] &= 0xfe;
+            g_duel_phase_stop_settings[phase].phase_flags[step] &= 0xfe;
           }
-          s.phase_value++;
-          s.step++;
+          phase_value++;
+          step++;
         }
-        s.phase++;
+        phase++;
       }
       g_duel_phase_stop_settings[0].phase_flags[0x14] |= 1;
     }
     else
     {
-      for (s.phase = 0; s.phase < 2; s.phase++)
+      for (phase = 0; phase < 2; phase++)
       {
-        for (s.step = 0; s.step < 0x25; s.step++)
-          g_duel_phase_stop_settings[s.phase].phase_flags[s.step] = 0;
+        for (step = 0; step < 0x25; step++)
+          g_duel_phase_stop_settings[phase].phase_flags[step] = 0;
       }
       g_duel_phase_stop_settings[0].phase_flags[0x14] = 1;
       g_duel_phase_stop_settings[0].phase_flags[0x1e] = 1;
@@ -594,28 +585,28 @@ void LoadDuelInterfaceRegistryOptions(void)
 
     if ((g_duel_mode_flags & 1) == 0)
     {
-      s.value_size = 10;
-      s.integer_buffer[0] = '\0';
-      if (RegQueryValueExA(s.options_key, "PlayerTerritoryColor", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-        sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.player_territory_color);
+      value_size = 10;
+      integer_buffer[0] = '\0';
+      if (RegQueryValueExA(options_key, "PlayerTerritoryColor", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+        sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.player_territory_color);
       else
         g_duel_interface_options.player_territory_color = -1;
     }
 
     if ((g_duel_mode_flags & 1) == 0)
     {
-      s.value_size = 10;
-      s.integer_buffer[0] = '\0';
-      if (RegQueryValueExA(s.options_key, "PlayerTerritoryType", NULL, NULL, s.integer_buffer, &s.value_size) == ERROR_SUCCESS)
-        sscanf((char *)s.integer_buffer, "%d", &g_duel_interface_options.player_territory_type);
+      value_size = 10;
+      integer_buffer[0] = '\0';
+      if (RegQueryValueExA(options_key, "PlayerTerritoryType", NULL, NULL, integer_buffer, &value_size) == ERROR_SUCCESS)
+        sscanf((char *)integer_buffer, "%d", &g_duel_interface_options.player_territory_type);
       else
         g_duel_interface_options.player_territory_type = 2;
     }
 
     g_has_expansion_10 = 0;
-    s.value_size = 10;
-    s.has_expansion = HasExpansion(0x10);
-    g_has_expansion_10 = (s.has_expansion != 0);
+    value_size = 10;
+    has_expansion = HasExpansion(0x10);
+    g_has_expansion_10 = (has_expansion != 0);
   }
   else
   {
@@ -630,10 +621,10 @@ void LoadDuelInterfaceRegistryOptions(void)
     g_duel_interface_options.show_abilities_on_cards = 1;
     g_duel_interface_options.expand_text_box_on_big_card = 0;
     g_duel_interface_options.see_next_draws_at_end_of_duel = 0;
-    for (s.phase = 0; s.phase < 2; s.phase++)
+    for (phase = 0; phase < 2; phase++)
     {
-      for (s.step = 0; s.step < 0x25; s.step++)
-        g_duel_phase_stop_settings[s.phase].phase_flags[s.step] = 0;
+      for (step = 0; step < 0x25; step++)
+        g_duel_phase_stop_settings[phase].phase_flags[step] = 0;
     }
     g_duel_phase_stop_settings[0].phase_flags[0x14] = 1;
     g_duel_phase_stop_settings[0].phase_flags[0x1e] = 1;
@@ -650,111 +641,108 @@ void LoadDuelInterfaceRegistryOptions(void)
 // FUNCTION: MAGIC 0x004c0c20
 int LoadRarityCsv(const char *filename)
 {
-  struct
-  {
-    SealedDeckPackDefinition *pack;
-    int result;
-    SealedDeckStarterTemplate *starter_template;
-  } s;
+  SealedDeckPackDefinition *pack;
+  int result;
+  SealedDeckStarterTemplate *starter_template;
 
-  s.result = 1;
+  result = 1;
   strcpy(g_exp1_art_path, global_base_directory);
   strcat(g_exp1_art_path, "\\Exp1Art");
 
-  s.starter_template = &g_sealed_starter_templates[0];
-  s.starter_template->color_mask = 0;
-  s.starter_template->land_count = 0xb;
-  s.starter_template->spell_count = 3;
-  s.starter_template->allow_artifact_spells = 1;
+  starter_template = &g_sealed_starter_templates[0];
+  starter_template->color_mask = 0;
+  starter_template->land_count = 0xb;
+  starter_template->spell_count = 3;
+  starter_template->allow_artifact_spells = 1;
 
-  s.starter_template = &g_sealed_starter_templates[1];
-  s.starter_template->color_mask = 0;
-  s.starter_template->land_count = 9;
-  s.starter_template->spell_count = 3;
-  s.starter_template->allow_artifact_spells = 0;
+  starter_template = &g_sealed_starter_templates[1];
+  starter_template->color_mask = 0;
+  starter_template->land_count = 9;
+  starter_template->spell_count = 3;
+  starter_template->allow_artifact_spells = 0;
 
-  s.starter_template = &g_sealed_starter_templates[2];
-  s.starter_template->color_mask = 0;
-  s.starter_template->land_count = 6;
-  s.starter_template->spell_count = 2;
-  s.starter_template->allow_artifact_spells = 0;
+  starter_template = &g_sealed_starter_templates[2];
+  starter_template->color_mask = 0;
+  starter_template->land_count = 6;
+  starter_template->spell_count = 2;
+  starter_template->allow_artifact_spells = 0;
 
   load_text(global_ui_strings_filename, "SEALEDDECK_PACKNAMES");
 
-  s.pack = &g_sealed_pack_definitions[0];
-  strcpy(s.pack->name, g_text_lines[0]);
-  s.pack->starter_count = 2;
-  s.pack->booster_count = 1;
-  s.pack->free_lands = 0;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[0];
+  strcpy(pack->name, g_text_lines[0]);
+  pack->starter_count = 2;
+  pack->booster_count = 1;
+  pack->free_lands = 0;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[1];
-  strcpy(s.pack->name, g_text_lines[1]);
-  s.pack->starter_count = 2;
-  s.pack->booster_count = 1;
-  s.pack->free_lands = 0;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[1];
+  strcpy(pack->name, g_text_lines[1]);
+  pack->starter_count = 2;
+  pack->booster_count = 1;
+  pack->free_lands = 0;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[2];
-  strcpy(s.pack->name, g_text_lines[2]);
-  s.pack->starter_count = 7;
-  s.pack->booster_count = 1;
-  s.pack->free_lands = 0;
-  s.pack->rounds = 1;
-  s.pack->color_count = 5;
+  pack = &g_sealed_pack_definitions[2];
+  strcpy(pack->name, g_text_lines[2]);
+  pack->starter_count = 7;
+  pack->booster_count = 1;
+  pack->free_lands = 0;
+  pack->rounds = 1;
+  pack->color_count = 5;
 
-  s.pack = &g_sealed_pack_definitions[3];
-  strcpy(s.pack->name, g_text_lines[3]);
-  s.pack->starter_count = 2;
-  s.pack->booster_count = 0;
-  s.pack->free_lands = 2;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[3];
+  strcpy(pack->name, g_text_lines[3]);
+  pack->starter_count = 2;
+  pack->booster_count = 0;
+  pack->free_lands = 2;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[4];
-  strcpy(s.pack->name, g_text_lines[4]);
-  s.pack->starter_count = 2;
-  s.pack->booster_count = 0;
-  s.pack->free_lands = 2;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[4];
+  strcpy(pack->name, g_text_lines[4]);
+  pack->starter_count = 2;
+  pack->booster_count = 0;
+  pack->free_lands = 2;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[5];
-  strcpy(s.pack->name, g_text_lines[5]);
-  s.pack->starter_count = 0;
-  s.pack->booster_count = 0;
-  s.pack->free_lands = 0;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[5];
+  strcpy(pack->name, g_text_lines[5]);
+  pack->starter_count = 0;
+  pack->booster_count = 0;
+  pack->free_lands = 0;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[6];
-  strcpy(s.pack->name, g_text_lines[6]);
-  s.pack->starter_count = 0;
-  s.pack->booster_count = 0;
-  s.pack->free_lands = 2;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[6];
+  strcpy(pack->name, g_text_lines[6]);
+  pack->starter_count = 0;
+  pack->booster_count = 0;
+  pack->free_lands = 2;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[7];
-  strcpy(s.pack->name, g_text_lines[7]);
-  s.pack->starter_count = 0;
-  s.pack->booster_count = 0;
-  s.pack->free_lands = 1;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[7];
+  strcpy(pack->name, g_text_lines[7]);
+  pack->starter_count = 0;
+  pack->booster_count = 0;
+  pack->free_lands = 1;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.pack = &g_sealed_pack_definitions[8];
-  strcpy(s.pack->name, g_text_lines[8]);
-  s.pack->starter_count = 0;
-  s.pack->booster_count = 1;
-  s.pack->free_lands = 0;
-  s.pack->rounds = 1;
-  s.pack->color_count = 1;
+  pack = &g_sealed_pack_definitions[8];
+  strcpy(pack->name, g_text_lines[8]);
+  pack->starter_count = 0;
+  pack->booster_count = 1;
+  pack->free_lands = 0;
+  pack->rounds = 1;
+  pack->color_count = 1;
 
-  s.result &= LoadRarityCsvCardData(filename);
-  return s.result;
+  result &= LoadRarityCsvCardData(filename);
+  return result;
 }
 
 // FUNCTION: SHANDALAR 0x00523ef4
@@ -940,276 +928,273 @@ int PackRarityCsvThreeBitValue(int value, int slot)
 // FUNCTION: MAGIC 0x004c100c
 int LoadRarityCsvCardData(const char *filename)
 {
-  struct
-  {
-    int parsed_db_rarity;
-    int temp_value2;
-    char *next_field;
-    unsigned short ai_dependencies;
-    int inflatable_value;
-    int parsed_expansion;
-    int ai_modifiers2;
-    int temp_value;
-    int ai_modifiers1;
-    char *file_buffer;
-    card_ptr_t *raw_card;
-    HANDLE file;
-    DWORD start_tick;
-    int result;
-    DWORD bytes_read;
-    DWORD file_size;
-    unsigned char mana_source_colors;
-    int field_index;
-    unsigned int expansion_rarity;
-    char *cursor;
-    int row_index;
-  } s;
+  int parsed_db_rarity;
+  int temp_value2;
+  char *next_field;
+  unsigned short ai_dependencies;
+  int inflatable_value;
+  int parsed_expansion;
+  int ai_modifiers2;
+  int temp_value;
+  int ai_modifiers1;
+  char *file_buffer;
+  card_ptr_t *raw_card;
+  HANDLE file;
+  DWORD start_tick;
+  int result;
+  DWORD bytes_read;
+  DWORD file_size;
+  unsigned char mana_source_colors;
+  int field_index;
+  unsigned int expansion_rarity;
+  char *cursor;
+  int row_index;
 
-  s.start_tick = GetTickCount();
-  s.file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                       FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
-  if (s.file != INVALID_HANDLE_VALUE)
+  start_tick = GetTickCount();
+  file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+  if (file != INVALID_HANDLE_VALUE)
   {
-    s.file_size = GetFileSize(s.file, NULL);
-    s.file_buffer = malloc(s.file_size + 1);
-    if (s.file_buffer != NULL)
+    file_size = GetFileSize(file, NULL);
+    file_buffer = malloc(file_size + 1);
+    if (file_buffer != NULL)
     {
-      ReadFile(s.file, s.file_buffer, s.file_size, &s.bytes_read, NULL);
-      s.cursor = s.file_buffer;
-      s.cursor = strchr(s.cursor, '\n') + 1;
-      s.cursor = strchr(s.cursor, '\n') + 1;
+      ReadFile(file, file_buffer, file_size, &bytes_read, NULL);
+      cursor = file_buffer;
+      cursor = strchr(cursor, '\n') + 1;
+      cursor = strchr(cursor, '\n') + 1;
 
-      for (s.row_index = 0; s.row_index < 3; ++s.row_index)
+      for (row_index = 0; row_index < 3; ++row_index)
       {
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
 
-        for (s.field_index = 0; s.field_index < 3; ++s.field_index)
-          g_rarity_csv_sealed_template_counts[s.row_index][s.field_index] =
-              ParseRarityCsvIntFieldClamped(&s.cursor, 99);
+        for (field_index = 0; field_index < 3; ++field_index)
+          g_rarity_csv_sealed_template_counts[row_index][field_index] =
+              ParseRarityCsvIntFieldClamped(&cursor, 99);
 
-        for (s.field_index = 0; s.field_index < 0x14; ++s.field_index)
-          g_rarity_csv_sealed_card_weights[s.row_index][s.field_index] =
-              ParseRarityCsvIntFieldClamped(&s.cursor, 99);
+        for (field_index = 0; field_index < 0x14; ++field_index)
+          g_rarity_csv_sealed_card_weights[row_index][field_index] =
+              ParseRarityCsvIntFieldClamped(&cursor, 99);
 
-        s.cursor = SkipCsvField(s.cursor);
-        g_rarity_csv_sealed_starter_counts[s.row_index] = ParseRarityCsvIntFieldClamped(&s.cursor, 99);
-        g_rarity_csv_sealed_booster_counts[s.row_index] = ParseRarityCsvIntFieldClamped(&s.cursor, 99);
+        cursor = SkipCsvField(cursor);
+        g_rarity_csv_sealed_starter_counts[row_index] = ParseRarityCsvIntFieldClamped(&cursor, 99);
+        g_rarity_csv_sealed_booster_counts[row_index] = ParseRarityCsvIntFieldClamped(&cursor, 99);
 
-        for (s.field_index = 0; s.field_index < 3; ++s.field_index)
-          g_rarity_csv_sealed_color_weights[s.row_index][s.field_index] =
-              ParseRarityCsvIntFieldClamped(&s.cursor, 99);
+        for (field_index = 0; field_index < 3; ++field_index)
+          g_rarity_csv_sealed_color_weights[row_index][field_index] =
+              ParseRarityCsvIntFieldClamped(&cursor, 99);
 
-        for (s.field_index = 0; s.field_index < 6; ++s.field_index)
-          g_rarity_csv_sealed_land_weights[s.row_index][s.field_index] =
-              ParseRarityCsvIntFieldClamped(&s.cursor, 99);
+        for (field_index = 0; field_index < 6; ++field_index)
+          g_rarity_csv_sealed_land_weights[row_index][field_index] =
+              ParseRarityCsvIntFieldClamped(&cursor, 99);
 
-        if (*s.cursor != '\n')
-          s.cursor = strchr(s.cursor, '\n') + 1;
+        if (*cursor != '\n')
+          cursor = strchr(cursor, '\n') + 1;
       }
 
-      for (s.field_index = 0; s.field_index < global_available_slots; ++s.field_index)
+      for (field_index = 0; field_index < global_available_slots; ++field_index)
       {
-        s.raw_card = &global_raw_cards_storage[s.field_index];
+        raw_card = &global_raw_cards_storage[field_index];
 
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.cursor = SkipCsvField(s.cursor);
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.cursor = s.next_field;
-        s.cursor = SkipCsvField(s.cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        cursor = SkipCsvField(cursor);
+        next_field = CsvParseNextField(&cursor);
+        cursor = next_field;
+        cursor = SkipCsvField(cursor);
 
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.parsed_expansion = ParseRarityCsvExpansionMask(s.cursor);
-        if (s.parsed_expansion != -1)
-          s.raw_card->expansion = s.parsed_expansion;
+        next_field = CsvParseNextField(&cursor);
+        parsed_expansion = ParseRarityCsvExpansionMask(cursor);
+        if (parsed_expansion != -1)
+          raw_card->expansion = parsed_expansion;
 
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.parsed_db_rarity = ParseRarityCsvDeckBuilderRarity(s.cursor);
-        if (s.parsed_db_rarity != -1)
-          s.raw_card->rarity = s.parsed_db_rarity;
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        parsed_db_rarity = ParseRarityCsvDeckBuilderRarity(cursor);
+        if (parsed_db_rarity != -1)
+          raw_card->rarity = parsed_db_rarity;
 
-        s.expansion_rarity = 0;
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.expansion_rarity |= ParseRarityCsvExpansionRarity(s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.expansion_rarity |= ParseRarityCsvExpansionRarity(s.cursor) << 4;
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.expansion_rarity |= ParseRarityCsvExpansionRarity(s.cursor) << 8;
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.expansion_rarity |= ParseRarityCsvExpansionRarity(s.cursor) << 0xc;
-        s.raw_card->expansion_rarity = s.expansion_rarity;
+        expansion_rarity = 0;
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        expansion_rarity |= ParseRarityCsvExpansionRarity(cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        expansion_rarity |= ParseRarityCsvExpansionRarity(cursor) << 4;
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        expansion_rarity |= ParseRarityCsvExpansionRarity(cursor) << 8;
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        expansion_rarity |= ParseRarityCsvExpansionRarity(cursor) << 0xc;
+        raw_card->expansion_rarity = expansion_rarity;
 
-        s.mana_source_colors = 0;
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        if (*s.cursor == '-')
+        mana_source_colors = 0;
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        if (*cursor == '-')
         {
         }
         else
         {
-          s.mana_source_colors = (unsigned char)(((*s.cursor - '0') << 5) | s.mana_source_colors);
+          mana_source_colors = (unsigned char)(((*cursor - '0') << 5) | mana_source_colors);
         }
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        if (*s.cursor == '-')
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        if (*cursor == '-')
         {
         }
         else
         {
-          s.mana_source_colors = (unsigned char)(((*s.cursor - '0') * 4) | s.mana_source_colors);
+          mana_source_colors = (unsigned char)(((*cursor - '0') * 4) | mana_source_colors);
         }
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        if (*s.cursor == '-')
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        if (*cursor == '-')
         {
         }
         else
         {
-          s.mana_source_colors = (unsigned char)(((*s.cursor - '0') * 2) | s.mana_source_colors);
+          mana_source_colors = (unsigned char)(((*cursor - '0') * 2) | mana_source_colors);
         }
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        if (*s.cursor == '-')
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        if (*cursor == '-')
         {
         }
         else
         {
-          s.mana_source_colors = (unsigned char)(((*s.cursor - '0') << 4) | s.mana_source_colors);
+          mana_source_colors = (unsigned char)(((*cursor - '0') << 4) | mana_source_colors);
         }
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        if (*s.cursor == '-')
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        if (*cursor == '-')
         {
         }
         else
         {
-          s.mana_source_colors = (unsigned char)(((*s.cursor - '0') * 8) | s.mana_source_colors);
+          mana_source_colors = (unsigned char)(((*cursor - '0') * 8) | mana_source_colors);
         }
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        if (*s.cursor == '-')
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        if (*cursor == '-')
         {
         }
         else
         {
-          s.mana_source_colors = (unsigned char)((*s.cursor - '0') | s.mana_source_colors);
+          mana_source_colors = (unsigned char)((*cursor - '0') | mana_source_colors);
         }
-        s.raw_card->mana_source_colors = (int8_t)s.mana_source_colors;
+        raw_card->mana_source_colors = (int8_t)mana_source_colors;
 
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.raw_card->ai_against_color = PackRarityCsvDigitPattern(s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.raw_card->ai_for_color = PackRarityCsvDigitPattern(s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.raw_card->ai_counts_as_color = PackRarityCsvDigitPattern(s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.raw_card->ai_against_land = PackRarityCsvDigitPattern(s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.raw_card->ai_for_land = PackRarityCsvDigitPattern(s.cursor);
-        s.cursor = s.next_field;
-        s.next_field = CsvParseNextField(&s.cursor);
-        s.raw_card->ai_counts_as_land = PackRarityCsvDigitPattern(s.cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        raw_card->ai_against_color = PackRarityCsvDigitPattern(cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        raw_card->ai_for_color = PackRarityCsvDigitPattern(cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        raw_card->ai_counts_as_color = PackRarityCsvDigitPattern(cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        raw_card->ai_against_land = PackRarityCsvDigitPattern(cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        raw_card->ai_for_land = PackRarityCsvDigitPattern(cursor);
+        cursor = next_field;
+        next_field = CsvParseNextField(&cursor);
+        raw_card->ai_counts_as_land = PackRarityCsvDigitPattern(cursor);
 
-        s.cursor = s.next_field;
-        s.ai_dependencies = 0;
-        s.ai_dependencies |= PackRarityCsvThreeBitValue((unsigned short)ParseRarityCsvBooleanField(&s.cursor), 0);
-        s.ai_dependencies |= PackRarityCsvThreeBitValue((unsigned short)ParseRarityCsvBooleanField(&s.cursor), 1);
-        s.ai_dependencies |= PackRarityCsvThreeBitValue((unsigned short)ParseRarityCsvBooleanField(&s.cursor), 2);
-        s.raw_card->ai_dependencies = s.ai_dependencies;
+        cursor = next_field;
+        ai_dependencies = 0;
+        ai_dependencies |= PackRarityCsvThreeBitValue((unsigned short)ParseRarityCsvBooleanField(&cursor), 0);
+        ai_dependencies |= PackRarityCsvThreeBitValue((unsigned short)ParseRarityCsvBooleanField(&cursor), 1);
+        ai_dependencies |= PackRarityCsvThreeBitValue((unsigned short)ParseRarityCsvBooleanField(&cursor), 2);
+        raw_card->ai_dependencies = ai_dependencies;
 
-        s.ai_modifiers1 = 0;
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 0);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 1);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 2);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 3);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 4);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 5);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 6);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 7);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 8);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 9);
+        ai_modifiers1 = 0;
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 0);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 1);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 2);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 3);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 4);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 5);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 6);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 7);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 8);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 9);
 
-        s.ai_modifiers2 = 0;
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 0);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 1);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 2);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 3);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 4);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 5);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 6);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 7);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 8);
-        s.ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 9);
-        s.raw_card->ai_modifiers1 = s.ai_modifiers1;
-        s.raw_card->ai_modifiers2 = s.ai_modifiers2;
+        ai_modifiers2 = 0;
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 0);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 1);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 2);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 3);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 4);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 5);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 6);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 7);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 8);
+        ai_modifiers2 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 9);
+        raw_card->ai_modifiers1 = ai_modifiers1;
+        raw_card->ai_modifiers2 = ai_modifiers2;
 
-        s.raw_card->ai_base_value = (short)ParseRarityCsvIntFieldClamped(&s.cursor, 999);
-        s.temp_value = ParseRarityCsvIntFieldClamped(&s.cursor, 999);
-        s.temp_value2 = ParseRarityCsvIntFieldClamped(&s.cursor, 999);
-        s.raw_card->ai_power_toughness = MAKEWORD(s.temp_value, s.temp_value2);
-        s.temp_value = ParseRarityCsvIntFieldClamped(&s.cursor, 0xff);
-        s.temp_value2 = ParseRarityCsvIntFieldClamped(&s.cursor, 0xff);
-        s.raw_card->ai_inc_power_toughness = MAKEWORD(s.temp_value, s.temp_value2);
+        raw_card->ai_base_value = (short)ParseRarityCsvIntFieldClamped(&cursor, 999);
+        temp_value = ParseRarityCsvIntFieldClamped(&cursor, 999);
+        temp_value2 = ParseRarityCsvIntFieldClamped(&cursor, 999);
+        raw_card->ai_power_toughness = MAKEWORD(temp_value, temp_value2);
+        temp_value = ParseRarityCsvIntFieldClamped(&cursor, 0xff);
+        temp_value2 = ParseRarityCsvIntFieldClamped(&cursor, 0xff);
+        raw_card->ai_inc_power_toughness = MAKEWORD(temp_value, temp_value2);
 
-        s.inflatable_value = ParseRarityCsvIntFieldClamped(&s.cursor, 1);
-        if (s.inflatable_value != 0)
-          s.raw_card->inflatable = 1;
+        inflatable_value = ParseRarityCsvIntFieldClamped(&cursor, 1);
+        if (inflatable_value != 0)
+          raw_card->inflatable = 1;
         else
-          s.raw_card->inflatable = 0;
+          raw_card->inflatable = 0;
 
-        s.ai_modifiers1 = 0;
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 0);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 1);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 2);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 3);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 4);
-        s.ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&s.cursor, 7), 5);
-        s.raw_card->ai_abilities = s.ai_modifiers1;
+        ai_modifiers1 = 0;
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 0);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 1);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 2);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 3);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 4);
+        ai_modifiers1 |= PackRarityCsvThreeBitValue(ParseRarityCsvIntFieldClamped(&cursor, 7), 5);
+        raw_card->ai_abilities = ai_modifiers1;
 
-        if (*s.cursor != '\n')
-          s.cursor = strchr(s.cursor, '\n') + 1;
+        if (*cursor != '\n')
+          cursor = strchr(cursor, '\n') + 1;
       }
 
       global_raw_cards_storage[239].rarity = 0;
@@ -1218,47 +1203,44 @@ int LoadRarityCsvCardData(const char *filename)
       global_raw_cards_storage[126].rarity = 0;
       global_raw_cards_storage[164].rarity = 0;
 
-      s.result = 1;
-      free(s.file_buffer);
+      result = 1;
+      free(file_buffer);
     }
     else
     {
-      s.result = 0;
+      result = 0;
     }
 
-    CloseHandle(s.file);
+    CloseHandle(file);
   }
   else
   {
-    s.result = 0;
+    result = 0;
   }
 
-  s.start_tick = GetTickCount() - s.start_tick;
-  return s.result;
+  start_tick = GetTickCount() - start_tick;
+  return result;
 }
 
 // FUNCTION: SHANDALAR 0x0046901b
 // FUNCTION: MAGIC 0x005097cb
 unsigned int setup_shared_startup(void)
 {
-  struct
-  {
-    unsigned int result;
-    char startup_message[2000];
-  } s;
+  unsigned int result;
+  char startup_message[2000];
 
-  s.result = 1;
+  result = 1;
   if (g_shared_startup_lock_initialized == 0)
   {
     InitializeCriticalSection(&g_shared_startup_lock);
     g_shared_startup_lock_initialized = 1;
   }
-  s.startup_message[0] = '\0';
-  s.result |= setup_paths_and_load_text_etc(s.startup_message);
+  startup_message[0] = '\0';
+  result |= setup_paths_and_load_text_etc(startup_message);
   LoadDuelInterfaceRegistryOptions();
   g_shared_startup_completed = 1;
   InitializeCriticalSection(&g_card_render_lock);
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x00422bea

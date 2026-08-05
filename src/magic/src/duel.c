@@ -355,89 +355,86 @@ int check_duel_finished(void)
 // FUNCTION: SHANDALAR 0x00403160
 void run_duel_turn(unsigned int player)
 {
-  struct
-  {
-    char trace[100];
-    int next_state;
-    int phase_value;
-    int phase_mode;
-  } s;
+  char trace[100];
+  int next_state;
+  int phase_value;
+  int phase_mode;
 
-  s.phase_mode = 0;
-  s.next_state = 0;
+  phase_mode = 0;
+  next_state = 0;
   if (TRACE_ENABLED)
   {
     append_to_trace_txt("___________________________________________________________________________\n");
     if (player != 0)
     {
-      sprintf(s.trace, "Turn #%d. We are the non-phasing player(%d).\n\n", g_duel_result, player);
+      sprintf(trace, "Turn #%d. We are the non-phasing player(%d).\n\n", g_duel_result, player);
     }
     else
     {
-      sprintf(s.trace, "Turn #%d. We are the phasing player(%d).\n\n", g_duel_result, player);
+      sprintf(trace, "Turn #%d. We are the phasing player(%d).\n\n", g_duel_result, player);
     }
-    append_to_trace_txt(s.trace);
+    append_to_trace_txt(trace);
   }
 
-  while (s.next_state != -1)
+  while (next_state != -1)
   {
     if (g_duel_ai_mode_state == 1)
       pump_ai_thinking_host();
 
-    switch (s.next_state)
+    switch (next_state)
     {
     case 0:
       init_turn(player);
-      s.next_state = restore_duel_turn_resume_state();
-      if (s.next_state != 10)
+      next_state = restore_duel_turn_resume_state();
+      if (next_state != 10)
       {
         break;
       }
     case 2:
       if (TENTATIVE_start_turn(player) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
     case 3:
       if (untap_phase_exe(player) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
     case 4:
       if (upkeep_phase(player) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
     case 5:
       if (draw_phase(player) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
     case 1:
     case 6:
-      if (main_phase(player, s.phase_mode, &s.phase_value) != 0)
+      if (main_phase(player, phase_mode, &phase_value) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
-      s.phase_mode = 0;
+      phase_mode = 0;
     case 7:
-      if (discard_phase(player, s.phase_mode) != 0)
+      if (discard_phase(player, phase_mode) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
-      s.phase_mode = 0;
+      phase_mode = 0;
     case 8:
       cleanup_phase(player);
       end_turn_phase(player);
-      if (ai_decision_phase(player, &s.next_state, &s.phase_mode, &s.phase_value) != 0)
+      if (ai_decision_phase(player, &next_state, &phase_mode, &phase_value) != 0)
       {
-        s.next_state = -1;
+        next_state = -1;
         break;
       }
     }
@@ -508,23 +505,20 @@ int restore_duel_turn_resume_state(void)
 // FUNCTION: SHANDALAR 0x0040421c
 int init_turn(int player)
 {
-  struct
-  {
-    int trace_counter;
-    char trace[100];
-    int other_player;
-    int card;
-    int loop_player;
-  } s;
+  int trace_counter;
+  char trace[100];
+  int other_player;
+  int card;
+  int loop_player;
 
   if (TRACE_ENABLED)
   {
-    s.trace_counter = g_duel_trace_counter;
+    trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering Init Turn.\n", s.trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering Init Turn.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
-  s.other_player = 1 - player;
+  other_player = 1 - player;
   g_current_player = player;
   g_ai_decision_code = -1;
   if (g_active_player == player)
@@ -532,27 +526,27 @@ int init_turn(int player)
     g_duel_state_0077784c++;
   }
   g_duel_result++;
-  for (s.card = 0; s.card < 0x97; s.card = s.card + 1)
+  for (card = 0; card < 0x97; card = card + 1)
   {
-    g_damage_accumulators[s.other_player][s.card][1].amount = 0;
-    g_damage_accumulators[s.other_player][s.card][0].amount = g_damage_accumulators[s.other_player][s.card][1].amount;
-    g_damage_accumulators[player][s.card][1].amount = g_damage_accumulators[s.other_player][s.card][0].amount;
-    g_damage_accumulators[player][s.card][0].amount = g_damage_accumulators[player][s.card][1].amount;
-    g_damage_accumulators[s.other_player][s.card][1].unknown_c = -1;
-    g_damage_accumulators[s.other_player][s.card][0].unknown_c = g_damage_accumulators[s.other_player][s.card][1].unknown_c;
-    g_damage_accumulators[s.other_player][s.card][1].unknown_8 = (char)g_damage_accumulators[s.other_player][s.card][0].unknown_c;
-    g_damage_accumulators[s.other_player][s.card][0].unknown_8 = g_damage_accumulators[s.other_player][s.card][1].unknown_8;
-    g_damage_accumulators[player][s.card][1].unknown_c = g_damage_accumulators[s.other_player][s.card][0].unknown_8;
-    g_damage_accumulators[player][s.card][0].unknown_c = g_damage_accumulators[player][s.card][1].unknown_c;
-    g_damage_accumulators[player][s.card][1].unknown_8 = (char)g_damage_accumulators[player][s.card][0].unknown_c;
-    g_damage_accumulators[player][s.card][0].unknown_8 = g_damage_accumulators[player][s.card][1].unknown_8;
+    g_damage_accumulators[other_player][card][1].amount = 0;
+    g_damage_accumulators[other_player][card][0].amount = g_damage_accumulators[other_player][card][1].amount;
+    g_damage_accumulators[player][card][1].amount = g_damage_accumulators[other_player][card][0].amount;
+    g_damage_accumulators[player][card][0].amount = g_damage_accumulators[player][card][1].amount;
+    g_damage_accumulators[other_player][card][1].unknown_c = -1;
+    g_damage_accumulators[other_player][card][0].unknown_c = g_damage_accumulators[other_player][card][1].unknown_c;
+    g_damage_accumulators[other_player][card][1].unknown_8 = (char)g_damage_accumulators[other_player][card][0].unknown_c;
+    g_damage_accumulators[other_player][card][0].unknown_8 = g_damage_accumulators[other_player][card][1].unknown_8;
+    g_damage_accumulators[player][card][1].unknown_c = g_damage_accumulators[other_player][card][0].unknown_8;
+    g_damage_accumulators[player][card][0].unknown_c = g_damage_accumulators[player][card][1].unknown_c;
+    g_damage_accumulators[player][card][1].unknown_8 = (char)g_damage_accumulators[player][card][0].unknown_c;
+    g_damage_accumulators[player][card][0].unknown_8 = g_damage_accumulators[player][card][1].unknown_8;
   }
   reset_empty_card_original_ids();
   compact_timestamp_slots();
-  for (s.card = 0; s.card < 0x26; s.card = s.card + 1)
+  for (card = 0; card < 0x26; card = card + 1)
   {
-    g_duel_phase_stop_settings[0].phase_flags[s.card] &= (PHASE_STOP_ENABLED | PHASE_STOP_OPPONENT);
-    g_duel_phase_stop_settings[1].phase_flags[s.card] &= (PHASE_STOP_ENABLED | PHASE_STOP_OPPONENT);
+    g_duel_phase_stop_settings[0].phase_flags[card] &= (PHASE_STOP_ENABLED | PHASE_STOP_OPPONENT);
+    g_duel_phase_stop_settings[1].phase_flags[card] &= (PHASE_STOP_ENABLED | PHASE_STOP_OPPONENT);
   }
 #ifndef SHANDALAR
   StopWorldLocationMusic();
@@ -562,13 +556,13 @@ int init_turn(int player)
   reassess_all_cards_and_mana();
   reset_stack_tracking_state();
   rebuild_battlefield_summary();
-  for (s.loop_player = 0; s.loop_player < 2; s.loop_player = s.loop_player + 1)
+  for (loop_player = 0; loop_player < 2; loop_player = loop_player + 1)
   {
-    for (s.card = 0; s.card < 0x96; s.card = s.card + 1)
+    for (card = 0; card < 0x96; card = card + 1)
     {
-      if (global_card_instances[s.loop_player][s.card].internal_card_id != -1)
+      if (global_card_instances[loop_player][card].internal_card_id != -1)
       {
-        g_active_cards_count[s.loop_player] = s.card + 1;
+        g_active_cards_count[loop_player] = card + 1;
       }
     }
   }
@@ -579,19 +573,16 @@ int init_turn(int player)
 // FUNCTION: SHANDALAR 0x004047ef
 int TENTATIVE_start_turn(int player)
 {
-  struct
-  {
-    int trace_counter;
-    char trace[100];
-    int card;
-  } s;
+  int trace_counter;
+  char trace[100];
+  int card;
 
   if (TRACE_ENABLED)
   {
-    s.trace_counter = g_duel_trace_counter;
+    trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering Start Turn.\n", s.trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering Start Turn.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
   if ((g_duel_ai_mode_state != 1) && ((g_duel_network_flags & 2) == 0))
   {
@@ -616,9 +607,9 @@ int TENTATIVE_start_turn(int player)
   g_duel_winner = 0;
   g_attacking_creature_count = 0;
   g_land_can_be_played &= -512;
-  for (s.card = 0; s.card < g_active_cards_count[player]; s.card = s.card + 1)
+  for (card = 0; card < g_active_cards_count[player]; card = card + 1)
   {
-    global_card_instances[player][s.card].state &= ~(STATE_ATTACKING | STATE_BLOCKING | STATE_PLAYED_FROM_HAND | STATE_UNKNOWN8000 | STATE_SUMMONSICK_NOATTACK | STATE_SUMMONSICK_NOTAP);
+    global_card_instances[player][card].state &= ~(STATE_ATTACKING | STATE_BLOCKING | STATE_PLAYED_FROM_HAND | STATE_UNKNOWN8000 | STATE_SUMMONSICK_NOATTACK | STATE_SUMMONSICK_NOTAP);
   }
   TENTATIVE_reassess_all_cards(0, 0xff);
   return 0;
@@ -686,26 +677,23 @@ int reset_stack_tracking_state(void)
 // FUNCTION: SHANDALAR 0x0040e7a6
 void rebuild_battlefield_summary(void)
 {
-  struct
-  {
-    int toughness_color;
-    int power_color;
-    int toughness;
-    int card_color;
-    int power;
-    int card;
-    int player;
-    int internal_card_id;
-  } s;
+  int toughness_color;
+  int power_color;
+  int toughness;
+  int card_color;
+  int power;
+  int card;
+  int player;
+  int internal_card_id;
 
-  for (s.card = 0; s.card <= 7; s.card = s.card + 1)
+  for (card = 0; card <= 7; card = card + 1)
   {
-    g_ai_mana_demand_by_color[1][s.card] = 0;
-    g_ai_mana_demand_by_color[0][s.card] = g_ai_mana_demand_by_color[1][s.card];
-    g_creature_toughness_by_color[1][s.card] = g_ai_mana_demand_by_color[0][s.card];
-    g_creature_toughness_by_color[0][s.card] = g_creature_toughness_by_color[1][s.card];
-    g_creature_power_by_color[1][s.card] = g_creature_toughness_by_color[0][s.card];
-    g_creature_power_by_color[0][s.card] = g_creature_power_by_color[1][s.card];
+    g_ai_mana_demand_by_color[1][card] = 0;
+    g_ai_mana_demand_by_color[0][card] = g_ai_mana_demand_by_color[1][card];
+    g_creature_toughness_by_color[1][card] = g_ai_mana_demand_by_color[0][card];
+    g_creature_toughness_by_color[0][card] = g_creature_toughness_by_color[1][card];
+    g_creature_power_by_color[1][card] = g_creature_toughness_by_color[0][card];
+    g_creature_power_by_color[0][card] = g_creature_power_by_color[1][card];
   }
   g_card_types_in_play[1] = 0;
   g_card_types_in_play[0] = g_card_types_in_play[1];
@@ -716,53 +704,53 @@ void rebuild_battlefield_summary(void)
   memset(&g_duel_summary, 0, sizeof(g_duel_summary));
   g_duel_summary.life_totals[0] = g_life[0];
   g_duel_summary.life_totals[1] = g_life[1];
-  for (s.player = 0; s.player < 2; s.player = s.player + 1)
+  for (player = 0; player < 2; player = player + 1)
   {
-    g_duel_summary.hand_counts[s.player] = 0;
-    for (s.card = 0; s.card < g_active_cards_count[s.player]; s.card = s.card + 1)
+    g_duel_summary.hand_counts[player] = 0;
+    for (card = 0; card < g_active_cards_count[player]; card = card + 1)
     {
-      if (is_in_play(s.player, s.card))
+      if (is_in_play(player, card))
 
       {
-        s.internal_card_id = global_card_instances[s.player][s.card].internal_card_id;
-        s.card_color = global_cards_data[s.internal_card_id].color;
-        if ((global_cards_data[s.internal_card_id].type & TYPE_CREATURE) != 0)
+        internal_card_id = global_card_instances[player][card].internal_card_id;
+        card_color = global_cards_data[internal_card_id].color;
+        if ((global_cards_data[internal_card_id].type & TYPE_CREATURE) != 0)
         {
-          s.power = C_get_abilities(s.player, s.card, EVENT_POWER, -1);
-          s.toughness = C_get_abilities(s.player, s.card, EVENT_TOUGHNESS, -1);
-          s.power_color = single_color_test_bit_to_color_t(s.card_color);
-          g_creature_power_by_color[s.player][s.power_color] += s.power;
-          g_creature_power_by_color[s.player][7] += s.power;
-          s.toughness_color = single_color_test_bit_to_color_t(s.card_color);
-          g_creature_toughness_by_color[s.player][s.toughness_color] += s.toughness;
-          g_creature_toughness_by_color[s.player][7] += s.toughness;
-          g_creature_count_summary[s.player]++;
+          power = C_get_abilities(player, card, EVENT_POWER, -1);
+          toughness = C_get_abilities(player, card, EVENT_TOUGHNESS, -1);
+          power_color = single_color_test_bit_to_color_t(card_color);
+          g_creature_power_by_color[player][power_color] += power;
+          g_creature_power_by_color[player][7] += power;
+          toughness_color = single_color_test_bit_to_color_t(card_color);
+          g_creature_toughness_by_color[player][toughness_color] += toughness;
+          g_creature_toughness_by_color[player][7] += toughness;
+          g_creature_count_summary[player]++;
         }
-        g_card_types_in_play[s.player] |= global_cards_data[s.internal_card_id].type;
-        if ((global_cards_data[s.internal_card_id].type & TYPE_CREATURE) != 0)
+        g_card_types_in_play[player] |= global_cards_data[internal_card_id].type;
+        if ((global_cards_data[internal_card_id].type & TYPE_CREATURE) != 0)
         {
-          g_duel_summary.creature_counts[s.player]++;
+          g_duel_summary.creature_counts[player]++;
         }
-        if ((global_cards_data[s.internal_card_id].type & TYPE_ARTIFACT) != 0)
+        if ((global_cards_data[internal_card_id].type & TYPE_ARTIFACT) != 0)
         {
-          g_duel_summary.artifact_counts[s.player]++;
+          g_duel_summary.artifact_counts[player]++;
         }
-        if ((global_cards_data[s.internal_card_id].type & TYPE_ENCHANTMENT) != 0)
+        if ((global_cards_data[internal_card_id].type & TYPE_ENCHANTMENT) != 0)
         {
-          g_duel_summary.enchantment_counts[s.player]++;
+          g_duel_summary.enchantment_counts[player]++;
         }
       }
-      else if (((global_card_instances[s.player][s.card].state & STATE_OUBLIETTED) == 0) &&
-               (global_card_instances[s.player][s.card].internal_card_id != -1))
+      else if (((global_card_instances[player][card].state & STATE_OUBLIETTED) == 0) &&
+               (global_card_instances[player][card].internal_card_id != -1))
       {
-        g_duel_summary.hand_counts[s.player]++;
+        g_duel_summary.hand_counts[player]++;
       }
     }
-    for (s.card = 0; s.card < 500; s.card = s.card + 1)
+    for (card = 0; card < 500; card = card + 1)
     {
-      if (global_graveyard_slots[s.player][s.card] != -1)
+      if (global_graveyard_slots[player][card] != -1)
       {
-        g_graveyard_card_types[s.player] |= global_cards_data[global_graveyard_slots[s.player][s.card]].type;
+        g_graveyard_card_types[player] |= global_cards_data[global_graveyard_slots[player][card]].type;
       }
     }
   }
@@ -772,55 +760,52 @@ void rebuild_battlefield_summary(void)
 // FUNCTION: SHANDALAR 0x004f8613
 void TENTATIVE_savegame(int autosave_slot)
 {
-  struct
-  {
-    int saved_phase;
-    char path[0x108];
-  } s;
+  int saved_phase;
+  char path[0x108];
 
   if (g_duel_run_mode == 0)
   {
     if ((g_duel_mode_flags & 1) == 0)
     {
-      s.saved_phase = g_current_phase;
+      saved_phase = g_current_phase;
       g_current_phase = autosave_slot;
-      strcpy(s.path, global_savegame_path);
-      strcat(s.path, "/AUTOSAVE");
-      strcat(s.path, g_duel_save_extension + 1);
-      save_gametype0(s.path);
-      g_current_phase = s.saved_phase;
+      strcpy(path, global_savegame_path);
+      strcat(path, "/AUTOSAVE");
+      strcat(path, g_duel_save_extension + 1);
+      save_gametype0(path);
+      g_current_phase = saved_phase;
     }
 
     if ((g_duel_mode_flags & 1) != 0 && g_duel_cheats_state != 0)
     {
-      s.saved_phase = g_current_phase;
+      saved_phase = g_current_phase;
       g_current_phase = autosave_slot;
-      strcpy(s.path, global_savegame_path);
-      strcat(s.path, "/SHANDSAVE");
-      strcat(s.path, g_duel_save_extension + 1);
-      save_gametype0(s.path);
-      g_current_phase = s.saved_phase;
+      strcpy(path, global_savegame_path);
+      strcat(path, "/SHANDSAVE");
+      strcat(path, g_duel_save_extension + 1);
+      save_gametype0(path);
+      g_current_phase = saved_phase;
     }
   }
   else
   {
-    s.saved_phase = g_current_phase;
+    saved_phase = g_current_phase;
     g_current_phase = autosave_slot;
-    sprintf(s.path, "%s\\AUTOSAVE.%s", global_savegame_path,
+    sprintf(path, "%s\\AUTOSAVE.%s", global_savegame_path,
             g_duel_run_save_extensions[g_duel_run_mode]);
     if (g_duel_run_mode == 1)
     {
-      save_soloduel(s.path);
+      save_soloduel(path);
     }
     else if (g_duel_run_mode == 2)
     {
-      save_gauntlet(s.path);
+      save_gauntlet(path);
     }
     else if (g_duel_run_mode == 3)
     {
-      save_sealeddeck(s.path);
+      save_sealeddeck(path);
     }
-    g_current_phase = s.saved_phase;
+    g_current_phase = saved_phase;
   }
 }
 
@@ -907,33 +892,30 @@ int update_duel_selection_display(int player, int phase)
 int untap_phase_exe(unsigned int player)
 {
   int trace_counter;
-  struct
-  {
-    char trace[100];
-    int selected_card;
-    int winter_orb_card_type;
-    int optional_untap_count;
-    int event_result_copy;
-    int must_untap_cards[100];
-    int optional_untap_cards[100];
-    int card;
-    int must_untap_count;
-    int did_skip_untap;
-    int loop_player;
-    int done;
-  } s;
+  char trace[100];
+  int selected_card;
+  int winter_orb_card_type;
+  int optional_untap_count;
+  int event_result_copy;
+  int must_untap_cards[100];
+  int optional_untap_cards[100];
+  int card;
+  int must_untap_count;
+  int did_skip_untap;
+  int loop_player;
+  int done;
 
   if (TRACE_ENABLED)
   {
     trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering Untap Phase.\n", trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering Untap Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
-  s.winter_orb_card_type = CardTypeFromID(0xe9);
-  if ((s.winter_orb_card_type == -1) ||
-      (real_target_available(NULL, 0, player, 2, 2, 0x200, 0, 0, 0, 0, 0, 0, s.winter_orb_card_type, -1, -1, -1, 0, 0, 0) == 0))
+  winter_orb_card_type = CardTypeFromID(0xe9);
+  if ((winter_orb_card_type == -1) ||
+      (real_target_available(NULL, 0, player, 2, 2, 0x200, 0, 0, 0, 0, 0, 0, winter_orb_card_type, -1, -1, -1, 0, 0, 0) == 0))
   {
     g_current_phase = PHASE_UNTAP;
     update_phase_display(player, g_current_phase);
@@ -942,42 +924,42 @@ int untap_phase_exe(unsigned int player)
     g_phase_response_window_open = 1;
     g_ai_score_baseline = 0;
 
-    for (s.card = 0; s.card < g_active_cards_count[player]; s.card = s.card + 1)
+    for (card = 0; card < g_active_cards_count[player]; card = card + 1)
     {
-      if ((is_in_play(player, s.card) != 0) &&
-          ((global_card_instances[player][s.card].state & 0x10) != 0))
+      if ((is_in_play(player, card) != 0) &&
+          ((global_card_instances[player][card].state & 0x10) != 0))
       {
-        global_card_instances[player][s.card].untap_status = 3;
-        dispatch_event(player, s.card, 0x82);
+        global_card_instances[player][card].untap_status = 3;
+        dispatch_event(player, card, 0x82);
       }
     }
 
-    s.done = 0;
-    while (s.done == 0)
+    done = 0;
+    while (done == 0)
     {
-      s.must_untap_count = s.optional_untap_count = 0;
-      for (s.loop_player = 0; s.loop_player < 2; s.loop_player = s.loop_player + 1)
+      must_untap_count = optional_untap_count = 0;
+      for (loop_player = 0; loop_player < 2; loop_player = loop_player + 1)
       {
-        for (s.card = 0; s.card < g_active_cards_count[s.loop_player]; s.card = s.card + 1)
+        for (card = 0; card < g_active_cards_count[loop_player]; card = card + 1)
         {
-          if (is_in_play(s.loop_player, s.card) != 0)
+          if (is_in_play(loop_player, card) != 0)
           {
-            g_affected_card_controller = s.loop_player;
-            g_affected_card = s.card;
+            g_affected_card_controller = loop_player;
+            g_affected_card = card;
             g_event_result = 0;
             C_dispatch_event_raw(0x7d);
-            s.event_result_copy = g_event_result;
-            if (s.event_result_copy == 1)
+            event_result_copy = g_event_result;
+            if (event_result_copy == 1)
             {
-              s.optional_untap_cards[s.optional_untap_count * 2] = s.loop_player;
-              s.optional_untap_cards[s.optional_untap_count * 2 + 1] = s.card;
-              s.optional_untap_count++;
+              optional_untap_cards[optional_untap_count * 2] = loop_player;
+              optional_untap_cards[optional_untap_count * 2 + 1] = card;
+              optional_untap_count++;
             }
-            else if (s.event_result_copy == 2)
+            else if (event_result_copy == 2)
             {
-              s.must_untap_cards[s.must_untap_count * 2] = s.loop_player;
-              s.must_untap_cards[s.must_untap_count * 2 + 1] = s.card;
-              s.must_untap_count++;
+              must_untap_cards[must_untap_count * 2] = loop_player;
+              must_untap_cards[must_untap_count * 2 + 1] = card;
+              must_untap_count++;
             }
           }
         }
@@ -986,32 +968,32 @@ int untap_phase_exe(unsigned int player)
       if (((g_other_player == player) && ((g_duel_network_flags & 2) == 0)) ||
           (g_duel_ai_mode_state == 1) || (g_duel_network_state != 0))
       {
-        s.done = 1;
+        done = 1;
         if ((g_other_player == player) &&
             ((g_duel_network_flags & 2) == 0) &&
             (g_duel_ai_mode_state != 1) &&
             (player_can_stop_at_phase(player, PHASE_UNTAP) != 0))
         {
-          s.done = 0;
+          done = 0;
         }
       }
-      else if (((s.must_untap_count == 0) || (s.must_untap_count == 1)) &&
-               (s.optional_untap_count == 0) &&
+      else if (((must_untap_count == 0) || (must_untap_count == 1)) &&
+               (optional_untap_count == 0) &&
                (player_can_stop_at_phase(player, PHASE_UNTAP) == 0))
       {
-        s.done = 1;
+        done = 1;
       }
 
-      if (s.done == 0)
+      if (done == 0)
       {
         reset_trigger_dispatch_state();
         if (((g_active_player == player) || ((g_duel_network_flags & 2) != 0)) &&
             (g_duel_ai_mode_state != 1) &&
             (g_duel_network_state == 0) &&
-            ((s.must_untap_count > 0) || (s.optional_untap_count > 0)))
+            ((must_untap_count > 0) || (optional_untap_count > 0)))
         {
           load_text(global_ui_strings_filename, "PROMPT_UNTAP");
-          s.selected_card = select_card_for_action(player, -1, player, 0xff, 0, g_text_lines[0], 2);
+          selected_card = select_card_for_action(player, -1, player, 0xff, 0, g_text_lines[0], 2);
         }
         else
         {
@@ -1024,102 +1006,102 @@ int untap_phase_exe(unsigned int player)
             g_previous_stop_phase = g_previous_stop_phase_player = -1;
           }
           load_text(global_ui_strings_filename, "PROMPT_UNTAP");
-          s.selected_card = select_card_for_action(player, player, player, 0xff, 0, g_text_lines[1], 2);
+          selected_card = select_card_for_action(player, player, player, 0xff, 0, g_text_lines[1], 2);
           g_phase_was_skipped = 1;
         }
 
         switch (g_target_selection_status_code)
         {
-          case 0:
-            if (s.selected_card != -1)
+        case 0:
+          if (selected_card != -1)
+          {
+            if ((contains_player_card_pair(must_untap_cards, must_untap_count, g_target_player_choice, selected_card) != 0) ||
+                (contains_player_card_pair(optional_untap_cards, optional_untap_count, g_target_player_choice, selected_card) != 0))
             {
-              if ((contains_player_card_pair(s.must_untap_cards, s.must_untap_count, g_target_player_choice, s.selected_card) != 0) ||
-                  (contains_player_card_pair(s.optional_untap_cards, s.optional_untap_count, g_target_player_choice, s.selected_card) != 0))
-              {
-                g_affected_card_controller = g_target_player_choice;
-                g_affected_card = s.selected_card;
-                C_dispatch_event_raw(0x7e);
-              }
-              else if ((can_activate_mana_source_for_stop_prompt(g_target_player_choice, s.selected_card) != 0) &&
-                       (g_target_player_choice == player))
-              {
-                activate_mana_source_card(g_target_player_choice, s.selected_card);
-              }
+              g_affected_card_controller = g_target_player_choice;
+              g_affected_card = selected_card;
+              C_dispatch_event_raw(0x7e);
             }
-            break;
+            else if ((can_activate_mana_source_for_stop_prompt(g_target_player_choice, selected_card) != 0) &&
+                     (g_target_player_choice == player))
+            {
+              activate_mana_source_card(g_target_player_choice, selected_card);
+            }
+          }
+          break;
 
-          case -2:
-            s.done = 1;
-            break;
+        case -2:
+          done = 1;
+          break;
 
-          case -3:
-            break;
+        case -3:
+          break;
         }
       }
     }
 
-    if (s.must_untap_count != 0)
+    if (must_untap_count != 0)
     {
-      s.done = 0;
-      while (s.done == 0)
+      done = 0;
+      while (done == 0)
       {
-        s.must_untap_count = 0;
-        for (s.loop_player = 0; (s.loop_player < 2) && (s.must_untap_count == 0); s.loop_player++)
+        must_untap_count = 0;
+        for (loop_player = 0; (loop_player < 2) && (must_untap_count == 0); loop_player++)
         {
-          for (s.card = 0; (s.card < g_active_cards_count[s.loop_player]) && (s.must_untap_count == 0); s.card++)
+          for (card = 0; (card < g_active_cards_count[loop_player]) && (must_untap_count == 0); card++)
           {
-            if (is_in_play(s.loop_player, s.card) != 0)
+            if (is_in_play(loop_player, card) != 0)
             {
-              g_affected_card_controller = s.loop_player;
-              g_affected_card = s.card;
+              g_affected_card_controller = loop_player;
+              g_affected_card = card;
               g_event_result = 0;
               C_dispatch_event_raw(0x7d);
-              s.event_result_copy = g_event_result;
-              if (s.event_result_copy == 2)
+              event_result_copy = g_event_result;
+              if (event_result_copy == 2)
               {
-                s.must_untap_cards[s.must_untap_count * 2] = s.loop_player;
-                s.must_untap_cards[s.must_untap_count * 2 + 1] = s.card;
-                s.must_untap_count++;
+                must_untap_cards[must_untap_count * 2] = loop_player;
+                must_untap_cards[must_untap_count * 2 + 1] = card;
+                must_untap_count++;
               }
             }
           }
         }
 
-        if (s.must_untap_count == 0)
+        if (must_untap_count == 0)
         {
-          s.done = 1;
+          done = 1;
         }
         else
         {
-          g_affected_card_controller = s.must_untap_cards[0];
-          g_affected_card = s.must_untap_cards[1];
+          g_affected_card_controller = must_untap_cards[0];
+          g_affected_card = must_untap_cards[1];
           C_dispatch_event_raw(0x7e);
         }
       }
     }
 
-    for (s.card = 0; s.card < g_active_cards_count[player]; s.card = s.card + 1)
+    for (card = 0; card < g_active_cards_count[player]; card = card + 1)
     {
-      if (((global_card_instances[player][s.card].untap_status & 1) != 0) &&
-          ((global_card_instances[player][s.card].untap_status & 2) != 0))
+      if (((global_card_instances[player][card].untap_status & 1) != 0) &&
+          ((global_card_instances[player][card].untap_status & 2) != 0))
       {
-        global_card_instances[player][s.card].state &= -17;
-        dispatch_event_to_single_card(player, s.card, 0x83, 1 - player, -1);
+        global_card_instances[player][card].state &= -17;
+        dispatch_event_to_single_card(player, card, 0x83, 1 - player, -1);
       }
     }
 
-    for (s.card = 0; s.card < g_active_cards_count[player]; s.card = s.card + 1)
+    for (card = 0; card < g_active_cards_count[player]; card = card + 1)
     {
-      if (is_in_play(player, s.card) != 0)
+      if (is_in_play(player, card) != 0)
       {
-        global_card_instances[player][s.card].untap_status = 0;
+        global_card_instances[player][card].untap_status = 0;
       }
     }
 
     reassess_all_cards_and_mana();
     TENTATIVE_reassess_all_cards(0, 0xff);
-    s.did_skip_untap = g_phase_was_skipped;
-    if (s.did_skip_untap == 0)
+    did_skip_untap = g_phase_was_skipped;
+    if (did_skip_untap == 0)
     {
       prompt_stop_phase_anyway(1);
     }
@@ -1136,18 +1118,15 @@ int untap_phase_exe(unsigned int player)
 // FUNCTION: SHANDALAR 0x0040520a
 int upkeep_phase(unsigned int player)
 {
-  struct
-  {
-    int trace_counter;
-    char trace[100];
-  } s;
+  int trace_counter;
+  char trace[100];
 
   if (TRACE_ENABLED)
   {
-    s.trace_counter = g_duel_trace_counter;
+    trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering UpKeep Phase.\n", s.trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering UpKeep Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
   g_ai_speculation_depth = 0;
@@ -1211,20 +1190,17 @@ int upkeep_phase(unsigned int player)
 int draw_phase(unsigned int player)
 {
   int trace_counter;
-  struct
-  {
-    char trace[100];
-    int card;
-    int draw_index;
-    int draw_count;
-  } s;
+  char trace[100];
+  int card;
+  int draw_index;
+  int draw_count;
 
   if (TRACE_ENABLED)
   {
     trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering Draw Phase.\n", trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering Draw Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
   if (g_first_turn_draw_pending != 0)
@@ -1275,24 +1251,24 @@ int draw_phase(unsigned int player)
     dispatch_trigger(player, 0xce, gs_draw_phase_008cf560, 1);
     g_event_result = 1;
     C_dispatch_event_raw(10);
-    s.draw_count = g_event_result;
-    if (s.draw_count > 0)
+    draw_count = g_event_result;
+    if (draw_count > 0)
     {
       if ((player == g_other_player) && ((g_duel_network_flags & 2) == 0))
       {
-        for (s.draw_index = 0; s.draw_count > s.draw_index; s.draw_index = s.draw_index + 1)
+        for (draw_index = 0; draw_count > draw_index; draw_index = draw_index + 1)
         {
           draw_card_for_player(player);
         }
       }
       else
       {
-        for (s.draw_index = 0; s.draw_count > s.draw_index; s.draw_index = s.draw_index + 1)
+        for (draw_index = 0; draw_count > draw_index; draw_index = draw_index + 1)
         {
-          s.card = add_card_to_hand(player, g_draw_card_placeholder_internal_card_id);
-          if (s.card != -1)
+          card = add_card_to_hand(player, g_draw_card_placeholder_internal_card_id);
+          if (card != -1)
           {
-            global_card_instances[player][s.card].state |= 2;
+            global_card_instances[player][card].state |= 2;
           }
         }
         TENTATIVE_reassess_all_cards(0, 0x30);
@@ -1321,30 +1297,27 @@ int draw_phase(unsigned int player)
 // FUNCTION: SHANDALAR 0x00407feb
 int discard_phase(unsigned int player, int phase_mode)
 {
-  struct
-  {
-    int trace_counter;
-    char trace[100];
-    int hand_count_for_discard;
-    int card;
-    int did_discard;
-    int allow_response_result;
-  } s;
+  int trace_counter;
+  char trace[100];
+  int hand_count_for_discard;
+  int card;
+  int did_discard;
+  int allow_response_result;
 
-  s.trace_counter = g_duel_trace_counter;
-  s.did_discard = 0;
+  trace_counter = g_duel_trace_counter;
+  did_discard = 0;
   if (TRACE_ENABLED)
   {
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering Discard Phase.\n", s.trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering Discard Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
-  for (s.card = 0; s.card < g_active_cards_count[player]; s.card = s.card + 1)
+  for (card = 0; card < g_active_cards_count[player]; card = card + 1)
   {
-    if ((global_card_instances[player][s.card].internal_card_id != -1) &&
-        ((global_card_instances[player][s.card].state & 2) != 0) &&
-        (global_cards_data[global_card_instances[player][s.card].internal_card_id].id == 0x8c))
+    if ((global_card_instances[player][card].internal_card_id != -1) &&
+        ((global_card_instances[player][card].state & 2) != 0) &&
+        (global_cards_data[global_card_instances[player][card].internal_card_id].id == 0x8c))
     {
       return 0;
     }
@@ -1408,9 +1381,9 @@ int discard_phase(unsigned int player, int phase_mode)
     g_current_phase = PHASE_DISCARD;
     update_phase_display(player, g_current_phase);
     g_phase_response_window_open = 1;
-    s.allow_response_result = allow_response(-1, g_current_phase, gs_discard_phase_0091d080, PHASE_DISCARD);
+    allow_response_result = allow_response(-1, g_current_phase, gs_discard_phase_0091d080, PHASE_DISCARD);
     g_phase_response_window_open = 0;
-  } while (s.allow_response_result != 0);
+  } while (allow_response_result != 0);
 
   if ((g_duel_ai_mode_state != 1) ||
       ((g_other_player == player) && ((g_duel_network_flags & 2) == 0)))
@@ -1425,32 +1398,32 @@ int discard_phase(unsigned int player, int phase_mode)
       {
         if (g_active_player == player)
         {
-          s.hand_count_for_discard = 0;
+          hand_count_for_discard = 0;
         }
         else
         {
-          s.hand_count_for_discard = g_hand_count_adjustment;
+          hand_count_for_discard = g_hand_count_adjustment;
         }
       }
       else
       {
-        s.hand_count_for_discard = 0;
+        hand_count_for_discard = 0;
       }
-      for (s.card = 0; s.card < g_active_cards_count[player]; s.card = s.card + 1)
+      for (card = 0; card < g_active_cards_count[player]; card = card + 1)
       {
-        if ((global_card_instances[player][s.card].internal_card_id != -1) &&
-            ((global_card_instances[player][s.card].state & 2) == 0))
+        if ((global_card_instances[player][card].internal_card_id != -1) &&
+            ((global_card_instances[player][card].state & 2) == 0))
         {
-          s.hand_count_for_discard++;
+          hand_count_for_discard++;
         }
       }
       g_event_result = 0;
       C_dispatch_event_raw(0x1f);
-      s.did_discard = 0;
-      while ((g_event_result == 0) && (s.hand_count_for_discard > 7))
+      did_discard = 0;
+      while ((g_event_result == 0) && (hand_count_for_discard > 7))
       {
         discard(player, 0, 1);
-        s.hand_count_for_discard--;
+        hand_count_for_discard--;
         if ((player == g_other_player) &&
             ((g_duel_network_flags & 2) == 0) &&
             (g_duel_ai_mode_state == 1))
@@ -1461,7 +1434,7 @@ int discard_phase(unsigned int player, int phase_mode)
             (g_duel_ai_mode_state == 0) &&
             (g_duel_network_state == 0))
         {
-          s.did_discard = 1;
+          did_discard = 1;
         }
       }
     }
@@ -1483,21 +1456,18 @@ int discard_phase(unsigned int player, int phase_mode)
 // FUNCTION: SHANDALAR 0x004084f7
 void cleanup_phase(unsigned int player)
 {
-  struct
-  {
-    int trace_counter;
-    char trace[100];
-    int other_player;
-    int card;
-  } s;
+  int trace_counter;
+  char trace[100];
+  int other_player;
+  int card;
 
-  s.other_player = 1 - player;
+  other_player = 1 - player;
   if (TRACE_ENABLED)
   {
-    s.trace_counter = g_duel_trace_counter;
+    trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering Cleanup Phase.\n", s.trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering Cleanup Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
   if (g_duel_ai_mode_state != 1)
@@ -1539,17 +1509,17 @@ void cleanup_phase(unsigned int player)
     }
   }
 
-  for (s.card = 0; s.card < MAX(g_active_cards_count[0], g_active_cards_count[1]); s.card++)
+  for (card = 0; card < MAX(g_active_cards_count[0], g_active_cards_count[1]); card++)
   {
-    if (is_in_play(player, s.card) != 0)
+    if (is_in_play(player, card) != 0)
     {
-      global_card_instances[player][s.card].damage_on_card = 0;
-      dispatch_event_to_single_card(player, s.card, 0x22, s.other_player, -1);
+      global_card_instances[player][card].damage_on_card = 0;
+      dispatch_event_to_single_card(player, card, 0x22, other_player, -1);
     }
-    if (is_in_play(s.other_player, s.card) != 0)
+    if (is_in_play(other_player, card) != 0)
     {
-      global_card_instances[s.other_player][s.card].damage_on_card = 0;
-      dispatch_event_to_single_card(s.other_player, s.card, 0x22, player, -1);
+      global_card_instances[other_player][card].damage_on_card = 0;
+      dispatch_event_to_single_card(other_player, card, 0x22, player, -1);
     }
   }
 
@@ -1563,25 +1533,22 @@ void cleanup_phase(unsigned int player)
 // FUNCTION: SHANDALAR 0x0040877b
 int end_turn_phase(unsigned int player)
 {
-  struct
-  {
-    int trace_counter;
-    char trace[100];
-    int found;
-    short dynamic_card_count;
-    int other_player;
-    int dynamic_card_index;
-    int card;
-    short dynamic_card_ids[300];
-  } s;
+  int trace_counter;
+  char trace[100];
+  int found;
+  short dynamic_card_count;
+  int other_player;
+  int dynamic_card_index;
+  int card;
+  short dynamic_card_ids[300];
 
-  s.other_player = 1 - player;
+  other_player = 1 - player;
   if (TRACE_ENABLED)
   {
-    s.trace_counter = g_duel_trace_counter;
+    trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering End Turn Phase.\n", s.trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering End Turn Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
   dispatch_trigger_twice_once_with_each_player_as_reason(player, 0xcd, gs_end_of_turn_008cd980, 0);
@@ -1593,67 +1560,67 @@ int end_turn_phase(unsigned int player)
   process_damage_prevention(player);
   TENTATIVE_reassess_all_cards(0, 0xff);
 
-  for (s.card = 0, s.dynamic_card_count = 0; s.card < 0x96; s.card = s.card + 1)
+  for (card = 0, dynamic_card_count = 0; card < 0x96; card = card + 1)
   {
-    if (global_card_instances[player][s.card].internal_card_id != -1)
+    if (global_card_instances[player][card].internal_card_id != -1)
     {
-      global_card_instances[player][s.card].state &= ~(STATE_JUST_DRAWED | STATE_ATTACKING | STATE_BLOCKING | STATE_ATTACKED | STATE_ISBLOCKED | STATE_UNKNOWN8000);
-      global_card_instances[player][s.card].blocking = -1;
-      global_card_instances[player][s.card].damage_on_card = 0;
+      global_card_instances[player][card].state &= ~(STATE_JUST_DRAWED | STATE_ATTACKING | STATE_BLOCKING | STATE_ATTACKED | STATE_ISBLOCKED | STATE_UNKNOWN8000);
+      global_card_instances[player][card].blocking = -1;
+      global_card_instances[player][card].damage_on_card = 0;
     }
-    if (global_card_instances[s.other_player][s.card].internal_card_id != -1)
+    if (global_card_instances[other_player][card].internal_card_id != -1)
     {
-      global_card_instances[s.other_player][s.card].state &= ~(STATE_JUST_DRAWED | STATE_ATTACKING | STATE_BLOCKING | STATE_ATTACKED | STATE_ISBLOCKED | STATE_UNKNOWN8000);
-      global_card_instances[s.other_player][s.card].blocking = -1;
-      global_card_instances[s.other_player][s.card].damage_on_card = 0;
+      global_card_instances[other_player][card].state &= ~(STATE_JUST_DRAWED | STATE_ATTACKING | STATE_BLOCKING | STATE_ATTACKED | STATE_ISBLOCKED | STATE_UNKNOWN8000);
+      global_card_instances[other_player][card].blocking = -1;
+      global_card_instances[other_player][card].damage_on_card = 0;
     }
-    if (global_card_instances[player][s.card].internal_card_id >= g_card_count)
+    if (global_card_instances[player][card].internal_card_id >= g_card_count)
     {
-      s.dynamic_card_ids[s.dynamic_card_count] = (short)global_card_instances[player][s.card].internal_card_id;
-      s.dynamic_card_count++;
+      dynamic_card_ids[dynamic_card_count] = (short)global_card_instances[player][card].internal_card_id;
+      dynamic_card_count++;
     }
-    if (global_card_instances[s.other_player][s.card].internal_card_id >= g_card_count)
+    if (global_card_instances[other_player][card].internal_card_id >= g_card_count)
     {
-      s.dynamic_card_ids[s.dynamic_card_count] = (short)global_card_instances[s.other_player][s.card].internal_card_id;
-      s.dynamic_card_count++;
+      dynamic_card_ids[dynamic_card_count] = (short)global_card_instances[other_player][card].internal_card_id;
+      dynamic_card_count++;
     }
   }
 
-  for (s.card = g_card_count; s.card < g_card_count + 0x10; s.card = s.card + 1)
+  for (card = g_card_count; card < g_card_count + 0x10; card = card + 1)
   {
-    if (global_cards_data[s.card].id != -1)
+    if (global_cards_data[card].id != -1)
     {
-      s.dynamic_card_index = s.dynamic_card_count - 1;
-      s.found = 0;
-      for (; (s.dynamic_card_index >= 0) && (s.found == 0); s.dynamic_card_index--)
+      dynamic_card_index = dynamic_card_count - 1;
+      found = 0;
+      for (; (dynamic_card_index >= 0) && (found == 0); dynamic_card_index--)
       {
-        if (s.dynamic_card_ids[s.dynamic_card_index] == s.card)
+        if (dynamic_card_ids[dynamic_card_index] == card)
         {
-          s.found = 1;
+          found = 1;
         }
       }
 
-      for (s.dynamic_card_index = 0;
-           s.dynamic_card_index < MAX(g_active_cards_count[g_other_player], g_active_cards_count[g_active_player]);
-           s.dynamic_card_index++)
+      for (dynamic_card_index = 0;
+           dynamic_card_index < MAX(g_active_cards_count[g_other_player], g_active_cards_count[g_active_player]);
+           dynamic_card_index++)
       {
-        if ((global_card_instances[g_active_player][s.dynamic_card_index].internal_card_id != -1) &&
-            ((global_card_instances[g_active_player][s.dynamic_card_index].state & 2) != 0) &&
-            (global_card_instances[g_active_player][s.dynamic_card_index].dummy3 == s.card))
+        if ((global_card_instances[g_active_player][dynamic_card_index].internal_card_id != -1) &&
+            ((global_card_instances[g_active_player][dynamic_card_index].state & 2) != 0) &&
+            (global_card_instances[g_active_player][dynamic_card_index].dummy3 == card))
         {
-          s.found = 1;
+          found = 1;
         }
-        if ((global_card_instances[g_other_player][s.dynamic_card_index].internal_card_id != -1) &&
-            ((global_card_instances[g_other_player][s.dynamic_card_index].state & 2) != 0) &&
-            (global_card_instances[g_other_player][s.dynamic_card_index].dummy3 == s.card))
+        if ((global_card_instances[g_other_player][dynamic_card_index].internal_card_id != -1) &&
+            ((global_card_instances[g_other_player][dynamic_card_index].state & 2) != 0) &&
+            (global_card_instances[g_other_player][dynamic_card_index].dummy3 == card))
         {
-          s.found = 1;
+          found = 1;
         }
       }
 
-      if (s.found == 0)
+      if (found == 0)
       {
-        global_cards_data[s.card].id = -1;
+        global_cards_data[card].id = -1;
       }
     }
   }
@@ -1666,27 +1633,24 @@ int end_turn_phase(unsigned int player)
 // FUNCTION: SHANDALAR 0x00408dcc
 int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int *phase_value)
 {
-  struct
-  {
-    char debug_text[100];
-    char trace[100];
-    int saved_ai_try_count;
-    int opponent;
-    int index;
-    int loop_player;
-    int skip_cleanup_stop_prompt;
-    int saved_special_mana[2][8];
-    int saved_ai_flags;
-    int ai_score;
-  } s;
+  char debug_text[100];
+  char trace[100];
+  int saved_ai_try_count;
+  int opponent;
+  int index;
+  int loop_player;
+  int skip_cleanup_stop_prompt;
+  int saved_special_mana[2][8];
+  int saved_ai_flags;
+  int ai_score;
   int trace_counter;
 
   if (TRACE_ENABLED)
   {
     trace_counter = g_duel_trace_counter;
     g_duel_trace_counter++;
-    sprintf(s.trace, "%d: Entering AI Decision Phase.\n", trace_counter);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, "%d: Entering AI Decision Phase.\n", trace_counter);
+    append_to_trace_txt(trace);
   }
 
   *next_state = -1;
@@ -1694,48 +1658,48 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
   {
     pump_ai_thinking_host();
 
-    s.opponent = 1 - player;
-    for (s.index = 0; s.index <= 7; s.index = s.index + 1)
+    opponent = 1 - player;
+    for (index = 0; index <= 7; index = index + 1)
     {
-      s.saved_special_mana[s.opponent][s.index] = g_special_mana_pool[s.opponent][s.index];
-      g_special_mana_pool[s.opponent][s.index] = g_basiclandtypes_controlled[s.opponent][s.index];
+      saved_special_mana[opponent][index] = g_special_mana_pool[opponent][index];
+      g_special_mana_pool[opponent][index] = g_basiclandtypes_controlled[opponent][index];
     }
 
     C_dispatch_event_raw(199);
-    for (s.index = 0; s.index < g_active_cards_count[g_other_player]; s.index = s.index + 1)
+    for (index = 0; index < g_active_cards_count[g_other_player]; index = index + 1)
     {
-      if (global_card_instances[g_other_player][s.index].internal_card_id != -1)
+      if (global_card_instances[g_other_player][index].internal_card_id != -1)
       {
-        (*global_cards_data[global_card_instances[g_other_player][s.index].internal_card_id].code_pointer)(g_other_player, s.index, 0x38);
+        (*global_cards_data[global_card_instances[g_other_player][index].internal_card_id].code_pointer)(g_other_player, index, 0x38);
       }
     }
 
     process_damage_prevention(player);
     regenerate_or_graveyard_triggers();
-    for (s.loop_player = 0; s.loop_player < 2; s.loop_player = s.loop_player + 1)
+    for (loop_player = 0; loop_player < 2; loop_player = loop_player + 1)
     {
-      for (s.index = 0; s.index <= 7; s.index = s.index + 1)
+      for (index = 0; index <= 7; index = index + 1)
       {
-        g_special_mana_pool[s.loop_player][s.index] = s.saved_special_mana[s.loop_player][s.index];
+        g_special_mana_pool[loop_player][index] = saved_special_mana[loop_player][index];
       }
     }
 
     reassess_all_cards_and_mana();
-    s.ai_score = g_ai_modifier + ai_opinion_of_gamestate(g_other_player);
+    ai_score = g_ai_modifier + ai_opinion_of_gamestate(g_other_player);
     if (g_life[1] > 0)
     {
       g_ai_search_flags |= 4;
     }
     if (g_reveal_all_world_info != 0)
     {
-      show_ai_action_log_dialog(0, s.ai_score);
+      show_ai_action_log_dialog(0, ai_score);
     }
-    if ((g_ai_search_best_score < s.ai_score) && (g_recorded_action_cursor == 0))
+    if ((g_ai_search_best_score < ai_score) && (g_recorded_action_cursor == 0))
     {
-      g_ai_search_best_score = s.ai_score;
+      g_ai_search_best_score = ai_score;
       save_recorded_ai_actions();
-      s.saved_ai_flags = g_ai_search_flags;
-      s.saved_ai_try_count = g_ai_search_try_count;
+      saved_ai_flags = g_ai_search_flags;
+      saved_ai_try_count = g_ai_search_try_count;
     }
     if (g_ai_search_target_depth == 999)
     {
@@ -1749,8 +1713,8 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
          (((g_ai_search_flags & 4) == 0 ? 0xc8 : 0x32) < get_ai_search_elapsed_time())) &&
         ((g_reveal_all_world_info == 0) || (g_ai_search_try_count > 0x32)))
     {
-      sprintf(s.debug_text, "phase: %3d num tries: %4d mtime %4d calls %d\n", g_ai_response_state, g_ai_search_try_count, g_ai_search_time_limit / 2, g_affected_card_context_index);
-      OutputDebugStringA(s.debug_text);
+      sprintf(debug_text, "phase: %3d num tries: %4d mtime %4d calls %d\n", g_ai_response_state, g_ai_search_try_count, g_ai_search_time_limit / 2, g_affected_card_context_index);
+      OutputDebugStringA(debug_text);
       if (g_reveal_all_world_info != 0)
       {
         show_ai_action_log_dialog(1, g_ai_search_best_score);
@@ -1758,7 +1722,7 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
       g_adventure_duel_internal_card_id = -1;
       g_duel_ai_mode_state = 0;
       g_ai_search_target_depth = -1;
-      g_ai_search_flags = s.saved_ai_flags;
+      g_ai_search_flags = saved_ai_flags;
     }
     else
     {
@@ -1841,8 +1805,8 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
   if (*next_state == -1)
   {
     g_current_phase = PHASE_CLEANUP2;
-    s.skip_cleanup_stop_prompt = 0;
-    if (s.skip_cleanup_stop_prompt == 0)
+    skip_cleanup_stop_prompt = 0;
+    if (skip_cleanup_stop_prompt == 0)
     {
       prompt_stop_phase_anyway(0x20);
     }
@@ -1867,50 +1831,47 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
 int AddCardToDeckSorted(int card_id)
 {
 
-  struct
-  {
-    int selected_state_sprite;
-    int location_block_start_index;
-    unsigned int inner_index;
-    int entry_index;
-    int candidate_sort_key;
-  } s;
+  int selected_state_sprite;
+  int location_block_start_index;
+  unsigned int inner_index;
+  int entry_index;
+  int candidate_sort_key;
 
   if (GetCardRarity(card_id) >= 3)
   {
     AddJournalEntry((int)card_id / 0x100 + JOURNAL_ENTRY_CARD_FOUND_SET0, card_id & 0xff);
   }
-  s.entry_index = single_color_test_bit_to_color_t(global_cards_data[card_id].color) * 0x20 + (unsigned int)global_cards_data[card_id].type * 0x100 +
-                  (int)global_cards_data[card_id].name[0];
-  s.selected_state_sprite = 0;
-  for (s.location_block_start_index = 0; s.location_block_start_index < 500; s.location_block_start_index = s.location_block_start_index + 1)
+  entry_index = single_color_test_bit_to_color_t(global_cards_data[card_id].color) * 0x20 + (unsigned int)global_cards_data[card_id].type * 0x100 +
+                (int)global_cards_data[card_id].name[0];
+  selected_state_sprite = 0;
+  for (location_block_start_index = 0; location_block_start_index < 500; location_block_start_index = location_block_start_index + 1)
   {
-    if (deck[s.location_block_start_index] == -1)
+    if (deck[location_block_start_index] == -1)
     {
-      s.selected_state_sprite = 1;
+      selected_state_sprite = 1;
     }
   }
-  if (s.selected_state_sprite == 0)
+  if (selected_state_sprite == 0)
   {
     return -1;
   }
-  for (s.location_block_start_index = 0x1f2; s.location_block_start_index >= 0; s.location_block_start_index = s.location_block_start_index - 1)
+  for (location_block_start_index = 0x1f2; location_block_start_index >= 0; location_block_start_index = location_block_start_index - 1)
   {
-    if (deck[s.location_block_start_index] == -1)
+    if (deck[location_block_start_index] == -1)
     {
       continue;
     }
 
-    s.inner_index = (unsigned int)deck[s.location_block_start_index] & 0xfff;
-    s.candidate_sort_key = single_color_test_bit_to_color_t(global_cards_data[s.inner_index].color) * 0x20 + (int)global_cards_data[s.inner_index].name[0] +
-                           (unsigned int)global_cards_data[s.inner_index].type * 0x100;
-    if (s.candidate_sort_key >= s.entry_index)
+    inner_index = (unsigned int)deck[location_block_start_index] & 0xfff;
+    candidate_sort_key = single_color_test_bit_to_color_t(global_cards_data[inner_index].color) * 0x20 + (int)global_cards_data[inner_index].name[0] +
+                         (unsigned int)global_cards_data[inner_index].type * 0x100;
+    if (candidate_sort_key >= entry_index)
     {
-      deck[s.location_block_start_index + 1] = card_id;
+      deck[location_block_start_index + 1] = card_id;
       card_id = (unsigned int)-1;
-      return s.location_block_start_index + 1;
+      return location_block_start_index + 1;
     }
-    deck[s.location_block_start_index + 1] = (unsigned int)deck[s.location_block_start_index];
+    deck[location_block_start_index + 1] = (unsigned int)deck[location_block_start_index];
   }
   deck[0] = card_id;
   return 0;
@@ -2022,14 +1983,11 @@ void remove_iid_from_initial_library(int player, int internal_card_id)
 // FUNCTION: SHANDALAR 0x0056a05a
 void perform_player_mulligan(int player, int wizard_color)
 {
-  struct
-  {
-    char trace_text[500];
-    int library_index;
-    int card_index;
-    int packet_card;
-    int found_card;
-  } s;
+  char trace_text[500];
+  int library_index;
+  int card_index;
+  int packet_card;
+  int found_card;
 
   if ((g_duel_network_flags & 2) != 0)
   {
@@ -2039,22 +1997,22 @@ void perform_player_mulligan(int player, int wizard_color)
   {
     append_to_trace_txt("Discarding my the hand.\n");
   }
-  for (s.card_index = 0; s.card_index < 0x96; s.card_index++)
+  for (card_index = 0; card_index < 0x96; card_index++)
   {
-    if (global_card_instances[player][s.card_index].internal_card_id != -1)
+    if (global_card_instances[player][card_index].internal_card_id != -1)
     {
-      s.found_card = 0;
+      found_card = 0;
 
-      for (s.library_index = 0; (s.library_index < 200) && (s.found_card == 0); s.library_index++)
+      for (library_index = 0; (library_index < 200) && (found_card == 0); library_index++)
       {
-        if (CardTypeFromID(g_initial_library[wizard_color][s.library_index].csvid) ==
-            global_card_instances[player][s.card_index].internal_card_id)
+        if (CardTypeFromID(g_initial_library[wizard_color][library_index].csvid) ==
+            global_card_instances[player][card_index].internal_card_id)
         {
-          g_initial_library[wizard_color][s.library_index].numcards++;
-          s.found_card = 1;
+          g_initial_library[wizard_color][library_index].numcards++;
+          found_card = 1;
         }
       }
-      global_card_instances[player][s.card_index].internal_card_id = -1;
+      global_card_instances[player][card_index].internal_card_id = -1;
     }
   }
   if ((g_duel_network_flags & 2) != 0)
@@ -2062,13 +2020,13 @@ void perform_player_mulligan(int player, int wizard_color)
     if (g_active_player == player)
     {
       append_to_trace_txt("Re-dealing my hand.\n");
-      for (s.card_index = 0; s.card_index < 7; s.card_index++)
+      for (card_index = 0; card_index < 7; card_index++)
       {
-        s.packet_card = DrawRandomCardFromInitialLibrary(wizard_color);
-        add_card_to_hand(player, s.packet_card);
-        AddCardToCLPacket(s.packet_card);
-        sprintf(s.trace_text, "%s(%d)\n", global_cards_data[s.packet_card].name, s.packet_card);
-        append_to_trace_txt(s.trace_text);
+        packet_card = DrawRandomCardFromInitialLibrary(wizard_color);
+        add_card_to_hand(player, packet_card);
+        AddCardToCLPacket(packet_card);
+        sprintf(trace_text, "%s(%d)\n", global_cards_data[packet_card].name, packet_card);
+        append_to_trace_txt(trace_text);
       }
       append_to_trace_txt("NONE\n");
       AddCardToCLPacket(-1);
@@ -2078,22 +2036,22 @@ void perform_player_mulligan(int player, int wizard_color)
     {
       append_to_trace_txt("Getting opponent's hand.\n");
       TENTATIVE_wait_for_network_result(1, 3);
-      s.card_index = s.packet_card = 0;
-      while (s.packet_card != -1)
+      card_index = packet_card = 0;
+      while (packet_card != -1)
       {
-        s.packet_card = GetCardFromCLPacket(s.card_index++);
-        sprintf(s.trace_text, "%s(%d)\n", global_cards_data[s.packet_card].name, s.packet_card);
-        append_to_trace_txt(s.trace_text);
-        if (s.packet_card != -1)
+        packet_card = GetCardFromCLPacket(card_index++);
+        sprintf(trace_text, "%s(%d)\n", global_cards_data[packet_card].name, packet_card);
+        append_to_trace_txt(trace_text);
+        if (packet_card != -1)
         {
-          add_card_to_hand(player, s.packet_card);
+          add_card_to_hand(player, packet_card);
         }
       }
     }
   }
   else
   {
-    for (s.card_index = 0; s.card_index < 7; s.card_index++)
+    for (card_index = 0; card_index < 7; card_index++)
     {
       add_card_to_hand(player, DrawRandomCardFromInitialLibrary(wizard_color));
     }
@@ -2159,30 +2117,27 @@ void evaluate_opening_hand_land_counts(int *redraw_result, int *ante_result, int
 // FUNCTION: SHANDALAR 0x0056862e
 int play_duel(int player, int creature_type)
 {
-  struct
-  {
-    int unused_68;                  // ebp - 0x68
-    int wizard_color;               // ebp - 0x64
-    int library_count;              // ebp - 0x60
-    int quantity;                   // ebp - 0x5c
-    int loop_5c;                    // ebp - 0x58
-    int packet_card;                // ebp - 0x54
-    int loop_player;                // ebp - 0x50
-    int shandalar_deck_minimums[6]; // ebp - 0x4c
-    unsigned int mulligan_accepted; // ebp - 0x34
-    int ante_result;                // ebp - 0x30
-    int victory_count;              // ebp - 0x2c
-    int opening_hand_count;         // ebp - 0x28
-    int random_starting_player;     // ebp - 0x24
-    int town_index;                 // ebp - 0x20
-    int redraw_result;              // ebp - 0x1c
-    int card_index;                 // ebp - 0x18
-    int ante_info;                  // ebp - 0x14
-    unsigned int next_player;       // ebp - 0x10
-    unsigned int starting_player;   // ebp - 0xc
-    int town_count;                 // ebp - 0x8
-    int player_index;               // ebp - 0x4
-  } s;
+  int unused_68;                  // ebp - 0x68
+  int wizard_color;               // ebp - 0x64
+  int library_count;              // ebp - 0x60
+  int quantity;                   // ebp - 0x5c
+  int loop_5c;                    // ebp - 0x58
+  int packet_card;                // ebp - 0x54
+  int loop_player;                // ebp - 0x50
+  int shandalar_deck_minimums[6]; // ebp - 0x4c
+  unsigned int mulligan_accepted; // ebp - 0x34
+  int ante_result;                // ebp - 0x30
+  int victory_count;              // ebp - 0x2c
+  int opening_hand_count;         // ebp - 0x28
+  int random_starting_player;     // ebp - 0x24
+  int town_index;                 // ebp - 0x20
+  int redraw_result;              // ebp - 0x1c
+  int card_index;                 // ebp - 0x18
+  int ante_info;                  // ebp - 0x14
+  unsigned int next_player;       // ebp - 0x10
+  unsigned int starting_player;   // ebp - 0xc
+  int town_count;                 // ebp - 0x8
+  int player_index;               // ebp - 0x4
 
   (void)player;
   if ((g_duel_mode_flags & 1) == 0)
@@ -2195,21 +2150,21 @@ int play_duel(int player, int creature_type)
   refresh_ai_random_table();
 #endif
   g_duel_active = 1;
-  for (s.player_index = 0; s.player_index < 2; s.player_index = s.player_index + 1)
+  for (player_index = 0; player_index < 2; player_index = player_index + 1)
   {
-    for (s.card_index = 0; s.card_index < 0x96; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 0x96; card_index = card_index + 1)
     {
-      global_card_instances[s.player_index][s.card_index].original_internal_card_id = -1;
-      global_card_instances[s.player_index][s.card_index].internal_card_id =
-          global_card_instances[s.player_index][s.card_index].original_internal_card_id;
+      global_card_instances[player_index][card_index].original_internal_card_id = -1;
+      global_card_instances[player_index][card_index].internal_card_id =
+          global_card_instances[player_index][card_index].original_internal_card_id;
     }
-    for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 500; card_index = card_index + 1)
     {
-      global_exile[s.player_index][s.card_index] = -1;
-      global_graveyard_slots[s.player_index][s.card_index] = global_exile[s.player_index][s.card_index];
+      global_exile[player_index][card_index] = -1;
+      global_graveyard_slots[player_index][card_index] = global_exile[player_index][card_index];
     }
-    g_player_duel_state_00938e38[s.player_index] = 0;
-    g_active_cards_count[s.player_index] = 0;
+    g_player_duel_state_00938e38[player_index] = 0;
+    g_active_cards_count[player_index] = 0;
   }
 
   g_duel_special_land_card_ids[1] = 0xef;
@@ -2225,11 +2180,11 @@ int play_duel(int player, int creature_type)
 
   if (creature_type != -1)
   {
-    s.shandalar_deck_minimums[4] = 0;
-    s.shandalar_deck_minimums[0] = 0x1e;
-    s.shandalar_deck_minimums[1] = 0x23;
-    s.shandalar_deck_minimums[2] = 0x28;
-    s.shandalar_deck_minimums[3] = 0x28;
+    shandalar_deck_minimums[4] = 0;
+    shandalar_deck_minimums[0] = 0x1e;
+    shandalar_deck_minimums[1] = 0x23;
+    shandalar_deck_minimums[2] = 0x28;
+    shandalar_deck_minimums[3] = 0x28;
     g_life[0] = 10;
     if ((g_world_magic_bitmap & 2) != 0)
     {
@@ -2271,9 +2226,9 @@ int play_duel(int player, int creature_type)
     }
     if (g_shandalar_monster_definitions[creature_type].encounter_type == 0xb)
     {
-      for (s.card_index = 0; s.card_index < 10; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 10; card_index = card_index + 1)
       {
-        if ((g_world_magic_bitmap & (1 << (byte)s.card_index)) != 0)
+        if ((g_world_magic_bitmap & (1 << (byte)card_index)) != 0)
         {
           g_life[1]++;
         }
@@ -2282,31 +2237,31 @@ int play_duel(int player, int creature_type)
     if (g_shandalar_monster_definitions[creature_type].encounter_type == 0xc)
     {
       g_life[1] += 10;
-      s.victory_count = 0;
-      s.town_count = 0;
-      for (s.card_index = 0; s.card_index < 1000; s.card_index = s.card_index + 1)
+      victory_count = 0;
+      town_count = 0;
+      for (card_index = 0; card_index < 1000; card_index = card_index + 1)
       {
-        if (g_duel_victory_log[s.card_index] == 0)
+        if (g_duel_victory_log[card_index] == 0)
         {
           break;
         }
-        if ((g_duel_victory_log[s.card_index] >> 4) == g_current_encounter_color)
+        if ((g_duel_victory_log[card_index] >> 4) == g_current_encounter_color)
         {
-          s.victory_count++;
+          victory_count++;
         }
       }
-      g_life[1] -= s.victory_count;
-      for (s.town_index = 0; s.town_index < 128; s.town_index = s.town_index + 1)
+      g_life[1] -= victory_count;
+      for (town_index = 0; town_index < 128; town_index = town_index + 1)
       {
-        if ((g_town_slots[s.town_index].status_and_ruling_wizard & 0xff00) != 0)
+        if ((g_town_slots[town_index].status_and_ruling_wizard & 0xff00) != 0)
         {
-          if (((g_town_slots[s.town_index].status_and_ruling_wizard >> 8) - 1) == s.card_index)
+          if (((g_town_slots[town_index].status_and_ruling_wizard >> 8) - 1) == card_index)
           {
-            s.town_count++;
+            town_count++;
           }
         }
       }
-      g_life[1] += s.town_count * g_shandalar_difficulty;
+      g_life[1] += town_count * g_shandalar_difficulty;
       g_life[1] = MAX(g_life[1], g_shandalar_difficulty * 5 + 20);
     }
     if (g_shandalar_monster_definitions[creature_type].encounter_type == 0xd)
@@ -2314,40 +2269,40 @@ int play_duel(int player, int creature_type)
       g_life[1] = g_shandalar_difficulty * 100 + 100;
     }
     strcpy(g_duel_message_text, GetCreatureName(creature_type));
-    s.opening_hand_count = ClampIntToRange(g_current_encounter_strength + g_shandalar_difficulty + 4, 0, 99);
+    opening_hand_count = ClampIntToRange(g_current_encounter_strength + g_shandalar_difficulty + 4, 0, 99);
     if (g_shandalar_difficulty == 3)
     {
-      s.opening_hand_count = 7;
+      opening_hand_count = 7;
     }
-    s.opening_hand_count += g_encounter_opening_hand_size_modifier;
-    s.opening_hand_count = 7;
-    if (s.opening_hand_count < 3)
+    opening_hand_count += g_encounter_opening_hand_size_modifier;
+    opening_hand_count = 7;
+    if (opening_hand_count < 3)
     {
-      s.opening_hand_count = 3;
+      opening_hand_count = 3;
     }
-    g_hand_count_adjustment = 7 - s.opening_hand_count;
+    g_hand_count_adjustment = 7 - opening_hand_count;
     SeedRandomFromTickCount();
     if (g_shandalar_difficulty != 0 && internal_rand(2) != 0 && g_duel_ai_mode_state == 0)
     {
-      s.starting_player = 1;
+      starting_player = 1;
     }
     else
     {
-      s.starting_player = 0;
+      starting_player = 0;
     }
-    s.random_starting_player = 1;
+    random_starting_player = 1;
     g_starting_player_was_random = 1;
     if (g_force_opponent_starts_duel != 0 || g_next_duel_card_id == 0)
     {
       if (g_force_opponent_starts_duel != 0)
       {
-        s.starting_player = 1;
+        starting_player = 1;
       }
       else
       {
-        s.starting_player = 0;
+        starting_player = 0;
       }
-      s.random_starting_player = 0;
+      random_starting_player = 0;
       g_starting_player_was_random = 0;
       g_force_opponent_starts_duel = 0;
     }
@@ -2357,48 +2312,48 @@ int play_duel(int player, int creature_type)
       goto idk;
     }
     g_restore_deck_after_duel = 0;
-    for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 500; card_index = card_index + 1)
     {
-      if (deck[s.card_index] != -1 && (deck[s.card_index] & 0x4000) == 0)
+      if (deck[card_index] != -1 && (deck[card_index] & 0x4000) == 0)
       {
-        s.shandalar_deck_minimums[4]++;
+        shandalar_deck_minimums[4]++;
       }
     }
-    if (s.shandalar_deck_minimums[4] < s.shandalar_deck_minimums[g_shandalar_difficulty])
+    if (shandalar_deck_minimums[4] < shandalar_deck_minimums[g_shandalar_difficulty])
     {
       g_restore_deck_after_duel = 1;
       memcpy(g_deck_restore_buffer, deck, 2000);
-      for (s.card_index = 0;
-           s.card_index < s.shandalar_deck_minimums[g_shandalar_difficulty] - s.shandalar_deck_minimums[4];
-           s.card_index = s.card_index + 1)
+      for (card_index = 0;
+           card_index < shandalar_deck_minimums[g_shandalar_difficulty] - shandalar_deck_minimums[4];
+           card_index = card_index + 1)
       {
         AddCardToDeckSorted(internal_rand(5));
       }
     }
-    for (s.card_index = 0; s.card_index < 0x3c; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 0x3c; card_index = card_index + 1)
     {
-      global_library[1][s.card_index] = 0;
-      global_library[0][s.card_index] = global_library[1][s.card_index];
+      global_library[1][card_index] = 0;
+      global_library[0][card_index] = global_library[1][card_index];
     }
-    for (s.card_index = 0x3c; s.card_index < 500; s.card_index = s.card_index + 1)
+    for (card_index = 0x3c; card_index < 500; card_index = card_index + 1)
     {
-      global_library[1][s.card_index] = -1;
-      global_library[0][s.card_index] = global_library[1][s.card_index];
+      global_library[1][card_index] = -1;
+      global_library[0][card_index] = global_library[1][card_index];
     }
     TENTATIVE_reassess_all_cards(0, 0x30);
-    for (s.town_index = 0; s.town_index < 4; s.town_index = s.town_index + 1)
+    for (town_index = 0; town_index < 4; town_index = town_index + 1)
     {
-      for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 500; card_index = card_index + 1)
       {
-        if ((deck[s.card_index] & 0x4000) == 0 &&
-            (deck[s.card_index] & 0xfff) == global_ante_cards[0][s.town_index])
+        if ((deck[card_index] & 0x4000) == 0 &&
+            (deck[card_index] & 0xfff) == global_ante_cards[0][town_index])
         {
-          deck[s.card_index] |= 0x8000;
+          deck[card_index] |= 0x8000;
           break;
         }
       }
     }
-    for (s.card_index = 0; s.card_index < 7; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 7; card_index = card_index + 1)
     {
       if (g_selected_wizard_color == -1)
       {
@@ -2419,45 +2374,45 @@ int play_duel(int player, int creature_type)
           remove_iid_from_initial_library(0, global_ante_cards[1][0]);
         }
       }
-      for (s.card_index = 0; s.opening_hand_count > s.card_index; s.card_index = s.card_index + 1)
+      for (card_index = 0; opening_hand_count > card_index; card_index = card_index + 1)
       {
         add_card_to_hand(1, DrawRandomCardFromInitialLibrary(g_selected_wizard_color != -1));
       }
     }
-    evaluate_opening_hand_land_counts(&s.ante_info, &s.ante_result, &s.redraw_result);
-    run_duel_coin_flip_dialogs(&s.starting_player,
-                               &s.mulligan_accepted,
-                               s.starting_player,
-                               s.random_starting_player,
+    evaluate_opening_hand_land_counts(&ante_info, &ante_result, &redraw_result);
+    run_duel_coin_flip_dialogs(&starting_player,
+                               &mulligan_accepted,
+                               starting_player,
+                               random_starting_player,
                                global_ante_cards[1][0],
                                global_ante_cards[0][0],
-                               s.ante_info,
-                               s.ante_result,
-                               s.redraw_result,
-                               &s.shandalar_deck_minimums[5]);
-    if (s.mulligan_accepted != 0)
+                               ante_info,
+                               ante_result,
+                               redraw_result,
+                               &shandalar_deck_minimums[5]);
+    if (mulligan_accepted != 0)
     {
-      for (s.card_index = 0; s.card_index < 0x96; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 0x96; card_index = card_index + 1)
       {
-        global_card_instances[0][s.card_index].internal_card_id = -1;
-        global_card_instances[0][s.card_index].original_internal_card_id = -1;
+        global_card_instances[0][card_index].internal_card_id = -1;
+        global_card_instances[0][card_index].original_internal_card_id = -1;
       }
-      for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 500; card_index = card_index + 1)
       {
-        if (deck[s.card_index] != -1)
+        if (deck[card_index] != -1)
         {
-          deck[s.card_index] &= -32769;
+          deck[card_index] &= -32769;
         }
       }
-      for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 500; card_index = card_index + 1)
       {
-        if ((deck[s.card_index] & 0xfff) == global_ante_cards[0][0])
+        if ((deck[card_index] & 0xfff) == global_ante_cards[0][0])
         {
-          deck[s.card_index] |= 0x8000;
+          deck[card_index] |= 0x8000;
           break;
         }
       }
-      for (s.card_index = 0; s.card_index < 7; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 7; card_index = card_index + 1)
       {
         if (g_selected_wizard_color == -1)
         {
@@ -2470,12 +2425,12 @@ int play_duel(int player, int creature_type)
       }
       TENTATIVE_reassess_all_cards(0, 0x30);
     }
-    if (s.ante_result != 0 || (s.mulligan_accepted != 0 && s.redraw_result != 0))
+    if (ante_result != 0 || (mulligan_accepted != 0 && redraw_result != 0))
     {
-      for (s.card_index = 0; s.card_index < 0x96; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 0x96; card_index = card_index + 1)
       {
-        global_card_instances[1][s.card_index].internal_card_id = -1;
-        global_card_instances[1][s.card_index].original_internal_card_id = -1;
+        global_card_instances[1][card_index].internal_card_id = -1;
+        global_card_instances[1][card_index].original_internal_card_id = -1;
       }
       if (g_selected_wizard_color == -1)
       {
@@ -2485,7 +2440,7 @@ int play_duel(int player, int creature_type)
           remove_iid_from_initial_library(0, global_ante_cards[1][0]);
         }
       }
-      for (s.card_index = 0; s.opening_hand_count > s.card_index; s.card_index = s.card_index + 1)
+      for (card_index = 0; opening_hand_count > card_index; card_index = card_index + 1)
       {
         add_card_to_hand(1, DrawRandomCardFromInitialLibrary(g_selected_wizard_color != -1));
       }
@@ -2495,32 +2450,32 @@ int play_duel(int player, int creature_type)
     {
       g_opponent_initial_library_index = 0;
     }
-    for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 500; card_index = card_index + 1)
     {
       if (g_selected_wizard_color == -1)
       {
-        global_library[0][s.card_index] = draw_random_unmarked_deck_card();
+        global_library[0][card_index] = draw_random_unmarked_deck_card();
       }
       else
       {
-        global_library[0][s.card_index] = DrawRandomCardFromInitialLibrary(g_selected_wizard_color);
+        global_library[0][card_index] = DrawRandomCardFromInitialLibrary(g_selected_wizard_color);
       }
-      global_library[1][s.card_index] = DrawRandomCardFromInitialLibrary(g_opponent_initial_library_index);
+      global_library[1][card_index] = DrawRandomCardFromInitialLibrary(g_opponent_initial_library_index);
     }
     g_selected_wizard_color = -1;
     if ((g_shandalar_monster_definitions[creature_type].preduel_flags & 2) != 0 && g_monster_timer % 3 == 0)
     {
       memcpy(global_library[1], global_library[0], 1000);
-      s.card_index = g_duel_ai_mode_state;
+      card_index = g_duel_ai_mode_state;
       g_duel_ai_mode_state = 1;
       shuffle_duel_library(0, 1);
-      g_duel_ai_mode_state = s.card_index;
+      g_duel_ai_mode_state = card_index;
       memcpy(global_card_instances[1], global_card_instances[0], 0xb0f4);
-      for (s.card_index = 0; s.card_index < 0x96; s.card_index = s.card_index + 1)
+      for (card_index = 0; card_index < 0x96; card_index = card_index + 1)
       {
-        if (global_card_instances[1][s.card_index].internal_card_id != -1)
+        if (global_card_instances[1][card_index].internal_card_id != -1)
         {
-          global_card_instances[1][s.card_index].state |= 0x1000;
+          global_card_instances[1][card_index].state |= 0x1000;
         }
       }
       g_hand_count_adjustment = 0;
@@ -2529,8 +2484,8 @@ int play_duel(int player, int creature_type)
     reset_duel_globals();
     if (g_opponent_starting_card_id_1 != -1)
     {
-      s.card_index = add_card_to_hand(1, g_opponent_starting_card_id_1);
-      process_card_enters_play(1, s.card_index);
+      card_index = add_card_to_hand(1, g_opponent_starting_card_id_1);
+      process_card_enters_play(1, card_index);
       g_opponent_starting_card_id_1 = -1;
       if (g_next_duel_card_id == -1)
       {
@@ -2539,8 +2494,8 @@ int play_duel(int player, int creature_type)
     }
     if (g_opponent_starting_card_id_2 != -1)
     {
-      s.card_index = add_card_to_hand(1, g_opponent_starting_card_id_2);
-      process_card_enters_play(1, s.card_index);
+      card_index = add_card_to_hand(1, g_opponent_starting_card_id_2);
+      process_card_enters_play(1, card_index);
       g_opponent_starting_card_id_2 = -1;
       if (g_next_duel_card_id == -1)
       {
@@ -2549,8 +2504,8 @@ int play_duel(int player, int creature_type)
     }
     if (g_next_duel_card_id > 5)
     {
-      s.card_index = add_card_to_hand(0, g_next_duel_card_id);
-      process_card_enters_play(0, s.card_index);
+      card_index = add_card_to_hand(0, g_next_duel_card_id);
+      process_card_enters_play(0, card_index);
     }
 
     goto idk;
@@ -2564,7 +2519,7 @@ int play_duel(int player, int creature_type)
     g_life[1] = 0x14;
     g_life[0] = g_life[1];
     copy_opponent_name_prefix(g_duel_message_text);
-    s.opening_hand_count = 7;
+    opening_hand_count = 7;
     g_hand_count_adjustment = 0;
     g_encounter_color_match_mode = 1;
     g_current_encounter_color = -1;
@@ -2578,58 +2533,58 @@ int play_duel(int player, int creature_type)
     {
       if ((g_duel_network_flags & 2) != 0)
       {
-        s.starting_player = internal_rand(2);
+        starting_player = internal_rand(2);
       }
       else
       {
         if (g_shandalar_difficulty != 0 && internal_rand(2) != 0 && g_duel_ai_mode_state == 0)
         {
-          s.starting_player = 1;
+          starting_player = 1;
         }
         else
         {
-          s.starting_player = 0;
+          starting_player = 0;
         }
       }
-      s.random_starting_player = 1;
+      random_starting_player = 1;
     }
     else
     {
-      s.starting_player = g_duel_state_00896718;
-      s.random_starting_player = 0;
+      starting_player = g_duel_state_00896718;
+      random_starting_player = 0;
     }
     if ((g_duel_network_flags & 2) != 0)
     {
       if (g_manalink_is_host != 0)
       {
         g_network_result_packet.packet_type = 1;
-        g_network_result_packet.result = 1 - s.starting_player;
+        g_network_result_packet.result = 1 - starting_player;
         TENTATIVE_send_network_result(0, 1);
       }
       else
       {
         TENTATIVE_wait_for_network_result(1, 1);
-        s.starting_player = g_network_result_packet.result;
+        starting_player = g_network_result_packet.result;
       }
     }
     g_starting_player_was_random = 1;
     if (g_duel_use_previous_backdrop_colors == 0)
     {
-      for (s.loop_5c = 0; s.loop_5c < 0x3c; s.loop_5c = s.loop_5c + 1)
+      for (loop_5c = 0; loop_5c < 0x3c; loop_5c = loop_5c + 1)
       {
-        global_library[1][s.loop_5c] = 0;
-        global_library[0][s.loop_5c] = global_library[1][s.loop_5c];
+        global_library[1][loop_5c] = 0;
+        global_library[0][loop_5c] = global_library[1][loop_5c];
       }
-      for (s.loop_5c = 0x3c; s.loop_5c < 500; s.loop_5c = s.loop_5c + 1)
+      for (loop_5c = 0x3c; loop_5c < 500; loop_5c = loop_5c + 1)
       {
-        global_library[1][s.loop_5c] = -1;
-        global_library[0][s.loop_5c] = global_library[1][s.loop_5c];
+        global_library[1][loop_5c] = -1;
+        global_library[0][loop_5c] = global_library[1][loop_5c];
       }
       TENTATIVE_reassess_all_cards(0, 0x30);
-      for (s.loop_5c = 0; s.loop_5c < 0x10; s.loop_5c = s.loop_5c + 1)
+      for (loop_5c = 0; loop_5c < 0x10; loop_5c = loop_5c + 1)
       {
-        global_ante_cards[1][s.loop_5c] = -1;
-        global_ante_cards[0][s.loop_5c] = global_ante_cards[1][s.loop_5c];
+        global_ante_cards[1][loop_5c] = -1;
+        global_ante_cards[0][loop_5c] = global_ante_cards[1][loop_5c];
       }
       if (g_duel_state_00789104 != 0)
       {
@@ -2650,132 +2605,132 @@ int play_duel(int player, int creature_type)
       }
       if ((g_duel_network_flags & 2) != 0)
       {
-        for (s.loop_5c = 0; s.loop_5c < 7; s.loop_5c = s.loop_5c + 1)
+        for (loop_5c = 0; loop_5c < 7; loop_5c = loop_5c + 1)
         {
-          s.packet_card = DrawRandomCardFromInitialLibrary(g_selected_wizard_color);
-          add_card_to_hand(0, s.packet_card);
-          AddCardToCLPacket(s.packet_card);
+          packet_card = DrawRandomCardFromInitialLibrary(g_selected_wizard_color);
+          add_card_to_hand(0, packet_card);
+          AddCardToCLPacket(packet_card);
         }
         AddCardToCLPacket(-1);
-        TENTATIVE_send_network_result(s.player_index, 3);
+        TENTATIVE_send_network_result(player_index, 3);
         TENTATIVE_wait_for_network_result(1, 3);
-        s.packet_card = 0;
-        s.loop_5c = s.packet_card;
-        while (s.packet_card != -1)
+        packet_card = 0;
+        loop_5c = packet_card;
+        while (packet_card != -1)
         {
-          s.unused_68 = s.loop_5c;
-          s.loop_5c++;
-          s.packet_card = GetCardFromCLPacket(s.unused_68);
-          if (s.packet_card != -1)
+          unused_68 = loop_5c;
+          loop_5c++;
+          packet_card = GetCardFromCLPacket(unused_68);
+          if (packet_card != -1)
           {
-            add_card_to_hand(1, s.packet_card);
+            add_card_to_hand(1, packet_card);
           }
         }
       }
       else
       {
-        for (s.loop_5c = 0; s.loop_5c < 7; s.loop_5c = s.loop_5c + 1)
+        for (loop_5c = 0; loop_5c < 7; loop_5c = loop_5c + 1)
         {
           add_card_to_hand(0, DrawRandomCardFromInitialLibrary(g_selected_wizard_color));
           add_card_to_hand(1, DrawRandomCardFromInitialLibrary(g_opponent_initial_library_index));
         }
       }
-      evaluate_opening_hand_land_counts(&s.ante_info, &s.ante_result, &s.redraw_result);
-      for (s.loop_player = 0; s.loop_player <= 1; s.loop_player++)
+      evaluate_opening_hand_land_counts(&ante_info, &ante_result, &redraw_result);
+      for (loop_player = 0; loop_player <= 1; loop_player++)
       {
-        if (s.loop_player == 0)
+        if (loop_player == 0)
         {
-          s.wizard_color = g_selected_wizard_color;
+          wizard_color = g_selected_wizard_color;
         }
         else
         {
-          s.wizard_color = g_opponent_initial_library_index;
+          wizard_color = g_opponent_initial_library_index;
         }
-        s.library_count = 0;
-        for (s.loop_5c = 0; s.loop_5c < 200; s.loop_5c = s.loop_5c + 1)
+        library_count = 0;
+        for (loop_5c = 0; loop_5c < 200; loop_5c = loop_5c + 1)
         {
-          if (g_initial_library[s.wizard_color][s.loop_5c].csvid != -1)
+          if (g_initial_library[wizard_color][loop_5c].csvid != -1)
           {
-            for (s.quantity = 0; s.quantity < g_initial_library[s.wizard_color][s.loop_5c].numcards;
-                 s.quantity = s.quantity + 1)
+            for (quantity = 0; quantity < g_initial_library[wizard_color][loop_5c].numcards;
+                 quantity = quantity + 1)
             {
-              global_library[s.loop_player][s.library_count] = 0;
-              s.library_count++;
+              global_library[loop_player][library_count] = 0;
+              library_count++;
             }
           }
         }
-        for (s.loop_5c = s.library_count; s.loop_5c < 500; s.loop_5c = s.loop_5c + 1)
+        for (loop_5c = library_count; loop_5c < 500; loop_5c = loop_5c + 1)
         {
-          global_library[s.loop_player][s.loop_5c] = -1;
+          global_library[loop_player][loop_5c] = -1;
         }
       }
-      run_duel_coin_flip_dialogs(&s.starting_player,
-                                 &s.mulligan_accepted,
-                                 s.starting_player,
-                                 s.random_starting_player,
+      run_duel_coin_flip_dialogs(&starting_player,
+                                 &mulligan_accepted,
+                                 starting_player,
+                                 random_starting_player,
                                  global_ante_cards[1][0],
                                  global_ante_cards[0][0],
-                                 s.ante_info,
-                                 s.ante_result,
-                                 s.redraw_result,
-                                 &s.shandalar_deck_minimums[5]);
-      if (s.mulligan_accepted != 0)
+                                 ante_info,
+                                 ante_result,
+                                 redraw_result,
+                                 &shandalar_deck_minimums[5]);
+      if (mulligan_accepted != 0)
       {
         perform_player_mulligan(0, g_selected_wizard_color);
         TENTATIVE_reassess_all_cards(0, 0x30);
       }
-      if (((g_duel_network_flags & 2) == 0 && (s.ante_result != 0 || (s.mulligan_accepted != 0 && s.redraw_result != 0))) ||
-          ((g_duel_network_flags & 2) != 0 && s.shandalar_deck_minimums[5] != 0))
+      if (((g_duel_network_flags & 2) == 0 && (ante_result != 0 || (mulligan_accepted != 0 && redraw_result != 0))) ||
+          ((g_duel_network_flags & 2) != 0 && shandalar_deck_minimums[5] != 0))
       {
         perform_player_mulligan(1, g_opponent_initial_library_index);
         TENTATIVE_reassess_all_cards(0, 0x30);
       }
-      for (s.loop_player = 0; s.loop_player <= 1; s.loop_player++)
+      for (loop_player = 0; loop_player <= 1; loop_player++)
       {
-        if ((g_duel_network_flags & 2) && s.loop_player == 1)
+        if ((g_duel_network_flags & 2) && loop_player == 1)
         {
-          for (s.loop_5c = 0; s.loop_5c < 500; s.loop_5c = s.loop_5c + 1)
+          for (loop_5c = 0; loop_5c < 500; loop_5c = loop_5c + 1)
           {
-            global_library[s.loop_player][s.loop_5c] = -1;
+            global_library[loop_player][loop_5c] = -1;
           }
 
           continue;
         }
 
-        if (s.loop_player == 0)
+        if (loop_player == 0)
         {
-          s.wizard_color = g_selected_wizard_color;
+          wizard_color = g_selected_wizard_color;
         }
         else
         {
-          s.wizard_color = g_opponent_initial_library_index;
+          wizard_color = g_opponent_initial_library_index;
         }
-        s.library_count = 0;
-        for (s.loop_5c = 0; s.loop_5c < 200; s.loop_5c = s.loop_5c + 1)
+        library_count = 0;
+        for (loop_5c = 0; loop_5c < 200; loop_5c = loop_5c + 1)
         {
-          if (g_initial_library[s.wizard_color][s.loop_5c].csvid != -1)
+          if (g_initial_library[wizard_color][loop_5c].csvid != -1)
           {
-            for (s.quantity = 0; s.quantity < g_initial_library[s.wizard_color][s.loop_5c].numcards;
-                 s.quantity = s.quantity + 1)
+            for (quantity = 0; quantity < g_initial_library[wizard_color][loop_5c].numcards;
+                 quantity = quantity + 1)
             {
-              global_library[s.loop_player][s.library_count] =
-                  CardTypeFromID(g_initial_library[s.wizard_color][s.loop_5c].csvid);
-              s.library_count++;
+              global_library[loop_player][library_count] =
+                  CardTypeFromID(g_initial_library[wizard_color][loop_5c].csvid);
+              library_count++;
             }
-            g_initial_library[s.wizard_color][s.loop_5c].numcards = 0;
+            g_initial_library[wizard_color][loop_5c].numcards = 0;
           }
         }
-        for (s.loop_5c = s.library_count; s.loop_5c < 500; s.loop_5c = s.loop_5c + 1)
+        for (loop_5c = library_count; loop_5c < 500; loop_5c = loop_5c + 1)
         {
-          global_library[s.loop_player][s.loop_5c] = -1;
+          global_library[loop_player][loop_5c] = -1;
         }
       }
       g_selected_wizard_color = -1;
-      s.loop_5c = g_duel_ai_mode_state;
+      loop_5c = g_duel_ai_mode_state;
       g_duel_ai_mode_state = 1;
       shuffle_duel_library(0, 0);
       shuffle_duel_library(1, 1);
-      g_duel_ai_mode_state = s.loop_5c;
+      g_duel_ai_mode_state = loop_5c;
     }
   }
 
@@ -2808,30 +2763,30 @@ idk:
       load_duel_run_mode_3_save(g_duel_prompt_text_pointer);
     }
     TENTATIVE_reassess_all_cards(0, 0xff);
-    s.next_player = g_current_player;
+    next_player = g_current_player;
   }
   else if (g_duel_ai_mode_state == -10)
   {
     load_gametype0(g_duel_prompt_text_pointer);
     TENTATIVE_reassess_all_cards(0, 0xff);
-    s.next_player = g_current_player;
+    next_player = g_current_player;
   }
   else if (g_duel_ai_mode_state == -1)
   {
     g_first_turn_draw_pending = 0;
     TENTATIVE_reassess_all_cards(0, 0xff);
-    s.next_player = 1;
+    next_player = 1;
   }
   else if (g_duel_ai_mode_state == -2)
   {
     g_first_turn_draw_pending = 0;
     TENTATIVE_reassess_all_cards(0, 0xff);
-    s.next_player = 0;
+    next_player = 0;
   }
   else
   {
     g_first_turn_draw_pending = 1;
-    s.next_player = s.starting_player;
+    next_player = starting_player;
   }
 
 #ifndef SHANDALAR
@@ -2846,7 +2801,7 @@ idk:
       if ((g_duel_state_0093a848 & 1U) != 0)
       {
         g_duel_state_0093a848 = 0;
-        if (s.next_player == 1)
+        if (next_player == 1)
         {
           g_duel_extra_turn_player = -1;
         }
@@ -2856,7 +2811,7 @@ idk:
       else
       {
         g_duel_state_0093a848 = 0;
-        if (s.next_player == 0)
+        if (next_player == 0)
         {
           g_duel_extra_turn_player = -1;
         }
@@ -2866,8 +2821,8 @@ idk:
     }
     else
     {
-      run_duel_turn(s.next_player);
-      s.next_player = 1 - s.next_player;
+      run_duel_turn(next_player);
+      next_player = 1 - next_player;
     }
   }
 #ifndef SHANDALAR
@@ -2878,11 +2833,11 @@ idk:
 
   if (g_one_deck_mode == 0)
   {
-    for (s.card_index = 0; s.card_index < 500; s.card_index = s.card_index + 1)
+    for (card_index = 0; card_index < 500; card_index = card_index + 1)
     {
-      if (deck[s.card_index] != -1)
+      if (deck[card_index] != -1)
       {
-        deck[s.card_index] &= -32769;
+        deck[card_index] &= -32769;
       }
     }
   }
@@ -2895,9 +2850,9 @@ idk:
   g_opponent_starting_card_id_1 = g_next_duel_card_id;
   g_opponent_starting_card_id_2 = g_opponent_starting_card_id_1;
   g_duel_ai_mode_state = 0;
-  for (s.card_index = 0; s.card_index < 4; s.card_index = s.card_index + 1)
+  for (card_index = 0; card_index < 4; card_index = card_index + 1)
   {
-    g_ai_combat_value_weights[s.card_index] = 8;
+    g_ai_combat_value_weights[card_index] = 8;
   }
   g_duel_active = 0;
   g_duel_state_00742fc0 = 1;

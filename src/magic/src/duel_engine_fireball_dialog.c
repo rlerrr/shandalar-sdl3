@@ -95,16 +95,7 @@ COLORREF g_fireball_dialog_button_focus_text_color;
 int choose_fireball_options(int player, int internal_card_id, int maximum_mana, int maximum_targets,
                             int *mana_to_pay, int *number_of_targets, int *damage_per_target)
 {
-  struct
-  {
-    int maximum_mana;
-    int maximum_targets;
-    int mana_to_pay;
-    int number_of_targets;
-    int damage_per_target;
-    int card_id;
-    int dialog_result;
-  } s;
+  FireballOptionsDialogContext context;
 
   if (player == g_other_player && (g_duel_network_flags & 2) == 0)
   {
@@ -116,50 +107,50 @@ int choose_fireball_options(int player, int internal_card_id, int maximum_mana, 
     return 0;
   }
 
-  s.maximum_mana = maximum_mana;
-  s.maximum_targets = maximum_targets;
-  s.mana_to_pay = *mana_to_pay;
-  s.number_of_targets = *number_of_targets;
-  s.card_id = CardIDFromType(internal_card_id);
+  context.maximum_mana = maximum_mana;
+  context.maximum_targets = maximum_targets;
+  context.mana_to_pay = *mana_to_pay;
+  context.number_of_targets = *number_of_targets;
+  context.card_id = CardIDFromType(internal_card_id);
 
   if ((g_duel_network_flags & 2) != 0 && player == g_other_player)
   {
     TENTATIVE_wait_for_network_result(player, 0x15);
-    s.dialog_result = g_fireball_options_network_packet.dialog_result;
-    s.mana_to_pay = g_fireball_options_network_packet.mana_to_pay;
-    s.number_of_targets = g_fireball_options_network_packet.number_of_targets;
-    s.damage_per_target = g_fireball_options_network_packet.damage_per_target;
+    context.dialog_result = g_fireball_options_network_packet.dialog_result;
+    context.mana_to_pay = g_fireball_options_network_packet.mana_to_pay;
+    context.number_of_targets = g_fireball_options_network_packet.number_of_targets;
+    context.damage_per_target = g_fireball_options_network_packet.damage_per_target;
   }
   else
   {
-    s.dialog_result = DialogBoxParamA(g_app_instance, (LPCSTR)0xef, g_duel_window_hwnd,
-                                      dlgproc_fireball_options, (LPARAM)&s);
+    context.dialog_result = DialogBoxParamA(g_app_instance, (LPCSTR)0xef, g_duel_window_hwnd,
+                                            dlgproc_fireball_options, (LPARAM)&context);
     if ((g_duel_network_flags & 2) != 0)
     {
-      g_fireball_options_network_packet.dialog_result = s.dialog_result;
-      g_fireball_options_network_packet.mana_to_pay = s.mana_to_pay;
-      g_fireball_options_network_packet.number_of_targets = s.number_of_targets;
-      g_fireball_options_network_packet.damage_per_target = s.damage_per_target;
+      g_fireball_options_network_packet.dialog_result = context.dialog_result;
+      g_fireball_options_network_packet.mana_to_pay = context.mana_to_pay;
+      g_fireball_options_network_packet.number_of_targets = context.number_of_targets;
+      g_fireball_options_network_packet.damage_per_target = context.damage_per_target;
       g_fireball_options_network_packet.packet_type = 0x15;
       TENTATIVE_send_network_result(player, 0x15);
     }
   }
 
-  if (s.dialog_result == -1)
+  if (context.dialog_result == -1)
   {
     return 0;
   }
   else
   {
-    if (s.dialog_result == -2)
+    if (context.dialog_result == -2)
     {
       return 0;
     }
     else
     {
-      *mana_to_pay = s.mana_to_pay;
-      *number_of_targets = s.number_of_targets;
-      *damage_per_target = s.damage_per_target;
+      *mana_to_pay = context.mana_to_pay;
+      *number_of_targets = context.number_of_targets;
+      *damage_per_target = context.damage_per_target;
       return 1;
     }
   }
@@ -169,37 +160,34 @@ int choose_fireball_options(int player, int internal_card_id, int maximum_mana, 
 // FUNCTION: SHANDALAR 0x0054001c
 INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    char pad_168[8];
-    PAINTSTRUCT paint;
-    RECT card_rect;
-    unsigned int mouse_x;
-    unsigned int mouse_y;
-    RECT preview_rect;
-    HDC erase_dc;
-    RECT erase_rect;
-    COLORREF button_text_color;
-    DRAWITEMSTRUCT *draw_item;
-    HWND ctl_hwnd;
-    int ctl_id;
-    HDC ctl_hdc;
-    int pad_d0;
-    HWND focus_lost;
-    HWND focus_gained;
-    HDC notify_dc;
-    int valid;
-    unsigned int command_id;
-    int target_count;
-    unsigned int spin_result;
-    unsigned int notify_code;
-    unsigned int spin_error;
-    int mana_value;
-    HWND button_hwnd;
-    char formatted_text[100];
-    unsigned int damage;
-    char format_text[52];
-  } s;
+  char pad_168[8];
+  PAINTSTRUCT paint;
+  RECT card_rect;
+  unsigned int mouse_x;
+  unsigned int mouse_y;
+  RECT preview_rect;
+  HDC erase_dc;
+  RECT erase_rect;
+  COLORREF button_text_color;
+  DRAWITEMSTRUCT *draw_item;
+  HWND ctl_hwnd;
+  int ctl_id;
+  HDC ctl_hdc;
+  int pad_d0;
+  HWND focus_lost;
+  HWND focus_gained;
+  HDC notify_dc;
+  int valid;
+  unsigned int command_id;
+  int target_count;
+  unsigned int spin_result;
+  unsigned int notify_code;
+  unsigned int spin_error;
+  int mana_value;
+  HWND button_hwnd;
+  char formatted_text[100];
+  unsigned int damage;
+  char format_text[52];
 
   switch (msg)
   {
@@ -224,12 +212,12 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     SetDlgItemTextA(hwnd, 0x4dc, g_text_lines[6]);
     SetDlgItemTextA(hwnd, IDOK, gs_done_008b40e0);
     SetDlgItemTextA(hwnd, IDCANCEL, gs_cancel_008a8c20);
-    GetDlgItemTextA(hwnd, FIREBALL_MAX_MANA_LABEL, s.format_text, 0x32);
-    sprintf(s.formatted_text, s.format_text, g_fireball_dialog_context->maximum_mana);
-    SetDlgItemTextA(hwnd, FIREBALL_MAX_MANA_LABEL, s.formatted_text);
-    GetDlgItemTextA(hwnd, FIREBALL_MAX_TARGETS_LABEL, s.format_text, 0x32);
-    sprintf(s.formatted_text, s.format_text, g_fireball_dialog_context->maximum_targets);
-    SetDlgItemTextA(hwnd, FIREBALL_MAX_TARGETS_LABEL, s.formatted_text);
+    GetDlgItemTextA(hwnd, FIREBALL_MAX_MANA_LABEL, format_text, 0x32);
+    sprintf(formatted_text, format_text, g_fireball_dialog_context->maximum_mana);
+    SetDlgItemTextA(hwnd, FIREBALL_MAX_MANA_LABEL, formatted_text);
+    GetDlgItemTextA(hwnd, FIREBALL_MAX_TARGETS_LABEL, format_text, 0x32);
+    sprintf(formatted_text, format_text, g_fireball_dialog_context->maximum_targets);
+    SetDlgItemTextA(hwnd, FIREBALL_MAX_TARGETS_LABEL, formatted_text);
     SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_SETRANGE, 0,
                         (unsigned int)(unsigned short)g_fireball_dialog_context->maximum_mana);
     SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_SETRANGE, 0,
@@ -238,35 +226,35 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                         (unsigned int)(unsigned short)g_fireball_dialog_context->mana_to_pay);
     SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_SETPOS, 0,
                         (unsigned int)(unsigned short)g_fireball_dialog_context->number_of_targets);
-    s.damage = calculate_fireball_damage_per_target(g_fireball_dialog_context->mana_to_pay,
-                                                    g_fireball_dialog_context->number_of_targets);
-    SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET, s.damage, 1);
+    damage = calculate_fireball_damage_per_target(g_fireball_dialog_context->mana_to_pay,
+                                                  g_fireball_dialog_context->number_of_targets);
+    SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET, damage, 1);
     SetFocus(GetDlgItem(hwnd, IDOK));
     SendMessageA(hwnd, 0x401, IDOK, 0);
-    s.button_hwnd = GetDlgItem(hwnd, IDOK);
-    SetWindowLongA(s.button_hwnd, GWL_STYLE,
-                   GetWindowLongA(s.button_hwnd, GWL_STYLE) | 0x800000);
+    button_hwnd = GetDlgItem(hwnd, IDOK);
+    SetWindowLongA(button_hwnd, GWL_STYLE,
+                   GetWindowLongA(button_hwnd, GWL_STYLE) | 0x800000);
     change_buttonclass_wndproc(hwnd);
     return 0;
 
   case WM_COMMAND:
-    s.command_id = LOWORD(wparam);
-    s.notify_code = HIWORD(wparam);
-    if (s.command_id == FIREBALL_MANA_NOTIFY)
+    command_id = LOWORD(wparam);
+    notify_code = HIWORD(wparam);
+    if (command_id == FIREBALL_MANA_NOTIFY)
     {
-      if (s.notify_code == 0x200)
+      if (notify_code == 0x200)
       {
-        s.spin_result = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-        s.spin_error = HIWORD(s.spin_result) != 0;
-        if (s.spin_error == 0)
+        spin_result = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
+        spin_error = HIWORD(spin_result) != 0;
+        if (spin_error == 0)
         {
-          s.mana_value = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-          s.target_count = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
+          mana_value = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
+          target_count = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
           SetDlgItemInt(hwnd, FIREBALL_MANA_TO_PAY,
-                        s.mana_value - (s.target_count - 1), 1);
-          SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, s.target_count - 1, 1);
+                        mana_value - (target_count - 1), 1);
+          SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, target_count - 1, 1);
           SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET,
-                        calculate_fireball_damage_per_target(s.mana_value, s.target_count), 1);
+                        calculate_fireball_damage_per_target(mana_value, target_count), 1);
         }
         else
         {
@@ -275,35 +263,35 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         }
       }
     }
-    else if (s.command_id == IDOK)
+    else if (command_id == IDOK)
     {
-      s.valid = 1;
-      s.spin_result = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-      s.spin_error = HIWORD(s.spin_result) != 0;
-      if (s.spin_error != 0)
+      valid = 1;
+      spin_result = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
+      spin_error = HIWORD(spin_result) != 0;
+      if (spin_error != 0)
       {
         SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_SETPOS, 0,
                             (unsigned int)(unsigned short)g_fireball_dialog_context->mana_to_pay);
-        s.valid = 0;
+        valid = 0;
       }
-      s.spin_result = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
-      s.spin_error = HIWORD(s.spin_result) != 0;
-      if (s.spin_error != 0)
+      spin_result = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
+      spin_error = HIWORD(spin_result) != 0;
+      if (spin_error != 0)
       {
         SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_SETPOS, 0,
                             (unsigned int)(unsigned short)g_fireball_dialog_context->number_of_targets);
-        s.valid = 0;
+        valid = 0;
       }
-      if (s.valid != 0)
+      if (valid != 0)
       {
         g_fireball_dialog_context->mana_to_pay =
             SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-        s.mana_value = g_fireball_dialog_context->mana_to_pay;
+        mana_value = g_fireball_dialog_context->mana_to_pay;
         g_fireball_dialog_context->number_of_targets =
             SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
-        s.target_count = g_fireball_dialog_context->number_of_targets;
+        target_count = g_fireball_dialog_context->number_of_targets;
         g_fireball_dialog_context->damage_per_target =
-            calculate_fireball_damage_per_target(s.mana_value, s.target_count);
+            calculate_fireball_damage_per_target(mana_value, target_count);
         cleanup_fireball_dialog_resources(g_fireball_dialog_background,
                                           g_fireball_dialog_button_brush,
                                           g_fireball_dialog_button_pen1,
@@ -311,7 +299,7 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         EndDialog(hwnd, 1);
       }
     }
-    else if (s.command_id == IDCANCEL)
+    else if (command_id == IDCANCEL)
     {
       cleanup_fireball_dialog_resources(g_fireball_dialog_background,
                                         g_fireball_dialog_button_brush,
@@ -319,19 +307,19 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                                         g_fireball_dialog_button_pen2);
       EndDialog(hwnd, -2);
     }
-    else if ((s.command_id == FIREBALL_TARGETS_NOTIFY) && (s.notify_code == 0x200))
+    else if ((command_id == FIREBALL_TARGETS_NOTIFY) && (notify_code == 0x200))
     {
-      s.spin_result = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
-      s.spin_error = HIWORD(s.spin_result) != 0;
-      if (s.spin_error == 0)
+      spin_result = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
+      spin_error = HIWORD(spin_result) != 0;
+      if (spin_error == 0)
       {
-        s.mana_value = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-        s.target_count = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
+        mana_value = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
+        target_count = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
         SetDlgItemInt(hwnd, FIREBALL_MANA_TO_PAY,
-                      s.mana_value - (s.target_count - 1), 1);
-        SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, s.target_count - 1, 1);
+                      mana_value - (target_count - 1), 1);
+        SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, target_count - 1, 1);
         SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET,
-                      calculate_fireball_damage_per_target(s.mana_value, s.target_count), 1);
+                      calculate_fireball_damage_per_target(mana_value, target_count), 1);
       }
       else
       {
@@ -342,84 +330,84 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     return 1;
 
   case WM_NOTIFY:
-    s.notify_dc = (HDC)wparam;
+    notify_dc = (HDC)wparam;
     PostMessageA(hwnd, WM_COMMAND, 0x020004d0,
                  (LPARAM)GetDlgItem(hwnd, FIREBALL_MANA_NOTIFY));
     return 0;
 
   case WM_DRAWITEM:
-    s.draw_item = (DRAWITEMSTRUCT *)lparam;
-    if (GetFocus() == s.draw_item->hwndItem)
-      s.button_text_color = g_fireball_dialog_button_focus_text_color;
+    draw_item = (DRAWITEMSTRUCT *)lparam;
+    if (GetFocus() == draw_item->hwndItem)
+      button_text_color = g_fireball_dialog_button_focus_text_color;
     else
-      s.button_text_color = g_fireball_dialog_button_unfocus_text_color;
-    draw_owner_draw_button_centered(s.draw_item,
+      button_text_color = g_fireball_dialog_button_unfocus_text_color;
+    draw_owner_draw_button_centered(draw_item,
                                     g_fireball_dialog_button_brush,
                                     g_fireball_dialog_button_pen1,
                                     g_fireball_dialog_button_pen2,
-                                    s.button_text_color,
+                                    button_text_color,
                                     0);
     return 1;
 
   case WM_CTLCOLORSTATIC:
-    s.ctl_hdc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.ctl_hdc);
-    s.ctl_hwnd = (HWND)lparam;
-    s.ctl_id = GetDlgCtrlID(s.ctl_hwnd);
-    if (GetFocus() == s.ctl_hwnd)
-      SetTextColor(s.ctl_hdc, g_fireball_dialog_button_focus_text_color);
+    ctl_hdc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(ctl_hdc);
+    ctl_hwnd = (HWND)lparam;
+    ctl_id = GetDlgCtrlID(ctl_hwnd);
+    if (GetFocus() == ctl_hwnd)
+      SetTextColor(ctl_hdc, g_fireball_dialog_button_focus_text_color);
     else
-      SetTextColor(s.ctl_hdc, g_fireball_dialog_label_text_color);
-    if ((s.ctl_id != FIREBALL_DAMAGE_PER_TARGET) &&
-        (s.ctl_id != FIREBALL_MANA_TO_PAY) &&
-        (s.ctl_id != FIREBALL_EXTRA_TARGET_COST))
+      SetTextColor(ctl_hdc, g_fireball_dialog_label_text_color);
+    if ((ctl_id != FIREBALL_DAMAGE_PER_TARGET) &&
+        (ctl_id != FIREBALL_MANA_TO_PAY) &&
+        (ctl_id != FIREBALL_EXTRA_TARGET_COST))
     {
-      SetBkMode(s.ctl_hdc, TRANSPARENT);
+      SetBkMode(ctl_hdc, TRANSPARENT);
       return (BOOL)GetStockObject(NULL_BRUSH);
     }
-    SetBkMode(s.ctl_hdc, TRANSPARENT);
+    SetBkMode(ctl_hdc, TRANSPARENT);
     return (BOOL)g_fireball_dialog_button_brush;
 
   case WM_PAINT:
-    s.erase_dc = BeginPaint(hwnd, &s.paint);
-    if (s.erase_dc != (HDC)0)
+    erase_dc = BeginPaint(hwnd, &paint);
+    if (erase_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.erase_dc);
+      ApplyCardArtPaletteToDc(erase_dc);
       if (g_fireball_dialog_card_id != -1)
       {
-        GetWindowRect(GetDlgItem(hwnd, FIREBALL_CARD_DISPLAY), &s.card_rect);
-        MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.card_rect, 2);
-        DrawFullCard(s.erase_dc, &s.card_rect,
+        GetWindowRect(GetDlgItem(hwnd, FIREBALL_CARD_DISPLAY), &card_rect);
+        MapWindowPoints((HWND)0, hwnd, (LPPOINT)&card_rect, 2);
+        DrawFullCard(erase_dc, &card_rect,
                      global_raw_cards_storage + g_fireball_dialog_card_id,
                      0, 0x11, 0, gs_illus_00789130);
       }
     }
-    EndPaint(hwnd, &s.paint);
+    EndPaint(hwnd, &paint);
     return 0;
 
   case WM_ERASEBKGND:
-    s.erase_dc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.erase_dc);
-    GetClientRect(hwnd, &s.erase_rect);
+    erase_dc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(erase_dc);
+    GetClientRect(hwnd, &erase_rect);
     if (g_fireball_dialog_background == (HBITMAP)0)
-      FillRect(s.erase_dc, &s.erase_rect, (HBRUSH)GetStockObject(3));
+      FillRect(erase_dc, &erase_rect, (HBRUSH)GetStockObject(3));
     else
-      DrawBitmapToRect(s.erase_dc, &s.erase_rect, g_fireball_dialog_background);
+      DrawBitmapToRect(erase_dc, &erase_rect, g_fireball_dialog_background);
     return 1;
 
   case WM_MOUSEMOVE:
   case WM_RBUTTONDOWN:
-    s.mouse_x = LOWORD(lparam);
-    s.mouse_y = HIWORD(lparam);
+    mouse_x = LOWORD(lparam);
+    mouse_y = HIWORD(lparam);
     if (((msg == WM_MOUSEMOVE) && (g_duel_interface_options.layout != 2)) ||
         ((msg == WM_RBUTTONDOWN) && (g_duel_interface_options.layout == 2)))
     {
-      GetWindowRect(GetDlgItem(hwnd, FIREBALL_CARD_DISPLAY), &s.preview_rect);
-      MapWindowPoints((HWND)0, hwnd, (LPPOINT)&s.preview_rect, 2);
-      s.erase_rect.left = s.mouse_x;
-      s.erase_rect.top = s.mouse_y;
+      GetWindowRect(GetDlgItem(hwnd, FIREBALL_CARD_DISPLAY), &preview_rect);
+      MapWindowPoints((HWND)0, hwnd, (LPPOINT)&preview_rect, 2);
+      erase_rect.left = mouse_x;
+      erase_rect.top = mouse_y;
       if ((g_fireball_dialog_card_id != -1) &&
-          PtInRect(&s.preview_rect, *(POINT *)&s.erase_rect))
+          PtInRect(&preview_rect, *(POINT *)&erase_rect))
       {
         SendMessageA(g_duel_card_preview_window_hwnd, 0x401,
                      g_fireball_dialog_card_id, 0);
@@ -437,16 +425,16 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
 
   case WM_DUEL_BUTTON_FOCUS:
-    s.focus_gained = (HWND)wparam;
-    s.focus_lost = (HWND)lparam;
-    if (GetDlgItem(hwnd, IDCANCEL) == s.focus_gained)
+    focus_gained = (HWND)wparam;
+    focus_lost = (HWND)lparam;
+    if (GetDlgItem(hwnd, IDCANCEL) == focus_gained)
       SendMessageA(hwnd, 0x401, IDCANCEL, 0);
     else
       SendMessageA(hwnd, 0x401, IDOK, 0);
-    if (s.focus_gained != (HWND)0)
-      InvalidateRect(s.focus_gained, (RECT *)0, 1);
-    if (s.focus_lost != (HWND)0)
-      InvalidateRect(s.focus_lost, (RECT *)0, 1);
+    if (focus_gained != (HWND)0)
+      InvalidateRect(focus_gained, (RECT *)0, 1);
+    if (focus_lost != (HWND)0)
+      InvalidateRect(focus_lost, (RECT *)0, 1);
     return 0;
 
   default:
@@ -461,13 +449,10 @@ void setup_fireball_dialog_resources(HBITMAP *background, COLORREF *label_text_c
                                      COLORREF *button_unfocus_text_color,
                                      COLORREF *button_focus_text_color)
 {
-  struct
-  {
-    char filename[264];
-  } s;
+  char filename[264];
 
-  sprintf(s.filename, "%s\\WINBK_Fireball.pic", global_duelart_path);
-  *background = load_pic(s.filename);
+  sprintf(filename, "%s\\WINBK_Fireball.pic", global_duelart_path);
+  *background = load_pic(filename);
   *label_text_color = 0x10000b6;
   *button_brush = CreateSolidBrush(0x10000e5);
   *button_pen1 = CreatePen(PS_SOLID, 0, 0x1000025);

@@ -186,27 +186,24 @@ int get_displayed_lich_state(int player)
 // FUNCTION: SHANDALAR 0x004ccc10
 int register_MAGICGAME_LifeClass(LPCSTR class_name)
 {
-  struct
-  {
-    char path[264];
-    int result;
-    WNDCLASSA wndclass;
-  } s;
+  char path[264];
+  int result;
+  WNDCLASSA wndclass;
 
-  s.result = 1;
-  s.wndclass.style = 0xb;
-  s.wndclass.lpfnWndProc = wndproc_MAGICGAME_LifeClass;
-  s.wndclass.cbClsExtra = 0;
-  s.wndclass.cbWndExtra = g_magicgame_life_window_extra_bytes;
-  s.wndclass.hInstance = g_app_instance;
-  s.wndclass.hIcon = (HICON)0;
-  s.wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7f00);
-  s.wndclass.hbrBackground = (HBRUSH)0x6;
-  s.wndclass.lpszMenuName = (LPCSTR)0;
-  s.wndclass.lpszClassName = class_name;
-  if (RegisterClassA(&s.wndclass) == 0)
+  result = 1;
+  wndclass.style = 0xb;
+  wndclass.lpfnWndProc = wndproc_MAGICGAME_LifeClass;
+  wndclass.cbClsExtra = 0;
+  wndclass.cbWndExtra = g_magicgame_life_window_extra_bytes;
+  wndclass.hInstance = g_app_instance;
+  wndclass.hIcon = (HICON)0;
+  wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7f00);
+  wndclass.hbrBackground = (HBRUSH)0x6;
+  wndclass.lpszMenuName = (LPCSTR)0;
+  wndclass.lpszClassName = class_name;
+  if (RegisterClassA(&wndclass) == 0)
   {
-    s.result = 0;
+    result = 0;
   }
 
   g_life_popup_menu = CreatePopupMenu();
@@ -216,15 +213,15 @@ int register_MAGICGAME_LifeClass(LPCSTR class_name)
   strcpy(g_life_menu_set_life_text, g_text_lines[2]);
   strcpy(g_life_menu_help_text, g_text_lines[3]);
 
-  sprintf(s.path, "%s\\Poison.pic", global_cardart_path);
-  g_life_poison_bitmap = load_pic(s.path);
-  sprintf(s.path, "%s\\LIFE_liched.pic", global_duelart_path);
-  g_life_lich_bitmap = load_pic(s.path);
+  sprintf(path, "%s\\Poison.pic", global_cardart_path);
+  g_life_poison_bitmap = load_pic(path);
+  sprintf(path, "%s\\LIFE_liched.pic", global_duelart_path);
+  g_life_lich_bitmap = load_pic(path);
 
   g_life_font = CreateFontIndirectA(LoadFontFromIni("Life", 0));
   g_life_text_color = 0x100004a;
   g_life_shadow_color = 0x10000c9;
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004e1f8e
@@ -260,165 +257,162 @@ void destroy_MAGICGAME_LifeClass(LPCSTR class_name)
 // FUNCTION: SHANDALAR 0x004cce39
 LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int menu_item_count;
-    char directive_text[100];
-    unsigned int menu_player;
-    char opponent_name[100];
-    POINT menu_point;
-    RECT popup_rect;
-    char poison_path[264];
-    char lich_path[264];
-    HDC dc;
-    int poison_height;
-    PAINTSTRUCT paint;
-    int poison_width;
-    int saved_dc;
-    int poison_y;
-    int poison_index;
-    int poison_total;
-    int poison_x;
-    int life_total;
-    char life_text[12];
-    RECT poison_rect;
-    int lich_state;
-    RECT client_rect;
-    MSG peek_msg;
-    unsigned int click_player;
-    char help_path[264];
-    DWORD help_context;
-    unsigned int command_player;
-    int updated_poison_total;
-    int updated_life_total;
-    int updated_lich_state;
-    char cuecard_text[100];
-    char cuecard_opponent_name[100];
-    int cached_poison_total;
-    HBITMAP background_bitmap;
-    int cached_life_total;
-    int cached_lich_state;
-  } s;
+  int menu_item_count;
+  char directive_text[100];
+  unsigned int menu_player;
+  char opponent_name[100];
+  POINT menu_point;
+  RECT popup_rect;
+  char poison_path[264];
+  char lich_path[264];
+  HDC dc;
+  int poison_height;
+  PAINTSTRUCT paint;
+  int poison_width;
+  int saved_dc;
+  int poison_y;
+  int poison_index;
+  int poison_total;
+  int poison_x;
+  int life_total;
+  char life_text[12];
+  RECT poison_rect;
+  int lich_state;
+  RECT client_rect;
+  MSG peek_msg;
+  unsigned int click_player;
+  char help_path[264];
+  DWORD help_context;
+  unsigned int command_player;
+  int updated_poison_total;
+  int updated_life_total;
+  int updated_lich_state;
+  char cuecard_text[100];
+  char cuecard_opponent_name[100];
+  int cached_poison_total;
+  HBITMAP background_bitmap;
+  int cached_life_total;
+  int cached_lich_state;
 
   switch (msg)
   {
   case 0x437:
-    s.cached_poison_total = GetWindowLongA(hwnd, g_life_window_poison_window_long_offset);
-    s.cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
+    cached_poison_total = GetWindowLongA(hwnd, g_life_window_poison_window_long_offset);
+    cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      if (s.cached_lich_state != 0)
+      if (cached_lich_state != 0)
       {
-        if (s.cached_poison_total != 0)
+        if (cached_poison_total != 0)
         {
-          strcpy(s.cuecard_text, gs_cuecard_your_life_points_and_poison_lich_008cf4f0);
+          strcpy(cuecard_text, gs_cuecard_your_life_points_and_poison_lich_008cf4f0);
         }
         else
         {
-          strcpy(s.cuecard_text, gs_cuecard_your_life_points_lich_007a7810);
+          strcpy(cuecard_text, gs_cuecard_your_life_points_lich_007a7810);
         }
       }
-      else if (s.cached_poison_total != 0)
+      else if (cached_poison_total != 0)
       {
-        strcpy(s.cuecard_text, gs_cuecard_your_life_points_and_poison_008a9ba0);
+        strcpy(cuecard_text, gs_cuecard_your_life_points_and_poison_008a9ba0);
       }
       else
       {
-        strcpy(s.cuecard_text, gs_cuecard_your_life_points_009394a0);
+        strcpy(cuecard_text, gs_cuecard_your_life_points_009394a0);
       }
     }
     else
     {
-      copy_opponent_name_prefix(s.cuecard_opponent_name);
-      if (s.cached_lich_state != 0)
+      copy_opponent_name_prefix(cuecard_opponent_name);
+      if (cached_lich_state != 0)
       {
-        if (s.cached_poison_total != 0)
+        if (cached_poison_total != 0)
         {
-          sprintf(s.cuecard_text, gs_cuecard_opponent_life_points_and_poison_lich_008b2890, s.cuecard_opponent_name);
+          sprintf(cuecard_text, gs_cuecard_opponent_life_points_and_poison_lich_008b2890, cuecard_opponent_name);
         }
         else
         {
-          sprintf(s.cuecard_text, gs_cuecard_opponent_life_points_lich_0091d1b0, s.cuecard_opponent_name);
+          sprintf(cuecard_text, gs_cuecard_opponent_life_points_lich_0091d1b0, cuecard_opponent_name);
         }
       }
-      else if (s.cached_poison_total != 0)
+      else if (cached_poison_total != 0)
       {
-        sprintf(s.cuecard_text, gs_cuecard_opponent_life_points_and_poison_009252f0, s.cuecard_opponent_name);
+        sprintf(cuecard_text, gs_cuecard_opponent_life_points_and_poison_009252f0, cuecard_opponent_name);
       }
       else
       {
-        sprintf(s.cuecard_text, gs_cuecard_opponent_life_points_008b30a0, s.cuecard_opponent_name);
+        sprintf(cuecard_text, gs_cuecard_opponent_life_points_008b30a0, cuecard_opponent_name);
       }
     }
-    strcpy((char *)wparam, s.cuecard_text);
+    strcpy((char *)wparam, cuecard_text);
     return 1;
 
   case 0x432:
-    s.cached_life_total = GetWindowLongA(hwnd, g_life_window_life_window_long_offset);
+    cached_life_total = GetWindowLongA(hwnd, g_life_window_life_window_long_offset);
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      s.updated_life_total = get_displayed_life_total(0);
+      updated_life_total = get_displayed_life_total(0);
     }
     else
     {
-      s.updated_life_total = get_displayed_life_total(1);
+      updated_life_total = get_displayed_life_total(1);
     }
 
-    s.cached_poison_total = GetWindowLongA(hwnd, g_life_window_poison_window_long_offset);
+    cached_poison_total = GetWindowLongA(hwnd, g_life_window_poison_window_long_offset);
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      s.updated_poison_total = get_displayed_poison_total(0);
+      updated_poison_total = get_displayed_poison_total(0);
     }
     else
     {
-      s.updated_poison_total = get_displayed_poison_total(1);
+      updated_poison_total = get_displayed_poison_total(1);
     }
 
-    s.cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
+    cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      s.updated_lich_state = get_displayed_lich_state(0);
+      updated_lich_state = get_displayed_lich_state(0);
     }
     else
     {
-      s.updated_lich_state = get_displayed_lich_state(1);
+      updated_lich_state = get_displayed_lich_state(1);
     }
 
-    if (s.cached_life_total != s.updated_life_total)
+    if (cached_life_total != updated_life_total)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
     }
-    if (s.cached_poison_total != s.updated_poison_total)
+    if (cached_poison_total != updated_poison_total)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
     }
-    if (s.cached_lich_state != s.updated_lich_state)
+    if (cached_lich_state != updated_lich_state)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
     }
     return 0;
 
   case 0x439:
-    s.background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
-    if (s.background_bitmap != (HBITMAP)0)
+    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
+    if (background_bitmap != (HBITMAP)0)
     {
-      DeleteObject(s.background_bitmap);
+      DeleteObject(background_bitmap);
     }
-    s.background_bitmap = (HBITMAP)wparam;
-    SetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset, (LONG)s.background_bitmap);
+    background_bitmap = (HBITMAP)wparam;
+    SetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset, (LONG)background_bitmap);
     InvalidateRect(hwnd, (RECT *)0, 1);
     return 0;
 
   case 0x438:
-    return (LRESULT)(s.background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset));
+    return (LRESULT)(background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset));
 
   case WM_COMMAND:
     switch ((unsigned int)wparam & 0xffff)
     {
     case 0x66:
-      s.command_player = hwnd == g_duel_life_status_window_1_hwnd ? 0 : 1;
+      command_player = hwnd == g_duel_life_status_window_1_hwnd ? 0 : 1;
       g_recorded_action_player = 0;
-      post_life_directive_action(s.command_player);
+      post_life_directive_action(command_player);
       break;
 
     case 100:
@@ -426,18 +420,18 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
       break;
 
     case 0x65:
-      s.cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
-      if (s.cached_lich_state != 0)
+      cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
+      if (cached_lich_state != 0)
       {
-        s.help_context = 0xbe1;
+        help_context = 0xbe1;
       }
       else
       {
-        s.help_context = 0x7e8;
+        help_context = 0x7e8;
       }
-      strcpy(s.help_path, global_base_directory);
-      strcat(s.help_path, "\\duel.hlp");
-      WinHelpA(g_duel_window_hwnd, s.help_path, HELP_CONTEXT, s.help_context);
+      strcpy(help_path, global_base_directory);
+      strcat(help_path, "\\duel.hlp");
+      WinHelpA(g_duel_window_hwnd, help_path, HELP_CONTEXT, help_context);
       break;
     default:
       break;
@@ -445,21 +439,21 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_CREATE:
-    s.cached_life_total = 0;
-    SetWindowLongA(hwnd, g_life_window_life_window_long_offset, s.cached_life_total);
-    s.cached_poison_total = 0;
-    SetWindowLongA(hwnd, g_life_window_poison_window_long_offset, s.cached_poison_total);
-    s.cached_lich_state = 0;
-    SetWindowLongA(hwnd, g_life_window_lich_window_long_offset, s.cached_lich_state);
-    s.background_bitmap = (HBITMAP)0;
-    SetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset, (LONG)s.background_bitmap);
+    cached_life_total = 0;
+    SetWindowLongA(hwnd, g_life_window_life_window_long_offset, cached_life_total);
+    cached_poison_total = 0;
+    SetWindowLongA(hwnd, g_life_window_poison_window_long_offset, cached_poison_total);
+    cached_lich_state = 0;
+    SetWindowLongA(hwnd, g_life_window_lich_window_long_offset, cached_lich_state);
+    background_bitmap = (HBITMAP)0;
+    SetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset, (LONG)background_bitmap);
     return 0;
 
   case WM_DESTROY:
-    s.background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
-    if (s.background_bitmap != (HBITMAP)0)
+    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
+    if (background_bitmap != (HBITMAP)0)
     {
-      delete_and_close_object(s.background_bitmap);
+      delete_and_close_object(background_bitmap);
     }
     return 0;
 
@@ -467,159 +461,159 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_LBUTTONDOWN:
-    s.click_player = hwnd == g_duel_life_status_window_1_hwnd ? 0 : 1;
+    click_player = hwnd == g_duel_life_status_window_1_hwnd ? 0 : 1;
     if (g_duel_modal_action_active != 0)
     {
       Sleep(GetDoubleClickTime());
-      g_recorded_action_player = PeekMessageA(&s.peek_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
-      post_life_directive_action(s.click_player);
+      g_recorded_action_player = PeekMessageA(&peek_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
+      post_life_directive_action(click_player);
     }
     return 0;
 
   case WM_PAINT:
-    s.cached_life_total = GetWindowLongA(hwnd, g_life_window_life_window_long_offset);
-    s.cached_poison_total = GetWindowLongA(hwnd, g_life_window_poison_window_long_offset);
-    s.cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
+    cached_life_total = GetWindowLongA(hwnd, g_life_window_life_window_long_offset);
+    cached_poison_total = GetWindowLongA(hwnd, g_life_window_poison_window_long_offset);
+    cached_lich_state = GetWindowLongA(hwnd, g_life_window_lich_window_long_offset);
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      s.life_total = get_displayed_life_total(0);
+      life_total = get_displayed_life_total(0);
     }
     else
     {
-      s.life_total = get_displayed_life_total(1);
+      life_total = get_displayed_life_total(1);
     }
-    wsprintfA(s.life_text, "%d", s.life_total);
+    wsprintfA(life_text, "%d", life_total);
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      s.poison_total = get_displayed_poison_total(0);
+      poison_total = get_displayed_poison_total(0);
     }
     else
     {
-      s.poison_total = get_displayed_poison_total(1);
+      poison_total = get_displayed_poison_total(1);
     }
     if (hwnd == g_duel_life_status_window_1_hwnd)
     {
-      s.lich_state = get_displayed_lich_state(0);
+      lich_state = get_displayed_lich_state(0);
     }
     else
     {
-      s.lich_state = get_displayed_lich_state(1);
+      lich_state = get_displayed_lich_state(1);
     }
-    if (s.cached_life_total != s.life_total)
+    if (cached_life_total != life_total)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
     }
-    if (s.cached_poison_total != s.poison_total)
+    if (cached_poison_total != poison_total)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
     }
-    if (s.cached_lich_state != s.lich_state)
+    if (cached_lich_state != lich_state)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
     }
 
-    GetClientRect(hwnd, &s.client_rect);
+    GetClientRect(hwnd, &client_rect);
     EnterCriticalSection(&g_card_render_lock);
-    s.dc = g_shared_offscreen_dc;
-    s.saved_dc = SaveDC(g_shared_offscreen_dc);
-    s.background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
-    DrawBitmapToRect(s.dc, &s.client_rect, s.background_bitmap);
+    dc = g_shared_offscreen_dc;
+    saved_dc = SaveDC(g_shared_offscreen_dc);
+    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
+    DrawBitmapToRect(dc, &client_rect, background_bitmap);
 
-    if (s.lich_state != 0)
+    if (lich_state != 0)
     {
       if (g_life_lich_bitmap == (HBITMAP)0)
       {
-        sprintf(s.lich_path, "%s\\LIFE_liched.pic", global_duelart_path);
-        g_life_lich_bitmap = load_pic(s.lich_path);
+        sprintf(lich_path, "%s\\LIFE_liched.pic", global_duelart_path);
+        g_life_lich_bitmap = load_pic(lich_path);
       }
-      DrawBitmapToRect(s.dc, &s.client_rect, g_life_lich_bitmap);
+      DrawBitmapToRect(dc, &client_rect, g_life_lich_bitmap);
     }
 
     if (g_life_poison_bitmap == (HBITMAP)0)
     {
-      sprintf(s.poison_path, "%s\\Poison.pic", global_cardart_path);
-      g_life_poison_bitmap = load_pic(s.poison_path);
+      sprintf(poison_path, "%s\\Poison.pic", global_cardart_path);
+      g_life_poison_bitmap = load_pic(poison_path);
     }
 
-    s.poison_width = s.client_rect.right / 4;
-    s.poison_height = s.client_rect.bottom / 3;
-    s.poison_x = 0;
-    s.poison_y = 0;
-    for (s.poison_index = 0; s.poison_index < s.poison_total; s.poison_index++)
+    poison_width = client_rect.right / 4;
+    poison_height = client_rect.bottom / 3;
+    poison_x = 0;
+    poison_y = 0;
+    for (poison_index = 0; poison_index < poison_total; poison_index++)
     {
-      SetRect(&s.poison_rect, s.poison_x, s.poison_y, s.poison_x + s.poison_width, s.poison_y + s.poison_height);
-      draw_masked_bitmap_left_half_to_rect(s.dc, &s.poison_rect, g_life_poison_bitmap);
-      s.poison_x += s.poison_width;
-      if (s.client_rect.right < s.poison_x + s.poison_width)
+      SetRect(&poison_rect, poison_x, poison_y, poison_x + poison_width, poison_y + poison_height);
+      draw_masked_bitmap_left_half_to_rect(dc, &poison_rect, g_life_poison_bitmap);
+      poison_x += poison_width;
+      if (client_rect.right < poison_x + poison_width)
       {
-        s.poison_x = 0;
-        s.poison_y += s.poison_height;
+        poison_x = 0;
+        poison_y += poison_height;
       }
     }
 
-    if (s.lich_state == 0)
+    if (lich_state == 0)
     {
-      SetMapMode(s.dc, MM_ANISOTROPIC);
-      SetWindowExtEx(s.dc, 0x7d, 100, (LPSIZE)0);
-      SetViewportExtEx(s.dc, s.client_rect.right - s.client_rect.left,
-                       s.client_rect.bottom - s.client_rect.top, (LPSIZE)0);
-      SelectObject(s.dc, g_life_font);
-      SetBkMode(s.dc, TRANSPARENT);
-      SetRect(&s.client_rect, 0, 0, 0x7d, 100);
-      OffsetRect(&s.client_rect, 3, 3);
-      SetTextColor(s.dc, g_life_shadow_color);
-      DrawTextA(s.dc, s.life_text, -1, &s.client_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-      OffsetRect(&s.client_rect, -3, -3);
-      SetTextColor(s.dc, g_life_text_color);
-      DrawTextA(s.dc, s.life_text, -1, &s.client_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+      SetMapMode(dc, MM_ANISOTROPIC);
+      SetWindowExtEx(dc, 0x7d, 100, (LPSIZE)0);
+      SetViewportExtEx(dc, client_rect.right - client_rect.left,
+                       client_rect.bottom - client_rect.top, (LPSIZE)0);
+      SelectObject(dc, g_life_font);
+      SetBkMode(dc, TRANSPARENT);
+      SetRect(&client_rect, 0, 0, 0x7d, 100);
+      OffsetRect(&client_rect, 3, 3);
+      SetTextColor(dc, g_life_shadow_color);
+      DrawTextA(dc, life_text, -1, &client_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+      OffsetRect(&client_rect, -3, -3);
+      SetTextColor(dc, g_life_text_color);
+      DrawTextA(dc, life_text, -1, &client_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
-    RestoreDC(g_shared_offscreen_dc, s.saved_dc);
-    s.dc = BeginPaint(hwnd, &s.paint);
-    if (s.dc != (HDC)0)
+    RestoreDC(g_shared_offscreen_dc, saved_dc);
+    dc = BeginPaint(hwnd, &paint);
+    if (dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.dc);
-      GetClientRect(hwnd, &s.client_rect);
+      ApplyCardArtPaletteToDc(dc);
+      GetClientRect(hwnd, &client_rect);
       if (g_duel_palette_refresh_pending != 0)
       {
-        FillRect(s.dc, &s.client_rect, GetStockObject(WHITE_BRUSH));
+        FillRect(dc, &client_rect, GetStockObject(WHITE_BRUSH));
         Sleep(200);
       }
-      BitBlt(s.dc, 0, 0, s.client_rect.right, s.client_rect.bottom,
+      BitBlt(dc, 0, 0, client_rect.right, client_rect.bottom,
              g_shared_offscreen_dc, 0, 0, SRCCOPY);
-      EndPaint(hwnd, &s.paint);
-      s.cached_life_total = s.life_total;
-      SetWindowLongA(hwnd, g_life_window_life_window_long_offset, s.cached_life_total);
-      s.cached_poison_total = s.poison_total;
-      SetWindowLongA(hwnd, g_life_window_poison_window_long_offset, s.cached_poison_total);
-      s.cached_lich_state = s.lich_state;
-      SetWindowLongA(hwnd, g_life_window_lich_window_long_offset, s.cached_lich_state);
+      EndPaint(hwnd, &paint);
+      cached_life_total = life_total;
+      SetWindowLongA(hwnd, g_life_window_life_window_long_offset, cached_life_total);
+      cached_poison_total = poison_total;
+      SetWindowLongA(hwnd, g_life_window_poison_window_long_offset, cached_poison_total);
+      cached_lich_state = lich_state;
+      SetWindowLongA(hwnd, g_life_window_lich_window_long_offset, cached_lich_state);
     }
     LeaveCriticalSection(&g_card_render_lock);
     return 0;
 
   case WM_RBUTTONDOWN:
-    s.menu_point.x = lparam & 0xffff;
-    s.menu_point.y = HIWORD(lparam);
-    ClientToScreen(hwnd, &s.menu_point);
-    SetRect(&s.popup_rect, s.menu_point.x, s.menu_point.y, s.menu_point.x + 1, s.menu_point.y + 1);
-    TrackPopupMenu(g_life_popup_menu, TPM_RIGHTBUTTON, s.menu_point.x, s.menu_point.y, 0, hwnd, &s.popup_rect);
+    menu_point.x = lparam & 0xffff;
+    menu_point.y = HIWORD(lparam);
+    ClientToScreen(hwnd, &menu_point);
+    SetRect(&popup_rect, menu_point.x, menu_point.y, menu_point.x + 1, menu_point.y + 1);
+    TrackPopupMenu(g_life_popup_menu, TPM_RIGHTBUTTON, menu_point.x, menu_point.y, 0, hwnd, &popup_rect);
     return 0;
 
   case WM_INITMENU:
-    s.menu_player = hwnd == g_duel_life_status_window_1_hwnd ? 0 : 1;
-    if (g_duel_modal_action_active != 0 && is_face_directive_action_enabled(s.menu_player) != 0)
+    menu_player = hwnd == g_duel_life_status_window_1_hwnd ? 0 : 1;
+    if (g_duel_modal_action_active != 0 && is_face_directive_action_enabled(menu_player) != 0)
     {
-      if (s.menu_player == 1)
+      if (menu_player == 1)
       {
-        copy_opponent_name_prefix(s.opponent_name);
-        sprintf(s.directive_text, g_life_menu_directive_format, s.opponent_name);
+        copy_opponent_name_prefix(opponent_name);
+        sprintf(directive_text, g_life_menu_directive_format, opponent_name);
       }
       else
       {
-        strcpy(s.directive_text, g_life_menu_directive_self_text);
+        strcpy(directive_text, g_life_menu_directive_self_text);
       }
-      AppendMenuA(g_life_popup_menu, 0, 0x66, s.directive_text);
+      AppendMenuA(g_life_popup_menu, 0, 0x66, directive_text);
     }
     if (GetMenuItemCount(g_life_popup_menu) > 0)
     {
@@ -632,8 +626,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_MENUSELECT:
     if (HIWORD(wparam) == 0xffff && lparam == 0)
     {
-      s.menu_item_count = GetMenuItemCount(g_life_popup_menu);
-      while (s.menu_item_count-- != 0)
+      menu_item_count = GetMenuItemCount(g_life_popup_menu);
+      while (menu_item_count-- != 0)
       {
         DeleteMenu(g_life_popup_menu, 0, MF_BYPOSITION);
       }

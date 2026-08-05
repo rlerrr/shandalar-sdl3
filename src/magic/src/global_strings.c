@@ -8,59 +8,56 @@
 // FUNCTION: MAGIC 0x004ec830
 int load_text(const char *file_name, const char *section_name)
 {
-  struct
-  {
-    FILE *f;
-    char line[300];
-    char path[128];
-    char section_line[300]; // ebp - 0x134
-    unsigned int num_text;
-    int i;
-  } s;
+  FILE *f;
+  char line[300];
+  char path[128];
+  char section_line[300]; // ebp - 0x134
+  unsigned int num_text;
+  int i;
 
-  strcpy(s.section_line, "@");
-  strcat(s.section_line, section_name);
-  strcat(s.section_line, "\n");
+  strcpy(section_line, "@");
+  strcat(section_line, section_name);
+  strcat(section_line, "\n");
 
-  strcpy(s.path, global_base_directory);
-  strcat(s.path, "\\");
-  strcat(s.path, file_name);
+  strcpy(path, global_base_directory);
+  strcat(path, "\\");
+  strcat(path, file_name);
   // if (!strchr(file_name, '.'))
-  //   strcat(s.path, ".txt");
+  //   strcat(path, ".txt");
 
-  s.f = fopen(s.path, "rt");
-  if (s.f == NULL)
+  f = fopen(path, "rt");
+  if (f == NULL)
     return -1;
 
-  while (strcmp(s.section_line, s.line))
+  while (strcmp(section_line, line))
   {
-    if (!fgets(s.line, 300, s.f))
+    if (!fgets(line, 300, f))
     {
-      fclose(s.f);
+      fclose(f);
       return -1;
     }
   }
 
-  fscanf(s.f, "%d", &s.num_text);
-  fgets(s.line, 300, s.f);
-  if (s.num_text > 225)
+  fscanf(f, "%d", &num_text);
+  fgets(line, 300, f);
+  if (num_text > 225)
   {
-    fclose(s.f);
+    fclose(f);
     return -1;
   }
 
-  for (s.i = 0; s.i < (int)s.num_text; s.i++)
+  for (i = 0; i < (int)num_text; i++)
   {
-    if (!fgets(g_text_lines[s.i], 300, s.f))
+    if (!fgets(g_text_lines[i], 300, f))
     {
-      fclose(s.f);
+      fclose(f);
       return -1;
     }
-    g_text_lines[s.i][strlen(g_text_lines[s.i]) - 1] = 0;
+    g_text_lines[i][strlen(g_text_lines[i]) - 1] = 0;
   }
 
-  fclose(s.f);
-  return s.num_text;
+  fclose(f);
+  return num_text;
 }
 
 // FUNCTION: MAGIC 0x004eca6d
@@ -225,7 +222,7 @@ void load_global_ui_strings(char *filename)
     strcpy(gs_words_hacked_0091d260[COLOR_WHITE][color_index], g_text_lines[color_index]);
   }
 
-  loaded_count = gs_words_to_sleight_count_00789c34 =load_text(filename, "WORDSTOSLEIGHT_BLACK");
+  loaded_count = gs_words_to_sleight_count_00789c34 = load_text(filename, "WORDSTOSLEIGHT_BLACK");
   for (color_index = 0; color_index < loaded_count; ++color_index)
   {
     strcpy(gs_words_to_sleight_00781bd0[COLOR_BLACK][color_index], g_text_lines[color_index]);

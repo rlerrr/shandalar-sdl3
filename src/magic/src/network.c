@@ -17,10 +17,10 @@ void report_unexpected_network_packet_number(int expected_packet_number, int act
 
 // GLOBAL: MAGIC 0x0057cba8
 char packet_names_0057cba8[20][20] = {
-    "NULL",          "COINTOSS",        "ANTE",       "HAND",          "LIBRARY",
-    "PLAYORDRAW",    "MULLIGAN",        "DUELPARAMETERS", "GUESTRESPONSE", "STARTDUEL",
-    "DUELRESULTS",   "SAVEDGAME",       "PICKACARD",  "NEWFULLCARD",   "QUESTION",
-    "QUESTIONMANA",  "GRABMANA",        "XPOOL",      "CHEATCARD",     "PHASESTOPPER"};
+    "NULL", "COINTOSS", "ANTE", "HAND", "LIBRARY",
+    "PLAYORDRAW", "MULLIGAN", "DUELPARAMETERS", "GUESTRESPONSE", "STARTDUEL",
+    "DUELRESULTS", "SAVEDGAME", "PICKACARD", "NEWFULLCARD", "QUESTION",
+    "QUESTIONMANA", "GRABMANA", "XPOOL", "CHEATCARD", "PHASESTOPPER"};
 
 // GLOBAL: MAGIC 0x0057d440
 char gs_player_receiving_packet_0057d440[] = "Player %d is receiving a %s packet. This is packet number %d.\n";
@@ -40,29 +40,26 @@ char gs_memory_allocation_error_in_AddCardToCLPacket_0057d4cc[] = "Memory alloca
 // FUNCTION: MAGIC 0x0049e8bb
 // FUNCTION: SHANDALAR 0x0053a265
 int select_multiple_cards_from_card_list(int player,
-                 int *graveyard,
-                 int unused,
-                 void *available,
-                 int count,
-                 int prompt_lines,
-                 int num_prompt_lines,
-                 int selected_indices,
-                 int highlighted_choices,
-                 int max_choices)
+                                         int *graveyard,
+                                         int unused,
+                                         void *available,
+                                         int count,
+                                         int prompt_lines,
+                                         int num_prompt_lines,
+                                         int selected_indices,
+                                         int highlighted_choices,
+                                         int max_choices)
 {
-  struct
-  {
-    int selected_count;
-    int selection;
-    char prompt[200];
-    int available_cards[500];
-    int index;
-    unsigned int require_selection;
-    int graveyard_copy[500];
-    int unused_slot;
-    int packet_card;
-    int stop_selection;
-  } s;
+  int selected_count;
+  int selection;
+  char prompt[200];
+  int available_cards[500];
+  int index;
+  unsigned int require_selection;
+  int graveyard_copy[500];
+  int unused_slot;
+  int packet_card;
+  int stop_selection;
 
   (void)unused;
 
@@ -75,68 +72,68 @@ int select_multiple_cards_from_card_list(int player,
     return 0;
   }
 
-  memcpy(s.graveyard_copy, graveyard, count << 2);
+  memcpy(graveyard_copy, graveyard, count << 2);
   if (available == NULL)
   {
-    for (s.index = 0; count > s.index; ++s.index)
+    for (index = 0; count > index; ++index)
     {
-      s.available_cards[s.index] = 1;
+      available_cards[index] = 1;
     }
   }
   else
   {
-    memcpy(s.available_cards, available, count << 2);
+    memcpy(available_cards, available, count << 2);
   }
 
   if (g_other_player == player && (g_duel_network_flags & 2) != 0)
   {
-    s.stop_selection = 1;
+    stop_selection = 1;
   }
   else
   {
-    s.stop_selection = 0;
+    stop_selection = 0;
   }
 
-  s.selected_count = 0;
-  while (s.stop_selection == 0 && s.selected_count < max_choices)
+  selected_count = 0;
+  while (stop_selection == 0 && selected_count < max_choices)
   {
-    if (num_prompt_lines > s.selected_count)
+    if (num_prompt_lines > selected_count)
     {
-      strcpy(s.prompt, ((char **)prompt_lines)[s.selected_count]);
+      strcpy(prompt, ((char **)prompt_lines)[selected_count]);
     }
     else
     {
-      strcpy(s.prompt, ((char **)prompt_lines)[num_prompt_lines - 1]);
+      strcpy(prompt, ((char **)prompt_lines)[num_prompt_lines - 1]);
     }
 
-    if (s.selected_count >= highlighted_choices)
+    if (selected_count >= highlighted_choices)
     {
-      s.require_selection = 0;
-      s.unused_slot = (int)gs_done_008b40e0;
+      require_selection = 0;
+      unused_slot = (int)gs_done_008b40e0;
     }
     else
     {
-      s.require_selection = 1;
-      s.unused_slot = 0;
+      require_selection = 1;
+      unused_slot = 0;
     }
 
-    s.selection = show_cardlist(s.graveyard_copy,
-                                0,
-                                s.available_cards,
-                                count,
-                                s.prompt,
-                                s.require_selection,
-                                gs_done_008b40e0);
-    if (s.selection == -1)
+    selection = show_cardlist(graveyard_copy,
+                              0,
+                              available_cards,
+                              count,
+                              prompt,
+                              require_selection,
+                              gs_done_008b40e0);
+    if (selection == -1)
     {
-      s.stop_selection = 1;
+      stop_selection = 1;
     }
     else
     {
-      ((int *)selected_indices)[s.selected_count] = s.selection;
-      ++s.selected_count;
-      s.graveyard_copy[s.selection] = g_draw_card_placeholder_internal_card_id;
-      s.available_cards[s.selection] = 0;
+      ((int *)selected_indices)[selected_count] = selection;
+      ++selected_count;
+      graveyard_copy[selection] = g_draw_card_placeholder_internal_card_id;
+      available_cards[selection] = 0;
     }
   }
 
@@ -145,31 +142,31 @@ int select_multiple_cards_from_card_list(int player,
     if (g_other_player == player)
     {
       TENTATIVE_wait_for_network_result(player, 0x16);
-      s.packet_card = 0;
-      s.index = s.packet_card;
-      while (s.packet_card != -1)
+      packet_card = 0;
+      index = packet_card;
+      while (packet_card != -1)
       {
-        s.packet_card = GetCardFromCLPacket(s.index);
-        if (s.packet_card != -1)
+        packet_card = GetCardFromCLPacket(index);
+        if (packet_card != -1)
         {
-          ((int *)selected_indices)[s.index] = s.packet_card;
-          ++s.index;
+          ((int *)selected_indices)[index] = packet_card;
+          ++index;
         }
       }
-      s.selected_count = s.index;
+      selected_count = index;
     }
     else
     {
-      for (s.index = 0; s.index < s.selected_count; ++s.index)
+      for (index = 0; index < selected_count; ++index)
       {
-        AddCardToCLPacket(((int *)selected_indices)[s.index]);
+        AddCardToCLPacket(((int *)selected_indices)[index]);
       }
       AddCardToCLPacket(-1);
       TENTATIVE_send_network_result(player, 0x16);
     }
   }
 
-  return s.selected_count;
+  return selected_count;
 }
 
 // FUNCTION: MAGIC 0x00501e96
@@ -237,46 +234,43 @@ int GetCardFromCLPacket(int packet_index)
 // FUNCTION: MAGIC 0x00501143
 int send_card_list_packet(int player, char packet_type)
 {
-  struct
-  {
-    unsigned char packet_header[32];
-    int packet_number;
-    int packet_kind;
-    size_t packet_size;
-    void *global_packet;
-    int index;
-    short *source_ptr;
-    int send_result;
-    short *write_ptr;
-  } s;
+  unsigned char packet_header[32];
+  int packet_number;
+  int packet_kind;
+  size_t packet_size;
+  void *global_packet;
+  int index;
+  short *source_ptr;
+  int send_result;
+  short *write_ptr;
 
   (void)player;
 
-  s.packet_size = g_card_list_packet_card_count * 2 + 6;
+  packet_size = g_card_list_packet_card_count * 2 + 6;
   g_card_list_packet_type = packet_type;
   g_card_list_packet_number = (short)g_next_outgoing_card_list_packet_number;
   ++g_next_outgoing_card_list_packet_number;
 
-  s.packet_number = -1;
-  s.packet_kind = 2;
-  s.global_packet = malloc(s.packet_size);
-  s.write_ptr = s.global_packet;
-  *s.write_ptr = (short)g_card_list_packet_type;
-  s.write_ptr[1] = g_card_list_packet_number;
-  s.write_ptr[2] = g_card_list_packet_card_count;
-  s.write_ptr += 3;
+  packet_number = -1;
+  packet_kind = 2;
+  global_packet = malloc(packet_size);
+  write_ptr = global_packet;
+  *write_ptr = (short)g_card_list_packet_type;
+  write_ptr[1] = g_card_list_packet_number;
+  write_ptr[2] = g_card_list_packet_card_count;
+  write_ptr += 3;
 
-  s.source_ptr = g_card_list_packet_cards;
-  for (s.index = 0; s.index < g_card_list_packet_card_count; ++s.index)
+  source_ptr = g_card_list_packet_cards;
+  for (index = 0; index < g_card_list_packet_card_count; ++index)
   {
-    *s.write_ptr = *s.source_ptr;
-    ++s.source_ptr;
-    ++s.write_ptr;
+    *write_ptr = *source_ptr;
+    ++source_ptr;
+    ++write_ptr;
   }
 
-  s.send_result = FamInterface_SendPacket(s.packet_header, 1);
-  free(s.global_packet);
-  if (s.send_result == 1)
+  send_result = FamInterface_SendPacket(packet_header, 1);
+  free(global_packet);
+  if (send_result == 1)
   {
     return 0;
   }
@@ -297,21 +291,18 @@ int send_card_list_packet(int player, char packet_type)
 // FUNCTION: MAGIC 0x00501c19
 int read_card_list_packet(int player, int packet_type, unsigned char *packet)
 {
-  struct
-  {
-    char trace[0x64];
-    int index;
-    short *write_ptr;
-    unsigned char *read_ptr;
-  } s;
+  char trace[0x64];
+  int index;
+  short *write_ptr;
+  unsigned char *read_ptr;
 
-  s.read_ptr = packet;
+  read_ptr = packet;
 
   g_card_list_packet_type = *packet;
 
-  s.read_ptr += 2;
-  g_card_list_packet_number = *(short *)s.read_ptr;
-  s.read_ptr += 2;
+  read_ptr += 2;
+  g_card_list_packet_number = *(short *)read_ptr;
+  read_ptr += 2;
 
   if ((int)g_card_list_packet_number != g_next_expected_network_packet_number)
   {
@@ -319,14 +310,14 @@ int read_card_list_packet(int player, int packet_type, unsigned char *packet)
   }
   else
   {
-    sprintf(s.trace, gs_player_receiving_packet_0057d440, player, packet_names_0057cba8[packet_type], g_next_expected_network_packet_number);
-    append_to_trace_txt(s.trace);
+    sprintf(trace, gs_player_receiving_packet_0057d440, player, packet_names_0057cba8[packet_type], g_next_expected_network_packet_number);
+    append_to_trace_txt(trace);
   }
 
   ++g_next_expected_network_packet_number;
 
-  g_card_list_packet_card_count = *(short *)s.read_ptr;
-  s.read_ptr += 2;
+  g_card_list_packet_card_count = *(short *)read_ptr;
+  read_ptr += 2;
   if ((int)g_card_list_packet_card_count > 0x1f4)
   {
     return 0;
@@ -341,12 +332,12 @@ int read_card_list_packet(int player, int packet_type, unsigned char *packet)
     }
   }
 
-  s.write_ptr = g_card_list_packet_cards;
-  for (s.index = 0; s.index < (int)g_card_list_packet_card_count; ++s.index)
+  write_ptr = g_card_list_packet_cards;
+  for (index = 0; index < (int)g_card_list_packet_card_count; ++index)
   {
-    *s.write_ptr = *(short *)s.read_ptr;
-    s.read_ptr += 2;
-    ++s.write_ptr;
+    *write_ptr = *(short *)read_ptr;
+    read_ptr += 2;
+    ++write_ptr;
   }
 
   return 1;
@@ -456,24 +447,21 @@ int apply_xpool_packet_to_active_player(void)
 int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
 {
 #ifdef MAGIC
-  struct
-  {
-    unsigned char receive_packet_storage[32];
-    int packet_id;
-    int unused_24;
-    unsigned int packet_size;
-    int packet_handle;
-    char message[100];
-    int receive_result;
-    int got_requested_packet;
-    short *packet_data_as_short;
-    unsigned char *packet_data;
-  } s;
+  unsigned char receive_packet_storage[32];
+  int packet_id;
+  int unused_24;
+  unsigned int packet_size;
+  int packet_handle;
+  char message[100];
+  int receive_result;
+  int got_requested_packet;
+  short *packet_data_as_short;
+  unsigned char *packet_data;
   unsigned long wait_result;
   const char *packet_name;
 
-  s.got_requested_packet = 0;
-  s.receive_result = 0;
+  got_requested_packet = 0;
+  receive_result = 0;
   g_waiting_for_network_packet = 1;
 
   do
@@ -483,7 +471,7 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
 
   for (;;)
   {
-    if (s.got_requested_packet != 0)
+    if (got_requested_packet != 0)
     {
       ReleaseMutex((HANDLE)global_mutex_ReadPacket);
       g_waiting_for_network_packet = 0;
@@ -492,12 +480,12 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
 
     do
     {
-      s.packet_id = 0x2fffffff;
-      s.receive_result = FamInterface_ReceivePacket(2, s.receive_packet_storage);
+      packet_id = 0x2fffffff;
+      receive_result = FamInterface_ReceivePacket(2, receive_packet_storage);
 
-      if (s.receive_result == 4)
+      if (receive_result == 4)
       {
-        if (s.packet_id != 0x2fffffff)
+        if (packet_id != 0x2fffffff)
         {
           append_to_trace_txt("The manalink said we didn't have a packet but it lied.\n");
         }
@@ -520,20 +508,20 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
           return 0;
         }
       }
-      else if (s.receive_result != 0)
+      else if (receive_result != 0)
       {
-        sprintf(s.message, "Manalink returned an error(%d).\n", s.receive_result);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Manalink returned an error(%d).\n", receive_result);
+        append_to_trace_txt(message);
       }
-    } while (s.receive_result != 0);
+    } while (receive_result != 0);
 
-    s.packet_data = (unsigned char *)GlobalLock((HGLOBAL)s.packet_handle);
-    if (s.packet_data[0] != packet_type && s.packet_data[0] != 0x12 && s.packet_data[0] != 0x11)
+    packet_data = (unsigned char *)GlobalLock((HGLOBAL)packet_handle);
+    if (packet_data[0] != packet_type && packet_data[0] != 0x12 && packet_data[0] != 0x11)
     {
-      ReportUnexpectedNetworkPacketType(packet_type, s.packet_data[0]);
-      trace_network_packet((char *)s.packet_data, s.packet_size);
-      s.packet_data_as_short = (short *)(s.packet_data + 2);
-      report_unexpected_network_packet_number(g_next_expected_network_packet_number, *s.packet_data_as_short);
+      ReportUnexpectedNetworkPacketType(packet_type, packet_data[0]);
+      trace_network_packet((char *)packet_data, packet_size);
+      packet_data_as_short = (short *)(packet_data + 2);
+      report_unexpected_network_packet_number(g_next_expected_network_packet_number, *packet_data_as_short);
 
       if (g_network_packet_filter_enabled != 0)
       {
@@ -548,7 +536,7 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
     }
 
     append_to_trace_txt("\n");
-    trace_network_packet((char *)s.packet_data, s.packet_size);
+    trace_network_packet((char *)packet_data, packet_size);
     SetEvent((HANDLE)g_network_packet_event);
 
     packet_name = "GENERIC";
@@ -616,7 +604,7 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
       break;
     }
 
-    switch (s.packet_data[0])
+    switch (packet_data[0])
     {
     case 1:
     case 2:
@@ -631,11 +619,11 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
     case 0x18:
     case 0x19:
     case 0x1a:
-      memcpy(&g_network_result_packet, s.packet_data, s.packet_size);
+      memcpy(&g_network_result_packet, packet_data, packet_size);
       if (g_network_result_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -643,22 +631,22 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_network_result_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     case 3:
     case 4:
     case 0x16:
-      read_card_list_packet(player, packet_type, s.packet_data);
-      s.got_requested_packet = 1;
+      read_card_list_packet(player, packet_type, packet_data);
+      got_requested_packet = 1;
       break;
 
     case 7:
-      memcpy(&g_duel_parameters_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_duel_parameters_network_packet, packet_data, packet_size);
       if (g_duel_parameters_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -666,15 +654,15 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_duel_parameters_network_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     case 0xc:
-      memcpy(&g_target_selection_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_target_selection_network_packet, packet_data, packet_size);
       if (g_target_selection_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -682,17 +670,17 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_target_selection_network_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     case 0xd:
     case 0xe:
     case 0xf:
-      memcpy(&g_dialog_result_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_dialog_result_network_packet, packet_data, packet_size);
       if (g_dialog_result_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -700,15 +688,15 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_dialog_result_network_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     case 0x11:
-      memcpy(&g_xpool_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_xpool_network_packet, packet_data, packet_size);
       if (g_xpool_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -716,15 +704,15 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
       }
       ++g_next_expected_network_packet_number;
       apply_xpool_packet_to_active_player();
-      s.got_requested_packet = 0;
+      got_requested_packet = 0;
       break;
 
     case 0x12:
-      memcpy(&g_network_result_packet, s.packet_data, s.packet_size);
+      memcpy(&g_network_result_packet, packet_data, packet_size);
       if (g_network_result_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -733,15 +721,15 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
       }
       ++g_next_expected_network_packet_number;
       apply_cheat_card_packet();
-      s.got_requested_packet = 0;
+      got_requested_packet = 0;
       break;
 
     case 0x13:
-      memcpy(&g_phase_stopper_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_phase_stopper_network_packet, packet_data, packet_size);
       if (g_phase_stopper_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -749,15 +737,15 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_phase_stopper_network_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     case 0x15:
-      memcpy(&g_fireball_options_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_fireball_options_network_packet, packet_data, packet_size);
       if (g_fireball_options_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -765,16 +753,16 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_fireball_options_network_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     case 0x1b:
     case 0x1c:
-      memcpy(&g_target_pair_network_packet, s.packet_data, s.packet_size);
+      memcpy(&g_target_pair_network_packet, packet_data, packet_size);
       if (g_target_pair_network_packet.packet_number == g_next_expected_network_packet_number)
       {
-        sprintf(s.message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
-        append_to_trace_txt(s.message);
+        sprintf(message, "Player %d is receiving a %s packet. This is packet number %d.\n", player, packet_name, g_next_expected_network_packet_number);
+        append_to_trace_txt(message);
       }
       else
       {
@@ -782,21 +770,21 @@ int TENTATIVE_wait_for_network_result(int player, signed int packet_type)
                                                 g_target_pair_network_packet.packet_number);
       }
       ++g_next_expected_network_packet_number;
-      s.got_requested_packet = 1;
+      got_requested_packet = 1;
       break;
 
     default:
-      GlobalUnlock((HGLOBAL)s.packet_handle);
-      GlobalFree((HGLOBAL)s.packet_handle);
-      sprintf(s.message, "There was an error reading a packet of type %d", packet_type);
-      MessageBoxA((HWND)0, s.message, "Packet Error", 0);
+      GlobalUnlock((HGLOBAL)packet_handle);
+      GlobalFree((HGLOBAL)packet_handle);
+      sprintf(message, "There was an error reading a packet of type %d", packet_type);
+      MessageBoxA((HWND)0, message, "Packet Error", 0);
       ReleaseMutex((HANDLE)global_mutex_ReadPacket);
-    g_waiting_for_network_packet = 0;
+      g_waiting_for_network_packet = 0;
       return 0;
     }
 
-    GlobalUnlock((HGLOBAL)s.packet_handle);
-    GlobalFree((HGLOBAL)s.packet_handle);
+    GlobalUnlock((HGLOBAL)packet_handle);
+    GlobalFree((HGLOBAL)packet_handle);
   }
 #else
   return 0;

@@ -96,27 +96,24 @@ int g_player_face_directive_action_enabled;
 // FUNCTION: SHANDALAR 0x00425f10
 int register_MAGICGAME_FaceClass(LPCSTR class_name)
 {
-  struct
-  {
-    char path[264];
-    int result;
-    WNDCLASSA wndclass;
-  } s;
+  char path[264];
+  int result;
+  WNDCLASSA wndclass;
 
-  s.result = 1;
-  s.wndclass.style = 0xb;
-  s.wndclass.lpfnWndProc = wndproc_MAGICGAME_FaceClass;
-  s.wndclass.cbClsExtra = 0;
-  s.wndclass.cbWndExtra = g_magicgame_face_window_extra_bytes;
-  s.wndclass.hInstance = g_app_instance;
-  s.wndclass.hIcon = (HICON)0;
-  s.wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7f00);
-  s.wndclass.hbrBackground = GetStockObject(4);
-  s.wndclass.lpszMenuName = (LPCSTR)0;
-  s.wndclass.lpszClassName = class_name;
-  if (RegisterClassA(&s.wndclass) == 0)
+  result = 1;
+  wndclass.style = 0xb;
+  wndclass.lpfnWndProc = wndproc_MAGICGAME_FaceClass;
+  wndclass.cbClsExtra = 0;
+  wndclass.cbWndExtra = g_magicgame_face_window_extra_bytes;
+  wndclass.hInstance = g_app_instance;
+  wndclass.hIcon = (HICON)0;
+  wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7f00);
+  wndclass.hbrBackground = GetStockObject(4);
+  wndclass.lpszMenuName = (LPCSTR)0;
+  wndclass.lpszClassName = class_name;
+  if (RegisterClassA(&wndclass) == 0)
   {
-    s.result = 0;
+    result = 0;
   }
 
   g_face_popup_menu = CreatePopupMenu();
@@ -126,34 +123,34 @@ int register_MAGICGAME_FaceClass(LPCSTR class_name)
   strcpy(g_face_menu_end_directive_text, g_text_lines[2]);
   strcpy(g_face_menu_help_text, g_text_lines[3]);
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\FACE_MULTI.pic");
-  g_face_background_pics[0] = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\FACE_MULTI.pic");
+  g_face_background_pics[0] = load_pic(path);
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\FACE_BLACK.pic");
-  g_face_background_pics[1] = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\FACE_BLACK.pic");
+  g_face_background_pics[1] = load_pic(path);
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\FACE_BLUE.pic");
-  g_face_background_pics[2] = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\FACE_BLUE.pic");
+  g_face_background_pics[2] = load_pic(path);
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\FACE_GREEN.pic");
-  g_face_background_pics[3] = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\FACE_GREEN.pic");
+  g_face_background_pics[3] = load_pic(path);
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\FACE_RED.pic");
-  g_face_background_pics[4] = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\FACE_RED.pic");
+  g_face_background_pics[4] = load_pic(path);
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\FACE_WHITE.pic");
-  g_face_background_pics[5] = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\FACE_WHITE.pic");
+  g_face_background_pics[5] = load_pic(path);
 
   g_face_name_font = CreateFontIndirectA(LoadFontFromIni("Face", 0));
   g_face_name_text_color = 0x2f6f7f7;
   g_face_name_shadow_color = 0x2565656;
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x00463a6e
@@ -188,64 +185,61 @@ void destroy_MAGICGAME_FaceClass(LPCSTR class_name)
 // FUNCTION: SHANDALAR 0x00426252
 LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int menu_item_count;
-    char directive_text[100];
-    int menu_player;
-    char opponent_name[100];
-    POINT menu_point;
-    RECT popup_rect;
-    HDC paint_dc;
-    PAINTSTRUCT paint;
-    RECT client_rect;
-    MSG peek_msg;
-    int click_player;
-    char help_path[264];
-    DWORD help_context;
-    int command_player;
-    HBITMAP face_bitmap;
-    int owns_face_bitmap;
-  } s;
+  int menu_item_count;
+  char directive_text[100];
+  int menu_player;
+  char opponent_name[100];
+  POINT menu_point;
+  RECT popup_rect;
+  HDC paint_dc;
+  PAINTSTRUCT paint;
+  RECT client_rect;
+  MSG peek_msg;
+  int click_player;
+  char help_path[264];
+  DWORD help_context;
+  int command_player;
+  HBITMAP face_bitmap;
+  int owns_face_bitmap;
 
   switch (msg)
   {
 
   case 0x439:
-    s.face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
-    s.owns_face_bitmap = GetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset);
-    if (s.face_bitmap != (HBITMAP)0 && s.owns_face_bitmap == 0)
+    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    owns_face_bitmap = GetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset);
+    if (face_bitmap != (HBITMAP)0 && owns_face_bitmap == 0)
     {
-      delete_and_close_object(s.face_bitmap);
+      delete_and_close_object(face_bitmap);
     }
 
-    s.face_bitmap = (HBITMAP)wparam;
-    s.owns_face_bitmap = lparam;
-    SetWindowLongA(hwnd, g_face_picture_window_long_offset, (LONG)s.face_bitmap);
-    SetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset, s.owns_face_bitmap);
+    face_bitmap = (HBITMAP)wparam;
+    owns_face_bitmap = lparam;
+    SetWindowLongA(hwnd, g_face_picture_window_long_offset, (LONG)face_bitmap);
+    SetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset, owns_face_bitmap);
     InvalidateRect(hwnd, (RECT *)0, 0);
     return 0;
 
   case 0x438:
-    s.face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
-    return (LRESULT)s.face_bitmap;
+    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    return (LRESULT)face_bitmap;
 
   case WM_COMMAND:
     switch ((UINT)wparam & 0xffff)
     {
     case 102:
-      s.command_player = g_duel_player_face_window_hwnd == hwnd ? 0 : 1;
+      command_player = g_duel_player_face_window_hwnd == hwnd ? 0 : 1;
       g_recorded_action_player = 0;
-      post_face_directive_action(s.command_player);
+      post_face_directive_action(command_player);
       break;
     case 100:
       set_player_directive_value(g_duel_player_face_window_hwnd != hwnd, 0);
       break;
     case 101:
-      s.help_context = 0xbdf;
-      strcpy(s.help_path, global_base_directory);
-      strcat(s.help_path, "\\duel.hlp");
-      WinHelpA(g_duel_window_hwnd, s.help_path, HELP_CONTEXT, s.help_context);
+      help_context = 0xbdf;
+      strcpy(help_path, global_base_directory);
+      strcat(help_path, "\\duel.hlp");
+      WinHelpA(g_duel_window_hwnd, help_path, HELP_CONTEXT, help_context);
       break;
     default:
       break;
@@ -253,72 +247,72 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_CREATE:
-    s.face_bitmap = (HBITMAP)0;
-    SetWindowLongA(hwnd, g_face_picture_window_long_offset, (LONG)s.face_bitmap);
-    s.owns_face_bitmap = 0;
-    SetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset, s.owns_face_bitmap);
+    face_bitmap = (HBITMAP)0;
+    SetWindowLongA(hwnd, g_face_picture_window_long_offset, (LONG)face_bitmap);
+    owns_face_bitmap = 0;
+    SetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset, owns_face_bitmap);
     return 0;
 
   case WM_DESTROY:
-    s.face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
-    s.owns_face_bitmap = GetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset);
-    if (s.face_bitmap != (HBITMAP)0 && s.owns_face_bitmap == 0)
+    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    owns_face_bitmap = GetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset);
+    if (face_bitmap != (HBITMAP)0 && owns_face_bitmap == 0)
     {
-      delete_and_close_object(s.face_bitmap);
+      delete_and_close_object(face_bitmap);
     }
     return 0;
 
   case WM_LBUTTONDOWN:
-    s.click_player = g_duel_player_face_window_hwnd == hwnd ? 0 : 1;
+    click_player = g_duel_player_face_window_hwnd == hwnd ? 0 : 1;
     if (g_duel_modal_action_active != 0)
     {
       Sleep(GetDoubleClickTime());
-      g_recorded_action_player = PeekMessageA(&s.peek_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
-      post_face_directive_action(s.click_player);
+      g_recorded_action_player = PeekMessageA(&peek_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
+      post_face_directive_action(click_player);
     }
     return 0;
 
   case WM_PAINT:
-    s.face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
-    s.paint_dc = BeginPaint(hwnd, &s.paint);
-    if (s.paint_dc != (HDC)0)
+    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    paint_dc = BeginPaint(hwnd, &paint);
+    if (paint_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      GetClientRect(hwnd, &s.client_rect);
-      if (s.face_bitmap != (HBITMAP)0)
+      ApplyCardArtPaletteToDc(paint_dc);
+      GetClientRect(hwnd, &client_rect);
+      if (face_bitmap != (HBITMAP)0)
       {
-        draw_duel_face_window(s.paint_dc, &s.client_rect, g_duel_player_face_window_hwnd != hwnd);
+        draw_duel_face_window(paint_dc, &client_rect, g_duel_player_face_window_hwnd != hwnd);
       }
       else
       {
-        FillRect(s.paint_dc, &s.client_rect, GetStockObject(4));
+        FillRect(paint_dc, &client_rect, GetStockObject(4));
       }
-      EndPaint(hwnd, &s.paint);
+      EndPaint(hwnd, &paint);
     }
     return 0;
 
   case WM_RBUTTONDOWN:
-    s.menu_point.x = lparam & 0xffff;
-    s.menu_point.y = HIWORD(lparam);
-    ClientToScreen(hwnd, &s.menu_point);
-    SetRect(&s.popup_rect, s.menu_point.x, s.menu_point.y, s.menu_point.x + 1, s.menu_point.y + 1);
-    TrackPopupMenu(g_face_popup_menu, TPM_RIGHTBUTTON, s.menu_point.x, s.menu_point.y, 0, hwnd, &s.popup_rect);
+    menu_point.x = lparam & 0xffff;
+    menu_point.y = HIWORD(lparam);
+    ClientToScreen(hwnd, &menu_point);
+    SetRect(&popup_rect, menu_point.x, menu_point.y, menu_point.x + 1, menu_point.y + 1);
+    TrackPopupMenu(g_face_popup_menu, TPM_RIGHTBUTTON, menu_point.x, menu_point.y, 0, hwnd, &popup_rect);
     return 0;
 
   case WM_INITMENU:
-    s.menu_player = g_duel_life_status_window_1_hwnd == hwnd ? 0 : 1;
-    if (g_duel_modal_action_active != 0 && is_face_directive_action_enabled(s.menu_player) != 0)
+    menu_player = g_duel_life_status_window_1_hwnd == hwnd ? 0 : 1;
+    if (g_duel_modal_action_active != 0 && is_face_directive_action_enabled(menu_player) != 0)
     {
-      if (s.menu_player == 1)
+      if (menu_player == 1)
       {
-        copy_opponent_name_prefix(s.opponent_name);
-        sprintf(s.directive_text, g_face_menu_directive_format, s.opponent_name);
+        copy_opponent_name_prefix(opponent_name);
+        sprintf(directive_text, g_face_menu_directive_format, opponent_name);
       }
       else
       {
-        strcpy(s.directive_text, g_face_menu_directive_self_text);
+        strcpy(directive_text, g_face_menu_directive_self_text);
       }
-      AppendMenuA(g_face_popup_menu, MF_ENABLED, 0x66, s.directive_text);
+      AppendMenuA(g_face_popup_menu, MF_ENABLED, 0x66, directive_text);
     }
 
     if (0 < GetMenuItemCount(g_face_popup_menu))
@@ -332,8 +326,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_MENUSELECT:
     if (HIWORD(wparam) == 0xffff && lparam == 0)
     {
-      s.menu_item_count = GetMenuItemCount(g_face_popup_menu);
-      while (s.menu_item_count-- != 0)
+      menu_item_count = GetMenuItemCount(g_face_popup_menu);
+      while (menu_item_count-- != 0)
       {
         DeleteMenu(g_face_popup_menu, 0, MF_BYPOSITION);
       }
@@ -359,88 +353,85 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
 // FUNCTION: SHANDALAR 0x0042693e
 void draw_duel_face_window(HDC dc, RECT *rect, int player)
 {
-  struct
-  {
-    BITMAP bitmap;
-    int saved_dc;
-    RECT bitmap_rect;
-    HBITMAP background_bitmap;
-    POINT text_origin;
-    int text_saved_dc;
-    HBITMAP face_bitmap;
-    char player_name[52];
-    HWND face_window;
-  } s;
+  BITMAP bitmap;
+  int saved_dc;
+  RECT bitmap_rect;
+  HBITMAP background_bitmap;
+  POINT text_origin;
+  int text_saved_dc;
+  HBITMAP face_bitmap;
+  char player_name[52];
+  HWND face_window;
 
   if (player == 0)
   {
-    s.face_window = g_duel_player_face_window_hwnd;
+    face_window = g_duel_player_face_window_hwnd;
   }
   else
   {
-    s.face_window = g_duel_opponent_face_window_hwnd;
+    face_window = g_duel_opponent_face_window_hwnd;
   }
 
-  s.face_bitmap = (HBITMAP)GetWindowLongA(s.face_window, g_face_picture_window_long_offset);
+  face_bitmap = (HBITMAP)GetWindowLongA(face_window, g_face_picture_window_long_offset);
   if (player == 0)
   {
-    s.background_bitmap = g_face_background_pics[g_last_duel_player_primary_color];
+    background_bitmap = g_face_background_pics[g_last_duel_player_primary_color];
   }
   else
   {
-    s.background_bitmap = g_face_background_pics[g_last_duel_enemy_primary_color];
+    background_bitmap = g_face_background_pics[g_last_duel_enemy_primary_color];
   }
 
-  if (s.background_bitmap != (HBITMAP)0)
+  if (background_bitmap != (HBITMAP)0)
   {
-    DrawBitmapToRect(dc, rect, s.background_bitmap);
+    DrawBitmapToRect(dc, rect, background_bitmap);
   }
   else
   {
     FillRect(dc, rect, GetStockObject(4));
   }
 
-  if (s.face_bitmap != (HBITMAP)0)
+  if (face_bitmap != (HBITMAP)0)
   {
-    GetObjectA(s.face_bitmap, 0x18, &s.bitmap);
-    s.bitmap.bmWidth = s.bitmap.bmWidth / 2;
-    s.saved_dc = SaveDC(dc);
+    GetObjectA(face_bitmap, 0x18, &bitmap);
+    bitmap.bmWidth = bitmap.bmWidth / 2;
+    saved_dc = SaveDC(dc);
     SetMapMode(dc, MM_ISOTROPIC);
-    SetWindowOrgEx(dc, s.bitmap.bmWidth / 2, s.bitmap.bmHeight / 2, (LPPOINT)0);
+    SetWindowOrgEx(dc, bitmap.bmWidth / 2, bitmap.bmHeight / 2, (LPPOINT)0);
     SetViewportOrgEx(dc, rect->left + (rect->right - rect->left) / 2, rect->top + (rect->bottom - rect->top) / 2, (LPPOINT)0);
-    SetWindowExtEx(dc, s.bitmap.bmWidth, s.bitmap.bmHeight, (LPSIZE)0);
+    SetWindowExtEx(dc, bitmap.bmWidth, bitmap.bmHeight, (LPSIZE)0);
     SetViewportExtEx(dc, rect->right - rect->left, rect->bottom - rect->top, (LPSIZE)0);
-    SetRect(&s.bitmap_rect, 0, 0, s.bitmap.bmWidth, s.bitmap.bmHeight);
-    draw_masked_bitmap_left_half_to_rect(dc, &s.bitmap_rect, s.face_bitmap);
-    RestoreDC(dc, s.saved_dc);
+    SetRect(&bitmap_rect, 0, 0, bitmap.bmWidth, bitmap.bmHeight);
+    draw_masked_bitmap_left_half_to_rect(dc, &bitmap_rect, face_bitmap);
+    RestoreDC(dc, saved_dc);
   }
 
   if (player == 1)
   {
-    copy_opponent_name_prefix(s.player_name);
+    copy_opponent_name_prefix(player_name);
   }
   else
   {
-    strcpy(s.player_name, g_player_name);
+    strcpy(player_name, g_player_name);
   }
 
-  if (strlen(s.player_name) != 0)
+  if (strlen(player_name) != 0)
   {
-    s.text_saved_dc = SaveDC(dc);
+    text_saved_dc = SaveDC(dc);
     SetMapMode(dc, MM_ANISOTROPIC);
     SetWindowExtEx(dc, rect->right - rect->left, 100, (LPSIZE)0);
     SetViewportExtEx(dc, rect->right - rect->left, rect->bottom - rect->top, (LPSIZE)0);
     SelectObject(dc, g_face_name_font);
     SetBkMode(dc, TRANSPARENT);
     SetTextAlign(dc, 0xe);
-    s.text_origin.x = rect->left + (rect->right - rect->left) / 2;
-    s.text_origin.y = rect->bottom;
-    DPtoLP(dc, &s.text_origin, 1);
+    text_origin.x = rect->left + (rect->right - rect->left) / 2;
+    text_origin.y = rect->bottom;
+    DPtoLP(dc, &text_origin, 1);
     SetTextColor(dc, g_face_name_shadow_color);
-    TextOutA(dc, s.text_origin.x + 1, s.text_origin.y + 1, s.player_name, strlen(s.player_name));
+    TextOutA(dc, text_origin.x + 1, text_origin.y + 1, player_name, strlen(player_name));
     SetTextColor(dc, g_face_name_text_color);
-    TextOutA(dc, s.text_origin.x, s.text_origin.y, s.player_name, strlen(s.player_name));
-    RestoreDC(dc, s.text_saved_dc);
+    TextOutA(dc, text_origin.x, text_origin.y, player_name, strlen(player_name));
+    RestoreDC(dc, text_saved_dc);
   }
 }
 
@@ -448,79 +439,76 @@ void draw_duel_face_window(HDC dc, RECT *rect, int player)
 // FUNCTION: SHANDALAR 0x00426c59
 void set_player_directive_value(int player, int value)
 {
-  struct
-  {
-    HWND life_window;
-    HWND face_window;
-    HWND graveyard_window;
-    HWND mana_summary_window;
-    HWND library_window;
-  } s;
+  HWND life_window;
+  HWND face_window;
+  HWND graveyard_window;
+  HWND mana_summary_window;
+  HWND library_window;
 
   if (player == 0)
   {
-    s.face_window = g_duel_player_face_window_hwnd;
+    face_window = g_duel_player_face_window_hwnd;
   }
   else
   {
-    s.face_window = g_duel_opponent_face_window_hwnd;
-  }
-
-  if (player == 0)
-  {
-    s.life_window = g_duel_life_status_window_1_hwnd;
-  }
-  else
-  {
-    s.life_window = g_duel_life_status_window_2_hwnd;
+    face_window = g_duel_opponent_face_window_hwnd;
   }
 
   if (player == 0)
   {
-    s.library_window = g_duel_main_window_hwnd;
+    life_window = g_duel_life_status_window_1_hwnd;
   }
   else
   {
-    s.library_window = g_duel_status_window_hwnd;
+    life_window = g_duel_life_status_window_2_hwnd;
   }
 
   if (player == 0)
   {
-    s.graveyard_window = g_duel_player_graveyard_window_hwnd;
+    library_window = g_duel_main_window_hwnd;
   }
   else
   {
-    s.graveyard_window = g_phasebar_your_untap_window_hwnd;
+    library_window = g_duel_status_window_hwnd;
   }
 
   if (player == 0)
   {
-    s.mana_summary_window = g_duel_active_popup_window;
+    graveyard_window = g_duel_player_graveyard_window_hwnd;
   }
   else
   {
-    s.mana_summary_window = g_duel_last_active_window;
+    graveyard_window = g_phasebar_your_untap_window_hwnd;
+  }
+
+  if (player == 0)
+  {
+    mana_summary_window = g_duel_active_popup_window;
+  }
+  else
+  {
+    mana_summary_window = g_duel_last_active_window;
   }
 
   if (value != 0)
   {
-    ShowWindow(s.face_window, SW_SHOW);
-    BringWindowToTop(s.face_window);
-    ShowWindow(s.life_window, SW_HIDE);
+    ShowWindow(face_window, SW_SHOW);
+    BringWindowToTop(face_window);
+    ShowWindow(life_window, SW_HIDE);
     if (g_duel_interface_options.layout != 2)
     {
-      ShowWindow(s.library_window, SW_HIDE);
-      ShowWindow(s.graveyard_window, SW_HIDE);
-      ShowWindow(s.mana_summary_window, SW_HIDE);
+      ShowWindow(library_window, SW_HIDE);
+      ShowWindow(graveyard_window, SW_HIDE);
+      ShowWindow(mana_summary_window, SW_HIDE);
     }
   }
   else
   {
-    ShowWindow(s.life_window, SW_SHOW);
-    ShowWindow(s.library_window, SW_SHOW);
-    ShowWindow(s.graveyard_window, SW_SHOW);
-    ShowWindow(s.mana_summary_window, SW_SHOW);
-    ShowWindow(s.face_window, SW_HIDE);
+    ShowWindow(life_window, SW_SHOW);
+    ShowWindow(library_window, SW_SHOW);
+    ShowWindow(graveyard_window, SW_SHOW);
+    ShowWindow(mana_summary_window, SW_SHOW);
+    ShowWindow(face_window, SW_HIDE);
   }
 }
 
@@ -553,27 +541,24 @@ int is_face_directive_action_enabled(int player)
 // FUNCTION: SHANDALAR 0x00464c8a
 int draw_masked_bitmap_left_half_to_rect(HDC dc, RECT *rect, HANDLE bitmap)
 {
-  struct
-  {
-    int result;
-    BITMAP bitmap_info;
-    int height;
-    int half_width;
-    int unused_14;
-    int unused_10;
-    int unused_c;
-    int width;
-  } s;
+  int result;
+  BITMAP bitmap_info;
+  int height;
+  int half_width;
+  int unused_14;
+  int unused_10;
+  int unused_c;
+  int width;
 
-  GetObjectA(bitmap, 0x18, &s.bitmap_info);
-  s.half_width = s.bitmap_info.bmWidth / 2;
-  s.height = s.bitmap_info.bmHeight;
-  s.unused_10 = 0;
-  s.unused_c = 0;
-  s.width = s.half_width;
-  s.unused_14 = 0;
-  s.result = DrawMaskedBitmapToRect(dc, rect, bitmap, s.half_width, s.height, s.unused_10, s.unused_c, s.width, s.unused_14);
-  return s.result;
+  GetObjectA(bitmap, 0x18, &bitmap_info);
+  half_width = bitmap_info.bmWidth / 2;
+  height = bitmap_info.bmHeight;
+  unused_10 = 0;
+  unused_c = 0;
+  width = half_width;
+  unused_14 = 0;
+  result = DrawMaskedBitmapToRect(dc, rect, bitmap, half_width, height, unused_10, unused_c, width, unused_14);
+  return result;
 }
 
 // FUNCTION: MAGIC 0x0049545f

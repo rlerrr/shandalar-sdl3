@@ -163,7 +163,6 @@ char g_kim_debug_class_name_duplicate_00560198[12] = "KimDebug";
 // GLOBAL: SHANDALAR 0x00583284
 char g_kim_debug_empty_text_005601a4[4] = "";
 
-
 // GLOBAL: MAGIC 0x00561270
 // GLOBAL: SHANDALAR 0x00580680
 const char *g_duel_sound_filenames[] = {
@@ -230,22 +229,19 @@ void prepare_duel_video_mode_transition(void)
 // FUNCTION: SHANDALAR 0x0040f067
 void finish_duel_video_mode_transition(void)
 {
-  struct
-  {
-    char path[264];
-    int sound_id;
-    int unused[7];
-    unsigned int flags;
-  } s;
+  char path[264];
+  int sound_id;
+  int unused[7];
+  unsigned int flags;
 
-  s.flags &= 0xfffffffb;
+  flags &= 0xfffffffb;
   sound_unload_all();
-  for (s.sound_id = 0; s.sound_id < 20; s.sound_id++)
+  for (sound_id = 0; sound_id < 20; sound_id++)
   {
-    strcpy(s.path, global_duelsounds_path);
-    strcat(s.path, "\\");
-    strcat(s.path, g_duel_sound_filenames[s.sound_id]);
-    sound_load(s.path, s.sound_id, (Sound *)0);
+    strcpy(path, global_duelsounds_path);
+    strcat(path, "\\");
+    strcat(path, g_duel_sound_filenames[sound_id]);
+    sound_load(path, sound_id, (Sound *)0);
   }
 }
 
@@ -350,12 +346,9 @@ int create_kim_debug_window(void)
 // FUNCTION: SHANDALAR 0x00430650
 int handle_duel_hover_help_message(MSG *message, UINT timer_elapsed)
 {
-  struct
-  {
-    int overrun;
-    POINT point;
-    RECT rect;
-  } s;
+  int overrun;
+  POINT point;
+  RECT rect;
 
   switch (message->message)
   {
@@ -378,21 +371,21 @@ int handle_duel_hover_help_message(MSG *message, UINT timer_elapsed)
     {
       KillTimer((HWND)0, g_duel_directive_hover_timer_id);
       g_duel_directive_hover_timer_id = 0;
-      GetCursorPos(&s.point);
-      s.point.x += GetSystemMetrics(0xd);
-      s.point.y += GetSystemMetrics(0xe);
-      GetWindowRect((HWND)g_duel_tooltip_window, &s.rect);
-      s.overrun = (s.rect.right - s.rect.left) + s.point.x - GetSystemMetrics(SM_CXSCREEN);
-      if (s.overrun > 0)
+      GetCursorPos(&point);
+      point.x += GetSystemMetrics(0xd);
+      point.y += GetSystemMetrics(0xe);
+      GetWindowRect((HWND)g_duel_tooltip_window, &rect);
+      overrun = (rect.right - rect.left) + point.x - GetSystemMetrics(SM_CXSCREEN);
+      if (overrun > 0)
       {
-        s.point.x -= s.overrun;
+        point.x -= overrun;
       }
-      s.overrun = (s.rect.bottom - s.rect.top) + s.point.y - GetSystemMetrics(SM_CYSCREEN);
-      if (s.overrun > 0)
+      overrun = (rect.bottom - rect.top) + point.y - GetSystemMetrics(SM_CYSCREEN);
+      if (overrun > 0)
       {
-        s.point.y -= s.overrun;
+        point.y -= overrun;
       }
-      SetWindowPos((HWND)g_duel_tooltip_window, (HWND)0, s.point.x, s.point.y, 0, 0,
+      SetWindowPos((HWND)g_duel_tooltip_window, (HWND)0, point.x, point.y, 0, 0,
                    SWP_NOSIZE | SWP_NOZORDER);
       return 1;
     }
@@ -424,18 +417,15 @@ int dispatch_duel_window_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 // FUNCTION: SHANDALAR 0x004cc6c0
 int handle_duel_tooltip_message(MSG *message)
 {
-  struct
-  {
-    int timer_cue_card_visible;
-    POINT timer_client_point;
-    POINT timer_screen_point;
-    HWND target_hwnd;
-    int cue_card_visible;
-    char current_text[100];
-    POINT screen_point;
-    int refresh_cue_card;
-    char cue_text[100];
-  } s;
+  int timer_cue_card_visible;
+  POINT timer_client_point;
+  POINT timer_screen_point;
+  HWND target_hwnd;
+  int cue_card_visible;
+  char current_text[100];
+  POINT screen_point;
+  int refresh_cue_card;
+  char cue_text[100];
 
   switch (message->message)
   {
@@ -464,42 +454,42 @@ int handle_duel_tooltip_message(MSG *message)
       }
       else
       {
-        s.refresh_cue_card = 1;
-        s.cue_card_visible = 1;
+        refresh_cue_card = 1;
+        cue_card_visible = 1;
         if (message->hwnd != g_duel_last_cue_card_hwnd)
         {
-          s.cue_card_visible = SendMessageA(message->hwnd, 0x437, (WPARAM)s.cue_text, message->lParam);
+          cue_card_visible = SendMessageA(message->hwnd, 0x437, (WPARAM)cue_text, message->lParam);
         }
         else if (abs((unsigned short)((message->lParam >> 16) & 0xffff) - g_duel_last_cue_card_y) +
                      abs((unsigned short)message->lParam - g_duel_last_cue_card_x) >
                  g_duel_cue_card_mouse_threshold)
         {
-          s.cue_card_visible = SendMessageA(message->hwnd, 0x437, (WPARAM)s.cue_text, message->lParam);
+          cue_card_visible = SendMessageA(message->hwnd, 0x437, (WPARAM)cue_text, message->lParam);
         }
         else
         {
-          s.refresh_cue_card = 0;
+          refresh_cue_card = 0;
         }
 
-        if (s.cue_card_visible == 0)
+        if (cue_card_visible == 0)
         {
           ShowWindow(g_duel_cue_card_window_hwnd, SW_HIDE);
         }
-        else if (s.refresh_cue_card != 0)
+        else if (refresh_cue_card != 0)
         {
           g_duel_last_cue_card_hwnd = message->hwnd;
           g_duel_last_cue_card_x = (unsigned short)message->lParam;
           g_duel_last_cue_card_y = (unsigned short)((message->lParam >> 16) & 0xffff);
-          GetCursorPos(&s.screen_point);
+          GetCursorPos(&screen_point);
           if (g_duel_interface_options.show_cue_cards != 0)
           {
-            SendMessageA(g_duel_cue_card_window_hwnd, 0x401, 0, (LPARAM)s.current_text);
-            if (strcmp(s.current_text, s.cue_text) != 0)
+            SendMessageA(g_duel_cue_card_window_hwnd, 0x401, 0, (LPARAM)current_text);
+            if (strcmp(current_text, cue_text) != 0)
             {
               SendMessageA(g_duel_cue_card_window_hwnd, 0x400,
-                           MAKELONG(s.screen_point.x + g_duel_cue_card_x_offset,
-                                    s.screen_point.y + g_duel_cue_card_y_offset),
-                           (LPARAM)s.cue_text);
+                           MAKELONG(screen_point.x + g_duel_cue_card_x_offset,
+                                    screen_point.y + g_duel_cue_card_y_offset),
+                           (LPARAM)cue_text);
             }
           }
           else
@@ -527,20 +517,20 @@ int handle_duel_tooltip_message(MSG *message)
     {
       KillTimer((HWND)0, g_duel_cue_card_timer_id);
       g_duel_cue_card_timer_id = 0;
-      GetCursorPos(&s.timer_screen_point);
-      s.target_hwnd = WindowFromPoint(s.timer_screen_point);
-      s.timer_client_point.x = s.timer_screen_point.x;
-      s.timer_client_point.y = s.timer_screen_point.y;
-      ScreenToClient(s.target_hwnd, &s.timer_client_point);
-      s.timer_cue_card_visible = SendMessageA(s.target_hwnd, 0x437, (WPARAM)s.cue_text,
-                                              MAKELONG(s.timer_client_point.x, s.timer_client_point.y));
-      if (s.timer_cue_card_visible != 0 &&
+      GetCursorPos(&timer_screen_point);
+      target_hwnd = WindowFromPoint(timer_screen_point);
+      timer_client_point.x = timer_screen_point.x;
+      timer_client_point.y = timer_screen_point.y;
+      ScreenToClient(target_hwnd, &timer_client_point);
+      timer_cue_card_visible = SendMessageA(target_hwnd, 0x437, (WPARAM)cue_text,
+                                            MAKELONG(timer_client_point.x, timer_client_point.y));
+      if (timer_cue_card_visible != 0 &&
           g_duel_interface_options.show_cue_cards != 0)
       {
         SendMessageA(g_duel_cue_card_window_hwnd, 0x400,
-                     MAKELONG(s.timer_screen_point.x + g_duel_cue_card_x_offset,
-                              s.timer_screen_point.y + g_duel_cue_card_y_offset),
-                     (LPARAM)s.cue_text);
+                     MAKELONG(timer_screen_point.x + g_duel_cue_card_x_offset,
+                              timer_screen_point.y + g_duel_cue_card_y_offset),
+                     (LPARAM)cue_text);
       }
 
       return 1;
@@ -634,16 +624,13 @@ void dispatch_duel_engine_message(MSG *message)
 // FUNCTION: SHANDALAR 0x005472f1
 int initialize_duel_engine_window(void)
 {
-  struct
-  {
-    DWORD style;
-    int created_window;
-    int height;
-    int width;
-    char startup_error[1000];
-  } s;
+  DWORD style;
+  int created_window;
+  int height;
+  int width;
+  char startup_error[1000];
 
-  s.created_window = 1;
+  created_window = 1;
   InitializeCriticalSection(&g_duel_render_lock);
 #ifdef _DEBUG
   // This is annoying to toggle since F12 is the debugger pause hotkey in VS, so start enabled
@@ -660,32 +647,32 @@ int initialize_duel_engine_window(void)
   LoadDuelInterfaceRegistryOptions();
   register_window_classes();
 
-  s.style = 0x82000000;
+  style = 0x82000000;
   if ((g_duel_mode_flags & 1) == 0)
   {
-    s.style |= 0x40000;
+    style |= 0x40000;
   }
 
   if ((g_duel_mode_flags & 1) != 0)
   {
-    s.width = global_screen_width;
-    s.height = global_screen_height;
+    width = global_screen_width;
+    height = global_screen_height;
   }
   else
   {
-    s.width = GetSystemMetrics(0) - 1;
-    s.height = GetSystemMetrics(1);
+    width = GetSystemMetrics(0) - 1;
+    height = GetSystemMetrics(1);
   }
 
   g_duel_window_hwnd = CreateWindowExA(0, CLASS_MAGICGAME_MAINCLASS, gs_magic_the_gathering_title_00789460,
-                                       s.style, 1, 0, s.width, s.height, g_main_window_hwnd,
+                                       style, 1, 0, width, height, g_main_window_hwnd,
                                        (HMENU)0, g_app_instance, (LPVOID)0);
   if (g_duel_window_hwnd == (HWND)0)
   {
-    s.created_window = 0;
+    created_window = 0;
     load_text(global_ui_strings_filename, "PROMPT_STARTUPERROR");
-    strcat(s.startup_error, g_text_lines[8]);
-    strcat(s.startup_error, "\n");
+    strcat(startup_error, g_text_lines[8]);
+    strcat(startup_error, "\n");
   }
 
   g_duel_accelerators = LoadAcceleratorsA(g_app_instance, (LPCSTR)0x6f);
@@ -701,7 +688,7 @@ int initialize_duel_engine_window(void)
     finish_duel_video_mode_transition();
   }
 
-  if (s.created_window == 0)
+  if (created_window == 0)
   {
     return 0;
   }
@@ -718,33 +705,30 @@ int initialize_duel_engine_window(void)
 // FUNCTION: SHANDALAR 0x00544e8f
 WPARAM run_duel_engine_message_loop(void)
 {
-  struct
-  {
-    MSG message;
-    char help_path[264];
-    WPARAM result;
-  } s;
+  MSG message;
+  char help_path[264];
+  WPARAM result;
 
-  strcpy(s.help_path, global_base_directory);
-  strcat(s.help_path, "\\duel.hlp");
-  WinHelpA(global_main_hwnd, s.help_path, 2, 0);
+  strcpy(help_path, global_base_directory);
+  strcat(help_path, "\\duel.hlp");
+  WinHelpA(global_main_hwnd, help_path, 2, 0);
   g_duel_message_loop_active = 1;
   SendMessageA(g_duel_window_hwnd, WM_USER, 0, 0);
 
-  while (GetMessageA(&s.message, (HWND)0, 0, 0) != 0)
+  while (GetMessageA(&message, (HWND)0, 0, 0) != 0)
   {
-    dispatch_duel_engine_message(&s.message);
+    dispatch_duel_engine_message(&message);
   }
 
-  s.result = s.message.wParam;
-  if (s.result == 0xffff)
+  result = message.wParam;
+  if (result == 0xffff)
   {
-    s.result = (WPARAM)-1;
+    result = (WPARAM)-1;
   }
 
   g_duel_active = 0;
   g_duel_message_loop_active = 0;
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x0050d3ff
@@ -782,13 +766,10 @@ void shutdown_duel_engine_window(void)
 // FUNCTION: SHANDALAR 0x0042ffd0
 DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
 {
-  struct
-  {
-    char stack_padding[0x7ec];
-    WPARAM result;
-  } s;
+  char stack_padding[0x7ec];
+  WPARAM result;
 
-  s.result = (WPARAM)-1;
+  result = (WPARAM)-1;
   g_duel_mode_flags = 1;
   g_duel_network_state = 0;
   g_duel_extra_turn_player = -1;
@@ -814,14 +795,14 @@ DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
 
   if (initialize_duel_engine_window() != 0)
   {
-    s.result = run_duel_engine_message_loop();
+    result = run_duel_engine_message_loop();
     shutdown_duel_engine_window();
   }
 #ifdef SHANDALAR
   shandalar_host_end_duel();
 #endif
 
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x004da380
@@ -843,23 +824,20 @@ int register_MAGICGAME_MainClass(LPCSTR class_name)
 // FUNCTION: SHANDALAR 0x004bab60
 int register_MAGICGAME_ChatClass(LPCSTR class_name)
 {
-  struct
-  {
-    int registered;
-    WNDCLASSA wndclass;
-  } s;
+  int registered;
+  WNDCLASSA wndclass;
 
-  s.registered = 1;
-  SET_DUEL_WNDCLASS(s.wndclass, 0, wndproc_MAGICGAME_ChatClass, g_magicgame_chat_window_extra_bytes,
+  registered = 1;
+  SET_DUEL_WNDCLASS(wndclass, 0, wndproc_MAGICGAME_ChatClass, g_magicgame_chat_window_extra_bytes,
                     LoadIconA((HINSTANCE)0, (LPCSTR)0x7f00), (HBRUSH)0x6, class_name);
-  if (RegisterClassA(&s.wndclass) == 0)
+  if (RegisterClassA(&wndclass) == 0)
   {
-    s.registered = 0;
+    registered = 0;
   }
 
   g_magicgame_chat_font = CreateFontIndirectA(LoadFontFromIni("Chat", 0));
   g_magicgame_chat_text_color = 0x2565656;
-  return s.registered;
+  return registered;
 }
 
 // FUNCTION: MAGIC 0x004e2f70
@@ -905,26 +883,23 @@ int register_MAGIC_PaletteClass(LPCSTR class_name)
 // FUNCTION: SHANDALAR 0x004cbfa0
 int register_MAGIC_CueCardClass(LPCSTR class_name)
 {
-  struct
-  {
-    int result;
-    WNDCLASSA wndclass;
-  } s;
+  int result;
+  WNDCLASSA wndclass;
 
-  s.result = 1;
-  s.wndclass.style = 0x800;
-  s.wndclass.lpfnWndProc = wndproc_MAGIC_CueCardClass;
-  s.wndclass.cbClsExtra = 0;
-  s.wndclass.cbWndExtra = g_duel_cue_card_window_extra_bytes;
-  s.wndclass.hInstance = g_app_instance;
-  s.wndclass.hIcon = (HICON)0;
-  s.wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7f00);
-  s.wndclass.hbrBackground = (HBRUSH)0x6;
-  s.wndclass.lpszMenuName = (LPCSTR)0;
-  s.wndclass.lpszClassName = class_name;
-  if (RegisterClassA(&s.wndclass) == 0)
+  result = 1;
+  wndclass.style = 0x800;
+  wndclass.lpfnWndProc = wndproc_MAGIC_CueCardClass;
+  wndclass.cbClsExtra = 0;
+  wndclass.cbWndExtra = g_duel_cue_card_window_extra_bytes;
+  wndclass.hInstance = g_app_instance;
+  wndclass.hIcon = (HICON)0;
+  wndclass.hCursor = LoadCursorA((HINSTANCE)0, (LPCSTR)0x7f00);
+  wndclass.hbrBackground = (HBRUSH)0x6;
+  wndclass.lpszMenuName = (LPCSTR)0;
+  wndclass.lpszClassName = class_name;
+  if (RegisterClassA(&wndclass) == 0)
   {
-    s.result = 0;
+    result = 0;
   }
   g_duel_cue_card_timer_id = 0;
   g_duel_cue_card_timer_elapsed = 500;
@@ -938,9 +913,9 @@ int register_MAGIC_CueCardClass(LPCSTR class_name)
   if (g_duel_cue_card_background_brush == (HBRUSH)0 ||
       g_duel_cue_card_shadow_brush == (HBRUSH)0)
   {
-    s.result = 0;
+    result = 0;
   }
-  return s.result;
+  return result;
 }
 
 // FUNCTION: MAGIC 0x0043db50
@@ -1107,32 +1082,29 @@ int destroy_windowclasses(void)
 // FUNCTION: SHANDALAR 0x004bac45
 LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    char large_text[500];
-    char text[100];
-    HDC dc;
-    PAINTSTRUCT paint;
-    RECT client_rect;
-    RECT create_rect;
-    RECT window_rect;
-    HFONT font;
-    int width;
-  } s;
+  char large_text[500];
+  char text[100];
+  HDC dc;
+  PAINTSTRUCT paint;
+  RECT client_rect;
+  RECT create_rect;
+  RECT window_rect;
+  HFONT font;
+  int width;
 
   switch (msg)
   {
   case 0x400:
-    s.width = GetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET);
-    return s.width;
+    width = GetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET);
+    return width;
 
   case 0x401:
-    s.width = wparam;
-    SetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET, s.width);
-    GetWindowRect(hwnd, &s.window_rect);
-    if (s.window_rect.right - s.window_rect.left < s.width)
+    width = wparam;
+    SetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET, width);
+    GetWindowRect(hwnd, &window_rect);
+    if (window_rect.right - window_rect.left < width)
     {
-      SetWindowPos(hwnd, (HWND)0, 0, 0, s.width, s.window_rect.bottom - s.window_rect.top, SWP_NOMOVE | SWP_NOZORDER);
+      SetWindowPos(hwnd, (HWND)0, 0, 0, width, window_rect.bottom - window_rect.top, SWP_NOMOVE | SWP_NOZORDER);
     }
     return 0;
 
@@ -1141,51 +1113,51 @@ LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_CREATE:
-    s.font = g_magicgame_chat_font;
-    SetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG)s.font);
-    GetWindowRect(hwnd, &s.create_rect);
-    s.width = s.create_rect.right - s.create_rect.left;
-    SetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET, s.width);
+    font = g_magicgame_chat_font;
+    SetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG)font);
+    GetWindowRect(hwnd, &create_rect);
+    width = create_rect.right - create_rect.left;
+    SetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET, width);
     return 0;
 
   case WM_GETFONT:
-    s.font = (HFONT)GetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
-    return (LRESULT)s.font;
+    font = (HFONT)GetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
+    return (LRESULT)font;
 
   case WM_LBUTTONDOWN:
     SendMessageA(hwnd, WM_TIMER, 1, 0);
     return 0;
 
   case WM_PAINT:
-    s.font = (HFONT)GetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
-    s.dc = BeginPaint(hwnd, &s.paint);
-    if (s.dc != (HDC)0)
+    font = (HFONT)GetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
+    dc = BeginPaint(hwnd, &paint);
+    if (dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.dc);
-      SetTextColor(s.dc, g_magicgame_chat_text_color);
-      SetBkMode(s.dc, TRANSPARENT);
-      SelectObject(s.dc, s.font);
-      GetWindowTextA(hwnd, s.text, 100);
-      GetClientRect(hwnd, &s.client_rect);
-      s.client_rect.left += 10;
-      SetMapMode(s.dc, MM_ANISOTROPIC);
-      SetWindowExtEx(s.dc, s.client_rect.right - s.client_rect.left, 20, (LPSIZE)0);
-      SetViewportExtEx(s.dc, s.client_rect.right - s.client_rect.left, s.client_rect.bottom - s.client_rect.top, (LPSIZE)0);
-      DrawTextA(s.dc, s.text, -1, &s.client_rect, DT_BOTTOM);
-      EndPaint(hwnd, &s.paint);
+      ApplyCardArtPaletteToDc(dc);
+      SetTextColor(dc, g_magicgame_chat_text_color);
+      SetBkMode(dc, TRANSPARENT);
+      SelectObject(dc, font);
+      GetWindowTextA(hwnd, text, 100);
+      GetClientRect(hwnd, &client_rect);
+      client_rect.left += 10;
+      SetMapMode(dc, MM_ANISOTROPIC);
+      SetWindowExtEx(dc, client_rect.right - client_rect.left, 20, (LPSIZE)0);
+      SetViewportExtEx(dc, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, (LPSIZE)0);
+      DrawTextA(dc, text, -1, &client_rect, DT_BOTTOM);
+      EndPaint(hwnd, &paint);
     }
     return 0;
 
   case WM_SETFONT:
-    s.font = (HFONT)wparam;
-    if (s.font == (HFONT)0)
+    font = (HFONT)wparam;
+    if (font == (HFONT)0)
     {
-      s.font = g_magicgame_chat_font;
+      font = g_magicgame_chat_font;
     }
-    SetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG)s.font);
+    SetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG)font);
     InvalidateRect(hwnd, (RECT *)0, 1);
-    GetWindowTextA(hwnd, s.large_text, 500);
-    SetWindowTextA(hwnd, s.large_text);
+    GetWindowTextA(hwnd, large_text, 500);
+    SetWindowTextA(hwnd, large_text);
     return 0;
 
   case WM_SHOWWINDOW:
@@ -1216,19 +1188,16 @@ LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam,
 // FUNCTION: SHANDALAR 0x004c252a
 LRESULT CALLBACK wndproc_ShuffleCard(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    HDC dc;
-    RECT client_rect;
-  } s;
+  HDC dc;
+  RECT client_rect;
 
   switch (msg)
   {
   case WM_ERASEBKGND:
-    s.dc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.dc);
-    GetClientRect(hwnd, &s.client_rect);
-    DrawCardBack(s.dc, &s.client_rect);
+    dc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(dc);
+    GetClientRect(hwnd, &client_rect);
+    DrawCardBack(dc, &client_rect);
     return 0;
 
   case 0x30f:
@@ -1247,11 +1216,8 @@ LRESULT CALLBACK wndproc_ShuffleCard(HWND hwnd, UINT msg, WPARAM wparam, LPARAM 
 // FUNCTION: SHANDALAR 0x0050e2fc
 LRESULT CALLBACK wndproc_ExpandedGraveyard(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    POINT mouse_point;
-    HWND target_hwnd;
-  } s;
+  POINT mouse_point;
+  HWND target_hwnd;
 
   switch (msg)
   {
@@ -1267,12 +1233,12 @@ LRESULT CALLBACK wndproc_ExpandedGraveyard(HWND hwnd, UINT msg, WPARAM wparam, L
 
   case WM_MOUSEMOVE:
   case WM_RBUTTONDBLCLK:
-    GetCursorPos(&s.mouse_point);
-    s.target_hwnd = WindowFromPoint(s.mouse_point);
-    MapWindowPoints((HWND)0, s.target_hwnd, &s.mouse_point, 1);
-    if (hwnd != s.target_hwnd)
+    GetCursorPos(&mouse_point);
+    target_hwnd = WindowFromPoint(mouse_point);
+    MapWindowPoints((HWND)0, target_hwnd, &mouse_point, 1);
+    if (hwnd != target_hwnd)
     {
-      SendMessageA(s.target_hwnd, msg, wparam, MAKELONG(s.mouse_point.x, s.mouse_point.y));
+      SendMessageA(target_hwnd, msg, wparam, MAKELONG(mouse_point.x, mouse_point.y));
     }
     return 0;
 
@@ -1292,15 +1258,12 @@ LRESULT CALLBACK wndproc_ExpandedGraveyard(HWND hwnd, UINT msg, WPARAM wparam, L
 // FUNCTION: SHANDALAR 0x004cbb3f
 LRESULT CALLBACK wndproc_SpellMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int menu_item_count;
-    POINT popup_point;
-    RECT popup_rect;
-    char background_path[264];
-    HDC erase_dc;
-    RECT client_rect;
-  } s;
+  int menu_item_count;
+  POINT popup_point;
+  RECT popup_rect;
+  char background_path[264];
+  HDC erase_dc;
+  RECT client_rect;
 
   switch (msg)
   {
@@ -1317,23 +1280,23 @@ LRESULT CALLBACK wndproc_SpellMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     return SendMessageA(g_duel_phase_display_window_hwnd, msg, wparam, lparam);
 
   case WM_ERASEBKGND:
-    s.erase_dc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.erase_dc);
-    GetClientRect(hwnd, &s.client_rect);
-    IntersectClipRect(s.erase_dc, 0, 0, s.client_rect.right, s.client_rect.bottom);
+    erase_dc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(erase_dc);
+    GetClientRect(hwnd, &client_rect);
+    IntersectClipRect(erase_dc, 0, 0, client_rect.right, client_rect.bottom);
     if (g_spell_minimized_background_bitmap == (HBITMAP)0)
     {
-      strcpy(s.background_path, global_duelart_path);
-      strcat(s.background_path, "\\WINBK_SpellMin.pic");
-      g_spell_minimized_background_bitmap = load_pic(s.background_path);
+      strcpy(background_path, global_duelart_path);
+      strcat(background_path, "\\WINBK_SpellMin.pic");
+      g_spell_minimized_background_bitmap = load_pic(background_path);
     }
     if (g_spell_minimized_background_bitmap != (HBITMAP)0)
     {
-      DrawBitmapToRect(s.erase_dc, &s.client_rect, g_spell_minimized_background_bitmap);
+      DrawBitmapToRect(erase_dc, &client_rect, g_spell_minimized_background_bitmap);
     }
     else
     {
-      FillRect(s.erase_dc, &s.client_rect, GetStockObject(GRAY_BRUSH));
+      FillRect(erase_dc, &client_rect, GetStockObject(GRAY_BRUSH));
     }
     return 1;
 
@@ -1342,13 +1305,13 @@ LRESULT CALLBACK wndproc_SpellMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     return 0;
 
   case WM_RBUTTONDOWN:
-    s.popup_point.x = (unsigned int)lparam & 0xffff;
-    s.popup_point.y = HIWORD(lparam);
-    ClientToScreen(hwnd, &s.popup_point);
-    SetRect(&s.popup_rect, s.popup_point.x, s.popup_point.y,
-            s.popup_point.x + 1, s.popup_point.y + 1);
-    TrackPopupMenu(g_spell_minimized_popup_menu, TPM_RIGHTBUTTON, s.popup_point.x,
-                   s.popup_point.y, 0, hwnd, &s.popup_rect);
+    popup_point.x = (unsigned int)lparam & 0xffff;
+    popup_point.y = HIWORD(lparam);
+    ClientToScreen(hwnd, &popup_point);
+    SetRect(&popup_rect, popup_point.x, popup_point.y,
+            popup_point.x + 1, popup_point.y + 1);
+    TrackPopupMenu(g_spell_minimized_popup_menu, TPM_RIGHTBUTTON, popup_point.x,
+                   popup_point.y, 0, hwnd, &popup_rect);
     return 0;
 
   case WM_INITMENU:
@@ -1359,8 +1322,8 @@ LRESULT CALLBACK wndproc_SpellMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   case WM_MENUSELECT:
     if (HIWORD(wparam) == 0xffff && lparam == 0)
     {
-      s.menu_item_count = GetMenuItemCount(g_spell_minimized_popup_menu);
-      while (s.menu_item_count-- != 0)
+      menu_item_count = GetMenuItemCount(g_spell_minimized_popup_menu);
+      while (menu_item_count-- != 0)
       {
         DeleteMenu(g_spell_minimized_popup_menu, 0, MF_BYPOSITION);
       }
@@ -1383,35 +1346,32 @@ LRESULT CALLBACK wndproc_SpellMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 // FUNCTION: SHANDALAR 0x00563934
 LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    int pressed;
-    HICON icon;
-  } s;
+  int pressed;
+  HICON icon;
 
   switch (msg)
   {
   case 0x400:
-    s.pressed = (int)wparam;
-    SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, s.pressed);
+    pressed = (int)wparam;
+    SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, pressed);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 
   case 0x401:
-    return s.pressed = GetWindowLongA(hwnd, g_icon_button_pressed_long_offset);
+    return pressed = GetWindowLongA(hwnd, g_icon_button_pressed_long_offset);
 
   case WM_CREATE:
-    s.icon = LoadIconA(g_app_instance, ((CREATESTRUCTA *)lparam)->lpszName);
-    SetWindowLongA(hwnd, g_icon_button_icon_long_offset, (LONG)s.icon);
-    s.pressed = 0;
-    SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, s.pressed);
+    icon = LoadIconA(g_app_instance, ((CREATESTRUCTA *)lparam)->lpszName);
+    SetWindowLongA(hwnd, g_icon_button_icon_long_offset, (LONG)icon);
+    pressed = 0;
+    SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, pressed);
     return 0;
 
   case WM_DESTROY:
-    s.icon = (HICON)GetWindowLongA(hwnd, g_icon_button_icon_long_offset);
-    if (s.icon != (HICON)0)
+    icon = (HICON)GetWindowLongA(hwnd, g_icon_button_icon_long_offset);
+    if (icon != (HICON)0)
     {
-      DestroyIcon(s.icon);
+      DestroyIcon(icon);
     }
     return 0;
 
@@ -1423,8 +1383,8 @@ LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM 
 
   case WM_LBUTTONDOWN:
     SetCapture(hwnd);
-    s.pressed = 1;
-    SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, s.pressed);
+    pressed = 1;
+    SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, pressed);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 
@@ -1436,8 +1396,8 @@ LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM 
       mouse_move_point.x = (unsigned int)lparam & 0xffff;
       mouse_move_point.y = HIWORD(lparam);
       GetClientRect(hwnd, &mouse_move_rect);
-      s.pressed = PtInRect(&mouse_move_rect, mouse_move_point);
-      SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, s.pressed);
+      pressed = PtInRect(&mouse_move_rect, mouse_move_point);
+      SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, pressed);
       InvalidateRect(hwnd, NULL, TRUE);
     }
     return 0;
@@ -1450,11 +1410,11 @@ LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM 
       mouse_up_point.x = (unsigned int)lparam & 0xffff;
       mouse_up_point.y = HIWORD(lparam);
       GetClientRect(hwnd, &mouse_up_rect);
-      s.pressed = PtInRect(&mouse_up_rect, mouse_up_point);
-      SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, s.pressed);
+      pressed = PtInRect(&mouse_up_rect, mouse_up_point);
+      SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, pressed);
       InvalidateRect(hwnd, NULL, TRUE);
       ReleaseCapture();
-      if (s.pressed != 0)
+      if (pressed != 0)
       {
         SetFocus(hwnd);
       }
@@ -1483,10 +1443,7 @@ LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM 
 // FUNCTION: SHANDALAR 0x004c69fe
 LRESULT CALLBACK wndproc_MAGICGAME_BigCardCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    POINT mouse_point;
-  } s;
+  POINT mouse_point;
 
   switch (msg)
   {
@@ -1501,10 +1458,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardCardClass(HWND hwnd, UINT msg, WPARAM 
 
   case WM_LBUTTONDOWN:
   case WM_LBUTTONUP:
-    s.mouse_point.x = lparam & 0xffff;
-    s.mouse_point.y = (unsigned short)(((unsigned int)lparam >> 16) & 0xffff);
-    MapWindowPoints(hwnd, GetParent(hwnd), &s.mouse_point, 1);
-    SendMessageA(GetParent(hwnd), msg, wparam, MAKELONG(s.mouse_point.x, s.mouse_point.y));
+    mouse_point.x = lparam & 0xffff;
+    mouse_point.y = (unsigned short)(((unsigned int)lparam >> 16) & 0xffff);
+    MapWindowPoints(hwnd, GetParent(hwnd), &mouse_point, 1);
+    SendMessageA(GetParent(hwnd), msg, wparam, MAKELONG(mouse_point.x, mouse_point.y));
     return 0;
 
   default:
@@ -1516,25 +1473,22 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardCardClass(HWND hwnd, UINT msg, WPARAM 
 // FUNCTION: SHANDALAR 0x004543d4
 LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    char color_text[100];
-    int paint_column;
-    HDC paint_dc;
-    int paint_row;
-    PAINTSTRUCT paint_struct;
-    PALETTEENTRY palette_entry;
-    HBRUSH color_brush;
-    RECT paint_rect;
-    int hit_color;
-    int column;
-    int mouse_x;
-    int mouse_y;
-    int row;
-    RECT mouse_rect;
-    int hit_found;
-    int selected_color;
-  } s;
+  char color_text[100];
+  int paint_column;
+  HDC paint_dc;
+  int paint_row;
+  PAINTSTRUCT paint_struct;
+  PALETTEENTRY palette_entry;
+  HBRUSH color_brush;
+  RECT paint_rect;
+  int hit_color;
+  int column;
+  int mouse_x;
+  int mouse_y;
+  int row;
+  RECT mouse_rect;
+  int hit_found;
+  int selected_color;
 
   switch (msg)
   {
@@ -1543,70 +1497,70 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
     return 0;
 
   case WM_CREATE:
-    s.selected_color = 0;
-    SetWindowLongA(hwnd, g_palette_selected_color_window_long_offset, s.selected_color);
+    selected_color = 0;
+    SetWindowLongA(hwnd, g_palette_selected_color_window_long_offset, selected_color);
     return 0;
 
   case WM_MOUSEMOVE:
-    s.selected_color = GetWindowLongA(hwnd, g_palette_selected_color_window_long_offset);
-    s.mouse_x = lparam & 0xffff;
-    s.mouse_y = (unsigned short)((lparam >> 16) & 0xffff);
-    s.hit_found = 0;
-    for (s.row = 0; s.row < 16 && s.hit_found == 0; s.row = s.row + 1)
+    selected_color = GetWindowLongA(hwnd, g_palette_selected_color_window_long_offset);
+    mouse_x = lparam & 0xffff;
+    mouse_y = (unsigned short)((lparam >> 16) & 0xffff);
+    hit_found = 0;
+    for (row = 0; row < 16 && hit_found == 0; row = row + 1)
     {
-      for (s.column = 0; s.column < 16 && s.hit_found == 0; s.column = s.column + 1)
+      for (column = 0; column < 16 && hit_found == 0; column = column + 1)
       {
-        SetRect(&s.mouse_rect, s.column << 4, s.row << 4, (s.column + 1) << 4, (s.row + 1) << 4);
-        OffsetRect(&s.mouse_rect, g_palette_grid_x_offset, g_palette_grid_y_offset);
-        if (((BOOL(WINAPI *)(const RECT *, int, int))PtInRect)(&s.mouse_rect, s.mouse_x, s.mouse_y) != 0)
+        SetRect(&mouse_rect, column << 4, row << 4, (column + 1) << 4, (row + 1) << 4);
+        OffsetRect(&mouse_rect, g_palette_grid_x_offset, g_palette_grid_y_offset);
+        if (((BOOL(WINAPI *)(const RECT *, int, int))PtInRect)(&mouse_rect, mouse_x, mouse_y) != 0)
         {
-          s.hit_found = 1;
-          s.hit_color = (s.row << 4) + s.column;
+          hit_found = 1;
+          hit_color = (row << 4) + column;
         }
       }
     }
-    if (s.hit_found != 0)
+    if (hit_found != 0)
     {
-      if (s.selected_color != s.hit_color)
+      if (selected_color != hit_color)
       {
-        s.selected_color = s.hit_color;
-        SetWindowLongA(hwnd, g_palette_selected_color_window_long_offset, s.selected_color);
+        selected_color = hit_color;
+        SetWindowLongA(hwnd, g_palette_selected_color_window_long_offset, selected_color);
         InvalidateRect(hwnd, (RECT *)0, FALSE);
       }
     }
     return 0;
 
   case WM_PAINT:
-    s.selected_color = GetWindowLongA(hwnd, g_palette_selected_color_window_long_offset);
-    s.paint_dc = BeginPaint(hwnd, &s.paint_struct);
-    if (s.paint_dc != (HDC)0)
+    selected_color = GetWindowLongA(hwnd, g_palette_selected_color_window_long_offset);
+    paint_dc = BeginPaint(hwnd, &paint_struct);
+    if (paint_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      GetClientRect(hwnd, &s.paint_rect);
-      g_palette_grid_x_offset = ((s.paint_rect.right - s.paint_rect.left) - 0x100) / 2;
-      g_palette_grid_y_offset = ((s.paint_rect.bottom - s.paint_rect.top) - 0x100) / 2;
-      for (s.paint_row = 0; s.paint_row < 16; s.paint_row = s.paint_row + 1)
+      ApplyCardArtPaletteToDc(paint_dc);
+      GetClientRect(hwnd, &paint_rect);
+      g_palette_grid_x_offset = ((paint_rect.right - paint_rect.left) - 0x100) / 2;
+      g_palette_grid_y_offset = ((paint_rect.bottom - paint_rect.top) - 0x100) / 2;
+      for (paint_row = 0; paint_row < 16; paint_row = paint_row + 1)
       {
-        for (s.paint_column = 0; s.paint_column < 16; s.paint_column = s.paint_column + 1)
+        for (paint_column = 0; paint_column < 16; paint_column = paint_column + 1)
         {
-          s.color_brush = CreateSolidBrush(PALETTEINDEX((WORD)((s.paint_row << 4) + s.paint_column)));
-          SetRect(&s.paint_rect, s.paint_column << 4, s.paint_row << 4, (s.paint_column + 1) << 4, (s.paint_row + 1) << 4);
-          OffsetRect(&s.paint_rect, g_palette_grid_x_offset, g_palette_grid_y_offset);
-          FillRect(s.paint_dc, &s.paint_rect, s.color_brush);
-          DeleteObject(s.color_brush);
+          color_brush = CreateSolidBrush(PALETTEINDEX((WORD)((paint_row << 4) + paint_column)));
+          SetRect(&paint_rect, paint_column << 4, paint_row << 4, (paint_column + 1) << 4, (paint_row + 1) << 4);
+          OffsetRect(&paint_rect, g_palette_grid_x_offset, g_palette_grid_y_offset);
+          FillRect(paint_dc, &paint_rect, color_brush);
+          DeleteObject(color_brush);
         }
       }
-      if (GetPaletteEntries(global_cart_art_hpalette, s.selected_color, 1, &s.palette_entry) != 0)
+      if (GetPaletteEntries(global_cart_art_hpalette, selected_color, 1, &palette_entry) != 0)
       {
-        sprintf(s.color_text, "#%3d: %3d,%3d,%3d         ", s.selected_color, s.palette_entry.peRed,
-                s.palette_entry.peGreen, s.palette_entry.peBlue);
+        sprintf(color_text, "#%3d: %3d,%3d,%3d         ", selected_color, palette_entry.peRed,
+                palette_entry.peGreen, palette_entry.peBlue);
       }
       else
       {
-        sprintf(s.color_text, "#%3d: not in palette         ", s.selected_color);
+        sprintf(color_text, "#%3d: not in palette         ", selected_color);
       }
-      TextOutA(s.paint_dc, 0, 0, s.color_text, strlen(s.color_text));
-      EndPaint(hwnd, &s.paint_struct);
+      TextOutA(paint_dc, 0, 0, color_text, strlen(color_text));
+      EndPaint(hwnd, &paint_struct);
     }
     return 0;
 
@@ -1621,86 +1575,83 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
 // FUNCTION: SHANDALAR 0x004cc15a
 LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    unsigned int font_param;
-    char paint_text[100];
-    HDC paint_dc;
-    PAINTSTRUCT paint_struct;
-    RECT inner_rect;
-    RECT client_rect;
-    unsigned int get_text_wparam;
-    LPARAM get_text_lparam;
-    int height;
-    HDC dc;
-    int width;
-    unsigned int y;
-    unsigned int x;
-    int screen_width;
-    LPCSTR text;
-    SIZE text_size;
-    int screen_height;
-    HGDIOBJ font;
-  } s;
+  unsigned int font_param;
+  char paint_text[100];
+  HDC paint_dc;
+  PAINTSTRUCT paint_struct;
+  RECT inner_rect;
+  RECT client_rect;
+  unsigned int get_text_wparam;
+  LPARAM get_text_lparam;
+  int height;
+  HDC dc;
+  int width;
+  unsigned int y;
+  unsigned int x;
+  int screen_width;
+  LPCSTR text;
+  SIZE text_size;
+  int screen_height;
+  HGDIOBJ font;
 
   switch (msg)
   {
   case 0x400:
-    s.font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
-    s.x = wparam & 0xffff;
-    s.y = (unsigned short)((wparam >> 16) & 0xffff);
-    s.text = (LPCSTR)lparam;
-    s.dc = GetDC(hwnd);
-    if (s.dc != (HDC)0)
+    font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
+    x = wparam & 0xffff;
+    y = (unsigned short)((wparam >> 16) & 0xffff);
+    text = (LPCSTR)lparam;
+    dc = GetDC(hwnd);
+    if (dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.dc);
-      SelectObject(s.dc, s.font);
-      GetTextExtentPoint32A(s.dc, s.text, lstrlenA(s.text), &s.text_size);
-      s.width = s.text_size.cx + 10;
-      s.height = s.text_size.cy + 6;
-      ReleaseDC(hwnd, s.dc);
-      s.screen_width = GetSystemMetrics(SM_CXSCREEN);
-      s.screen_height = GetSystemMetrics(SM_CYSCREEN);
-      if ((int)s.x < 1)
+      ApplyCardArtPaletteToDc(dc);
+      SelectObject(dc, font);
+      GetTextExtentPoint32A(dc, text, lstrlenA(text), &text_size);
+      width = text_size.cx + 10;
+      height = text_size.cy + 6;
+      ReleaseDC(hwnd, dc);
+      screen_width = GetSystemMetrics(SM_CXSCREEN);
+      screen_height = GetSystemMetrics(SM_CYSCREEN);
+      if ((int)x < 1)
       {
-        s.x = 1;
+        x = 1;
       }
-      if ((int)(s.width + s.x) > s.screen_width - 1)
+      if ((int)(width + x) > screen_width - 1)
       {
-        s.x = (s.screen_width - 1) - s.width;
+        x = (screen_width - 1) - width;
       }
-      if ((int)s.y < 1)
+      if ((int)y < 1)
       {
-        s.y = 1;
+        y = 1;
       }
-      if ((int)(s.height + s.y) > s.screen_height - 1)
+      if ((int)(height + y) > screen_height - 1)
       {
-        s.y = (s.screen_height - 1) - s.height;
+        y = (screen_height - 1) - height;
       }
-      MoveWindow(hwnd, s.x, s.y, s.width, s.height, 1);
-      SetWindowTextA(hwnd, s.text);
+      MoveWindow(hwnd, x, y, width, height, 1);
+      SetWindowTextA(hwnd, text);
       ShowWindow(hwnd, SW_SHOW);
       InvalidateRect(hwnd, (RECT *)0, 1);
     }
     return 0;
 
   case 0x401:
-    s.get_text_lparam = lparam;
-    s.get_text_wparam = wparam;
-    GetWindowTextA(hwnd, (LPSTR)s.get_text_lparam, s.get_text_wparam);
+    get_text_lparam = lparam;
+    get_text_wparam = wparam;
+    GetWindowTextA(hwnd, (LPSTR)get_text_lparam, get_text_wparam);
     return 0;
 
   case WM_CREATE:
-    s.font = (HGDIOBJ)g_duel_cue_card_font;
-    SetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset, (LONG)s.font);
+    font = (HGDIOBJ)g_duel_cue_card_font;
+    SetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset, (LONG)font);
     return 0;
 
   case WM_ERASEBKGND:
     return 1;
 
   case WM_GETFONT:
-    s.font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
-    return (LRESULT)s.font;
+    font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
+    return (LRESULT)font;
 
   case WM_KEYDOWN:
     SetFocus(g_duel_window_hwnd);
@@ -1708,32 +1659,32 @@ LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, 
     return 0;
 
   case WM_PAINT:
-    s.font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
-    s.paint_dc = BeginPaint(hwnd, &s.paint_struct);
-    if (s.paint_dc != (HDC)0)
+    font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
+    paint_dc = BeginPaint(hwnd, &paint_struct);
+    if (paint_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      GetClientRect(hwnd, &s.client_rect);
-      SetRect(&s.inner_rect, s.client_rect.left, s.client_rect.top,
-              s.client_rect.right - 2, s.client_rect.bottom - 2);
-      FillRect(s.paint_dc, &s.client_rect, g_duel_cue_card_shadow_brush);
-      FillRect(s.paint_dc, &s.inner_rect, g_duel_cue_card_background_brush);
-      SetTextColor(s.paint_dc, g_duel_cue_card_text_color);
-      SetBkMode(s.paint_dc, TRANSPARENT);
-      GetWindowTextA(hwnd, s.paint_text, 100);
-      SelectObject(s.paint_dc, s.font);
-      DrawTextA(s.paint_dc, s.paint_text, -1, &s.inner_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-      EndPaint(hwnd, &s.paint_struct);
+      ApplyCardArtPaletteToDc(paint_dc);
+      GetClientRect(hwnd, &client_rect);
+      SetRect(&inner_rect, client_rect.left, client_rect.top,
+              client_rect.right - 2, client_rect.bottom - 2);
+      FillRect(paint_dc, &client_rect, g_duel_cue_card_shadow_brush);
+      FillRect(paint_dc, &inner_rect, g_duel_cue_card_background_brush);
+      SetTextColor(paint_dc, g_duel_cue_card_text_color);
+      SetBkMode(paint_dc, TRANSPARENT);
+      GetWindowTextA(hwnd, paint_text, 100);
+      SelectObject(paint_dc, font);
+      DrawTextA(paint_dc, paint_text, -1, &inner_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+      EndPaint(hwnd, &paint_struct);
     }
     return 0;
 
   case WM_SETFONT:
-    s.font_param = wparam;
-    if (s.font_param == 0)
+    font_param = wparam;
+    if (font_param == 0)
     {
-      s.font_param = (unsigned int)g_duel_cue_card_font;
+      font_param = (unsigned int)g_duel_cue_card_font;
     }
-    SetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset, s.font_param);
+    SetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset, font_param);
     InvalidateRect(hwnd, (RECT *)0, 1);
     return 0;
 
@@ -1753,16 +1704,13 @@ LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, 
 // FUNCTION: SHANDALAR 0x00409462
 LRESULT CALLBACK wndproc_MAGIC_PlayerDirectiveClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
-  {
-    HDC paint_dc;
-    PAINTSTRUCT paint_struct;
-    char window_text[200];
-    RECT text_rect;
-    HDC erase_dc;
-    RECT erase_rect;
-    HBRUSH erase_brush;
-  } s;
+  HDC paint_dc;
+  PAINTSTRUCT paint_struct;
+  char window_text[200];
+  RECT text_rect;
+  HDC erase_dc;
+  RECT erase_rect;
+  HBRUSH erase_brush;
 
   switch (msg)
   {
@@ -1770,25 +1718,25 @@ LRESULT CALLBACK wndproc_MAGIC_PlayerDirectiveClass(HWND hwnd, UINT msg, WPARAM 
 
     return 0;
   case WM_ERASEBKGND:
-    s.erase_dc = (HDC)wparam;
-    ApplyCardArtPaletteToDc(s.erase_dc);
-    GetClientRect(hwnd, &s.erase_rect);
-    s.erase_brush = CreateSolidBrush(0xffff);
-    FillRect(s.erase_dc, &s.erase_rect, s.erase_brush);
-    DeleteObject(s.erase_brush);
+    erase_dc = (HDC)wparam;
+    ApplyCardArtPaletteToDc(erase_dc);
+    GetClientRect(hwnd, &erase_rect);
+    erase_brush = CreateSolidBrush(0xffff);
+    FillRect(erase_dc, &erase_rect, erase_brush);
+    DeleteObject(erase_brush);
     return 1;
   case WM_PAINT:
-    s.paint_dc = BeginPaint(hwnd, &s.paint_struct);
-    if (s.paint_dc != NULL)
+    paint_dc = BeginPaint(hwnd, &paint_struct);
+    if (paint_dc != NULL)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      GetWindowTextA(hwnd, s.window_text, 200);
-      SetTextAlign(s.paint_dc, 6);
-      SetBkMode(s.paint_dc, 1);
-      SetTextColor(s.paint_dc, 0);
-      GetClientRect(hwnd, &s.text_rect);
-      DrawManaText(s.paint_dc, &s.text_rect, s.window_text, 1);
-      EndPaint(hwnd, &s.paint_struct);
+      ApplyCardArtPaletteToDc(paint_dc);
+      GetWindowTextA(hwnd, window_text, 200);
+      SetTextAlign(paint_dc, 6);
+      SetBkMode(paint_dc, 1);
+      SetTextColor(paint_dc, 0);
+      GetClientRect(hwnd, &text_rect);
+      DrawManaText(paint_dc, &text_rect, window_text, 1);
+      EndPaint(hwnd, &paint_struct);
     }
     return 0;
 
@@ -1811,16 +1759,13 @@ LRESULT CALLBACK wndproc_MAGIC_PlayerDirectiveClass(HWND hwnd, UINT msg, WPARAM 
 // FUNCTION: SHANDALAR 0x00542b64
 int create_duel_child_windows(HWND parent_window)
 {
-  struct
-  {
-    int visible_style;
-    int popup_style;
-    RECT client_rect;
-  } s;
+  int visible_style;
+  int popup_style;
+  RECT client_rect;
 
-  GetClientRect(parent_window, &s.client_rect);
-  s.visible_style = 0x50000000;
-  s.popup_style = 0x80c00000;
+  GetClientRect(parent_window, &client_rect);
+  visible_style = 0x50000000;
+  popup_style = 0x80c00000;
   g_duel_cue_card_window_hwnd =
       CreateWindowExA(0, CLASS_MAGIC_CUE_CARD, "", 0x80000000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_tooltip_window =
@@ -1828,27 +1773,27 @@ int create_duel_child_windows(HWND parent_window)
   g_duel_prompt_context_hwnd =
       CreateWindowExA(0, CLASS_MAGIC_TELL_USER, "", 0x80000001, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_opponent_battlefield_window =
-      (int)CreateWindowExA(0, CLASS_MAGICGAME_PHASE_DISPLAY, "Phase Display", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x77, g_app_instance, (LPVOID)0);
+      (int)CreateWindowExA(0, CLASS_MAGICGAME_PHASE_DISPLAY, "Phase Display", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x77, g_app_instance, (LPVOID)0);
   g_duel_player_battlefield_window =
-      (int)CreateWindowExA(0, CLASS_MAGICGAME_ATTACK_PHASE_DISPLAY, "Attack Phase Display", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x78, g_app_instance, (LPVOID)0);
+      (int)CreateWindowExA(0, CLASS_MAGICGAME_ATTACK_PHASE_DISPLAY, "Attack Phase Display", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x78, g_app_instance, (LPVOID)0);
   g_duel_card_preview_window_hwnd =
       CreateWindowExA(0, CLASS_MAGICGAME_FULL_CARD, "Full-size card", 0x90000000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_life_status_window_2_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_LIFE, "Oppon Life", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x65, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_LIFE, "Oppon Life", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x65, g_app_instance, (LPVOID)0);
   g_duel_life_status_window_1_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_LIFE, "Player Life", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x66, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_LIFE, "Player Life", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x66, g_app_instance, (LPVOID)0);
   g_phasebar_your_untap_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_GRAVEYARD, "Oppon Graveyard", s.visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x6c, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_GRAVEYARD, "Oppon Graveyard", visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x6c, g_app_instance, (LPVOID)0);
   g_duel_player_graveyard_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_GRAVEYARD, "Player Graveyard", s.visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x6e, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_GRAVEYARD, "Player Graveyard", visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x6e, g_app_instance, (LPVOID)0);
   g_duel_status_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_LIBRARY, "Oppon Library", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x6d, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_LIBRARY, "Oppon Library", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x6d, g_app_instance, (LPVOID)0);
   g_duel_main_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_LIBRARY, "Player Library", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x6f, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_LIBRARY, "Player Library", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x6f, g_app_instance, (LPVOID)0);
   g_duel_last_active_window =
-      CreateWindowExA(0, CLASS_MAGICGAME_MANA_SUMMARY, "Oppon Mana", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x68, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_MANA_SUMMARY, "Oppon Mana", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x68, g_app_instance, (LPVOID)0);
   g_duel_active_popup_window =
-      CreateWindowExA(0, CLASS_MAGICGAME_MANA_SUMMARY, "Player Mana", s.visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x69, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_MANA_SUMMARY, "Player Mana", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x69, g_app_instance, (LPVOID)0);
   g_duel_opponent_face_window_hwnd =
       CreateWindowExA(0, CLASS_MAGICGAME_FACE, "Oppon Face", 0x40000000, 0, 0, 0, 0, parent_window, (HMENU)0x7c, g_app_instance, (LPVOID)0);
   g_duel_player_face_window_hwnd =
@@ -1858,19 +1803,19 @@ int create_duel_child_windows(HWND parent_window)
   g_duel_player_chat_window_hwnd =
       CreateWindowExA(0, CLASS_MAGICGAME_CHAT, "Player Chat", 0x80800000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_player_battlefield_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_TERRITORY, "Player Territory", s.visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x79, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_TERRITORY, "Player Territory", visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x79, g_app_instance, (LPVOID)0);
   g_duel_help_owner_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_TERRITORY, "Oppon Territory", s.visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x7a, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_TERRITORY, "Oppon Territory", visible_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0x7a, g_app_instance, (LPVOID)0);
   g_duel_life_window_hwnd =
       CreateWindowExA(0, CLASS_MAGICGAME_HAND, gs_window_title_opponent_0091c820, 0x82000000,
-                      (s.client_rect.right * 80) / 100, (s.client_rect.bottom * 40) / 100, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
+                      (client_rect.right * 80) / 100, (client_rect.bottom * 40) / 100, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_full_card_window_hwnd =
       CreateWindowExA(0, CLASS_MAGICGAME_HAND, gs_window_title_your_hand_00777bf0, 0x82000000,
-                      (s.client_rect.right * 80) / 100, (s.client_rect.bottom * 60) / 100, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
+                      (client_rect.right * 80) / 100, (client_rect.bottom * 60) / 100, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_attack_phase_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_ATTACK, "", s.popup_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_ATTACK, "", popup_style | 0x2000000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_phase_display_window_hwnd =
-      CreateWindowExA(0, CLASS_MAGICGAME_SPELL_CHAIN, gs_window_title_spell_chain_008b42f0, s.popup_style, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_SPELL_CHAIN, gs_window_title_spell_chain_008b42f0, popup_style, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
 
   if (g_duel_tooltip_window == 0 || g_duel_card_preview_window_hwnd == (HWND)0 ||
       g_duel_life_status_window_2_hwnd == (HWND)0 || g_duel_life_status_window_1_hwnd == (HWND)0 ||

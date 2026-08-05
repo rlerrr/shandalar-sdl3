@@ -21,11 +21,8 @@ unsigned int get_current_stack_action(void)
 // FUNCTION: SHANDALAR 0x004104db
 char *format_stack_action_text(char *out, int msg, int player, int card)
 {
-  struct
-  {
-    char tmp[300];
-    char *prefix;
-  } s;
+  char tmp[300];
+  char *prefix;
 
   if (out == (char *)0)
   {
@@ -34,30 +31,30 @@ char *format_stack_action_text(char *out, int msg, int player, int card)
 
   if (msg == 0x71)
   {
-    s.prefix = gs_casting_008b4850;
+    prefix = gs_casting_008b4850;
   }
   else if (msg == 0x72)
   {
-    s.prefix = gs_activating_007912e0;
+    prefix = gs_activating_007912e0;
   }
   else if (msg == 0x7e)
   {
-    s.prefix = gs_processing_008ce290;
+    prefix = gs_processing_008ce290;
   }
   else
   {
-    s.prefix = "";
+    prefix = "";
   }
 
   if (player >= 0 && card >= 0)
   {
-    sprintf(s.tmp, "%s: %s", s.prefix, get_displayed_card_name(player, card));
+    sprintf(tmp, "%s: %s", prefix, get_displayed_card_name(player, card));
   }
   else
   {
-    strcpy(s.tmp, s.prefix);
+    strcpy(tmp, prefix);
   }
 
-  strcpy(out, s.tmp);
+  strcpy(out, tmp);
   return out;
 }

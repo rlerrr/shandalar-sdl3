@@ -51,98 +51,92 @@ int big_card_choice_item_is_enabled(HWND hwnd, int item);
 // FUNCTION: SHANDALAR 0x004c6b35
 int register_MAGICGAME_BigCardChoiceClass(LPCSTR class_name)
 {
-  struct
-  {
-    char path[264];
-    int registered;
-    WNDCLASSA wndclass;
-  } s;
+  char path[264];
+  int registered;
+  WNDCLASSA wndclass;
 
-  s.registered = 1;
-  SET_DUEL_WNDCLASS(s.wndclass, 0, wndproc_MAGICGAME_BigCardChoiceClass,
+  registered = 1;
+  SET_DUEL_WNDCLASS(wndclass, 0, wndproc_MAGICGAME_BigCardChoiceClass,
                     g_big_card_choice_window_extra_bytes,
                     LoadIconA((HINSTANCE)0, (LPCSTR)0x7f00), (HBRUSH)0x6, class_name);
-  if (RegisterClassA(&s.wndclass) == 0)
+  if (RegisterClassA(&wndclass) == 0)
   {
-    s.registered = 0;
+    registered = 0;
   }
 
-  strcpy(s.path, global_duelart_path);
-  strcat(s.path, "\\WINBK_BigCard.pic");
-  g_magicgame_big_card_choice_pic = load_pic(s.path);
+  strcpy(path, global_duelart_path);
+  strcat(path, "\\WINBK_BigCard.pic");
+  g_magicgame_big_card_choice_pic = load_pic(path);
   g_big_card_choice_timeout_ms = 9000;
-  return s.registered;
+  return registered;
 }
 
 // FUNCTION: MAGIC 0x00507f42
 // FUNCTION: SHANDALAR 0x004c6c40
 LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  struct
+  int strlen_result;
+  int any_enabled;
+  int found_choices;
+  int text_index;
+  LRESULT text_result;
+  char *source;
+  RECT selection_rect;
+  SIZE text_size;
+  COLORREF color;
+  HDC paint_dc;
+  int line_height;
+  PAINTSTRUCT paint;
+  int item_y;
+  int index;
+  COLORREF title_color;
+  COLORREF normal_color;
+  COLORREF selected_text_color;
+  COLORREF selected_color;
+  char text[500];
+  TEXTMETRICA metrics;
+  COLORREF disabled_color;
+  RECT rect; // ebp - 0xd0
+  COLORREF shadow_color;
+  char *item_text; // ebp - 0xbc
+  int title_height;
+  RECT before_drag_rect;
+  int mouse_line_height; // ebp - 0xa4
+  RECT mouse_selection_rect;
+  int mouse_x;
+  int mouse_y;
+  HDC mouse_dc;
+  int new_selected; // ebp - 0x84
+  int mouse_index;  // ebp - 0x80
+  int mouse_item_y; // ebp - 0x7c
+  int was_dragged;
+  TEXTMETRICA mouse_metrics;
+  RECT after_drag_rect;
+  RECT child_rect;
+  RECT parent_rect;
+  HDC parent_dc;
+  RECT mouse_rect;
+  int command_selected;
+  union
   {
-    int strlen_result;
-    int any_enabled;
-    int found_choices;
-    int text_index;
-    LRESULT text_result;
-    char *source;
-    RECT selection_rect;
-    SIZE text_size;
-    COLORREF color;
-    HDC paint_dc;
-    int line_height;
-    PAINTSTRUCT paint;
-    int item_y;
-    int index;
-    COLORREF title_color;
-    COLORREF normal_color;
-    COLORREF selected_text_color;
-    COLORREF selected_color;
-    char text[500];
-    TEXTMETRICA metrics;
-    COLORREF disabled_color;
-    RECT rect; // ebp - 0xd0
-    COLORREF shadow_color;
-    char *item_text; // ebp - 0xbc
-    int title_height;
-    RECT before_drag_rect;
-    int mouse_line_height; // ebp - 0xa4
-    RECT mouse_selection_rect;
-    int mouse_x;
-    int mouse_y;
-    HDC mouse_dc;
-    int new_selected; // ebp - 0x84
-    int mouse_index;  // ebp - 0x80
-    int mouse_item_y; // ebp - 0x7c
-    int was_dragged;
-    TEXTMETRICA mouse_metrics;
-    RECT after_drag_rect;
-    RECT child_rect;
-    RECT parent_rect;
-    HDC parent_dc;
-    RECT mouse_rect;
-    int command_selected;
-    union
-    {
-      char *create_name;
-      int enabled;
-    } u18;
-    int count;    // ebp - 0x14
-    int selected; // ebp - 0x10
-    int mode;     // ebp - 0xc
-    HFONT font;   // ebp - 0x8
-    char *items;  // ebp - 0x4
-  } s;
+    char *create_name;
+    int enabled;
+  } u18;
+  int count;    // ebp - 0x14
+  int selected; // ebp - 0x10
+  int mode;     // ebp - 0xc
+  HFONT font;   // ebp - 0x8
+  char *items;  // ebp - 0x4
 
   switch (msg)
   {
   case 0x400:
-    s.count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-    return s.count;
+    count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
+    return count;
 
   case 0x401:
-    s.mode = (int)wparam;
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, s.mode);
+    mode = (int)wparam;
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, mode);
     return 0;
 
   case WM_CHAR:
@@ -150,27 +144,27 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_CREATE:
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG)(s.font = 0));
-    s.items = (char *)malloc(0x3e8);
-    s.count = 0;
-    s.selected = -1;
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET, s.count);
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG)s.items);
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, s.selected);
-    s.mode = (int)((CREATESTRUCTA *)lparam)->lpCreateParams;
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, s.mode);
-    s.u18.create_name = (char *)((CREATESTRUCTA *)lparam)->lpszName;
-    if (s.u18.create_name != NULL)
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG)(font = 0));
+    items = (char *)malloc(0x3e8);
+    count = 0;
+    selected = -1;
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET, count);
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG)items);
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, selected);
+    mode = (int)((CREATESTRUCTA *)lparam)->lpCreateParams;
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, mode);
+    u18.create_name = (char *)((CREATESTRUCTA *)lparam)->lpszName;
+    if (u18.create_name != NULL)
     {
-      PostMessageA(hwnd, WM_SETTEXT, 0, (LPARAM)s.u18.create_name);
+      PostMessageA(hwnd, WM_SETTEXT, 0, (LPARAM)u18.create_name);
     }
     return 0;
 
   case WM_DESTROY:
-    s.items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
-    if (s.items != NULL)
+    items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+    if (items != NULL)
     {
-      free(s.items);
+      free(items);
     }
     return 0;
 
@@ -183,24 +177,26 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
      * gives every child its own backing surface.  Seed that surface with the
      * corresponding dialog pixels before drawing the prompt and choices.
      */
-    s.parent_dc = GetDC(GetParent(hwnd));
-    if (s.parent_dc != (HDC)0 &&
-        GetWindowRect(hwnd, &s.child_rect) &&
-        GetWindowRect(GetParent(hwnd), &s.parent_rect))
+    parent_dc = GetDC(GetParent(hwnd));
+    if (parent_dc != (HDC)0 &&
+        GetWindowRect(hwnd, &child_rect) &&
+        GetWindowRect(GetParent(hwnd), &parent_rect))
     {
       BitBlt((HDC)wparam, 0, 0,
-             s.child_rect.right - s.child_rect.left,
-             s.child_rect.bottom - s.child_rect.top,
-             s.parent_dc,
-             s.child_rect.left - s.parent_rect.left,
-             s.child_rect.top - s.parent_rect.top -
+             child_rect.right - child_rect.left,
+             child_rect.bottom - child_rect.top,
+             parent_dc,
+             child_rect.left - parent_rect.left,
+             child_rect.top - parent_rect.top -
                  (((GetWindowLongA(GetParent(hwnd), GWL_STYLE) & WS_CAPTION) ==
-                   WS_CAPTION) ? GetSystemMetrics(SM_CYCAPTION) : 0),
+                   WS_CAPTION)
+                      ? GetSystemMetrics(SM_CYCAPTION)
+                      : 0),
              SRCCOPY);
     }
-    if (s.parent_dc != (HDC)0)
+    if (parent_dc != (HDC)0)
     {
-      ReleaseDC(GetParent(hwnd), s.parent_dc);
+      ReleaseDC(GetParent(hwnd), parent_dc);
     }
 #endif
     return 1;
@@ -209,21 +205,21 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 4;
 
   case WM_GETFONT:
-    s.font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
-    return (LRESULT)s.font;
+    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    return (LRESULT)font;
 
   case WM_KEYDOWN:
-    s.count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-    s.selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
-    s.mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
-    if (s.mode != 0)
+    count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
+    selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
+    mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
+    if (mode != 0)
     {
       if (wparam == VK_RETURN || wparam == VK_SPACE)
       {
-        s.command_selected = s.selected + 1;
+        command_selected = selected + 1;
         SendMessageA(GetParent(hwnd),
                      WM_COMMAND,
-                     MAKELONG(GetDlgCtrlID(hwnd), s.command_selected),
+                     MAKELONG(GetDlgCtrlID(hwnd), command_selected),
                      (LPARAM)hwnd);
       }
       else
@@ -243,53 +239,53 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
         switch (wparam)
         {
         case VK_HOME:
-          s.selected = 0;
-          while (!big_card_choice_item_is_enabled(hwnd, s.selected))
+          selected = 0;
+          while (!big_card_choice_item_is_enabled(hwnd, selected))
           {
-            s.selected++;
+            selected++;
           }
           break;
 
         case VK_END:
-          s.selected = s.count - 1;
-          while (!big_card_choice_item_is_enabled(hwnd, s.selected))
+          selected = count - 1;
+          while (!big_card_choice_item_is_enabled(hwnd, selected))
           {
-            s.selected--;
+            selected--;
           }
           break;
 
         case VK_UP:
-          if (--s.selected < 0)
+          if (--selected < 0)
           {
-            s.selected = s.count - 1;
+            selected = count - 1;
           }
 
-          while (!big_card_choice_item_is_enabled(hwnd, s.selected))
+          while (!big_card_choice_item_is_enabled(hwnd, selected))
           {
-            if (--s.selected < 0)
+            if (--selected < 0)
             {
-              s.selected = s.count - 1;
+              selected = count - 1;
             }
           }
 
           break;
 
         case VK_DOWN:
-          if (s.count - 1 < ++s.selected)
+          if (count - 1 < ++selected)
           {
-            s.selected = 0;
+            selected = 0;
           }
-          while (!big_card_choice_item_is_enabled(hwnd, s.selected))
+          while (!big_card_choice_item_is_enabled(hwnd, selected))
           {
-            if (s.count - 1 < ++s.selected)
+            if (count - 1 < ++selected)
             {
-              s.selected = 0;
+              selected = 0;
             }
           }
           break;
         }
 
-        SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, s.selected);
+        SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, selected);
         InvalidateRect(hwnd, (RECT *)0, 0);
       }
     }
@@ -298,46 +294,46 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
   case WM_LBUTTONDOWN:
   case WM_MOUSEMOVE:
   case WM_LBUTTONUP:
-    s.count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-    s.font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
-    s.selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
-    s.mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
+    count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
+    mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
     if (msg == WM_LBUTTONDOWN)
     {
-      GetWindowRect(GetParent(hwnd), &s.before_drag_rect);
+      GetWindowRect(GetParent(hwnd), &before_drag_rect);
       SendMessageA(GetParent(hwnd), WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
       msg = WM_LBUTTONUP;
-      GetWindowRect(GetParent(hwnd), &s.after_drag_rect);
-      if (abs(s.before_drag_rect.top - s.after_drag_rect.top) +
-              abs(s.before_drag_rect.left - s.after_drag_rect.left) <
+      GetWindowRect(GetParent(hwnd), &after_drag_rect);
+      if (abs(before_drag_rect.top - after_drag_rect.top) +
+              abs(before_drag_rect.left - after_drag_rect.left) <
           5)
       {
-        s.was_dragged = 0;
+        was_dragged = 0;
       }
       else
       {
-        s.was_dragged = 1;
+        was_dragged = 1;
       }
     }
     else
     {
-      s.was_dragged = 0;
+      was_dragged = 0;
     }
 
-    if (s.was_dragged == 0)
+    if (was_dragged == 0)
     {
-      s.new_selected = s.selected + 1;
-      if (s.mode == 0)
+      new_selected = selected + 1;
+      if (mode == 0)
       {
         if (msg == WM_LBUTTONUP)
         {
           SendMessageA(GetParent(hwnd),
                        WM_COMMAND,
-                       MAKELONG(GetDlgCtrlID(hwnd), s.new_selected),
+                       MAKELONG(GetDlgCtrlID(hwnd), new_selected),
                        (LPARAM)hwnd);
         }
       }
-      else if (s.count < 1)
+      else if (count < 1)
       {
         if (msg == WM_LBUTTONUP)
         {
@@ -346,30 +342,30 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
       }
       else
       {
-        s.mouse_x = lparam & 0xffff;
-        s.mouse_y = HIWORD(lparam);
-        s.mouse_dc = GetDC(hwnd);
-        ApplyCardArtPaletteToDc(s.mouse_dc);
-        SelectObject(s.mouse_dc, s.font);
-        GetTextMetricsA(s.mouse_dc, &s.mouse_metrics);
-        s.mouse_line_height = s.mouse_metrics.tmHeight + s.mouse_metrics.tmExternalLeading;
-        ReleaseDC(hwnd, s.mouse_dc);
-        s.new_selected = 0;
-        GetClientRect(hwnd, &s.mouse_rect);
-        s.mouse_item_y = s.mouse_rect.bottom - s.mouse_line_height;
-        for (s.mouse_index = s.count; s.mouse_index > 0 && s.new_selected == 0; s.mouse_item_y -= s.mouse_line_height, s.mouse_index--)
+        mouse_x = lparam & 0xffff;
+        mouse_y = HIWORD(lparam);
+        mouse_dc = GetDC(hwnd);
+        ApplyCardArtPaletteToDc(mouse_dc);
+        SelectObject(mouse_dc, font);
+        GetTextMetricsA(mouse_dc, &mouse_metrics);
+        mouse_line_height = mouse_metrics.tmHeight + mouse_metrics.tmExternalLeading;
+        ReleaseDC(hwnd, mouse_dc);
+        new_selected = 0;
+        GetClientRect(hwnd, &mouse_rect);
+        mouse_item_y = mouse_rect.bottom - mouse_line_height;
+        for (mouse_index = count; mouse_index > 0 && new_selected == 0; mouse_item_y -= mouse_line_height, mouse_index--)
         {
-          if (s.mouse_item_y < s.mouse_y)
+          if (mouse_item_y < mouse_y)
           {
-            s.new_selected = s.mouse_index;
-            SetRect(&s.mouse_selection_rect, 0, s.mouse_item_y,
-                    s.mouse_rect.right, s.mouse_item_y + s.mouse_line_height);
+            new_selected = mouse_index;
+            SetRect(&mouse_selection_rect, 0, mouse_item_y,
+                    mouse_rect.right, mouse_item_y + mouse_line_height);
           }
         }
-        if (big_card_choice_item_is_enabled(hwnd, s.new_selected - 1))
+        if (big_card_choice_item_is_enabled(hwnd, new_selected - 1))
         {
-          s.selected = s.new_selected - 1;
-          SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, s.selected);
+          selected = new_selected - 1;
+          SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, selected);
           InvalidateRect(hwnd, (RECT *)0, 0);
           UpdateWindow(hwnd);
           if (msg == WM_LBUTTONUP)
@@ -377,7 +373,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
             Sleep(750);
             SendMessageA(GetParent(hwnd),
                          WM_COMMAND,
-                         MAKELONG(GetDlgCtrlID(hwnd), s.new_selected),
+                         MAKELONG(GetDlgCtrlID(hwnd), new_selected),
                          (LPARAM)hwnd);
           }
         }
@@ -386,219 +382,219 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_PAINT:
-    s.font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
-    s.count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-    s.items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
-    s.selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
-    s.mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
-    GetWindowTextA(hwnd, s.text, sizeof(s.text));
+    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
+    items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+    selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
+    mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
+    GetWindowTextA(hwnd, text, sizeof(text));
 
-    s.item_text = s.items;
-    s.title_color = 0x01000097;
-    s.normal_color = 0x01000097;
-    s.selected_text_color = 0x01000097;
-    s.disabled_color = 0x010000c3;
-    s.selected_color = 0x010000bf;
-    s.shadow_color = 0x010000c9;
-    s.paint_dc = BeginPaint(hwnd, &s.paint);
-    if (s.paint_dc != (HDC)0)
+    item_text = items;
+    title_color = 0x01000097;
+    normal_color = 0x01000097;
+    selected_text_color = 0x01000097;
+    disabled_color = 0x010000c3;
+    selected_color = 0x010000bf;
+    shadow_color = 0x010000c9;
+    paint_dc = BeginPaint(hwnd, &paint);
+    if (paint_dc != (HDC)0)
     {
-      ApplyCardArtPaletteToDc(s.paint_dc);
-      GetClientRect(hwnd, &s.rect);
-      SetBkMode(s.paint_dc, TRANSPARENT);
-      SelectObject(s.paint_dc, s.font);
-      SetTextColor(s.paint_dc, s.shadow_color);
-      OffsetRect(&s.rect, 1, 1);
-      DrawTextA(s.paint_dc, s.text, -1, &s.rect, DT_WORDBREAK);
-      OffsetRect(&s.rect, -1, -1);
-      SetTextColor(s.paint_dc, s.title_color);
-      DrawTextA(s.paint_dc, s.text, -1, &s.rect, DT_WORDBREAK);
-      s.title_height = DrawTextA(s.paint_dc, s.text, -1, &s.rect, DT_CALCRECT | DT_WORDBREAK);
-      if (s.count != 0)
+      ApplyCardArtPaletteToDc(paint_dc);
+      GetClientRect(hwnd, &rect);
+      SetBkMode(paint_dc, TRANSPARENT);
+      SelectObject(paint_dc, font);
+      SetTextColor(paint_dc, shadow_color);
+      OffsetRect(&rect, 1, 1);
+      DrawTextA(paint_dc, text, -1, &rect, DT_WORDBREAK);
+      OffsetRect(&rect, -1, -1);
+      SetTextColor(paint_dc, title_color);
+      DrawTextA(paint_dc, text, -1, &rect, DT_WORDBREAK);
+      title_height = DrawTextA(paint_dc, text, -1, &rect, DT_CALCRECT | DT_WORDBREAK);
+      if (count != 0)
       {
-        s.item_y = s.rect.top + s.title_height + 20;
-        GetTextMetricsA(s.paint_dc, &s.metrics);
-        s.line_height = s.metrics.tmHeight + s.metrics.tmExternalLeading +
-                        (s.metrics.tmHeight * 10) / 100;
-        SetBkMode(s.paint_dc, TRANSPARENT);
-        for (s.index = 0; s.index < s.count; s.index++)
+        item_y = rect.top + title_height + 20;
+        GetTextMetricsA(paint_dc, &metrics);
+        line_height = metrics.tmHeight + metrics.tmExternalLeading +
+                      (metrics.tmHeight * 10) / 100;
+        SetBkMode(paint_dc, TRANSPARENT);
+        for (index = 0; index < count; index++)
         {
-          if (big_card_choice_item_is_enabled(hwnd, s.index) == 0)
+          if (big_card_choice_item_is_enabled(hwnd, index) == 0)
           {
-            s.item_text++;
-            if (*s.item_text == ' ')
+            item_text++;
+            if (*item_text == ' ')
             {
-              s.item_text++;
+              item_text++;
             }
           }
 
-          if (s.mode != 0)
+          if (mode != 0)
           {
-            if (big_card_choice_item_is_enabled(hwnd, s.index) == 0)
+            if (big_card_choice_item_is_enabled(hwnd, index) == 0)
             {
-              s.color = s.disabled_color;
+              color = disabled_color;
             }
-            else if (s.index == s.selected)
+            else if (index == selected)
             {
-              s.color = s.selected_color;
+              color = selected_color;
             }
             else
             {
-              s.color = s.normal_color;
+              color = normal_color;
             }
           }
           else
           {
-            if (s.index == s.selected)
+            if (index == selected)
             {
-              GetTextExtentPointA(s.paint_dc, s.item_text, strlen(s.item_text), &s.text_size);
-              SetRect(&s.selection_rect,
-                      s.rect.left - 5,
-                      s.item_y,
-                      s.rect.left + s.text_size.cx + 5,
-                      s.item_y + s.line_height);
-              FillRect(s.paint_dc, &s.selection_rect, GetStockObject(0));
+              GetTextExtentPointA(paint_dc, item_text, strlen(item_text), &text_size);
+              SetRect(&selection_rect,
+                      rect.left - 5,
+                      item_y,
+                      rect.left + text_size.cx + 5,
+                      item_y + line_height);
+              FillRect(paint_dc, &selection_rect, GetStockObject(0));
             }
 
-            if (big_card_choice_item_is_enabled(hwnd, s.index) == 0)
+            if (big_card_choice_item_is_enabled(hwnd, index) == 0)
             {
-              s.color = s.disabled_color;
+              color = disabled_color;
             }
             else
             {
-              s.color = s.selected_text_color;
+              color = selected_text_color;
             }
           }
 
-          SetTextColor(s.paint_dc, s.shadow_color);
-          TextOutA(s.paint_dc, s.rect.left + 1, s.item_y + 1, s.item_text, strlen(s.item_text));
-          SetTextColor(s.paint_dc, s.color);
-          TextOutA(s.paint_dc, s.rect.left, s.item_y, s.item_text, strlen(s.item_text));
-          s.item_y += s.line_height;
-          s.item_text += strlen(s.item_text) + 1;
+          SetTextColor(paint_dc, shadow_color);
+          TextOutA(paint_dc, rect.left + 1, item_y + 1, item_text, strlen(item_text));
+          SetTextColor(paint_dc, color);
+          TextOutA(paint_dc, rect.left, item_y, item_text, strlen(item_text));
+          item_y += line_height;
+          item_text += strlen(item_text) + 1;
         }
       }
-      if (s.count != 0)
+      if (count != 0)
       {
-        GetClientRect(hwnd, &s.rect);
-        s.rect.bottom = s.item_y;
+        GetClientRect(hwnd, &rect);
+        rect.bottom = item_y;
         SetWindowPos(hwnd, (HWND)0, 0, 0,
-                     s.rect.right - s.rect.left,
-                     s.rect.bottom - s.rect.top,
+                     rect.right - rect.left,
+                     rect.bottom - rect.top,
                      SWP_NOZORDER | SWP_NOMOVE);
       }
-      EndPaint(hwnd, &s.paint);
+      EndPaint(hwnd, &paint);
     }
     return 0;
 
   case WM_SETFONT:
-    s.font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
-    if ((HFONT)wparam != s.font)
+    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    if ((HFONT)wparam != font)
     {
-      s.font = (HFONT)wparam;
-      SetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG)s.font);
+      font = (HFONT)wparam;
+      SetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG)font);
       InvalidateRect(hwnd, (RECT *)0, 1);
     }
     return 0;
 
   case WM_SETTEXT:
-    s.source = (char *)lparam;
-    s.text_index = 0;
-    s.found_choices = 0;
-    while (*s.source != '\0' && s.found_choices == 0)
+    source = (char *)lparam;
+    text_index = 0;
+    found_choices = 0;
+    while (*source != '\0' && found_choices == 0)
     {
-      if (*s.source == ' ' || *s.source == '>')
+      if (*source == ' ' || *source == '>')
       {
-        g_big_card_choice_window_text_buffer[s.text_index] = '\0';
-        s.found_choices = 1;
+        g_big_card_choice_window_text_buffer[text_index] = '\0';
+        found_choices = 1;
       }
       else
       {
-        while (*s.source != '\0' && *s.source != '\n')
+        while (*source != '\0' && *source != '\n')
         {
-          g_big_card_choice_window_text_buffer[s.text_index] = *s.source;
-          s.source++;
-          s.text_index++;
+          g_big_card_choice_window_text_buffer[text_index] = *source;
+          source++;
+          text_index++;
         }
-        if (*s.source != '\0')
+        if (*source != '\0')
         {
-          g_big_card_choice_window_text_buffer[s.text_index] = *s.source;
-          s.source++;
-          s.text_index++;
+          g_big_card_choice_window_text_buffer[text_index] = *source;
+          source++;
+          text_index++;
         }
       }
     }
 
-    g_big_card_choice_window_text_buffer[s.text_index] = '\0';
+    g_big_card_choice_window_text_buffer[text_index] = '\0';
     while (strlen(g_big_card_choice_window_text_buffer) >= 2 &&
            g_big_card_choice_window_text_buffer[strlen(g_big_card_choice_window_text_buffer) - 2] == '\n')
     {
-      s.strlen_result = strlen(g_big_card_choice_window_text_buffer);
-      g_big_card_choice_window_text_buffer[s.strlen_result - 2] = '\0';
+      strlen_result = strlen(g_big_card_choice_window_text_buffer);
+      g_big_card_choice_window_text_buffer[strlen_result - 2] = '\0';
     }
 
-    s.text_result = DefWindowProcA(hwnd, msg, wparam, (LPARAM)g_big_card_choice_window_text_buffer);
-    s.items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
-    s.count = 0;
-    s.selected = -1;
-    if (*s.source != '\0')
+    text_result = DefWindowProcA(hwnd, msg, wparam, (LPARAM)g_big_card_choice_window_text_buffer);
+    items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+    count = 0;
+    selected = -1;
+    if (*source != '\0')
     {
-      s.text_index = 0;
-      while (*s.source != '\0')
+      text_index = 0;
+      while (*source != '\0')
       {
-        while (*s.source == ' ')
+        while (*source == ' ')
         {
-          s.source++;
+          source++;
         }
 
-        if (*s.source == '>')
+        if (*source == '>')
         {
-          s.selected = s.count;
-          s.source++;
+          selected = count;
+          source++;
         }
 
-        while (*s.source == '\n')
+        while (*source == '\n')
         {
-          s.source++;
+          source++;
         }
 
-        while (*s.source != '\0' && *s.source != '\n')
+        while (*source != '\0' && *source != '\n')
         {
-          s.items[s.text_index] = *s.source;
-          s.source++;
-          s.text_index++;
+          items[text_index] = *source;
+          source++;
+          text_index++;
         }
-        s.items[s.text_index] = '\0';
-        s.text_index++;
-        if (*s.source != '\0')
+        items[text_index] = '\0';
+        text_index++;
+        if (*source != '\0')
         {
-          s.source++;
+          source++;
         }
-        s.count++;
+        count++;
       }
 
-      s.items[s.text_index] = '\0';
+      items[text_index] = '\0';
     }
 
-    if (s.count != 0 && s.selected == -1)
+    if (count != 0 && selected == -1)
     {
-      s.selected = 0;
+      selected = 0;
     }
 
-    s.any_enabled = 0;
-    for (s.text_index = 0; s.text_index < s.count; s.text_index++)
+    any_enabled = 0;
+    for (text_index = 0; text_index < count; text_index++)
     {
-      s.any_enabled |= big_card_choice_item_is_enabled(hwnd, s.text_index);
+      any_enabled |= big_card_choice_item_is_enabled(hwnd, text_index);
     }
-    if (s.any_enabled == 0)
+    if (any_enabled == 0)
     {
-      s.mode = 0;
-      SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, s.mode);
+      mode = 0;
+      SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, mode);
     }
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET, s.count);
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG)s.items);
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, s.selected);
-    return s.text_result;
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET, count);
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG)items);
+    SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, selected);
+    return text_result;
 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
@@ -614,40 +610,37 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
 // FUNCTION: SHANDALAR 0x004c7e59
 int big_card_choice_item_is_enabled(HWND hwnd, int item)
 {
-  struct
-  {
-    int result;
-    int count;
-    int index;
-    char *items;
-    char *item_text;
-  } s;
+  int result;
+  int count;
+  int index;
+  char *items;
+  char *item_text;
 
   if (hwnd == (HWND)0)
   {
     return 0;
   }
-  s.items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
-  s.count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-  if (s.count - 1 < item)
+  items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+  count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
+  if (count - 1 < item)
   {
     return 0;
   }
 
-  s.item_text = s.items;
+  item_text = items;
 
-  for (s.index = 0; s.index < item; s.index++)
+  for (index = 0; index < item; index++)
   {
-    s.item_text += strlen(s.item_text) + 1;
+    item_text += strlen(item_text) + 1;
   }
 
-  if (*s.item_text == '_')
+  if (*item_text == '_')
   {
-    s.result = 0;
+    result = 0;
   }
   else
   {
-    s.result = 1;
+    result = 1;
   }
-  return s.result;
+  return result;
 }
