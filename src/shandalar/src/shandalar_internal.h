@@ -367,7 +367,7 @@ void UpdateWorldMagicUnlockProgress(void);
 void RebuildDeckEntriesByCardGroup(void);
 void RefreshAdventureInterfaceLayout(void);
 int ConsumeUiTickCount(void);
-void RenderAdventureWorldScene(int world_x, int world_y, int world_state);
+void RenderAdventureWorldScene(double world_x, double world_y, int world_state);
 int RunRightClickMenuAndQueueInput(void);
 void RunDebugRightClickMenu(void);
 int QueuePendingMenuActionInput(void);

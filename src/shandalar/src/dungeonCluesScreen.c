@@ -75,7 +75,7 @@ int DrawEncodedImageResampledFitBoxCentered(FacemakerWindowBounds *dst, int x, i
                                             EncodedImage *image);
 char *BuildTownDisplayName(int town_index);
 void ResetWorldDrawQueue(void);
-void UpdateWorldViewportBuffer(int world_x, int world_y);
+void UpdateWorldViewportBuffer(double world_x, double world_y);
 void DrawQueuedWorldSprites(void);
 void DestroyCachedCardArt(void);
 
@@ -87,7 +87,7 @@ void BlitGraphicsRectScaledFrom320x240(FacemakerWindowBounds *dst, int dst_x, in
                                        FacemakerWindowBounds *src, int src_x, int src_y);
 void ResetWorldDrawQueue(void);
 void DrawQueuedWorldSprites(void);
-void UpdateWorldViewportBuffer(int world_x, int world_y);
+void UpdateWorldViewportBuffer(double world_x, double world_y);
 
 char *BuildTownDisplayName(int town_index);
 DWORD FormatMessageFromStringStripCarriageReturns(char *dst, DWORD dst_len, LPCVOID format, ...);

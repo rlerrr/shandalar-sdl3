@@ -8,6 +8,7 @@
 #include <setjmp.h>
 #include <time.h>
 #include <errno.h>
+#include <math.h>
 
 #include "platform/legacy_io.h"
 #include "defs.h"
@@ -48,18 +49,18 @@ static double g_cam_vel_y;
 static int g_cam_last_gate_x;
 static int g_cam_last_gate_y;
 
-static void AdvanceSmoothWorldCamera(int elapsed_ms)
+static void AdvanceSmoothWorldCamera(double elapsed_ms)
 {
   double next_x;
   double next_y;
 
-  if (elapsed_ms <= 0)
+  if (elapsed_ms <= 0.0)
   {
     return;
   }
 
-  next_x = g_cam_smooth_x + g_cam_vel_x * ((double)elapsed_ms / 60);
-  next_y = g_cam_smooth_y + g_cam_vel_y * ((double)elapsed_ms / 60);
+  next_x = g_cam_smooth_x + g_cam_vel_x * (elapsed_ms / 60.0);
+  next_y = g_cam_smooth_y + g_cam_vel_y * (elapsed_ms / 60.0);
 
   if ((g_cam_vel_x > 0.0 && next_x > g_cam_last_gate_x) ||
       (g_cam_vel_x < 0.0 && next_x < g_cam_last_gate_x))
@@ -76,25 +77,22 @@ static void AdvanceSmoothWorldCamera(int elapsed_ms)
   g_cam_smooth_y = next_y;
 }
 
-static void GetSmoothWorldCameraRenderPosition(int *world_x, int *world_y)
+static void GetSmoothWorldCameraRenderPosition(double *world_x, double *world_y)
 {
-  int rounded_x;
-  int rounded_y;
-
-  rounded_x = (int)(g_cam_smooth_x + 0.5);
-  rounded_y = (int)(g_cam_smooth_y + 0.5);
+  double smooth_x = g_cam_smooth_x;
+  double smooth_y = g_cam_smooth_y;
 
   if (g_cam_vel_x != 0.0 && g_cam_vel_x == g_cam_vel_y)
   {
-    rounded_y = rounded_x - (g_cam_last_gate_x - g_cam_last_gate_y);
+    smooth_y = smooth_x - (g_cam_last_gate_x - g_cam_last_gate_y);
   }
   else if (g_cam_vel_x != 0.0 && g_cam_vel_x == -g_cam_vel_y)
   {
-    rounded_y = (g_cam_last_gate_x + g_cam_last_gate_y) - rounded_x;
+    smooth_y = (g_cam_last_gate_x + g_cam_last_gate_y) - smooth_x;
   }
 
-  *world_x = rounded_x;
-  *world_y = rounded_y;
+  *world_x = smooth_x;
+  *world_y = smooth_y;
 }
 
 void SetSmoothWorldCameraVelocity(int player_x, int player_y, int movement_tick_interval)
@@ -514,7 +512,6 @@ int RunWorldLairMonsterEncounter(int slot_index, int monster_color);
 // FUNCTION: SHANDALAR 0x0055db50
 int RunAdventureSession(void)
 {
-  uint64_t last_tick;
   int temp_value;
   int initialized_world;
   unsigned int tile_mask;
@@ -680,7 +677,8 @@ opening_menu:
   else
   {
     {
-      uint64_t last_frame_ms;
+      uint64_t last_frame_ns;
+      uint64_t last_tick_ns;
 
       g_cam_smooth_x = g_world_player_x;
       g_cam_smooth_y = g_world_player_y;
@@ -688,20 +686,20 @@ opening_menu:
       g_cam_vel_y = 0.0;
       g_cam_last_gate_x = g_world_player_x;
       g_cam_last_gate_y = g_world_player_y;
-      last_frame_ms = SDL_GetTicks();
-      last_tick = last_frame_ms;
+      last_frame_ns = SDL_GetTicksNS();
+      last_tick_ns = last_frame_ns;
 
       do
       {
-        int render_world_x;
-        int render_world_y;
-        uint64_t now_ms = SDL_GetTicks();
-        int frame_delta = (int)(now_ms - last_frame_ms);
-        last_frame_ms = now_ms;
+        double render_world_x;
+        double render_world_y;
+        uint64_t now_ns = SDL_GetTicksNS();
+        double frame_delta_ms = (double)(now_ns - last_frame_ns) / 1000000.0;
+        last_frame_ns = now_ns;
 
-        AdvanceSmoothWorldCamera(frame_delta);
+        AdvanceSmoothWorldCamera(frame_delta_ms);
 
-        if ((int)(now_ms - last_tick) >= 60)
+        while ((now_ns - last_tick_ns) >= 60ULL * 1000000ULL)
         {
           ConsumeUiTickCount();
 
@@ -724,11 +722,11 @@ opening_menu:
           }
           ClearQueuedKeyInput();
 
-          last_tick = now_ms;
+          last_tick_ns += 60ULL * 1000000ULL;
         }
 
-        if ((abs((int)g_cam_smooth_x - g_world_player_x) >= 0x20) ||
-            (abs((int)g_cam_smooth_y - g_world_player_y) >= 0x20))
+        if ((fabs(g_cam_smooth_x - (double)g_world_player_x) >= 32.0) ||
+            (fabs(g_cam_smooth_y - (double)g_world_player_y) >= 32.0))
         {
           g_cam_smooth_x = g_world_player_x;
           g_cam_smooth_y = g_world_player_y;

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <math.h>
 
 #ifdef MODERN_FIXES
 #include "platform/winuser_compat.h"
@@ -177,7 +178,7 @@ int g_world_draw_head_index;
 // GLOBAL: SHANDALAR 0x006506f8
 int g_world_camera_viewport_left;
 // GLOBAL: SHANDALAR 0x006506fc
-int g_world_camera_anchor_world_x;
+double g_world_camera_anchor_world_x;
 // GLOBAL: SHANDALAR 0x00650700
 int g_world_draw_depth_sort_keys[0x200];
 // GLOBAL: SHANDALAR 0x00650f00
@@ -189,7 +190,7 @@ int g_world_camera_viewport_width_pixels;
 // GLOBAL: SHANDALAR 0x00650f0c
 int g_world_camera_minimap_panel_x;
 // GLOBAL: SHANDALAR 0x00650f10
-int g_world_camera_origin_screen_x;
+double g_world_camera_origin_screen_x;
 // GLOBAL: SHANDALAR 0x00650f14
 int g_world_player_tile_x;
 // GLOBAL: SHANDALAR 0x00650f18
@@ -213,17 +214,17 @@ int g_world_draw_screen_y[0x200];
 // GLOBAL: SHANDALAR 0x006527a8
 int g_world_camera_viewport_width_scaled;
 // GLOBAL: SHANDALAR 0x006527ac
-int g_world_camera_anchor_world_y;
+double g_world_camera_anchor_world_y;
 // GLOBAL: SHANDALAR 0x006527b4
-int g_world_camera_origin_screen_y;
+double g_world_camera_origin_screen_y;
 // GLOBAL: SHANDALAR 0x006527b8
 int g_world_camera_scroll_limit_right;
 // GLOBAL: SHANDALAR 0x006527c0
 int g_world_draw_next_index[0x200];
 // GLOBAL: SHANDALAR 0x0073ea98
-int g_world_camera_last_anchor_x;
+double g_world_camera_last_anchor_x;
 // GLOBAL: SHANDALAR 0x0073ea9c
-int g_world_camera_last_anchor_y;
+double g_world_camera_last_anchor_y;
 // GLOBAL: SHANDALAR 0x0073e9d0
 int g_world_player_tile_x;
 // GLOBAL: SHANDALAR 0x0073e9d4
@@ -257,13 +258,13 @@ int g_world_tile_screen_y_cache[0x1000];
 #endif
 
 // GLOBAL: SHANDALAR 0x00746af0
-int g_world_scroll_x;
+double g_world_scroll_x;
 // GLOBAL: SHANDALAR 0x00746af4
-int g_world_scroll_y;
+double g_world_scroll_y;
 // GLOBAL: SHANDALAR 0x00746af8
-int g_world_player_world_x_cached;
+double g_world_player_world_x_cached;
 // GLOBAL: SHANDALAR 0x00746afc
-int g_world_player_world_y_cached;
+double g_world_player_world_y_cached;
 
 extern int g_monster_timer;
 extern RGBQUAD g_palette_rgb[256];
@@ -278,12 +279,13 @@ void DrawWorldUiFormattedText(FacemakerWindowBounds *window, int color_index, in
 unsigned int BlitRectByRandomTileOrder(HDC dst_hdc, int dst_x, int dst_y, int width, int height, int block_w, int block_h,
                                        HDC src_hdc, int src_x, int src_y);
 void QueueWorldSpriteForDraw(FacemakerWindowBounds *window, int draw_x, int draw_y, int depth_y, EncodedImage *sprite);
-void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_start, int tile_x_end, int tile_y_start, int tile_y_end,
+void DrawWorldTileRange(double world_x, double world_y, int tile_x_start, int tile_x_end, int tile_y_start, int tile_y_end,
                         int edge_mode, int draw_mode);
 void ScreenToWorldPoint(int screen_x, int screen_y, int *out_world_x, int *out_world_y);
 int IsWorldMapCoordinateInBounds(int x, int y);
 char *BuildQuestLocationName(int town_index, int quest_destination, int mana_castle_index);
-void WorldPointToScreen(int world_x, int world_y, int *out_screen_x, int *out_screen_y);
+void WorldPointToScreen(double world_x, double world_y, int *out_screen_x, int *out_screen_y);
+void WorldPointToScreenF(double world_x, double world_y, double *out_screen_x, double *out_screen_y);
 int CountDuelPoolEligibleTowns(void);
 int GetRelativeWorldQuadrant(int world_x, int world_y);
 int FindDeckSlotForQuestColorAndType(unsigned char quest_color, int quest_bitmap_mask);
@@ -293,6 +295,7 @@ int FindNearestTownIndex(int world_x, int world_y);
 char *BuildCreatureNameWithArticle(int creature_type);
 char *BuildTownDisplayName(int town_index);
 DWORD FormatMessageFromStringStripCarriageReturns(char *dst, DWORD max_length, LPCVOID format, ...);
+int IsAdventureRightClickMenuButtonHit(int x, int y);
 void DrawAdventureRightClickMenuButton(void);
 
 // FUNCTION: SHANDALAR 0x005501dc
@@ -564,7 +567,7 @@ char *BuildQuestLocationName(int town_index, int quest_destination, int mana_cas
 }
 
 // FUNCTION: SHANDALAR 0x0054cee2
-void UpdateWorldViewportBuffer(int world_x, int world_y)
+void UpdateWorldViewportBuffer(double world_x, double world_y)
 {
   int clip_dst_y;
   int clip_dst_x;
@@ -580,17 +583,17 @@ void UpdateWorldViewportBuffer(int world_x, int world_y)
   int need_right_edge;
   int need_bottom_edge;
   int tile_x;
-  int scroll_delta_y;
+  double scroll_delta_y;
   int origin_screen_x;
-  int scroll_delta_x;
+  double scroll_delta_x;
   int redraw_x_end;
   int snapped_screen_y;
   int redraw_y_end;
-  int snapped_world_y;
+  double snapped_world_y;
   int snapped_screen_x;
   int redraw_y_start;
   int redraw_x_start;
-  int snapped_world_x;
+  double snapped_world_x;
   int origin_screen_y;
   int saved_page_number;
   int world_screen_y;
@@ -603,160 +606,160 @@ void UpdateWorldViewportBuffer(int world_x, int world_y)
   g_world_player_world_x_cached = world_x;
   g_world_player_world_y_cached = world_y;
 
-  snapped_world_x = world_x - (world_x & 0x1f);
-  snapped_world_y = world_y - (world_y & 0x1f);
+  snapped_world_x = floor(world_x / 32.0) * 32.0;
+  snapped_world_y = floor(world_y / 32.0) * 32.0;
   WorldPointToScreen(snapped_world_x, snapped_world_y, &snapped_screen_x, &snapped_screen_y);
   WorldPointToScreen(world_x, world_y, &world_screen_x, &world_screen_y);
   WorldPointToScreen(0, 0, &origin_screen_x, &origin_screen_y);
 
   if ((g_world_camera_initialized != 0) && (g_world_scroll_cache_ready != 0))
-  {
-    need_left_edge = 0;
-    need_right_edge = 0;
-    need_top_edge = 0;
-    need_bottom_edge = 0;
-
-    tile_x = world_x / 32;
-    tile_y = world_y / 32;
-    scroll_delta_x = g_world_tile_screen_x_cache[(tile_y << 8) + tile_x] - snapped_screen_x;
-    g_world_scroll_x = scroll_delta_x;
-    scroll_delta_y = g_world_tile_screen_y_cache[(tile_y << 8) + tile_x] - snapped_screen_y;
-    g_world_scroll_y = scroll_delta_y;
-
-    if ((scroll_delta_x != 0) || (scroll_delta_y != 0))
     {
-      if (scroll_delta_x < 0 && g_world_camera_scroll_limit_left >= scroll_delta_x)
-      {
-        need_left_edge = 1;
-      }
-      if (scroll_delta_x > 0 && g_world_camera_scroll_limit_right <= scroll_delta_x)
-      {
-        need_right_edge = 1;
-      }
-      if ((0 < scroll_delta_y) && (g_world_camera_scroll_limit_bottom <= scroll_delta_y))
-      {
-        need_bottom_edge = 1;
-      }
-      if ((scroll_delta_y < 0) && (scroll_delta_y <= g_world_camera_scroll_limit_top))
-      {
-        need_top_edge = 1;
-      }
-    }
+      need_left_edge = 0;
+      need_right_edge = 0;
+      need_top_edge = 0;
+      need_bottom_edge = 0;
 
-    any_edge_needed = need_bottom_edge | need_top_edge | need_right_edge | need_left_edge;
-    if (any_edge_needed == 0)
-    {
-      BlitGraphicsRect(g_page0_window_bounds, g_world_camera_viewport_left + scroll_delta_x, g_world_camera_viewport_top + scroll_delta_y,
-                       g_world_camera_viewport_width_scaled, g_world_camera_viewport_height_scaled,
-                       g_page1_window_bounds, 0x40, g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10);
+      tile_x = (int)floor(world_x / 32.0);
+      tile_y = (int)floor(world_y / 32.0);
+      scroll_delta_x = (double)g_world_tile_screen_x_cache[(tile_y << 8) + tile_x] - (double)snapped_screen_x;
+      g_world_scroll_x = scroll_delta_x;
+      scroll_delta_y = (double)g_world_tile_screen_y_cache[(tile_y << 8) + tile_x] - (double)snapped_screen_y;
+      g_world_scroll_y = scroll_delta_y;
 
-      g_page0_window_bounds->page_number = saved_page_number;
-      DrawWorldTileRange(g_world_camera_anchor_world_x, g_world_camera_anchor_world_y, -5, 4, -7, 9, 0, 1);
-      g_world_player_world_x_cached = world_x;
-      g_world_player_world_y_cached = world_y;
-      return;
-    }
-    else
-    {
-      clip_width = g_page0_window_bounds->max_x;
-      clip_height = g_page0_window_bounds->max_y;
-      clip_mode_x = 0;
-      clip_mode_y = 0;
-
-      DrawWorldTileRange(world_x, world_y, -5, 4, -7, 9, 0, 1);
-
-      if (scroll_delta_x > 0)
+      if ((fabs(scroll_delta_x) > 0.001) || (fabs(scroll_delta_y) > 0.001))
       {
-        clip_dst_x = scroll_delta_x;
-        clip_src_x = 0;
-        clip_width = g_page0_window_bounds->max_x - scroll_delta_x;
-        clip_mode_x = 2;
+        if (scroll_delta_x < 0 && g_world_camera_scroll_limit_left >= (int)scroll_delta_x)
+        {
+          need_left_edge = 1;
+        }
+        if (scroll_delta_x > 0 && g_world_camera_scroll_limit_right <= (int)scroll_delta_x)
+        {
+          need_right_edge = 1;
+        }
+        if ((0 < scroll_delta_y) && (g_world_camera_scroll_limit_bottom <= (int)scroll_delta_y))
+        {
+          need_bottom_edge = 1;
+        }
+        if ((scroll_delta_y < 0) && (scroll_delta_y <= g_world_camera_scroll_limit_top))
+        {
+          need_top_edge = 1;
+        }
       }
-      else if (scroll_delta_x < 0)
+
+      any_edge_needed = need_bottom_edge | need_top_edge | need_right_edge | need_left_edge;
+      if (any_edge_needed == 0)
       {
-        clip_dst_x = 0;
-        clip_src_x = -scroll_delta_x;
-        clip_width = g_page0_window_bounds->max_x - -scroll_delta_x;
-        clip_mode_x = 1;
+        BlitGraphicsRect(g_page0_window_bounds, g_world_camera_viewport_left + (int)scroll_delta_x, g_world_camera_viewport_top + (int)scroll_delta_y,
+                         g_world_camera_viewport_width_scaled, g_world_camera_viewport_height_scaled,
+                         g_page1_window_bounds, 0x40, g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10);
+
+        g_page0_window_bounds->page_number = saved_page_number;
+        DrawWorldTileRange((double)g_world_camera_anchor_world_x, (double)g_world_camera_anchor_world_y, -5, 4, -7, 9, 0, 1);
+        g_world_player_world_x_cached = world_x;
+        g_world_player_world_y_cached = world_y;
+        return;
       }
       else
       {
-        clip_dst_x = 0;
-        clip_src_x = 0;
         clip_width = g_page0_window_bounds->max_x;
-        clip_mode_x = -1;
-      }
+        clip_height = g_page0_window_bounds->max_y;
+        clip_mode_x = 0;
+        clip_mode_y = 0;
 
-      if (scroll_delta_y > 0)
-      {
-        clip_dst_y = scroll_delta_y + 0x80;
-        clip_src_y = 0x80;
-        clip_height = (g_page0_window_bounds->max_y - scroll_delta_y) - 0x80;
-        clip_mode_y = 2;
-      }
-      else if (scroll_delta_y < 0)
-      {
-        clip_dst_y = 0x80;
-        clip_src_y = 0x80 - scroll_delta_y;
-        clip_height = (g_page0_window_bounds->max_y - -scroll_delta_y) - 0x80;
-        clip_mode_y = 1;
-      }
-      else
-      {
-        clip_dst_y = 0x80;
-        clip_src_y = 0x80;
-        clip_height = g_page0_window_bounds->max_y - 0x80;
-        clip_mode_y = -1;
-      }
+        DrawWorldTileRange(world_x, world_y, -5, 4, -7, 9, 0, 1);
 
-      BlitGraphicsRect(g_page0_window_bounds, clip_dst_x, clip_dst_y, clip_width, (DWORD)clip_height,
-                       g_page0_window_bounds, clip_src_x, clip_src_y);
-
-      if (clip_mode_x == 1)
-      {
-        DrawWorldTileRange(world_x, world_y, -3, -1, -7, 7, 1, 0);
-        if (clip_mode_y == 1)
+        if (scroll_delta_x > 0)
         {
-          DrawWorldTileRange(world_x, world_y, -1, 4, -7, -3, 1, 0);
+          clip_dst_x = (int)scroll_delta_x;
+          clip_src_x = 0;
+          clip_width = g_page0_window_bounds->max_x - (int)scroll_delta_x;
+          clip_mode_x = 2;
+        }
+        else if (scroll_delta_x < 0)
+        {
+          clip_dst_x = 0;
+          clip_src_x = -(int)scroll_delta_x;
+          clip_width = g_page0_window_bounds->max_x - -(int)scroll_delta_x;
+          clip_mode_x = 1;
+        }
+        else
+        {
+          clip_dst_x = 0;
+          clip_src_x = 0;
+          clip_width = g_page0_window_bounds->max_x;
+          clip_mode_x = -1;
+        }
+
+        if (scroll_delta_y > 0)
+        {
+          clip_dst_y = (int)scroll_delta_y + 0x80;
+          clip_src_y = 0x80;
+          clip_height = (g_page0_window_bounds->max_y - (int)scroll_delta_y) - 0x80;
+          clip_mode_y = 2;
+        }
+        else if (scroll_delta_y < 0)
+        {
+          clip_dst_y = 0x80;
+          clip_src_y = 0x80 - (int)scroll_delta_y;
+          clip_height = (g_page0_window_bounds->max_y - -(int)scroll_delta_y) - 0x80;
+          clip_mode_y = 1;
+        }
+        else
+        {
+          clip_dst_y = 0x80;
+          clip_src_y = 0x80;
+          clip_height = g_page0_window_bounds->max_y - 0x80;
+          clip_mode_y = -1;
+        }
+
+        BlitGraphicsRect(g_page0_window_bounds, clip_dst_x, clip_dst_y, clip_width, (DWORD)clip_height,
+                         g_page0_window_bounds, clip_src_x, clip_src_y);
+
+        if (clip_mode_x == 1)
+        {
+          DrawWorldTileRange(world_x, world_y, -3, -1, -7, 7, 1, 0);
+          if (clip_mode_y == 1)
+          {
+            DrawWorldTileRange(world_x, world_y, -1, 4, -7, -3, 1, 0);
+          }
+          else if (clip_mode_y == 2)
+          {
+            DrawWorldTileRange(world_x, world_y, -1, 4, 3, 7, 1, 0);
+          }
+        }
+        else if (clip_mode_x == 2)
+        {
+          DrawWorldTileRange(world_x, world_y, 2, 5, -7, 7, 1, 0);
+          if (clip_mode_y == 1)
+          {
+            DrawWorldTileRange(world_x, world_y, -3, 2, -7, -3, 1, 0);
+          }
+          else if (clip_mode_y == 2)
+          {
+            DrawWorldTileRange(world_x, world_y, -3, 2, 3, 7, 1, 0);
+          }
+        }
+        else if (clip_mode_y == 1)
+        {
+          DrawWorldTileRange(world_x, world_y, -3, 5, -7, -3, 1, 0);
         }
         else if (clip_mode_y == 2)
         {
-          DrawWorldTileRange(world_x, world_y, -1, 4, 3, 7, 1, 0);
+          DrawWorldTileRange(world_x, world_y, -3, 5, 3, 7, 1, 0);
         }
-      }
-      else if (clip_mode_x == 2)
-      {
-        DrawWorldTileRange(world_x, world_y, 2, 5, -7, 7, 1, 0);
-        if (clip_mode_y == 1)
-        {
-          DrawWorldTileRange(world_x, world_y, -3, 2, -7, -3, 1, 0);
-        }
-        else if (clip_mode_y == 2)
-        {
-          DrawWorldTileRange(world_x, world_y, -3, 2, 3, 7, 1, 0);
-        }
-      }
-      else if (clip_mode_y == 1)
-      {
-        DrawWorldTileRange(world_x, world_y, -3, 5, -7, -3, 1, 0);
-      }
-      else if (clip_mode_y == 2)
-      {
-        DrawWorldTileRange(world_x, world_y, -3, 5, 3, 7, 1, 0);
-      }
 
-      DrawWorldTileRange(world_x, world_y, -4, 6, -9, 0xb, 2, 0);
+        DrawWorldTileRange(world_x, world_y, -4, 6, -9, 0xb, 2, 0);
 
-      g_world_camera_origin_screen_x = origin_screen_x;
-      g_world_camera_origin_screen_y = origin_screen_y;
-      g_world_camera_anchor_world_x = world_x;
-      g_world_camera_anchor_world_y = world_y;
-      g_world_scroll_x = 0;
-      g_world_scroll_y = 0;
-      g_world_camera_last_anchor_x = world_x;
-      g_world_camera_last_anchor_y = world_y;
+        g_world_camera_origin_screen_x = (double)origin_screen_x;
+        g_world_camera_origin_screen_y = (double)origin_screen_y;
+        g_world_camera_anchor_world_x = world_x;
+        g_world_camera_anchor_world_y = world_y;
+        g_world_scroll_x = 0;
+        g_world_scroll_y = 0;
+        g_world_camera_last_anchor_x = world_x;
+        g_world_camera_last_anchor_y = world_y;
+      }
     }
-  }
   else
   {
     redraw_y_start = -9;
@@ -764,8 +767,8 @@ void UpdateWorldViewportBuffer(int world_x, int world_y)
     redraw_x_start = -4;
     redraw_y_end = 6;
 
-    g_world_camera_origin_screen_x = origin_screen_x;
-    g_world_camera_origin_screen_y = origin_screen_y;
+    g_world_camera_origin_screen_x = (double)origin_screen_x;
+    g_world_camera_origin_screen_y = (double)origin_screen_y;
     g_world_camera_anchor_world_x = world_x;
     g_world_camera_anchor_world_y = world_y;
     g_world_scroll_x = 0;
@@ -796,7 +799,7 @@ void UpdateWorldViewportBuffer(int world_x, int world_y)
 }
 
 // FUNCTION: SHANDALAR 0x0054d619
-void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_start, int tile_x_end, int tile_y_start, int tile_y_end,
+void DrawWorldTileRange(double world_x, double world_y, int tile_x_start, int tile_x_end, int tile_y_start, int tile_y_end,
                         int edge_mode, int draw_mode)
 {
   int terrain_edge_x_adjust;           /* ebp-0xb4 */
@@ -815,8 +818,8 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
   EncodedImage *first_terrain_sprite;  /* ebp-0x80 */
   int tile_x;                          /* ebp-0x7c */
   int terrain_offset_y;                /* ebp-0x78 */
-  int tile_screen_x;                   /* ebp-0x74 */
-  int tile_base_screen_y;              /* ebp-0x70 */
+  double tile_screen_x;                /* ebp-0x74 */
+  double tile_base_screen_y;           /* ebp-0x70 */
   int terrain_flip_side;               /* ebp-0x6c */
   int terrain_pattern;                 /* ebp-0x68 */
   unsigned int neighbor_tile_class;    /* ebp-0x64 */
@@ -824,19 +827,19 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
   unsigned int neighbor_tile_type;     /* ebp-0x5c */
   int terrain_column;                  /* ebp-0x58 */
   unsigned int tile_mask;              /* ebp-0x54 */
-  int snapped_screen_y;                /* ebp-0x50 */
+  double snapped_screen_y;             /* ebp-0x50 */
   unsigned int tile_class;             /* ebp-0x4c */
-  int snapped_world_y;                 /* ebp-0x48 */
-  int snapped_screen_x;                /* ebp-0x44 */
+  double snapped_world_y;              /* ebp-0x48 */
+  double snapped_screen_x;             /* ebp-0x44 */
   unsigned int road_mask;              /* ebp-0x40 */
   int scratch_index;                   /* ebp-0x3c */
   int i;                               /* ebp-0x38 */
-  int snapped_world_x;                 /* ebp-0x34 */
+  double snapped_world_x;              /* ebp-0x34 */
   int coastline_bits;                  /* ebp-0x30 */
   int terrain_row;                     /* ebp-0x2c */
   unsigned int tile_type;              /* ebp-0x28 */
   unsigned int road_bits;              /* ebp-0x24 */
-  int tile_screen_y;                   /* ebp-0x20 */
+  double tile_screen_y;                /* ebp-0x20 */
   int saved_page_number;               /* ebp-0x1c */
   int world_tile_y;                    /* ebp-0x18 */
   int town_index;                      /* ebp-0x14 */
@@ -850,21 +853,25 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
 
   g_world_player_world_x_cached = world_x;
   g_world_player_world_y_cached = world_y;
-  snapped_world_x = (int)world_x - ((int)world_x & 0x1f);
-  snapped_world_y = (int)world_y - ((int)world_y & 0x1f);
-  WorldPointToScreen(snapped_world_x, snapped_world_y, &snapped_screen_x, &snapped_screen_y);
+
+  snapped_world_x = floor(world_x / 32.0) * 32.0;
+  snapped_world_y = floor(world_y / 32.0) * 32.0;
+  WorldPointToScreenF(snapped_world_x, snapped_world_y, &snapped_screen_x, &snapped_screen_y);
   for (tile_y = tile_y_start; tile_y < tile_y_end; tile_y++)
   {
     for (tile_x = tile_x_start; tile_x < tile_x_end; tile_x++)
     {
-      tile_screen_x = tile_x * g_world_camera_minimap_panel_x + snapped_screen_x;
-      tile_screen_y = tile_y * g_world_camera_minimap_panel_y + snapped_screen_y;
+      // Keep integer panel multiples for tile grid to avoid per-tile drift
+      // (true 204.8 vs int 204 would shear). Fractional camera offset is
+      // via snapped_screen (double) uniformly.
+      tile_screen_x = (double)tile_x * (double)g_world_camera_minimap_panel_x + snapped_screen_x;
+      tile_screen_y = (double)tile_y * (double)g_world_camera_minimap_panel_y + snapped_screen_y;
       if ((tile_y & 1) != 0)
       {
-        tile_screen_x += g_world_camera_minimap_panel_x / 2;
+        tile_screen_x += (double)g_world_camera_minimap_panel_x / 2.0;
       }
 
-      ScreenToWorldPoint(tile_screen_x + 0x10, tile_screen_y, &world_tile_x, &world_tile_y);
+      ScreenToWorldPoint((int)floor(tile_screen_x + 0.5) + 0x10, (int)floor(tile_screen_y + 0.5), &world_tile_x, &world_tile_y);
       world_tile_x = world_tile_x / 32;
       world_tile_y = world_tile_y / 32;
 
@@ -881,8 +888,8 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           (world_tile_y >= 0) && (world_tile_x >= 0) &&
           (world_tile_y <= 0x3f) && (world_tile_x <= 0x3f))
       {
-        g_world_tile_screen_x_cache[world_tile_y * 0x100 + world_tile_x] = tile_screen_x;
-        g_world_tile_screen_y_cache[world_tile_y * 0x100 + world_tile_x] = tile_screen_y;
+        g_world_tile_screen_x_cache[world_tile_y * 0x100 + world_tile_x] = (int)floor(tile_screen_x + 0.5);
+        g_world_tile_screen_y_cache[world_tile_y * 0x100 + world_tile_x] = (int)floor(tile_screen_y + 0.5);
       }
 
       tile_screen_y -= g_world_camera_minimap_panel_y;
@@ -895,13 +902,13 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
       {
         if (((tile_type == 0) || (tile_type == 8)) && (edge_mode != 0))
         {
-          DrawEncodedImageUnscaledClipped(g_page0_window_bounds, tile_screen_x, tile_screen_y, g_land_tile_sprite_entries[1]);
+          DrawEncodedImageUnscaledClipped(g_page0_window_bounds, (int)floor(tile_screen_x + 0.5), (int)floor(tile_screen_y + 0.5), g_land_tile_sprite_entries[1]);
         }
         else if (edge_mode != 0)
         {
           if (tile_type == 1)
           {
-            DrawEncodedImageUnscaledClipped(g_page0_window_bounds, tile_screen_x, tile_screen_y, g_land_tile_sprite_entries[2]);
+            DrawEncodedImageUnscaledClipped(g_page0_window_bounds, (int)floor(tile_screen_x + 0.5), (int)floor(tile_screen_y + 0.5), g_land_tile_sprite_entries[2]);
           }
           else
           {
@@ -913,7 +920,7 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
             {
               marker_sprite = g_land_tile_sprite_entries[0];
             }
-            DrawEncodedImageUnscaledClipped(g_page0_window_bounds, tile_screen_x, tile_screen_y, marker_sprite);
+            DrawEncodedImageUnscaledClipped(g_page0_window_bounds, (int)floor(tile_screen_x + 0.5), (int)floor(tile_screen_y + 0.5), marker_sprite);
           }
 
           coastline_bits = road_connection_bits = 0;
@@ -965,15 +972,15 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
                 if (i < 2)
                 {
                   DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                                  tile_screen_x + g_world_camera_minimap_panel_y,
-                                                  (i & 1) * g_world_camera_minimap_panel_y + tile_screen_y,
+                                                  (int)floor(tile_screen_x + g_world_camera_minimap_panel_y + 0.5),
+                                                  (int)floor((i & 1) * g_world_camera_minimap_panel_y + tile_screen_y + 0.5),
                                                   g_cstline1_sprite_entries[i + 4][road_bits]);
                 }
                 else
                 {
                   DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                                  (i & 1) * g_world_camera_minimap_panel_y * 2 + tile_screen_x,
-                                                  tile_screen_y + g_world_camera_minimap_panel_y / 2,
+                                                  (int)floor((i & 1) * g_world_camera_minimap_panel_y * 2 + tile_screen_x + 0.5),
+                                                  (int)floor(tile_screen_y + g_world_camera_minimap_panel_y / 2 + 0.5),
                                                   g_cstline1_sprite_entries[i + 4][road_bits]);
                 }
               }
@@ -1009,15 +1016,15 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
                 if (i < 2)
                 {
                   DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                                  tile_screen_x + g_world_camera_minimap_panel_y,
-                                                  (i & 1) * g_world_camera_minimap_panel_y + tile_screen_y,
+                                                  (int)floor(tile_screen_x + g_world_camera_minimap_panel_y + 0.5),
+                                                  (int)floor((i & 1) * g_world_camera_minimap_panel_y + tile_screen_y + 0.5),
                                                   g_cstline1_sprite_entries[i][road_bits]);
                 }
                 else
                 {
                   DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                                  (i & 1) * g_world_camera_minimap_panel_y * 2 + tile_screen_x,
-                                                  tile_screen_y + g_world_camera_minimap_panel_y / 2,
+                                                  (int)floor((i & 1) * g_world_camera_minimap_panel_y * 2 + tile_screen_x + 0.5),
+                                                  (int)floor(tile_screen_y + g_world_camera_minimap_panel_y / 2 + 0.5),
                                                   g_cstline1_sprite_entries[i][road_bits]);
                 }
               }
@@ -1040,7 +1047,7 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           {
             if (((road_mask & (1 << (unsigned char)i)) != 0) && (edge_mode != 0))
             {
-              DrawEncodedImageUnscaledClipped(g_page0_window_bounds, tile_screen_x, tile_screen_y, g_road_sprite_entries[(i - 2 & 7) + 1]);
+              DrawEncodedImageUnscaledClipped(g_page0_window_bounds, (int)floor(tile_screen_x + 0.5), (int)floor(tile_screen_y + 0.5), g_road_sprite_entries[(i - 2 & 7) + 1]);
             }
           }
         }
@@ -1153,9 +1160,9 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
             }
 
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x + terrain_draw_x_adjust,
-                                    (tile_base_screen_y - terrain_height) + terrain_draw_y_adjust,
-                                    terrain_draw_base_y_adjust + tile_base_screen_y,
+                                    (int)floor(tile_screen_x + terrain_draw_x_adjust + 0.5),
+                                    (int)floor((tile_base_screen_y - terrain_height) + terrain_draw_y_adjust + 0.5),
+                                    (int)floor(terrain_draw_base_y_adjust + tile_base_screen_y + 0.5),
                                     g_land_sprite_entries[terrain_row][terrain_column]);
           }
           if (edge_mode != 0)
@@ -1178,8 +1185,8 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
               terrain_edge_x_adjust = terrain_offset_x;
             }
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x + terrain_edge_x_adjust,
-                                            (tile_base_screen_y - terrain_height) + terrain_edge_y_adjust,
+                                            (int)floor(tile_screen_x + terrain_edge_x_adjust + 0.5),
+                                            (int)floor((tile_base_screen_y - terrain_height) + terrain_edge_y_adjust + 0.5),
                                             g_sland_sprite_entries[terrain_row][terrain_column]);
           }
 
@@ -1199,16 +1206,16 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           {
 
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x - terrain_offset_x,
-                                    (tile_base_screen_y - terrain_height) + terrain_offset_y,
-                                    terrain_offset_y + tile_base_screen_y,
+                                    (int)floor(tile_screen_x - terrain_offset_x + 0.5),
+                                    (int)floor((tile_base_screen_y - terrain_height) + terrain_offset_y + 0.5),
+                                    (int)floor(terrain_offset_y + tile_base_screen_y + 0.5),
                                     g_land_sprite_entries[terrain_row][terrain_column]);
           }
           if (edge_mode != 0)
           {
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x - terrain_offset_x,
-                                            (tile_base_screen_y - terrain_height) + terrain_offset_y,
+                                            (int)floor(tile_screen_x - terrain_offset_x + 0.5),
+                                            (int)floor((tile_base_screen_y - terrain_height) + terrain_offset_y + 0.5),
                                             g_sland_sprite_entries[terrain_row][terrain_column]);
           }
         }
@@ -1228,16 +1235,16 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           if (draw_mode != 0)
           {
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x,
-                                    (tile_base_screen_y - (int)dungeon_marker_sprite->height) + g_world_camera_minimap_panel_y,
-                                    tile_base_screen_y,
+                                    (int)floor(tile_screen_x + 0.5),
+                                    (int)floor((tile_base_screen_y - (int)dungeon_marker_sprite->height) + g_world_camera_minimap_panel_y + 0.5),
+                                    (int)floor(tile_base_screen_y + 0.5),
                                     g_location_marker_sprite_entries[g_dungeon_marker_sprite_lookup[scratch_index]]);
           }
           if (edge_mode != 0)
           {
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x,
-                                            (tile_base_screen_y - (int)dungeon_marker_sprite->height) + g_world_camera_minimap_panel_y,
+                                            (int)floor(tile_screen_x + 0.5),
+                                            (int)floor((tile_base_screen_y - (int)dungeon_marker_sprite->height) + g_world_camera_minimap_panel_y + 0.5),
                                             g_location_marker_sprite_entries[g_dungeon_marker_sprite_lookup[scratch_index + 1]]);
           }
         }
@@ -1252,16 +1259,16 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           if (draw_mode != 0)
           {
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x,
-                                    tile_base_screen_y - ScaleUiCoordinate(0xa0),
-                                    tile_base_screen_y,
+                                    (int)floor(tile_screen_x + 0.5),
+                                    (int)floor(tile_base_screen_y - ScaleUiCoordinate(0xa0) + 0.5),
+                                    (int)floor(tile_base_screen_y + 0.5),
                                     g_castles_sprite_entries[(char)g_castle_sprite_lookup_by_tile_class[tile_class * 4]]);
           }
           if (edge_mode != 0)
           {
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x,
-                                            tile_base_screen_y - ScaleUiCoordinate(0xa0),
+                                            (int)floor(tile_screen_x + 0.5),
+                                            (int)floor(tile_base_screen_y - ScaleUiCoordinate(0xa0) + 0.5),
                                             g_castles_sprite_entries[(char)g_castle_sprite_lookup_by_tile_class[tile_class * 4 + 1]]);
           }
         }
@@ -1271,16 +1278,16 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           if (draw_mode != 0)
           {
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x,
-                                    tile_base_screen_y - ScaleUiCoordinate(0xa0),
-                                    tile_base_screen_y,
+                                    (int)floor(tile_screen_x + 0.5),
+                                    (int)floor(tile_base_screen_y - ScaleUiCoordinate(0xa0) + 0.5),
+                                    (int)floor(tile_base_screen_y + 0.5),
                                     g_castles_sprite_entries[(char)g_castle_sprite_lookup_by_tile_class[tile_class * 4 + 0x1a]]);
           }
           if (edge_mode != 0)
           {
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x,
-                                            tile_base_screen_y - ScaleUiCoordinate(0xa0),
+                                            (int)floor(tile_screen_x + 0.5),
+                                            (int)floor(tile_base_screen_y - ScaleUiCoordinate(0xa0) + 0.5),
                                             g_castles_sprite_entries[(char)g_castle_sprite_lookup_by_tile_class[tile_class * 4 + 0x1b]]);
           }
         }
@@ -1290,16 +1297,16 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           if (draw_mode != 0)
           {
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x,
-                                    tile_base_screen_y - ScaleUiCoordinate(0xa6),
-                                    tile_base_screen_y,
+                                    (int)floor(tile_screen_x + 0.5),
+                                    (int)floor(tile_base_screen_y - ScaleUiCoordinate(0xa6) + 0.5),
+                                    (int)floor(tile_base_screen_y + 0.5),
                                     g_wizard_controlled_town_sprite_entries[wizard_index]);
           }
           if (edge_mode != 0)
           {
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x,
-                                            tile_base_screen_y - ScaleUiCoordinate(0xa6),
+                                            (int)floor(tile_screen_x + 0.5),
+                                            (int)floor(tile_base_screen_y - ScaleUiCoordinate(0xa6) + 0.5),
                                             g_current_location_marker_sprite);
           }
         }
@@ -1319,16 +1326,16 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
           if (draw_mode != 0)
           {
             QueueWorldSpriteForDraw(g_page0_window_bounds,
-                                    tile_screen_x,
-                                    ScaleUiCoordinate(0x18) + (tile_base_screen_y - town_marker_height),
-                                    tile_base_screen_y,
+                                    (int)floor(tile_screen_x + 0.5),
+                                    (int)floor(ScaleUiCoordinate(0x18) + (tile_base_screen_y - town_marker_height) + 0.5),
+                                    (int)floor(tile_base_screen_y + 0.5),
                                     g_location_marker_sprite_entries[(char)g_location_marker_sprite_lookup_by_town[scratch_index]]);
           }
           if (edge_mode != 0)
           {
             DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                            tile_screen_x,
-                                            ScaleUiCoordinate(0x18) + (tile_base_screen_y - town_marker_height),
+                                            (int)floor(tile_screen_x + 0.5),
+                                            (int)floor(ScaleUiCoordinate(0x18) + (tile_base_screen_y - town_marker_height) + 0.5),
                                             g_location_marker_sprite_entries[(char)g_location_marker_sprite_lookup_by_town[scratch_index + 1]]);
           }
         }
@@ -1349,21 +1356,25 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
               strcpy(g_ui_message_buffer, BuildQuestLocationName(town_index, g_current_quest_destination, 0));
             }
 
-            DrawWorldUiFormattedText(g_page0_window_bounds, 0xff, tile_screen_x + g_world_camera_minimap_panel_x / 2,
-                                     tile_base_screen_y + g_world_camera_minimap_panel_y / 2, g_ui_message_buffer);
+            DrawWorldUiFormattedText(g_page0_window_bounds, 0xff, (int)floor(tile_screen_x + g_world_camera_minimap_panel_x / 2 + 0.5),
+                                     (int)floor(tile_base_screen_y + g_world_camera_minimap_panel_y / 2 + 0.5), g_ui_message_buffer);
           }
           else
           {
             strcpy(g_ui_message_buffer, BuildQuestLocationName(town_index, g_current_quest_destination, 0));
-            DrawWorldUiFormattedText(g_page0_window_bounds, 0xff, tile_screen_x + g_world_camera_minimap_panel_x / 2,
-                                     tile_base_screen_y + g_world_camera_minimap_panel_y / 2, g_ui_message_buffer);
+            DrawWorldUiFormattedText(g_page0_window_bounds, 0xff, (int)floor(tile_screen_x + g_world_camera_minimap_panel_x / 2 + 0.5),
+                                     (int)floor(tile_base_screen_y + g_world_camera_minimap_panel_y / 2 + 0.5), g_ui_message_buffer);
           }
         }
       }
     }
   }
 
-  WorldPointToScreen(g_world_player_world_x_cached, g_world_player_world_y_cached, &tile_screen_x, &tile_screen_y);
+  {
+    int tmp_x, tmp_y;
+    WorldPointToScreen(g_world_player_world_x_cached, g_world_player_world_y_cached, &tmp_x, &tmp_y);
+    (void)tmp_x; (void)tmp_y;
+  }
 
   g_page0_window_bounds->page_number = saved_page_number;
 }
@@ -1960,10 +1971,9 @@ void DrawQueuedWorldSprites(void)
   draw_index = g_world_draw_head_index;
   while (draw_index != -1)
   {
-    DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                    g_world_draw_screen_x[draw_index] - g_world_scroll_x,
-                                    g_world_draw_screen_y[draw_index] - g_world_scroll_y,
-                                    g_world_draw_sprites[draw_index]);
+    int sx = (int)floor(g_world_draw_screen_x[draw_index] - g_world_scroll_x + 0.5);
+    int sy = (int)floor(g_world_draw_screen_y[draw_index] - g_world_scroll_y + 0.5);
+    DrawEncodedImageUnscaledClipped(g_page0_window_bounds, sx, sy, g_world_draw_sprites[draw_index]);
     draw_index = g_world_draw_next_index[draw_index];
   }
 }
@@ -1971,49 +1981,42 @@ void DrawQueuedWorldSprites(void)
 // FUNCTION: SHANDALAR 0x0054aa04
 void WorldSubtileOffsetToScreen(int world_subcell_x, int world_subcell_y, int *out_screen_x, int *out_screen_y)
 {
-  int world_subcell_y_copy;
-  int screen_x;
-  int world_subcell_x_copy;
-  int screen_y;
-
-  world_subcell_x_copy = world_subcell_x;
-  world_subcell_y_copy = world_subcell_y;
-  screen_x = ((world_subcell_y_copy + world_subcell_x_copy) * global_screen_width * 2) / 0x280;
-  screen_y = ((world_subcell_y_copy - world_subcell_x_copy) * global_screen_height) / 0x1e0;
-  *out_screen_x = screen_x;
-  *out_screen_y = screen_y;
+  double sx = ((double)(world_subcell_y + world_subcell_x) * (double)global_screen_width * 2.0) / 640.0;
+  double sy = ((double)(world_subcell_y - world_subcell_x) * (double)global_screen_height) / 480.0;
+  *out_screen_x = (int)floor(sx + 0.5);
+  *out_screen_y = (int)floor(sy + 0.5);
 }
 
 // FUNCTION: SHANDALAR 0x0054aa60
 void WorldTileToScreenFromCameraAnchor(int world_tile_x, int world_tile_y, int *out_screen_x, int *out_screen_y)
 {
-  int delta_y;
-  int screen_x;
-  int delta_x;
-  int screen_y;
-
-  delta_x = world_tile_x - g_world_camera_last_anchor_x;
-  delta_y = world_tile_y - g_world_camera_last_anchor_y;
-  screen_x = ((delta_y + delta_x) * global_screen_width * 2) / 0x280 + g_world_camera_viewport_width_pixels / 2;
-  screen_y = ((delta_y - delta_x) * global_screen_height) / 0x1e0 + g_world_camera_viewport_height_pixels / 2;
-  *out_screen_x = screen_x;
-  *out_screen_y = g_world_ui_top_offset + screen_y;
+  double delta_x = (double)world_tile_x - g_world_camera_last_anchor_x;
+  double delta_y = (double)world_tile_y - g_world_camera_last_anchor_y;
+  double sx = ((delta_y + delta_x) * (double)global_screen_width * 2.0) / 640.0 + (double)g_world_camera_viewport_width_pixels / 2.0;
+  double sy = ((delta_y - delta_x) * (double)global_screen_height) / 480.0 + (double)g_world_camera_viewport_height_pixels / 2.0;
+  *out_screen_x = (int)floor(sx + 0.5);
+  *out_screen_y = g_world_ui_top_offset + (int)floor(sy + 0.5);
 }
 
 // FUNCTION: SHANDALAR 0x0054aae9
-void WorldPointToScreen(int world_x, int world_y, int *out_screen_x, int *out_screen_y)
+void WorldPointToScreen(double world_x, double world_y, int *out_screen_x, int *out_screen_y)
 {
-  int delta_y;
-  int screen_x;
-  int delta_x;
-  int screen_y;
+  double delta_x = world_x - g_world_player_world_x_cached;
+  double delta_y = world_y - g_world_player_world_y_cached;
+  double sx = ((delta_y + delta_x) * (double)global_screen_width * 2.0) / 640.0 + (double)g_world_camera_viewport_width_pixels / 2.0;
+  double sy = ((delta_y - delta_x) * (double)global_screen_height) / 480.0 + (double)g_world_camera_viewport_height_pixels / 2.0;
+  *out_screen_x = (int)floor(sx + 0.5);
+  *out_screen_y = (int)floor(sy + 0.5) + g_world_ui_top_offset;
+}
 
-  delta_x = world_x - g_world_player_world_x_cached;
-  delta_y = world_y - g_world_player_world_y_cached;
-  screen_x = ((delta_y + delta_x) * global_screen_width * 2) / 0x280 + g_world_camera_viewport_width_pixels / 2;
-  screen_y = ((delta_y - delta_x) * global_screen_height) / 0x1e0 + g_world_camera_viewport_height_pixels / 2;
-  *out_screen_x = screen_x;
-  *out_screen_y = screen_y + g_world_ui_top_offset;
+void WorldPointToScreenF(double world_x, double world_y, double *out_screen_x, double *out_screen_y)
+{
+  double delta_x = world_x - g_world_player_world_x_cached;
+  double delta_y = world_y - g_world_player_world_y_cached;
+  double sx = ((delta_y + delta_x) * (double)global_screen_width * 2.0) / 640.0 + (double)g_world_camera_viewport_width_pixels / 2.0;
+  double sy = ((delta_y - delta_x) * (double)global_screen_height) / 480.0 + (double)g_world_camera_viewport_height_pixels / 2.0;
+  *out_screen_x = sx;
+  *out_screen_y = sy + g_world_ui_top_offset;
 }
 
 // FUNCTION: SHANDALAR 0x0054ab73
@@ -2177,7 +2180,7 @@ static __inline void DrawWorldStatusTipSprites(void)
 }
 
 // FUNCTION: SHANDALAR 0x0054ac08
-void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
+void RenderAdventureWorldScene(double world_x, double world_y, int world_state)
 {
   int scratch_padding[4];
   AdvMenuRect restore_clip_rect_scratch;
@@ -2220,8 +2223,8 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
   g_world_player_world_x_cached = world_x;
   g_world_player_world_y_cached = world_y;
 
-  g_world_player_tile_x = world_x / 32;
-  g_world_player_tile_y = world_y / 32;
+  g_world_player_tile_x = (int)floor(world_x / 32.0);
+  g_world_player_tile_y = (int)floor(world_y / 32.0);
 
   g_page0_window_bounds->page_number = g_page1_window_bounds->page_number;
   ResetWorldDrawQueue();
@@ -2238,9 +2241,9 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
                        ScaleUiCoordinateFrom320(0x100), ScaleUiCoordinateFrom320(0x8c));
 
   QueueWorldSpriteForDraw(g_page0_window_bounds,
-                          (player_screen_x - g_ego_sprite_width / 2) + g_world_scroll_x,
-                          (player_screen_y - g_ego_sprite_draw_height) + g_world_scroll_y,
-                          player_screen_y + g_world_scroll_y,
+                          (int)floor((player_screen_x - g_ego_sprite_width / 2) + g_world_scroll_x + 0.5),
+                          (int)floor((player_screen_y - g_ego_sprite_draw_height) + g_world_scroll_y + 0.5),
+                          (int)floor(player_screen_y + g_world_scroll_y + 0.5),
                           (&g_opening_menu_sprite_work_buffer[0x10].sprites[((g_world_player_animation_direction + 2) & 7) * 5])
                               [g_world_player_animation_frame]);
 
@@ -2300,8 +2303,8 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
                                 g_location07_sprite_entries[g_lair_sprite_index_by_color[g_lair_or_monster_slots[slot_index].color]]);
 
         DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                        (player_screen_x - ScaleUiCoordinateFrom320(0x20)) - g_world_scroll_x,
-                                        (player_screen_y - ScaleUiCoordinateFrom320(0x30)) - g_world_scroll_y,
+                                        (int)floor((player_screen_x - ScaleUiCoordinateFrom320(0x20)) - g_world_scroll_x + 0.5),
+                                        (int)floor((player_screen_y - ScaleUiCoordinateFrom320(0x30)) - g_world_scroll_y + 0.5),
                                         g_location07_sprite_entries[g_lair_sprite_index_by_color[g_lair_or_monster_slots[slot_index].color] + 6]);
       }
       else
@@ -2322,8 +2325,8 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
 
         heading_sprite_index = slot_index + 8;
         DrawEncodedImageUnscaledClipped(g_page0_window_bounds,
-                                        (player_screen_x - g_world_lair_monster_sprite_widths[heading_sprite_index] / 2) - g_world_scroll_x,
-                                        (player_screen_y - g_world_lair_monster_sprite_top_clips[heading_sprite_index]) - g_world_scroll_y,
+                                        (int)floor((player_screen_x - g_world_lair_monster_sprite_widths[heading_sprite_index] / 2) - g_world_scroll_x + 0.5),
+                                        (int)floor((player_screen_y - g_world_lair_monster_sprite_top_clips[heading_sprite_index]) - g_world_scroll_y + 0.5),
                                         (&g_opening_menu_sprite_work_buffer[heading_sprite_index]
                                               .sprites[((g_lair_or_monster_slots[slot_index].movement_heading + 2) & 7) * 5])
                                             [g_lair_or_monster_slots[slot_index].movement_anim_frame]);
