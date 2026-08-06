@@ -38,6 +38,73 @@
 
 DIBSurface *GetPrimaryPage(int unused);
 
+// The authoritative integer player position advances on the original movement
+// cadence.  Keep a separate camera position so rendering can scroll smoothly
+// at the host frame rate without changing adventure-world game logic.
+static double g_cam_smooth_x;
+static double g_cam_smooth_y;
+static double g_cam_vel_x;
+static double g_cam_vel_y;
+static int g_cam_last_gate_x;
+static int g_cam_last_gate_y;
+
+static void AdvanceSmoothWorldCamera(int elapsed_ms)
+{
+  double next_x;
+  double next_y;
+
+  if (elapsed_ms <= 0)
+  {
+    return;
+  }
+
+  next_x = g_cam_smooth_x + g_cam_vel_x * ((double)elapsed_ms / 60);
+  next_y = g_cam_smooth_y + g_cam_vel_y * ((double)elapsed_ms / 60);
+
+  if ((g_cam_vel_x > 0.0 && next_x > g_cam_last_gate_x) ||
+      (g_cam_vel_x < 0.0 && next_x < g_cam_last_gate_x))
+  {
+    next_x = g_cam_last_gate_x;
+  }
+  if ((g_cam_vel_y > 0.0 && next_y > g_cam_last_gate_y) ||
+      (g_cam_vel_y < 0.0 && next_y < g_cam_last_gate_y))
+  {
+    next_y = g_cam_last_gate_y;
+  }
+
+  g_cam_smooth_x = next_x;
+  g_cam_smooth_y = next_y;
+}
+
+static void GetSmoothWorldCameraRenderPosition(int *world_x, int *world_y)
+{
+  int rounded_x;
+  int rounded_y;
+
+  rounded_x = (int)(g_cam_smooth_x + 0.5);
+  rounded_y = (int)(g_cam_smooth_y + 0.5);
+
+  if (g_cam_vel_x != 0.0 && g_cam_vel_x == g_cam_vel_y)
+  {
+    rounded_y = rounded_x - (g_cam_last_gate_x - g_cam_last_gate_y);
+  }
+  else if (g_cam_vel_x != 0.0 && g_cam_vel_x == -g_cam_vel_y)
+  {
+    rounded_y = (g_cam_last_gate_x + g_cam_last_gate_y) - rounded_x;
+  }
+
+  *world_x = rounded_x;
+  *world_y = rounded_y;
+}
+
+void SetSmoothWorldCameraVelocity(int player_x, int player_y, int movement_tick_interval)
+{
+  g_cam_vel_x = (double)(player_x - g_cam_last_gate_x) / (double)movement_tick_interval;
+  g_cam_vel_y = (double)(player_y - g_cam_last_gate_y) / (double)movement_tick_interval;
+  g_cam_last_gate_x = player_x;
+  g_cam_last_gate_y = player_y;
+}
+
 
 // GLOBAL: SHANDALAR 0x007483f8
 HDC global_main_hdc;
@@ -447,7 +514,7 @@ int RunWorldLairMonsterEncounter(int slot_index, int monster_color);
 // FUNCTION: SHANDALAR 0x0055db50
 int RunAdventureSession(void)
 {
-  Uint32 last_tick;
+  uint64_t last_tick;
   int temp_value;
   int initialized_world;
   unsigned int tile_mask;
@@ -455,7 +522,6 @@ int RunAdventureSession(void)
   int loop_index;
   int proceed_to_main_loop;
   int pending_ui_action_queued;
-  int mouse_snapshot_updated;
 
   initialized_world = 0;
   proceed_to_main_loop = 0;
@@ -613,47 +679,72 @@ opening_menu:
   }
   else
   {
-    last_tick = 0;
-    do
     {
-      ConsumeUiTickCount();
-      RenderAdventureWorldScene(g_world_player_x, g_world_player_y, g_world_scene_force_redraw);
-      g_world_scene_force_redraw = 0;
+      uint64_t last_frame_ms;
 
-      while ((int)(SDL_GetTicks() - last_tick) < 0x3c)
-      {
-#ifdef __EMSCRIPTEN__
-        emscripten_sleep(0);
-#else
-        SDL_Delay(1);
-#endif
-      }
-      last_tick = SDL_GetTicks();
+      g_cam_smooth_x = g_world_player_x;
+      g_cam_smooth_y = g_world_player_y;
+      g_cam_vel_x = 0.0;
+      g_cam_vel_y = 0.0;
+      g_cam_last_gate_x = g_world_player_x;
+      g_cam_last_gate_y = g_world_player_y;
+      last_frame_ms = SDL_GetTicks();
+      last_tick = last_frame_ms;
 
-      if ((g_mouse_button_down_mask & 2U) != 0)
+      do
       {
-        RunRightClickMenuAndQueueInput();
-      }
-      pending_ui_action_queued = (g_pending_ui_action_code != 0);
-      mouse_snapshot_updated = QueuePendingMenuActionInput();
+        int render_world_x;
+        int render_world_y;
+        uint64_t now_ms = SDL_GetTicks();
+        int frame_delta = (int)(now_ms - last_frame_ms);
+        last_frame_ms = now_ms;
 
-      UpdateAdventureWorldInputAndMovement();
-      UpdateWorldLairAndMonsterSlots();
+        AdvanceSmoothWorldCamera(frame_delta);
 
-      TickWorldMagicSlotTimers();
-      if (mouse_snapshot_updated == 0)
-      {
-        UpdateMouseSnapshot();
-      }
-      UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
-      g_monster_timer = g_monster_timer + 1;
-      if (pending_ui_action_queued)
-      {
-        ClearInputAndWaitForMouseRelease();
-      }
-      ClearQueuedKeyInput();
-      setjmp(g_adventure_world_exit_jump_buffer);
-    } while (g_adventure_world_exit_requested == 0);
+        if ((int)(now_ms - last_tick) >= 60)
+        {
+          ConsumeUiTickCount();
+
+          if ((g_mouse_button_down_mask & 2U) != 0)
+          {
+            RunRightClickMenuAndQueueInput();
+          }
+          pending_ui_action_queued = (g_pending_ui_action_code != 0);
+          QueuePendingMenuActionInput();
+
+          UpdateAdventureWorldInputAndMovement();
+          UpdateWorldLairAndMonsterSlots();
+
+          TickWorldMagicSlotTimers();
+          UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
+          g_monster_timer = g_monster_timer + 1;
+          if (pending_ui_action_queued)
+          {
+            ClearInputAndWaitForMouseRelease();
+          }
+          ClearQueuedKeyInput();
+
+          last_tick = now_ms;
+        }
+
+        if ((abs((int)g_cam_smooth_x - g_world_player_x) >= 0x20) ||
+            (abs((int)g_cam_smooth_y - g_world_player_y) >= 0x20))
+        {
+          g_cam_smooth_x = g_world_player_x;
+          g_cam_smooth_y = g_world_player_y;
+          g_cam_last_gate_x = g_world_player_x;
+          g_cam_last_gate_y = g_world_player_y;
+          g_cam_vel_x = 0.0;
+          g_cam_vel_y = 0.0;
+        }
+        GetSmoothWorldCameraRenderPosition(&render_world_x, &render_world_y);
+        RenderAdventureWorldScene(render_world_x, render_world_y, g_world_scene_force_redraw);
+        g_world_scene_force_redraw = 0;
+
+        shandalar_host_pump();
+        setjmp(g_adventure_world_exit_jump_buffer);
+      } while (g_adventure_world_exit_requested == 0);
+    }
   }
 
   AnimatePaletteToColor(0, g_default_palette_fade_steps);

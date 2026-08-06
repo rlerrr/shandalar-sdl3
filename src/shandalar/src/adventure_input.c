@@ -138,7 +138,7 @@ int QueuePendingMenuActionInput(void)
     PushQueuedKeyInput(0x35);
     break;
   default:
-    UpdateMouseSnapshot();
+    UpdateMouseSnapshotImpl();
     if ((g_mouse_button_mask_snapshot & 2U) != 0)
     {
       RunRightClickMenuAndQueueInput();
@@ -622,6 +622,8 @@ void UpdateAdventureWorldInputAndMovement(void)
       g_world_player_y = previous_world_y;
     }
 
+    SetSmoothWorldCameraVelocity(g_world_player_x, g_world_player_y, deck_index);
+
     if ((internal_rand(0x28) == 0) && (g_skip_world_sfx_preload == 0))
     {
       UpdateAmbientWizardColorSound(abs_delta_y);
@@ -974,6 +976,11 @@ void UpdateMouseSnapshot(void)
 #ifdef MODERN_FIXES
   shandalar_host_pump();
 #endif
+  UpdateMouseSnapshotImpl();
+}
+
+void UpdateMouseSnapshotImpl(void)
+{
   if (g_legacy_mouse_active != 0)
   {
     g_mouse_button_mask_snapshot = ConsumeMouseButtonReleaseMask() | g_mouse_button_down_mask;
