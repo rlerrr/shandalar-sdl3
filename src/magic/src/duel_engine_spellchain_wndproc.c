@@ -351,9 +351,7 @@ int add_spell_chain_entry(HWND hwnd, spell_chain_display_entry_t display_entry, 
   int target_index;
   int shift_index;
   int window_count;
-  HWND spell_window;
-  HWND target_windows[20];
-  int created_target_count;
+  spell_chain_window_entry_t new_entry;
   spell_chain_window_entry_t *windows;
 
   if (hwnd == (HWND)0)
@@ -371,27 +369,27 @@ int add_spell_chain_entry(HWND hwnd, spell_chain_display_entry_t display_entry, 
   result = 1;
   create_target.player = display_entry.player;
   create_target.card = display_entry.card;
-  spell_window = CreateWindowExA(0, "MAGICGAME_CardClass", "Spell Card", 0x50000000,
-                                 0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, &create_target);
-  if (spell_window == (HWND)0)
+  new_entry.spell_window = CreateWindowExA(0, "MAGICGAME_CardClass", "Spell Card", 0x50000000,
+                                           0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, &create_target);
+  if (new_entry.spell_window == (HWND)0)
   {
     result = 0;
   }
 
-  created_target_count = 0;
+  new_entry.target_count = 0;
   for (target_index = 0; target_index < display_entry.number_of_targets && result != 0; ++target_index)
   {
     create_target = display_entry.targets[target_index];
-    target_windows[target_index] =
+    new_entry.target_windows[target_index] =
         CreateWindowExA(0, "MAGICGAME_CardClass", "Spell Target Card", 0x50000000,
                         0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, &create_target);
-    if (target_windows[target_index] == (HWND)0)
+    if (new_entry.target_windows[target_index] == (HWND)0)
     {
       result = 0;
     }
     else
     {
-      ++created_target_count;
+      ++new_entry.target_count;
     }
   }
 
@@ -401,21 +399,21 @@ int add_spell_chain_entry(HWND hwnd, spell_chain_display_entry_t display_entry, 
     {
       memcpy(&windows[shift_index + 1], &windows[shift_index], sizeof(windows[shift_index]));
     }
-    memcpy(&windows[insert_index], &spell_window, sizeof(windows[insert_index]));
+    memcpy(&windows[insert_index], &new_entry, sizeof(windows[insert_index]));
     ++window_count;
     SetWindowLongA(hwnd, g_spell_chain_count_long_offset, window_count);
   }
   else
   {
-    if (spell_window != (HWND)0)
+    if (new_entry.spell_window != (HWND)0)
     {
-      DestroyWindow(spell_window);
+      DestroyWindow(new_entry.spell_window);
     }
-    for (target_index = 0; target_index < created_target_count; ++target_index)
+    for (target_index = 0; target_index < new_entry.target_count; ++target_index)
     {
-      if (target_windows[target_index] != (HWND)0)
+      if (new_entry.target_windows[target_index] != (HWND)0)
       {
-        DestroyWindow(target_windows[target_index]);
+        DestroyWindow(new_entry.target_windows[target_index]);
       }
     }
   }
@@ -460,9 +458,7 @@ int update_spell_chain_entry_targets(HWND hwnd, spell_chain_display_entry_t disp
   int result;
   int target_index;
   int window_count;
-  HWND spell_window;
-  HWND target_windows[20];
-  int created_target_count;
+  spell_chain_window_entry_t new_entry;
   spell_chain_window_entry_t *windows;
 
   if (hwnd == (HWND)0)
@@ -473,35 +469,35 @@ int update_spell_chain_entry_targets(HWND hwnd, spell_chain_display_entry_t disp
   windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   result = 1;
-  spell_window = windows[entry_index].spell_window;
-  created_target_count = 0;
+  new_entry.spell_window = windows[entry_index].spell_window;
+  new_entry.target_count = 0;
   for (target_index = 0; target_index < display_entry.number_of_targets && result != 0; ++target_index)
   {
     create_target = display_entry.targets[target_index];
-    target_windows[target_index] =
+    new_entry.target_windows[target_index] =
         CreateWindowExA(0, "MAGICGAME_CardClass", "Spell Target Card", 0x50000000,
                         0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, &create_target);
-    if (target_windows[target_index] == (HWND)0)
+    if (new_entry.target_windows[target_index] == (HWND)0)
     {
       result = 0;
     }
     else
     {
-      ++created_target_count;
+      ++new_entry.target_count;
     }
   }
 
   if (result != 0)
   {
-    memcpy(&windows[entry_index], &spell_window, sizeof(windows[entry_index]));
+    memcpy(&windows[entry_index], &new_entry, sizeof(windows[entry_index]));
   }
   else
   {
-    for (target_index = 0; target_index < created_target_count; ++target_index)
+    for (target_index = 0; target_index < new_entry.target_count; ++target_index)
     {
-      if (target_windows[target_index] != (HWND)0)
+      if (new_entry.target_windows[target_index] != (HWND)0)
       {
-        DestroyWindow(target_windows[target_index]);
+        DestroyWindow(new_entry.target_windows[target_index]);
       }
     }
     windows[entry_index].target_count = 0;
