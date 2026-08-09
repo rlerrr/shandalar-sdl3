@@ -467,6 +467,7 @@ typedef struct tagWINDOWPOS {
 
 #define SM_CXSCREEN 0
 #define SM_CYSCREEN 1
+#define SM_CXVSCROLL 2
 #define SM_CXBORDER 5
 #define SM_CYCAPTION 4
 #define SM_CYHSCROLL 3

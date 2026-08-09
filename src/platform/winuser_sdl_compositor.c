@@ -248,6 +248,29 @@ static int event_mouse_position(SDL_Renderer *renderer, const SDL_Event *event,
   return SDL_RenderCoordinatesFromWindow(renderer, window_x, window_y, x, y);
 }
 
+/* Scrollbars are non-client controls rendered by the ImGui bridge.  Do not
+ * also deliver their mouse events to the legacy client window underneath. */
+static int point_in_rendered_scrollbar(HWND window, POINT point)
+{
+  while (window && window != GetDesktopWindow()) {
+    RECT rect;
+    LONG style = GetWindowLongA(window, GWL_STYLE);
+    int minimum;
+    int maximum;
+    if (GetWindowRect(window, &rect)) {
+      if ((style & WS_HSCROLL) &&
+          GetScrollRange(window, SB_HORZ, &minimum, &maximum) &&
+          maximum > minimum &&
+          point.x >= rect.left && point.x < rect.right &&
+          point.y >= rect.bottom - GetSystemMetrics(SM_CYHSCROLL) &&
+          point.y < rect.bottom)
+        return 1;
+    }
+    window = GetParent(window);
+  }
+  return 0;
+}
+
 int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
                                                   const SDL_Event *event)
 {
@@ -299,6 +322,18 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   if (modal && !is_descendant_or_self(target, modal)) {
     BringWindowToTop(modal);
     return 1;
+  }
+  if (point_in_rendered_scrollbar(target, screen)) {
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
+        event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+      WPARAM button = event->button.button == SDL_BUTTON_LEFT ? MK_LBUTTON :
+                      event->button.button == SDL_BUTTON_RIGHT ? MK_RBUTTON : 0;
+      if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+        g_mouse_buttons |= button;
+      else
+        g_mouse_buttons &= ~button;
+    }
+    return 0;
   }
   if (shandalar_win32_is_builtin_control(target))
     return 0;

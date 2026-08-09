@@ -4749,6 +4749,7 @@ void UpdateAdventureWorldInputAndMovement(void)
         goto handle_world_magic_hotkey;
       }
 
+      ClearInputAndWaitForMouseRelease();
       AnimatePaletteToColor(0, g_default_palette_fade_steps);
       DeckBuilderMain(g_main_window_hwnd, 1, 0);
       RestoreAdventureUiPaletteAndFocus();

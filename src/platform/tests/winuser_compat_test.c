@@ -297,6 +297,15 @@ int main(void)
   CHECK(SetWindowPos(child, NULL, 0, 0, 90, 45,
                      SWP_NOMOVE | SWP_NOZORDER));
   CHECK(UpdateWindow(child));
+  {
+    HWND scrolled = CreateWindowExA(0, "CompatTest", "scrolled",
+                                    WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL,
+                                    0, 0, 100, 80, parent, (HMENU)46, NULL, NULL);
+    CHECK(scrolled);
+    CHECK(GetClientRect(scrolled, &rect));
+    CHECK(rect.right == 100 - GetSystemMetrics(SM_CXVSCROLL));
+    CHECK(rect.bottom == 80 - GetSystemMetrics(SM_CYHSCROLL));
+  }
   thread_timer = SetTimer(NULL, 0, 1, NULL);
   CHECK(thread_timer != 0);
   Sleep(2);
@@ -334,7 +343,7 @@ int main(void)
   CHECK(DestroyWindow(caption_window));
   CHECK(DestroyWindow(double_click_window));
   CHECK(DeleteObject(palette));
-  CHECK(destroys == 6); /* Built-in controls use their own window procedure. */
+  CHECK(destroys == 7); /* Built-in controls use their own window procedure. */
   CHECK(!IsWindow(parent) && !IsWindow(child));
   shandalar_win32_reset();
   return 0;

@@ -138,6 +138,7 @@ int GetSystemMetrics(int index)
   switch (index) {
   case SM_CXSCREEN: return desktop.right;
   case SM_CYSCREEN: return desktop.bottom;
+  case SM_CXVSCROLL: return 17;
   case SM_CXBORDER: return 1;
   case SM_CYCAPTION: return 19;
   case SM_CYHSCROLL: return 17;

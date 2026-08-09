@@ -1176,6 +1176,7 @@ int OpenTownDeckBuilder(AdvMenuControl *control)
 
   (void)control;
   town_index = g_active_town_services_town_index;
+  ClearInputAndWaitForMouseRelease();
   PlaySoundEffectOnChannel("x:sound\\button2.wav", 0xf, 100, 100, 0);
   AnimatePaletteToColor(0, g_default_palette_fade_steps);
   DeckBuilderMain(g_main_window_hwnd, 1, 3);
@@ -2269,6 +2270,7 @@ loop:
       switch (menu_context)
       {
       case 4:
+        ClearInputAndWaitForMouseRelease();
         AnimatePaletteToColor(0, g_default_palette_fade_steps);
         DeckBuilderMain(g_main_window_hwnd, 1, 3);
         (void)RestoreAdventureUiPaletteAndFocus();

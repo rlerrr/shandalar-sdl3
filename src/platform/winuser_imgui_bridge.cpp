@@ -607,7 +607,6 @@ extern "C" int shandalar_win32_imgui_process_event(SDL_Renderer *renderer,
     SDL_RenderCoordinatesFromWindow(renderer, event->button.x, event->button.y,
                                     &logical_event.button.x, &logical_event.button.y);
   ImGui_ImplSDL3_ProcessEvent(&logical_event);
-  shandalar_win32_sdl_compositor_process_event(renderer, event);
   return 1;
 }
 

@@ -5,7 +5,6 @@ add_library(shandalar_platform STATIC
   legacy_io.c
   dictionary.c
   iniparser.c
-  vfw_compat.c
   winbase_compat.c
   wincontrols_compat.c
   windialog_compat.c
@@ -16,6 +15,10 @@ add_library(shandalar_platform STATIC
   winreg_compat.c
   winscroll_compat.c
 )
+
+if(SHANDALAR_BUILD_SHANDALAR)
+  target_sources(shandalar_platform PRIVATE vfw_compat.c)
+endif()
 
 target_include_directories(shandalar_platform PUBLIC
   "${SHANDALAR_SRC_ROOT}"

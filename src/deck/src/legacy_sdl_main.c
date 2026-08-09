@@ -34,7 +34,7 @@ static int g_snapshot_saved;
 extern HWND global_horzlist_hwnd;
 extern HWND global_decksurface_hwnd;
 extern HWND cardlistfilter_hwnd;
-extern HWND global_main_hwnd;
+extern HWND deckdll_global_main_hwnd;
 
 static void save_snapshot(void)
 {
@@ -123,7 +123,7 @@ static BOOL pump_legacy_ui(BOOL wait)
   static int first_frame = 1;
   if (g_smoke_dialog_open && g_smoke_frames_remaining == 3) {
     HWND dialog;
-    for (dialog = GetWindow(global_main_hwnd, GW_CHILD); dialog;
+    for (dialog = GetWindow(deckdll_global_main_hwnd, GW_CHILD); dialog;
          dialog = GetWindow(dialog, GW_HWNDNEXT)) {
       char class_name[16] = {0};
       GetClassNameA(dialog, class_name, sizeof(class_name));
@@ -219,8 +219,8 @@ static BOOL pump_legacy_ui(BOOL wait)
     g_smoke_menu = 0;
   }
 
-  if (g_smoke_dialog_command && g_smoke_frames_remaining == 20 && global_main_hwnd) {
-    PostMessageA(global_main_hwnd, WM_COMMAND, g_smoke_dialog_command, 0);
+  if (g_smoke_dialog_command && g_smoke_frames_remaining == 20 && deckdll_global_main_hwnd) {
+    PostMessageA(deckdll_global_main_hwnd, WM_COMMAND, g_smoke_dialog_command, 0);
     g_smoke_dialog_command = 0;
     g_smoke_dialog_open = 1;
   }

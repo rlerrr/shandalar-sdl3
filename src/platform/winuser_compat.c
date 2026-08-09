@@ -712,13 +712,19 @@ DWORD GetWindowThreadProcessId(HWND window, DWORD *process_id)
 
 BOOL GetClientRect(HWND window, RECT *rect)
 {
+  int width;
   int height;
   if (!valid_window(window) || !rect)
     return FALSE;
+  width = window->width;
   height = window->height;
   if ((window->style & WS_CAPTION) == WS_CAPTION)
     height -= GetSystemMetrics(SM_CYCAPTION);
-  SetRect(rect, 0, 0, window->width, height > 0 ? height : 0);
+  if (window->style & WS_HSCROLL)
+    height -= GetSystemMetrics(SM_CYHSCROLL);
+  if (window->style & WS_VSCROLL)
+    width -= GetSystemMetrics(SM_CXVSCROLL);
+  SetRect(rect, 0, 0, width > 0 ? width : 0, height > 0 ? height : 0);
   return TRUE;
 }
 
