@@ -29,6 +29,9 @@ struct ShandalarBitmap {
   int top_down;
   unsigned char *pixels;
   int owns_pixels;
+  PALETTEENTRY color_table[256];
+  int has_color_table;
+  unsigned int color_table_revision;
 };
 
 struct ShandalarPalette {
@@ -86,6 +89,7 @@ typedef struct CompatRegion {
 struct ShandalarDC {
   HBITMAP bitmap;
   HPALETTE palette;
+  int is_screen_dc;
   HFONT font;
   COLORREF text_color;
   COLORREF background_color;
@@ -240,8 +244,8 @@ static char *utf8_from_windows_text(LPCSTR text, int length, int *out_length)
 #define COLOR_CACHE_MASK (COLOR_CACHE_SIZE - 1)
 static struct {
   COLORREF color;
-  HPALETTE palette;
-  unsigned int palette_revision;
+  const PALETTEENTRY *colors;
+  unsigned int colors_revision;
   unsigned char index;
 } g_color_cache[COLOR_CACHE_SIZE];
 static HPALETTE g_realized_palette;
@@ -251,9 +255,28 @@ static HPALETTE effective_palette(HDC dc)
   return dc && dc->palette ? dc->palette : g_realized_palette;
 }
 
-static unsigned char color_to_index(HDC dc, COLORREF color)
+static const PALETTEENTRY *effective_bitmap_colors(HDC dc)
+{
+  if (dc && dc->bitmap && dc->bitmap->bits_per_pixel == 8 &&
+      dc->bitmap->has_color_table)
+    return dc->bitmap->color_table;
+  return effective_palette(dc) ? effective_palette(dc)->entries : NULL;
+}
+
+static unsigned int effective_bitmap_colors_revision(HDC dc)
 {
   HPALETTE palette;
+  if (dc && dc->bitmap && dc->bitmap->bits_per_pixel == 8 &&
+      dc->bitmap->has_color_table)
+    return dc->bitmap->color_table_revision;
+  palette = effective_palette(dc);
+  return palette ? palette->revision : 0;
+}
+
+static unsigned char color_to_index(HDC dc, COLORREF color)
+{
+  const PALETTEENTRY *entries;
+  unsigned int entries_revision;
   unsigned int i;
   unsigned int slot;
   unsigned int best = 0;
@@ -266,23 +289,24 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
     return (unsigned char)(color & 0xffu);
   color &= 0x00ffffffu;
 
-  palette = effective_palette(dc);
+  entries = effective_bitmap_colors(dc);
+  entries_revision = effective_bitmap_colors_revision(dc);
   slot = (color >> 2) & COLOR_CACHE_MASK;
   if (g_color_cache[slot].color == color &&
-      g_color_cache[slot].palette == palette &&
-      g_color_cache[slot].palette_revision == (palette ? palette->revision : 0))
+      g_color_cache[slot].colors == entries &&
+      g_color_cache[slot].colors_revision == entries_revision)
     return g_color_cache[slot].index;
 
   r = color & 0xff;
   g = (color >> 8) & 0xff;
   b = (color >> 16) & 0xff;
-  if (!palette)
+  if (!entries)
     return (unsigned char)((r + g + b) / 3);
 
   for (i = 0; i < 256; ++i) {
-    int dr = r - palette->entries[i].peRed;
-    int dg = g - palette->entries[i].peGreen;
-    int db = b - palette->entries[i].peBlue;
+    int dr = r - entries[i].peRed;
+    int dg = g - entries[i].peGreen;
+    int db = b - entries[i].peBlue;
     unsigned int distance = (unsigned int)(dr * dr + dg * dg + db * db);
     if (distance < best_distance) {
       best_distance = distance;
@@ -290,8 +314,8 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
     }
   }
   g_color_cache[slot].color = color;
-  g_color_cache[slot].palette = palette;
-  g_color_cache[slot].palette_revision = palette ? palette->revision : 0;
+  g_color_cache[slot].colors = entries;
+  g_color_cache[slot].colors_revision = entries_revision;
   g_color_cache[slot].index = (unsigned char)best;
   return (unsigned char)best;
 }
@@ -309,15 +333,15 @@ static unsigned char *pixel_at(HBITMAP bitmap, int x, int y)
 
 static COLORREF read_pixel_color(HDC dc, int x, int y)
 {
-  HPALETTE palette;
+  const PALETTEENTRY *entries;
   unsigned char *pixel = dc && dc->bitmap ? pixel_at(dc->bitmap, x, y) : NULL;
   if (!pixel)
     return UINT32_MAX;
   if (dc->bitmap->bits_per_pixel == 24)
     return RGB(pixel[2], pixel[1], pixel[0]);
-  palette = effective_palette(dc);
-  if (palette) {
-    PALETTEENTRY *entry = &palette->entries[*pixel];
+  entries = effective_bitmap_colors(dc);
+  if (entries) {
+    const PALETTEENTRY *entry = &entries[*pixel];
     return RGB(entry->peRed, entry->peGreen, entry->peBlue);
   }
   return RGB(*pixel, *pixel, *pixel);
@@ -459,7 +483,7 @@ HBITMAP CreateDIBSection(HDC dc, const BITMAPINFO *info, UINT usage, void **bits
 {
   HBITMAP bitmap;
   int bytes_per_pixel;
-  (void)dc; (void)usage; (void)section; (void)offset;
+  (void)section; (void)offset;
   if (!info || !bits)
     return NULL;
   bitmap = (HBITMAP)calloc(1, sizeof(*bitmap));
@@ -479,6 +503,22 @@ HBITMAP CreateDIBSection(HDC dc, const BITMAPINFO *info, UINT usage, void **bits
   if (!bitmap->pixels) {
     free(bitmap);
     return NULL;
+  }
+  if (bitmap->bits_per_pixel == 8) {
+    unsigned int i;
+    unsigned int count = info->bmiHeader.biClrUsed;
+    if (count > 256)
+      count = 256;
+    if (usage == DIB_RGB_COLORS && count > 0) {
+      for (i = 0; i < count; ++i) {
+        bitmap->color_table[i].peRed = info->bmiColors[i].rgbRed;
+        bitmap->color_table[i].peGreen = info->bmiColors[i].rgbGreen;
+        bitmap->color_table[i].peBlue = info->bmiColors[i].rgbBlue;
+        bitmap->color_table[i].peFlags = 0;
+      }
+      bitmap->has_color_table = 1;
+      bitmap->color_table_revision = 1;
+    }
   }
   *bits = bitmap->pixels;
   return bitmap;
@@ -602,9 +642,17 @@ static void apply_rop(unsigned char *dst, unsigned char src, DWORD rop)
 
 static int can_copy_indexed_pixels_directly(HDC dst, HDC src)
 {
+  const PALETTEENTRY *dst_colors;
+  const PALETTEENTRY *src_colors;
   if (!dst || !src)
     return 0;
-  return effective_palette(dst) == effective_palette(src);
+  if (effective_palette(dst) == effective_palette(src))
+    return 1;
+  dst_colors = effective_bitmap_colors(dst);
+  src_colors = effective_bitmap_colors(src);
+  return dst_colors == src_colors ||
+         (dst_colors && src_colors &&
+          memcmp(dst_colors, src_colors, 256 * sizeof(*dst_colors)) == 0);
 }
 
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop)
@@ -1236,25 +1284,18 @@ UINT SetPaletteEntries(HPALETTE palette, UINT start, UINT count, const PALETTEEN
 UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
 {
   UINT i;
-  if (!dc || !colors) return 0;
-  if (!dc->palette) {
-    LOGPALETTE *log_palette = (LOGPALETTE *)calloc(1, sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
-    if (!log_palette)
-      return 0;
-    log_palette->palVersion = 0x300;
-    log_palette->palNumEntries = 256;
-    dc->palette = CreatePalette(log_palette);
-    free(log_palette);
-    if (!dc->palette)
-      return 0;
-  }
+  if (!dc || dc->is_screen_dc || !dc->bitmap ||
+      dc->bitmap->bits_per_pixel != 8 || !colors)
+    return 0;
   if (count > 256 - start) count = 256 - start;
   for (i = 0; i < count; ++i) {
-    dc->palette->entries[start + i].peRed = colors[i].rgbRed;
-    dc->palette->entries[start + i].peGreen = colors[i].rgbGreen;
-    dc->palette->entries[start + i].peBlue = colors[i].rgbBlue;
+    dc->bitmap->color_table[start + i].peRed = colors[i].rgbRed;
+    dc->bitmap->color_table[start + i].peGreen = colors[i].rgbGreen;
+    dc->bitmap->color_table[start + i].peBlue = colors[i].rgbBlue;
+    dc->bitmap->color_table[start + i].peFlags = 0;
   }
-  ++dc->palette->revision;
+  dc->bitmap->has_color_table = 1;
+  ++dc->bitmap->color_table_revision;
   return count;
 }
 int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
@@ -1813,6 +1854,7 @@ HDC shandalar_create_screen_dc(int width, int height)
   info.bmiHeader.biBitCount = 8;
   bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &bits, NULL, 0);
   SelectObject(dc, bitmap);
+  dc->is_screen_dc = 1;
   return dc;
 }
 
@@ -1832,14 +1874,15 @@ const void *shandalar_dc_pixels(HDC dc, int *pitch)
   return dc->bitmap->pixels;
 }
 BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
-                                int pitch_bytes, int width, int height)
+                                 int pitch_bytes, int width, int height)
 {
-  static HPALETTE cached_palette;
+  static const PALETTEENTRY *cached_colors;
   static unsigned int cached_revision;
   static unsigned int cached_palette_hash;
   static unsigned char palette_indices[32768];
   static unsigned char palette_indices_valid[32768];
-  HPALETTE palette;
+  const PALETTEENTRY *colors;
+  unsigned int colors_revision;
   unsigned int palette_hash = 2166136261u;
   int x;
   int y;
@@ -1849,20 +1892,21 @@ BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
     width = dc->bitmap->width;
   if (height > dc->bitmap->height)
     height = dc->bitmap->height;
-  palette = effective_palette(dc);
-  if (palette) {
-    const unsigned char *palette_bytes = (const unsigned char *)palette->entries;
+  colors = effective_bitmap_colors(dc);
+  colors_revision = effective_bitmap_colors_revision(dc);
+  if (colors) {
+    const unsigned char *palette_bytes = (const unsigned char *)colors;
     size_t byte_index;
-    for (byte_index = 0; byte_index < sizeof(palette->entries); ++byte_index)
+    for (byte_index = 0; byte_index < 256 * sizeof(*colors); ++byte_index)
       palette_hash = (palette_hash ^ palette_bytes[byte_index]) * 16777619u;
   } else {
     palette_hash = 0;
   }
-  if (cached_palette != palette ||
-      cached_revision != (palette ? palette->revision : 0) ||
+  if (cached_colors != colors ||
+      cached_revision != colors_revision ||
       cached_palette_hash != palette_hash) {
-    cached_palette = palette;
-    cached_revision = palette ? palette->revision : 0;
+    cached_colors = colors;
+    cached_revision = colors_revision;
     cached_palette_hash = palette_hash;
     memset(palette_indices_valid, 0, sizeof(palette_indices_valid));
   }
@@ -1907,6 +1951,7 @@ void shandalar_set_default_font_root(const char *root)
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
 {
   HBITMAP bitmap;
+  const PALETTEENTRY *entries;
   int x, y, height, width;
   if (!dc || !dc->bitmap || !pixels || pitch_bytes < dc->bitmap->width * 4)
     return FALSE;
@@ -1925,8 +1970,7 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
         dst[x] = 0xff000000u | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0];
       }
     }
-  } else if (effective_palette(dc)) {
-    PALETTEENTRY *entries = effective_palette(dc)->entries;
+  } else if ((entries = effective_bitmap_colors(dc)) != NULL) {
     unsigned char *base = bitmap->pixels;
     int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
     for (y = 0; y < height; ++y) {
@@ -1934,7 +1978,7 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
       unsigned char *src = base + row * src_pitch;
       uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
       for (x = 0; x < width; ++x) {
-        PALETTEENTRY *entry = &entries[src[x]];
+        const PALETTEENTRY *entry = &entries[src[x]];
         dst[x] = 0xff000000u | ((uint32_t)entry->peRed << 16) |
                  ((uint32_t)entry->peGreen << 8) | entry->peBlue;
       }

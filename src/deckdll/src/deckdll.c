@@ -330,6 +330,10 @@ static HWND global_cuecard_hwnd;
 extern HWND global_decksurface_hwnd;
 extern HPALETTE global_cart_art_hpalette;
 
+/* In the SDL monolith, Shandalar and the embedded deck builder share the
+ * card-art globals that were separate in the original EXE/DLL processes. */
+static int global_deckbuilder_owns_card_art_palette;
+
 // GLOBAL: DECKDLL 0x100f2848
 static HANDLE global_gaun_options_pic;
 
@@ -941,7 +945,11 @@ delete_resources(void)
   delete_pics();
 
   delete_brushes();
-  DestroyCardArtPalette();
+  if (global_deckbuilder_owns_card_art_palette)
+  {
+    DestroyCardArtPalette();
+    global_deckbuilder_owns_card_art_palette = 0;
+  }
   delete_fonts();
   DeleteDC(global_hdc);
   DeleteObject(global_hbmp);
@@ -1083,10 +1091,17 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
     }
   }
 
-  if (!SetupDuelPalette())
+  global_deckbuilder_owns_card_art_palette = 0;
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  if (!((global_db_flags_1 & DBFLAGS_SHANDALAR) && global_cart_art_hpalette))
+#endif
   {
-    fatal_err("WinMain: Couldn't create the palette", 0);
-    return 0;
+    if (!SetupDuelPalette())
+    {
+      fatal_err("WinMain: Couldn't create the palette", 0);
+      return 0;
+    }
+    global_deckbuilder_owns_card_art_palette = 1;
   }
 
   if (global_db_flags_1 & (DBFLAGS_EDITDECK | DBFLAGS_SHANDALAR))

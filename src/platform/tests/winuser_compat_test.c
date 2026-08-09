@@ -76,6 +76,8 @@ int main(void)
   HBRUSH brush;
   HPEN pen;
   BITMAPINFO bitmap_info;
+  RGBQUAD dib_colors[256];
+  PALETTEENTRY palette_entry;
   void *bitmap_bits;
   HKEY registry_key;
   RECT rect;
@@ -212,6 +214,34 @@ int main(void)
   CHECK(SetPaletteEntries(palette, 42, 1, &palette_data.entries[42]) == 1);
   CHECK(shandalar_dc_copy_rgba(child_dc, rgba_pixels, 100 * sizeof(rgba_pixels[0])));
   CHECK(rgba_pixels[0] == 0xff00ff00u);
+
+  /* A DIB color table belongs to the bitmap, not its selected logical palette. */
+  memset(&bitmap_info, 0, sizeof(bitmap_info));
+  bitmap_info.bmiHeader.biSize = sizeof(bitmap_info.bmiHeader);
+  bitmap_info.bmiHeader.biWidth = 2;
+  bitmap_info.bmiHeader.biHeight = -2;
+  bitmap_info.bmiHeader.biPlanes = 1;
+  bitmap_info.bmiHeader.biBitCount = 8;
+  bitmap_info.bmiHeader.biCompression = BI_RGB;
+  bitmap = CreateDIBSection(NULL, &bitmap_info, DIB_RGB_COLORS,
+                            &bitmap_bits, NULL, 0);
+  bitmap_dc = CreateCompatibleDC(NULL);
+  CHECK(bitmap && bitmap_dc && bitmap_bits);
+  SelectObject(bitmap_dc, bitmap);
+  SelectPalette(bitmap_dc, palette, FALSE);
+  memset(dib_colors, 0, sizeof(dib_colors));
+  dib_colors[42].rgbBlue = 255;
+  CHECK(SetDIBColorTable(bitmap_dc, 0, 256, dib_colors) == 256);
+  CHECK(GetPaletteEntries(palette, 42, 1, &palette_entry) == 1);
+  CHECK(palette_entry.peRed == 0 && palette_entry.peGreen == 255 &&
+        palette_entry.peBlue == 0);
+  ((unsigned char *)bitmap_bits)[0] = 42;
+  CHECK(shandalar_dc_copy_rgba(bitmap_dc, rgba_pixels,
+                               2 * sizeof(rgba_pixels[0])));
+  CHECK(rgba_pixels[0] == 0xff0000ffu);
+  CHECK(DeleteDC(bitmap_dc));
+  CHECK(DeleteObject(bitmap));
+
   memset(&bitmap_info, 0, sizeof(bitmap_info));
   bitmap_info.bmiHeader.biSize = sizeof(bitmap_info.bmiHeader);
   bitmap_info.bmiHeader.biWidth = 2;
