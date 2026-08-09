@@ -333,6 +333,7 @@ static BOOL pump_duel_ui(BOOL wait)
   while (SDL_PollEvent(&event))
   {
     shandalar_win32_imgui_process_event(g_renderer, &event);
+    shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
     if (event.type == SDL_EVENT_QUIT)
     {
       g_quit_requested = 1;
