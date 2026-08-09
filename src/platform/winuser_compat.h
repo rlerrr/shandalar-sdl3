@@ -688,6 +688,7 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
 void shandalar_controls_reset(void);
 void shandalar_win32_reset(void);
 HDC shandalar_window_backing_dc(HWND window);
+uint64_t shandalar_window_content_revision(HWND window);
 
 #include "platform/winreg_compat.h"
 

@@ -84,6 +84,7 @@ int main(void)
   POINT point;
   MSG message;
   char text[32];
+  uint64_t content_revision;
   uint32_t rgba_pixels[100 * 50];
   struct {
     WORD version;
@@ -265,7 +266,9 @@ int main(void)
   CHECK(rgba_pixels[3] == 0xff000000u);
   CHECK(DeleteDC(bitmap_dc));
   CHECK(DeleteObject(bitmap));
+  content_revision = shandalar_window_content_revision(child);
   CHECK(ReleaseDC(child, child_dc));
+  CHECK(shandalar_window_content_revision(child) == content_revision + 1);
   CHECK(GetParent(child) == parent);
   CHECK(GetDlgItem(parent, 42) == child);
   CHECK(GetDlgCtrlID(child) == 42);
@@ -293,6 +296,10 @@ int main(void)
   CHECK(message.message == WM_PAINT);
   DispatchMessageA(&message);
   CHECK(paints == 1);
+  content_revision = shandalar_window_content_revision(child);
+  CHECK(InvalidateRect(child, NULL, FALSE));
+  CHECK(UpdateWindow(child));
+  CHECK(shandalar_window_content_revision(child) == content_revision + 1);
   UpdateWindow(child);
   CHECK(SetWindowPos(child, NULL, 0, 0, 90, 45,
                      SWP_NOMOVE | SWP_NOZORDER));

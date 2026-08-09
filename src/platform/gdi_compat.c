@@ -468,8 +468,11 @@ HDC WINAPI shandalar_GetDC(HWND window)
 int ReleaseDC(HWND window, HDC dc)
 {
   extern HDC shandalar_window_backing_dc(HWND window);
-  if (window && dc == shandalar_window_backing_dc(window))
+  extern void shandalar_window_backing_dc_changed(HWND window, HDC dc);
+  if (window && dc == shandalar_window_backing_dc(window)) {
+    shandalar_window_backing_dc_changed(window, dc);
     return 1;
+  }
   return DeleteDC(dc);
 }
 

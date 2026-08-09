@@ -39,6 +39,7 @@ struct ShandalarWindow {
   int enabled;
   int dirty;
   int erase;
+  uint64_t content_revision;
   char *text;
   unsigned char *extra;
   size_t extra_size;
@@ -1033,7 +1034,10 @@ HDC BeginPaint(HWND window, PAINTSTRUCT *paint)
 
 BOOL EndPaint(HWND window, const PAINTSTRUCT *paint)
 {
-  return valid_window(window) && paint != NULL;
+  if (!valid_window(window) || !paint)
+    return FALSE;
+  ++window->content_revision;
+  return TRUE;
 }
 
 HDC GetWindowDC(HWND window)
@@ -1089,6 +1093,17 @@ HWND FindWindowA(LPCSTR class_name, LPCSTR window_name)
 HDC shandalar_window_backing_dc(HWND window)
 {
   return valid_window(window) ? window->backing_dc : NULL;
+}
+
+uint64_t shandalar_window_content_revision(HWND window)
+{
+  return valid_window(window) ? window->content_revision : 0;
+}
+
+void shandalar_window_backing_dc_changed(HWND window, HDC dc)
+{
+  if (valid_window(window) && dc == window->backing_dc)
+    ++window->content_revision;
 }
 
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc) { g_pump_proc = proc; }

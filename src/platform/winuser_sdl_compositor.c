@@ -13,6 +13,7 @@ typedef struct WindowTexture {
   SDL_Texture *texture;
   int width;
   int height;
+  uint64_t content_revision;
   uint32_t *pixels;
 } WindowTexture;
 
@@ -66,6 +67,7 @@ static SDL_Texture *update_window_texture(HWND window, int *out_width,
   WindowTexture *entry;
   int width;
   int height;
+  uint64_t content_revision;
 
   if (!window || !IsWindowVisible(window) ||
       shandalar_win32_is_builtin_control(window))
@@ -81,9 +83,18 @@ static SDL_Texture *update_window_texture(HWND window, int *out_width,
     return NULL;
 
   UpdateWindow(window);
+  content_revision = shandalar_window_content_revision(window);
   entry = find_texture(window);
   if (!entry)
     return NULL;
+  if (entry->texture && entry->width == width && entry->height == height &&
+      entry->content_revision == content_revision) {
+    if (out_width)
+      *out_width = width;
+    if (out_height)
+      *out_height = height;
+    return entry->texture;
+  }
   if (!entry->texture || entry->width != width || entry->height != height) {
     SDL_DestroyTexture(entry->texture);
     free(entry->pixels);
@@ -102,6 +113,7 @@ static SDL_Texture *update_window_texture(HWND window, int *out_width,
     return NULL;
   SDL_UpdateTexture(entry->texture, NULL, entry->pixels,
                     width * (int)sizeof(*entry->pixels));
+  entry->content_revision = content_revision;
   if (out_width)
     *out_width = width;
   if (out_height)
