@@ -3634,6 +3634,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     scratch = GetMessageTime();
     damage_on_card = GetTickCount();
 #ifdef SHANDALAR
+    SetCapture(hwnd);
     /*
      * Windows continues collecting input while this handler waits for a
      * possible double-click.  The browser has a single event thread, so pump
@@ -3647,6 +3648,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         break;
       if (!shandalar_win32_pump(TRUE))
         break;
+    }
+    ReleaseCapture();
+    if (!PeekMessageA((MSG *)&paint_struct, hwnd,
+                      WM_LBUTTONUP, WM_LBUTTONUP, 0))
+    {
+      SendMessageA(hwnd, WM_COMMAND, 0x6e, 0);
+      return 0;
     }
 #else
     Sleep(counter_power - (scratch - damage_on_card));
