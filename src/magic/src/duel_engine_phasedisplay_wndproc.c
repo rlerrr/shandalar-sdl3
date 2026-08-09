@@ -99,6 +99,7 @@ int is_invalid_duel_player(int player);
 
 static void get_phase_display_phase_rect(RECT *rect, int player, int phase, int width, int height);
 static void hit_test_phase_display(POINT *point, RECT *client_rect, int *player, int *phase);
+static int get_phase_display_command_index(int phase);
 void copy_phase_stop_flags(int *phase_flags, int player);
 void get_phase_display_selected_half(int *selected_half);
 void get_phase_display_action_selection(int *player, int *phase);
@@ -110,74 +111,93 @@ void noop_phase_display_user_message(HWND hwnd, WPARAM wparam, LPARAM lparam);
 static void hit_test_phase_display(POINT *point, RECT *client_rect, int *player, int *phase)
 {
   int found_player;
-  int test_x;
-  int test_y;
+  POINT test_point;
   RECT client_copy;
   RECT phase_rect;
   int found_phase;
 
   CopyRect(&client_copy, client_rect);
-  test_x = point->x;
-  test_y = point->y;
+  test_point = *point;
   found_phase = -1;
   found_player = 1;
 
   get_phase_display_phase_rect(&phase_rect, 1, 1, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 1;
   get_phase_display_phase_rect(&phase_rect, 1, 4, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 4;
   get_phase_display_phase_rect(&phase_rect, 1, 0xa, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 0xa;
   get_phase_display_phase_rect(&phase_rect, 1, 0x14, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 0x14;
   get_phase_display_phase_rect(&phase_rect, 1, 0x16, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 0x16;
   get_phase_display_phase_rect(&phase_rect, 1, 0x1e, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 0x1e;
   get_phase_display_phase_rect(&phase_rect, 1, 0x1f, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 0x1f;
   get_phase_display_phase_rect(&phase_rect, 1, 0x20, client_copy.right, client_copy.bottom);
-  if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+  if (PtInRect(&phase_rect, test_point) != 0)
     found_phase = 0x20;
 
   if (found_phase == -1)
   {
     found_player = 0;
     get_phase_display_phase_rect(&phase_rect, 0, 1, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 1;
     get_phase_display_phase_rect(&phase_rect, 0, 4, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 4;
     get_phase_display_phase_rect(&phase_rect, 0, 0xa, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 0xa;
     get_phase_display_phase_rect(&phase_rect, 0, 0x14, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 0x14;
     get_phase_display_phase_rect(&phase_rect, 0, 0x15, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 0x15;
     get_phase_display_phase_rect(&phase_rect, 0, 0x1e, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 0x1e;
     get_phase_display_phase_rect(&phase_rect, 0, 0x1f, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 0x1f;
     get_phase_display_phase_rect(&phase_rect, 0, 0x20, client_copy.right, client_copy.bottom);
-    if (PtInRect(&phase_rect, *(POINT *)&test_x) != 0)
+    if (PtInRect(&phase_rect, test_point) != 0)
       found_phase = 0x20;
   }
 
   *player = found_player;
   *phase = found_phase;
+}
+
+static int get_phase_display_command_index(int phase)
+{
+  if (phase == 1)
+    return 0;
+  if (phase >= 2 && phase <= 5)
+    return 1;
+  if (phase == 0xa)
+    return 2;
+  if (phase == 0x14)
+    return 3;
+  if (phase >= 0x15 && phase <= 0x1b)
+    return 4;
+  if (phase == 0x1e)
+    return 5;
+  if (phase == 0x1f)
+    return 6;
+  if (phase >= 0x20 && phase <= 0x25)
+    return 7;
+  return -1;
 }
 
 // FUNCTION: MAGIC 0x0053726a
@@ -438,9 +458,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_PhaseDisplayClass(HWND hwnd, UINT msg, WPARAM
   RECT paint_phase_rect;
   int paint_hit_player;
   RECT paint_client_rect;
-  MSG peek_message;
   int click_hit_player;
-  int peek_result;
   POINT click_point;
   RECT click_client_rect;
   int click_hit_phase;
@@ -704,21 +722,17 @@ LRESULT CALLBACK wndproc_MAGICGAME_PhaseDisplayClass(HWND hwnd, UINT msg, WPARAM
     return 1;
 
   case WM_LBUTTONDOWN:
-    Sleep(GetDoubleClickTime());
-    peek_result = PeekMessageA(&peek_message, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
     click_point.x = lparam & 0xffff;
     click_point.y = HIWORD(lparam);
     GetClientRect(hwnd, &click_client_rect);
     hit_test_phase_display(&click_point, &click_client_rect, &click_hit_player, &click_hit_phase);
-    if ((g_duel_network_flags & 2) == 0 && click_hit_phase != -1 && g_duel_modal_action_active != 0)
+    command_phase_index = get_phase_display_command_index(click_hit_phase);
+    if (command_phase_index != -1)
     {
-      g_stop_phase_player = click_hit_player;
-      g_stop_phase = click_hit_phase;
-      g_recorded_action_player = peek_result;
-      g_phase_display_click_packet[0] = -2;
-      g_phase_display_click_packet[1] = -1;
-      g_phase_display_click_packet[2] = -1;
-      PostMessageA(g_duel_window_hwnd, 0x464, 0, (LPARAM)g_phase_display_click_packet);
+      SendMessageA(hwnd, WM_COMMAND,
+                   PHASE_DISPLAY_COMMAND_TOGGLE_BASE + command_phase_index +
+                       (click_hit_player == 1 ? PHASE_DISPLAY_PLAYER_COMMAND_OFFSET : 0),
+                   0);
     }
     return 0;
 
