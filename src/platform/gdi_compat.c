@@ -117,6 +117,9 @@ struct ShandalarDC {
 static char g_font_root[512];
 static char g_module_path[1024] = ".\\shandalar.exe";
 static double g_font_device_scale = 1.0;
+static HFONT g_default_gui_font;
+
+static HFONT open_font(const LOGFONTA *description);
 
 static unsigned int read_be16(const unsigned char *data)
 {
@@ -574,6 +577,8 @@ BOOL DeleteObject(HGDIOBJ object)
   ObjectHeader *header = (ObjectHeader *)object;
   if (!header)
     return FALSE;
+  if (object == (HGDIOBJ)g_default_gui_font)
+    return TRUE;
   if (header->kind == OBJECT_BITMAP) {
     HBITMAP bitmap = (HBITMAP)object;
     if (bitmap->owns_pixels)
@@ -1226,8 +1231,18 @@ HGDIOBJ GetStockObject(int object)
                    object == LTGRAY_BRUSH ? RGB(192,192,192) :
                    object == GRAY_BRUSH ? RGB(128,128,128) :
                    object == DKGRAY_BRUSH ? RGB(64,64,64) : RGB(0,0,0);
-  if (object == DEFAULT_GUI_FONT || object == SYSTEM_FONT)
-    return NULL;
+  if (object == DEFAULT_GUI_FONT || object == SYSTEM_FONT) {
+    if (!g_default_gui_font) {
+      LOGFONTA description;
+      memset(&description, 0, sizeof(description));
+      description.lfHeight = 16;
+      description.lfWeight = FW_NORMAL;
+      SDL_strlcpy(description.lfFaceName, "Benguiat Bk BT",
+                  sizeof(description.lfFaceName));
+      g_default_gui_font = open_font(&description);
+    }
+    return g_default_gui_font;
+  }
   if (object == NULL_BRUSH)
     return create_paint(OBJECT_BRUSH, color, 1);
   if (object == BLACK_PEN)
@@ -1304,6 +1319,7 @@ UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
 int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
 
 COLORREF SetTextColor(HDC dc, COLORREF color) { COLORREF old = dc ? dc->text_color : 0; if (dc) dc->text_color = color; return old; }
+COLORREF GetTextColor(HDC dc) { return dc ? dc->text_color : 0; }
 COLORREF SetBkColor(HDC dc, COLORREF color) { COLORREF old = dc ? dc->background_color : 0; if (dc) dc->background_color = color; return old; }
 int SetBkMode(HDC dc, int mode) { int old = dc ? dc->background_mode : 0; if (dc) dc->background_mode = mode; return old; }
 int SetROP2(HDC dc, int mode) { (void)dc; return mode; }
@@ -1473,6 +1489,39 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
   return TRUE;
 }
 
+static char *draw_text_without_prefixes(const char *text, int length,
+                                        int *out_length,
+                                        int *out_underline_offset)
+{
+  char *result = (char *)malloc((size_t)length + 1);
+  int source = 0;
+  int destination = 0;
+  int underline_offset = -1;
+  if (!result)
+    return NULL;
+  while (source < length) {
+    if (text[source] == '&') {
+      if (source + 1 >= length) {
+        ++source;
+        continue;
+      }
+      if (text[source + 1] == '&') {
+        result[destination++] = '&';
+        source += 2;
+        continue;
+      }
+      ++source;
+      if (underline_offset < 0)
+        underline_offset = destination;
+    }
+    result[destination++] = text[source++];
+  }
+  result[destination] = '\0';
+  *out_length = destination;
+  *out_underline_offset = underline_offset;
+  return result;
+}
+
 int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
 {
   SDL_Surface *surface;
@@ -1483,26 +1532,42 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   int rect_right;
   int rect_bottom;
   int single_line;
+  int underline_offset = -1;
+  int underline_x = 0;
+  int underline_width = 0;
   float old_size;
   double scale_x;
   double scale_y;
   char *utf8;
   int utf8_length;
+  char *display_text = NULL;
+  const char *render_text = text;
   if (!dc || !dc->bitmap || !dc->font || !dc->font->font || !text || !rect)
     return 0;
   if (length < 0)
     length = (int)strlen(text);
+  if (!(format & DT_NOPREFIX)) {
+    display_text = draw_text_without_prefixes(text, length, &length,
+                                               &underline_offset);
+    if (!display_text)
+      return 0;
+    render_text = display_text;
+  }
   draw_x = map_x(dc, rect->left);
   draw_y = map_y(dc, rect->top);
   rect_right = map_x(dc, rect->right);
   rect_bottom = map_y(dc, rect->bottom);
   max_width = rect_right - draw_x;
   single_line = (format & DT_SINGLELINE) != 0;
-  if (max_width <= 0 || (!(format & DT_CALCRECT) && rect_bottom <= draw_y))
+  if (max_width <= 0 || (!(format & DT_CALCRECT) && rect_bottom <= draw_y)) {
+    free(display_text);
     return 0;
-  utf8 = utf8_from_windows_text(text, length, &utf8_length);
-  if (!utf8)
+  }
+  utf8 = utf8_from_windows_text(render_text, length, &utf8_length);
+  if (!utf8) {
+    free(display_text);
     return 0;
+  }
   old_size = prepare_font_for_dc(dc);
   surface = single_line
               ? TTF_RenderText_Blended(dc->font->font, utf8, (size_t)utf8_length, white)
@@ -1510,10 +1575,34 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
                                                white, max_width);
   if (!surface) {
     free(utf8);
+    free(display_text);
     restore_font_size(dc, old_size);
     return 0;
   }
+  if (single_line && underline_offset >= 0) {
+    char *prefix_utf8;
+    char *character_utf8;
+    int prefix_length;
+    int character_length;
+    int unused_height;
+    prefix_utf8 = utf8_from_windows_text(render_text, underline_offset,
+                                          &prefix_length);
+    character_utf8 = utf8_from_windows_text(render_text + underline_offset, 1,
+                                             &character_length);
+    if (prefix_utf8) {
+      TTF_GetStringSize(dc->font->font, prefix_utf8, (size_t)prefix_length,
+                        &underline_x, &unused_height);
+      free(prefix_utf8);
+    }
+    if (character_utf8) {
+      TTF_GetStringSize(dc->font->font, character_utf8,
+                        (size_t)character_length, &underline_width,
+                        &unused_height);
+      free(character_utf8);
+    }
+  }
   free(utf8);
+  free(display_text);
   if (format & DT_CALCRECT) {
     scale_x = device_scale_x(dc);
     scale_y = device_scale_y(dc);
@@ -1532,6 +1621,16 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   else if (single_line && (format & DT_BOTTOM))
     draw_y = rect_bottom - surface->h;
   draw_text_surface(dc, surface, draw_x, draw_y, rect_right, rect_bottom);
+  if (underline_width > 0) {
+    int underline_y = draw_y + surface->h - 1;
+    int x;
+    if (underline_y >= rect_bottom)
+      underline_y = rect_bottom - 1;
+    for (x = 0; x < underline_width && draw_x + underline_x + x < rect_right;
+         ++x)
+      write_pixel_color(dc, draw_x + underline_x + x, underline_y,
+                        dc->text_color, SRCCOPY);
+  }
   max_width = surface->h;
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
@@ -2000,6 +2099,11 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
     }
   }
   return TRUE;
+}
+
+COLORREF shandalar_dc_resolve_color(HDC dc, COLORREF color)
+{
+  return resolve_color(dc, color);
 }
 
 BOOL InflateRect(RECT *rect, int dx, int dy)

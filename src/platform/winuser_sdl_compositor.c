@@ -59,8 +59,16 @@ static int is_descendant_or_self(HWND window, HWND ancestor)
   return 0;
 }
 
+static int is_parent_drawn_control(HWND window)
+{
+  char name[64] = {0};
+  GetClassNameA(window, name, sizeof(name));
+  return SDL_strcasecmp(name, "MAGICTHEME_IconButtonClass") == 0;
+}
+
 static SDL_Texture *update_window_texture(HWND window, int *out_width,
-                                          int *out_height)
+                                          int *out_height,
+                                          int include_builtin_control)
 {
   RECT rect;
   HDC dc;
@@ -69,8 +77,8 @@ static SDL_Texture *update_window_texture(HWND window, int *out_width,
   int height;
   uint64_t content_revision;
 
-  if (!window || !IsWindowVisible(window) ||
-      shandalar_win32_is_builtin_control(window))
+  if (!window || !IsWindowVisible(window) || is_parent_drawn_control(window) ||
+      (!include_builtin_control && shandalar_win32_is_builtin_control(window)))
     return NULL;
   if (!GetWindowRect(window, &rect))
     return NULL;
@@ -133,7 +141,7 @@ static void visit_window_tree(HWND window,
 
   if (!window || !IsWindowVisible(window))
     return;
-  texture = update_window_texture(window, &width, &height);
+  texture = update_window_texture(window, &width, &height, 0);
   if (texture && GetWindowRect(window, &rect))
     visitor(window, texture, &rect, width, height, userdata);
 
@@ -234,12 +242,19 @@ SDL_Texture *shandalar_win32_sdl_compositor_texture(HWND window,
   if (!entry)
     return NULL;
   if (!entry->texture)
-    return update_window_texture(window, width, height);
+    return update_window_texture(window, width, height, 0);
   if (width)
     *width = entry->width;
   if (height)
     *height = entry->height;
   return entry->texture;
+}
+
+SDL_Texture *shandalar_win32_sdl_compositor_control_texture(HWND window,
+                                                             int *width,
+                                                             int *height)
+{
+  return update_window_texture(window, width, height, 1);
 }
 
 static int event_mouse_position(SDL_Renderer *renderer, const SDL_Event *event,
@@ -265,19 +280,43 @@ static int event_mouse_position(SDL_Renderer *renderer, const SDL_Event *event,
 static int point_in_rendered_scrollbar(HWND window, POINT point)
 {
   while (window && window != GetDesktopWindow()) {
-    RECT rect;
+    RECT client;
+    POINT origin = {0, 0};
     LONG style = GetWindowLongA(window, GWL_STYLE);
     int minimum;
     int maximum;
-    if (GetWindowRect(window, &rect)) {
+    if (GetClientRect(window, &client) && ClientToScreen(window, &origin)) {
       if ((style & WS_HSCROLL) &&
           GetScrollRange(window, SB_HORZ, &minimum, &maximum) &&
           maximum > minimum &&
-          point.x >= rect.left && point.x < rect.right &&
-          point.y >= rect.bottom - GetSystemMetrics(SM_CYHSCROLL) &&
-          point.y < rect.bottom)
+          point.x >= origin.x && point.x < origin.x + client.right &&
+          point.y >= origin.y + client.bottom &&
+          point.y < origin.y + client.bottom + GetSystemMetrics(SM_CYHSCROLL))
+        return 1;
+      if ((style & WS_VSCROLL) &&
+          GetScrollRange(window, SB_VERT, &minimum, &maximum) &&
+          maximum > minimum &&
+          point.x >= origin.x + client.right &&
+          point.x < origin.x + client.right + GetSystemMetrics(SM_CXVSCROLL) &&
+          point.y >= origin.y && point.y < origin.y + client.bottom)
         return 1;
     }
+    window = GetParent(window);
+  }
+  return 0;
+}
+
+/* Captions are rendered and interacted with by the ImGui bridge. */
+static int point_in_rendered_caption(HWND window, POINT point)
+{
+  while (window && window != GetDesktopWindow()) {
+    RECT rect;
+    if (shandalar_win32_should_render_caption(window) &&
+        GetWindowRect(window, &rect) &&
+        point.x >= rect.left && point.x < rect.right &&
+        point.y >= rect.top &&
+        point.y < rect.top + GetSystemMetrics(SM_CYCAPTION))
+      return 1;
     window = GetParent(window);
   }
   return 0;
@@ -335,7 +374,8 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
     BringWindowToTop(modal);
     return 1;
   }
-  if (point_in_rendered_scrollbar(target, screen)) {
+  if (point_in_rendered_scrollbar(target, screen) ||
+      point_in_rendered_caption(target, screen)) {
     if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
         event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
       WPARAM button = event->button.button == SDL_BUTTON_LEFT ? MK_LBUTTON :
@@ -358,8 +398,21 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
     return 1;
   }
   if (event->type == SDL_EVENT_MOUSE_WHEEL) {
+    HWND scroll_target = target;
     WPARAM wheel = MAKEWPARAM(g_mouse_buttons,
                               (int)(event->wheel.y * 120.0f));
+    while (scroll_target && scroll_target != GetDesktopWindow() &&
+           !(GetWindowLongA(scroll_target, GWL_STYLE) & WS_VSCROLL))
+      scroll_target = GetParent(scroll_target);
+    if (scroll_target && scroll_target != GetDesktopWindow()) {
+      int steps = event->wheel.y > 0.0f ? (int)event->wheel.y : -(int)event->wheel.y;
+      UINT command = event->wheel.y > 0.0f ? SB_LINEUP : SB_LINEDOWN;
+      if (steps < 1)
+        steps = 1;
+      while (steps-- > 0)
+        SendMessageA(scroll_target, WM_VSCROLL, command, 0);
+      return 1;
+    }
     SendMessageA(target, WM_MOUSEWHEEL, wheel,
                  MAKELPARAM(screen.x, screen.y));
     return 1;

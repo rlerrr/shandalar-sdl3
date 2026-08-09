@@ -40,9 +40,29 @@ bool is_dialog_control(HWND window)
   return false;
 }
 
+bool push_child_clip_rect(HWND window, ImDrawList *draw_list)
+{
+  RECT client = {};
+  POINT top_left = {};
+  POINT bottom_right = {};
+  if (!GetClientRect(window, &client))
+    return false;
+  top_left.x = client.left;
+  top_left.y = client.top;
+  bottom_right.x = client.right;
+  bottom_right.y = client.bottom;
+  if (!ClientToScreen(window, &top_left) ||
+      !ClientToScreen(window, &bottom_right))
+    return false;
+  draw_list->PushClipRect(ImVec2(static_cast<float>(top_left.x),
+                                 static_cast<float>(top_left.y)),
+                          ImVec2(static_cast<float>(bottom_right.x),
+                                 static_cast<float>(bottom_right.y)), true);
+  return true;
+}
+
 void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list)
 {
-  char class_name[32] = {};
   if (!IsWindowVisible(window))
     return;
 
@@ -57,9 +77,7 @@ void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list
         shandalar_win32_sdl_compositor_texture(window, &texture_width,
                                                 &texture_height);
     if (texture) {
-      GetClassNameA(window, class_name, sizeof(class_name));
-      if (SDL_strcasecmp(class_name, "#32770") == 0 &&
-          (GetWindowLongA(window, GWL_STYLE) & WS_CAPTION) == WS_CAPTION) {
+      if (shandalar_win32_should_render_caption(window)) {
         int caption_height = GetSystemMetrics(SM_CYCAPTION);
         draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left),
@@ -79,8 +97,11 @@ void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list
   HWND child = GetWindow(window, GW_CHILD);
   if (child)
     child = GetWindow(child, GW_HWNDLAST);
+  const bool clipped = child && push_child_clip_rect(window, draw_list);
   for (; child; child = GetWindow(child, GW_HWNDPREV))
     draw_window_tree(renderer, child, draw_list);
+  if (clipped)
+    draw_list->PopClipRect();
 }
 
 void send_control_command(HWND window, int notification)
@@ -93,33 +114,70 @@ void send_control_command(HWND window, int notification)
 
 void draw_window_scrollbars(HWND window)
 {
-  RECT rect = {};
+  RECT client = {};
+  POINT origin = {};
+  const LONG style = GetWindowLongA(window, GWL_STYLE);
   int minimum;
   int maximum;
   int position;
-  const float extent = static_cast<float>(GetSystemMetrics(SM_CYHSCROLL));
-  if (!(GetWindowLongA(window, GWL_STYLE) & WS_HSCROLL) ||
-      !GetScrollRange(window, SB_HORZ, &minimum, &maximum) || maximum <= minimum)
+  const float horizontal_extent =
+      static_cast<float>(GetSystemMetrics(SM_CYHSCROLL));
+  const float vertical_extent =
+      static_cast<float>(GetSystemMetrics(SM_CXVSCROLL));
+  if (!GetClientRect(window, &client) || !ClientToScreen(window, &origin))
     return;
-  GetWindowRect(window, &rect);
-  position = GetScrollPos(window, SB_HORZ);
+
   ImGui::PushID(window);
-  ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.left),
-                                   static_cast<float>(rect.bottom) - extent));
-  if (ImGui::ArrowButton("##scroll-left", ImGuiDir_Left))
-    SendMessageA(window, WM_HSCROLL, SB_LINELEFT, 0);
-  ImGui::SameLine(0.0f, 0.0f);
-  ImGui::SetNextItemWidth(static_cast<float>(rect.right - rect.left) - extent * 2.0f);
-  if (ImGui::SliderInt("##scroll-position", &position, minimum, maximum, "",
-                       ImGuiSliderFlags_AlwaysClamp))
-    SendMessageA(window, WM_HSCROLL, MAKEWPARAM(SB_THUMBPOSITION, position), 0);
-  ImGui::SameLine(0.0f, 0.0f);
-  if (ImGui::ArrowButton("##scroll-right", ImGuiDir_Right))
-    SendMessageA(window, WM_HSCROLL, SB_LINERIGHT, 0);
+  if ((style & WS_HSCROLL) &&
+      GetScrollRange(window, SB_HORZ, &minimum, &maximum) && maximum > minimum) {
+    position = GetScrollPos(window, SB_HORZ);
+    ImGui::SetCursorScreenPos(
+        ImVec2(static_cast<float>(origin.x),
+               static_cast<float>(origin.y + client.bottom)));
+    if (ImGui::ArrowButton("##scroll-left", ImGuiDir_Left))
+      SendMessageA(window, WM_HSCROLL, SB_LINELEFT, 0);
+    ImGui::SameLine(0.0f, 0.0f);
+    ImGui::SetNextItemWidth(static_cast<float>(client.right) -
+                            horizontal_extent * 2.0f);
+    if (ImGui::SliderInt("##hscroll-position", &position, minimum, maximum, "",
+                         ImGuiSliderFlags_AlwaysClamp))
+      SendMessageA(window, WM_HSCROLL,
+                   MAKEWPARAM(SB_THUMBPOSITION, position), 0);
+    ImGui::SameLine(0.0f, 0.0f);
+    if (ImGui::ArrowButton("##scroll-right", ImGuiDir_Right))
+      SendMessageA(window, WM_HSCROLL, SB_LINERIGHT, 0);
+  }
+
+  if ((style & WS_VSCROLL) &&
+      GetScrollRange(window, SB_VERT, &minimum, &maximum) && maximum > minimum) {
+    const float slider_height =
+        static_cast<float>(client.bottom) - vertical_extent * 2.0f;
+    position = GetScrollPos(window, SB_VERT);
+    ImGui::SetCursorScreenPos(
+        ImVec2(static_cast<float>(origin.x + client.right),
+               static_cast<float>(origin.y)));
+    if (ImGui::ArrowButton("##scroll-up", ImGuiDir_Up))
+      SendMessageA(window, WM_VSCROLL, SB_LINEUP, 0);
+    ImGui::SetCursorScreenPos(
+        ImVec2(static_cast<float>(origin.x + client.right),
+               static_cast<float>(origin.y) + vertical_extent));
+    if (ImGui::VSliderInt("##vscroll-position",
+                          ImVec2(vertical_extent, slider_height), &position,
+                          minimum, maximum, "",
+                          ImGuiSliderFlags_AlwaysClamp))
+      SendMessageA(window, WM_VSCROLL,
+                   MAKEWPARAM(SB_THUMBPOSITION, position), 0);
+    ImGui::SetCursorScreenPos(
+        ImVec2(static_cast<float>(origin.x + client.right),
+               static_cast<float>(origin.y + client.bottom) - vertical_extent));
+    if (ImGui::ArrowButton("##scroll-down", ImGuiDir_Down))
+      SendMessageA(window, WM_VSCROLL, SB_LINEDOWN, 0);
+  }
   ImGui::PopID();
 }
 
-void draw_static_text(const char *text, const RECT &rect, LONG style)
+void draw_static_text(const char *text, const RECT &rect, LONG style,
+                      ImU32 color)
 {
   constexpr LONG static_type_mask = 0x1fL;
   constexpr LONG static_center = 0x01L;
@@ -133,7 +191,6 @@ void draw_static_text(const char *text, const RECT &rect, LONG style)
   const float bottom = static_cast<float>(rect.bottom);
   const float width = right - left;
   const float line_height = ImGui::GetTextLineHeight();
-  const ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
   ImDrawList *draw_list = ImGui::GetWindowDrawList();
   const char *cursor = text;
   float y = top;
@@ -182,6 +239,72 @@ void draw_static_text(const char *text, const RECT &rect, LONG style)
       break;
   }
   draw_list->PopClipRect();
+}
+
+ImU32 legacy_static_text_color(HWND window)
+{
+  HDC dc = shandalar_window_backing_dc(window);
+  HWND parent = GetParent(window);
+  COLORREF color;
+  if (!dc)
+    return ImGui::GetColorU32(ImGuiCol_Text);
+  if (parent)
+    SendMessageA(parent, WM_CTLCOLORSTATIC, (WPARAM)dc, (LPARAM)window);
+  color = shandalar_dc_resolve_color(dc, GetTextColor(dc));
+  return IM_COL32(color & 0xff, (color >> 8) & 0xff,
+                  (color >> 16) & 0xff, 255);
+}
+
+void draw_owner_draw_button(HWND window, const RECT &rect,
+                            float width, float height)
+{
+  DRAWITEMSTRUCT item = {};
+  HDC dc;
+  HWND parent;
+  SDL_Texture *texture;
+  bool clicked = ImGui::InvisibleButton("##owner-draw", ImVec2(width, height));
+
+  item.CtlType = ODT_BUTTON;
+  item.CtlID = static_cast<UINT>(GetDlgCtrlID(window));
+  item.itemState = (ImGui::IsItemActive() ? ODS_SELECTED : 0) |
+                   (GetFocus() == window ? ODS_FOCUS : 0);
+  item.hwndItem = window;
+  item.rcItem.right = static_cast<LONG>(width);
+  item.rcItem.bottom = static_cast<LONG>(height);
+  dc = shandalar_window_backing_dc(window);
+  parent = GetParent(window);
+  item.hDC = dc;
+  if (dc && parent) {
+    SendMessageA(parent, WM_DRAWITEM, item.CtlID, (LPARAM)&item);
+    shandalar_window_content_changed(window);
+  }
+  texture = shandalar_win32_sdl_compositor_control_texture(window, nullptr,
+                                                            nullptr);
+  if (texture) {
+    ImGui::GetWindowDrawList()->AddImage(
+        reinterpret_cast<ImTextureID>(texture),
+        ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
+        ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)));
+  }
+  if (clicked) {
+    SetFocus(window);
+    send_control_command(window, BN_CLICKED);
+  }
+}
+
+HWND static_click_proxy(HWND window)
+{
+  int target_id;
+  switch (GetDlgCtrlID(window)) {
+  case 1126: target_id = 1120; break;
+  case 1127: target_id = 1122; break;
+  case 1128: target_id = 1124; break;
+  case 1129: target_id = 1123; break;
+  case 1130: target_id = 1121; break;
+  case 1131: target_id = 1125; break;
+  default: return nullptr;
+  }
+  return GetDlgItem(GetParent(window), target_id);
 }
 
 bool draw_coin_flip_title(HWND window, const char *text, const RECT &rect)
@@ -235,7 +358,9 @@ void draw_builtin_control(HWND window)
   LONG style = GetWindowLongA(window, GWL_STYLE);
   if (SDL_strcasecmp(class_name, "BUTTON") == 0) {
     LONG type = style & BS_TYPEMASK;
-    if (type == BS_GROUPBOX) {
+    if (type == BS_OWNERDRAW) {
+      draw_owner_draw_button(window, rect, width, height);
+    } else if (type == BS_GROUPBOX) {
       ImDrawList *draw_list = ImGui::GetWindowDrawList();
       const float label_x = static_cast<float>(rect.left + 10);
       const float label_y = static_cast<float>(rect.top);
@@ -297,8 +422,14 @@ void draw_builtin_control(HWND window)
       send_control_command(window, BN_CLICKED);
     }
   } else if (SDL_strcasecmp(class_name, "STATIC") == 0) {
-    if (!draw_coin_flip_title(window, text, rect))
-      draw_static_text(text, rect, style);
+    if (!draw_coin_flip_title(window, text, rect)) {
+      HWND click_proxy;
+      draw_static_text(text, rect, style, legacy_static_text_color(window));
+      click_proxy = static_click_proxy(window);
+      if (click_proxy && ImGui::InvisibleButton("##static-click-proxy",
+                                                ImVec2(width, height)))
+        SetFocus(click_proxy);
+    }
   } else if (SDL_strcasecmp(class_name, "EDIT") == 0) {
     ImGuiInputTextFlags flags = 0;
     if (style & ES_READONLY) flags |= ImGuiInputTextFlags_ReadOnly;
@@ -388,13 +519,16 @@ void draw_control_tree(HWND window, HWND modal)
   }
   HWND child = GetWindow(window, GW_CHILD);
   if (child) child = GetWindow(child, GW_HWNDLAST);
+  ImDrawList *draw_list = ImGui::GetWindowDrawList();
+  const bool clipped = child && push_child_clip_rect(window, draw_list);
   for (; child; child = GetWindow(child, GW_HWNDPREV))
     draw_control_tree(child, modal);
+  if (clipped)
+    draw_list->PopClipRect();
 }
 
 void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
 {
-  char class_name[32] = {};
   RECT rect = {};
   if (!window || !IsWindowVisible(window) || !GetWindowRect(window, &rect))
     return;
@@ -405,9 +539,7 @@ void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
         shandalar_win32_sdl_compositor_texture(window, &texture_width,
                                                 &texture_height);
     if (texture && texture_width > 0 && texture_height > 0) {
-      GetClassNameA(window, class_name, sizeof(class_name));
-      if (SDL_strcasecmp(class_name, "#32770") == 0 &&
-          (GetWindowLongA(window, GWL_STYLE) & WS_CAPTION) == WS_CAPTION) {
+      if (shandalar_win32_should_render_caption(window)) {
         int caption_height = GetSystemMetrics(SM_CYCAPTION);
         draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left),
@@ -425,22 +557,25 @@ void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
   }
   HWND child = GetWindow(window, GW_CHILD);
   if (child) child = GetWindow(child, GW_HWNDLAST);
+  const bool clipped = child && push_child_clip_rect(window, draw_list);
   for (; child; child = GetWindow(child, GW_HWNDPREV))
     draw_window_overlay_tree(child, draw_list);
+  if (clipped)
+    draw_list->PopClipRect();
 }
 
-void draw_dialog_caption(HWND dialog)
+void draw_window_caption(HWND window)
 {
   char title[512] = {};
   RECT rect = {};
   int caption_height;
-  if (!dialog || !GetWindowRect(dialog, &rect))
+  if (!window || !IsWindowVisible(window) || !GetWindowRect(window, &rect))
     return;
-  if ((GetWindowLongA(dialog, GWL_STYLE) & WS_CAPTION) != WS_CAPTION)
+  if (!shandalar_win32_should_render_caption(window))
     return;
   caption_height = GetSystemMetrics(SM_CYCAPTION);
-  GetWindowTextA(dialog, title, sizeof(title));
-  ImGui::PushID(dialog);
+  GetWindowTextA(window, title, sizeof(title));
+  ImGui::PushID(window);
   ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.left),
                                    static_cast<float>(rect.top)));
   ImGui::InvisibleButton("##dialog-caption",
@@ -458,18 +593,31 @@ void draw_dialog_caption(HWND dialog)
     ImVec2 delta = ImGui::GetIO().MouseDelta;
     POINT position = {rect.left + static_cast<int>(delta.x),
                       rect.top + static_cast<int>(delta.y)};
-    HWND parent = GetParent(dialog);
-    if (parent)
+    HWND parent = GetParent(window);
+    if (parent && (GetWindowLongA(window, GWL_STYLE) & WS_CHILD))
       ScreenToClient(parent, &position);
-    MoveWindow(dialog, position.x, position.y, rect.right - rect.left,
+    MoveWindow(window, position.x, position.y, rect.right - rect.left,
                rect.bottom - rect.top, TRUE);
   }
   ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.right - caption_height),
                                    static_cast<float>(rect.top)));
   if (ImGui::Button("X", ImVec2(static_cast<float>(caption_height),
                                  static_cast<float>(caption_height))))
-    PostMessageA(dialog, WM_CLOSE, 0, 0);
+    PostMessageA(window, WM_CLOSE, 0, 0);
   ImGui::PopID();
+}
+
+void draw_window_caption_tree(HWND window, HWND skip)
+{
+  HWND child;
+  if (!window || !IsWindowVisible(window) || window == skip)
+    return;
+  draw_window_caption(window);
+  child = GetWindow(window, GW_CHILD);
+  if (child)
+    child = GetWindow(child, GW_HWNDLAST);
+  for (; child; child = GetWindow(child, GW_HWNDPREV))
+    draw_window_caption_tree(child, skip);
 }
 
 bool draw_popup_menu_items(HMENU menu)
@@ -574,7 +722,12 @@ void draw_controls(void)
     draw_window_overlay_tree(modal, ImGui::GetWindowDrawList());
     draw_control_tree(modal, nullptr);
   }
-  draw_dialog_caption(modal);
+  window = GetWindow(desktop, GW_CHILD);
+  if (window)
+    window = GetWindow(window, GW_HWNDLAST);
+  for (; window; window = GetWindow(window, GW_HWNDPREV))
+    draw_window_caption_tree(window, modal);
+  draw_window_caption(modal);
   draw_popup_menu();
   ImGui::End();
   ImGui::PopStyleVar();

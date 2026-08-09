@@ -213,6 +213,7 @@ typedef struct MEASUREITEMSTRUCT {
 #define ODS_SELECTED 0x0001
 #define ODS_FOCUS 0x0010
 #define ODT_LISTBOX 2
+#define ODT_BUTTON 4
 
 #define MAKEWORD(low, high) ((WORD)(((BYTE)(low)) | ((WORD)((BYTE)(high)) << 8)))
 #define RGB(r,g,b) ((COLORREF)((BYTE)(r) | ((DWORD)(BYTE)(g) << 8) | ((DWORD)(BYTE)(b) << 16)))
@@ -290,6 +291,7 @@ UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors);
 int SetStretchBltMode(HDC dc, int mode);
 
 COLORREF SetTextColor(HDC dc, COLORREF color);
+COLORREF GetTextColor(HDC dc);
 COLORREF SetBkColor(HDC dc, COLORREF color);
 int SetBkMode(HDC dc, int mode);
 int SetROP2(HDC dc, int mode);
@@ -358,6 +360,7 @@ HDC shandalar_create_screen_dc(int width, int height);
 void shandalar_destroy_screen_dc(HDC dc);
 const void *shandalar_dc_pixels(HDC dc, int *pitch);
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes);
+COLORREF shandalar_dc_resolve_color(HDC dc, COLORREF color);
 BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
                                 int pitch_bytes, int width, int height);
 void shandalar_set_default_font_root(const char *root);

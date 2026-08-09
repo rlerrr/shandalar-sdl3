@@ -2171,6 +2171,7 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
     populate_pick_card_list(GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID),
                             g_pick_card_dialog_context_ptr->color_filter,
                             g_pick_card_dialog_context_ptr->type_filter);
+    select_first_pick_card(hwnd);
     SetFocus(GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID));
     return 0;
 
@@ -2227,6 +2228,7 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
         populate_pick_card_list(GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID),
                                 g_pick_card_dialog_context_ptr->color_filter,
                                 g_pick_card_dialog_context_ptr->type_filter);
+        select_first_pick_card(hwnd);
         SetFocus(GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID));
       }
       break;
@@ -2268,6 +2270,7 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
         populate_pick_card_list(GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID),
                                 g_pick_card_dialog_context_ptr->color_filter,
                                 g_pick_card_dialog_context_ptr->type_filter);
+        select_first_pick_card(hwnd);
         SetFocus(GetDlgItem(hwnd, PICK_CARD_LISTBOX_ID));
 
         if ((wparam & 0xffff) == PICK_CARD_TYPE_LAND_ID || (wparam & 0xffff) == PICK_CARD_TYPE_ARTIFACT_ID)
@@ -3439,6 +3442,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     g_duel_palette_window_hwnd = CreateWindowExA(0, "MAGIC_PaletteClass", "Palette", 0x80cc0000,
                                                  0x14, 0x14, 300, 0x15e, hwnd, (HMENU)0,
                                                  g_app_instance, (LPVOID)0);
+    shandalar_win32_set_render_caption(g_duel_palette_window_hwnd, TRUE);
     g_your_attack_window_hwnd = (HWND)0;
     g_duel_timer_id = 0x14;
     return 0;

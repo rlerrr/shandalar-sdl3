@@ -278,7 +278,36 @@ UINT GetDoubleClickTime(void) { return 500; }
 
 BOOL ScrollWindow(HWND window, int dx, int dy, const RECT *scroll, const RECT *clip)
 {
-  (void)dx; (void)dy; (void)scroll; (void)clip;
+  HWND child;
+  RECT child_rect;
+  POINT child_origin;
+  POINT child_corner;
+
+  (void)clip;
+  if (!window)
+    return FALSE;
+
+  /* ScrollWindow moves child windows contained by the scrolled rectangle.
+   * Card-list dialogs rely on this to make their grid act as one scrolling
+   * client surface. */
+  for (child = GetWindow(window, GW_CHILD); child;
+       child = GetWindow(child, GW_HWNDNEXT)) {
+    if (!GetWindowRect(child, &child_rect))
+      continue;
+    child_origin.x = child_rect.left;
+    child_origin.y = child_rect.top;
+    child_corner.x = child_rect.right;
+    child_corner.y = child_rect.bottom;
+    ScreenToClient(window, &child_origin);
+    ScreenToClient(window, &child_corner);
+    if (scroll && (child_corner.x <= scroll->left ||
+                   child_origin.x >= scroll->right ||
+                   child_corner.y <= scroll->top ||
+                   child_origin.y >= scroll->bottom))
+      continue;
+    SetWindowPos(child, NULL, child_origin.x + dx, child_origin.y + dy,
+                 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+  }
   return InvalidateRect(window, NULL, FALSE);
 }
 

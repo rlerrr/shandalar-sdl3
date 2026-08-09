@@ -1530,6 +1530,11 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
     }
     return 0;
 
+  case WM_ERASEBKGND:
+    GetClientRect(hwnd, &paint_rect);
+    FillRect((HDC)wparam, &paint_rect, (HBRUSH)GetStockObject(WHITE_BRUSH));
+    return 1;
+
   case WM_PAINT:
     selected_color = GetWindowLongA(hwnd, g_palette_selected_color_window_long_offset);
     paint_dc = BeginPaint(hwnd, &paint_struct);

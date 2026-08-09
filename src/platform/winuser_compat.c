@@ -37,9 +37,11 @@ struct ShandalarWindow {
   int height;
   int visible;
   int enabled;
+  int render_caption;
   int dirty;
   int erase;
   uint64_t content_revision;
+  HFONT font;
   char *text;
   unsigned char *extra;
   size_t extra_size;
@@ -370,6 +372,14 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
     return set_window_text_storage(window, (LPCSTR)lparam);
   case WM_GETTEXT:
     return GetWindowTextA(window, (LPSTR)lparam, (int)wparam);
+  case WM_GETFONT:
+    return (LRESULT)(window->font ? window->font :
+                     GetStockObject(DEFAULT_GUI_FONT));
+  case WM_SETFONT:
+    window->font = (HFONT)wparam;
+    if (lparam)
+      InvalidateRect(window, NULL, TRUE);
+    return 0;
   case WM_GETTEXTLENGTH:
     return GetWindowTextLengthA(window);
   case WM_SYSCOMMAND:
@@ -414,8 +424,10 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
   case WM_PAINT:
     /* DefWindowProc validates the update region for controls which do not
      * implement their own paint handler.  ImGui renders those controls. */
-    if (window->erase)
+    if (window->erase) {
       SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
+      ++window->content_revision;
+    }
     window->dirty = 0;
     window->erase = 0;
     return 0;
@@ -834,6 +846,15 @@ BOOL ShowWindow(HWND window, int command)
 BOOL IsWindowVisible(HWND window) { return valid_window(window) && window->visible; }
 BOOL IsWindow(HWND window) { return valid_window(window); }
 BOOL IsWindowEnabled(HWND window) { return valid_window(window) && window->enabled; }
+void shandalar_win32_set_render_caption(HWND window, BOOL render)
+{
+  if (valid_window(window))
+    window->render_caption = !!render;
+}
+BOOL shandalar_win32_should_render_caption(HWND window)
+{
+  return valid_window(window) && window->render_caption;
+}
 BOOL shandalar_win32_accepts_double_click(HWND window)
 {
   return valid_window(window) && window->window_class &&
@@ -1100,10 +1121,16 @@ uint64_t shandalar_window_content_revision(HWND window)
   return valid_window(window) ? window->content_revision : 0;
 }
 
+void shandalar_window_content_changed(HWND window)
+{
+  if (valid_window(window))
+    ++window->content_revision;
+}
+
 void shandalar_window_backing_dc_changed(HWND window, HDC dc)
 {
   if (valid_window(window) && dc == window->backing_dc)
-    ++window->content_revision;
+    shandalar_window_content_changed(window);
 }
 
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc) { g_pump_proc = proc; }

@@ -35,6 +35,18 @@ static const char *control_text(int id)
   switch (id) {
   case IDOK: return "OK";
   case IDCANCEL: return "Cancel";
+  case 1032: return "Black";
+  case 1033: return "Blue";
+  case 1034: return "Green";
+  case 1035: return "Red";
+  case 1036: return "White";
+  case 1037: return "Creature";
+  case 1038: return "Artifact";
+  case 1039: return "Enchantment";
+  case 1040: return "Sorcery";
+  case 1041: return "Instant/Interrupt";
+  case 1042: return "Land";
+  case 1864: return "Multicolor";
   case 1060: return "Duel Options";
   case 1061: return "Layout";
   case 1062: return "Standard";
@@ -105,6 +117,7 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   int width = 180, height = 120;
   const char *title = "";
   DWORD style = 0x80800840;
+  HWND dialog;
   static const ControlSpec d220[] = {
       C(CT_STATIC,1101,27,11,113,56,0), C(CT_EDIT,1100,64,73,40,12,WS_BORDER),
       C(CT_BUTTON,IDOK,27,95,50,14,OWNER), C(CT_BUTTON,IDCANCEL,88,95,50,14,OWNER)};
@@ -112,9 +125,9 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
       C(CT_ICON,1120,85,33,20,22,0), C(CT_ICON,1122,136,73,20,22,0),
       C(CT_ICON,1124,111,124,20,22,0), C(CT_ICON,1123,58,124,20,22,0),
       C(CT_ICON,1121,33,73,20,22,0), C(CT_ICON,1125,86,80,20,22,0),
-      C(CT_STATIC,1126,76,57,39,8,0), C(CT_STATIC,1127,126,97,39,8,0),
-      C(CT_STATIC,1128,101,148,39,8,0), C(CT_STATIC,1129,48,148,39,8,0),
-      C(CT_STATIC,1130,23,97,39,8,0), C(CT_STATIC,1131,73,104,47,8,0),
+      C(CT_STATIC,1126,76,57,39,8,SS_CENTER), C(CT_STATIC,1127,126,97,39,8,SS_CENTER),
+      C(CT_STATIC,1128,101,148,39,8,SS_CENTER), C(CT_STATIC,1129,48,148,39,8,SS_CENTER),
+      C(CT_STATIC,1130,23,97,39,8,SS_CENTER), C(CT_STATIC,1131,73,104,47,8,SS_CENTER),
       C(CT_STATIC,1133,13,7,165,8,0), C(CT_BUTTON,IDOK,40,182,46,14,OWNER),
       C(CT_BUTTON,IDCANCEL,103,182,46,14,OWNER)};
   static const ControlSpec d223[] = {C(CT_BIGCHOICE,1021,111,7,102,98,0)};
@@ -185,9 +198,9 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
 #define D(n,w,h) do { specs=d##n; count=sizeof(d##n)/sizeof(d##n[0]); width=w; height=h; } while (0)
   switch (id) {
   case 220: D(220,186,116); break; case 222: D(222,193,206); break;
-  case 223: D(223,220,169); break; case 224: D(224,363,258); title="Browse (pick a card)"; break;
+  case 223: D(223,220,169); break; case 224: D(224,363,258); title="Browse (pick a card)"; style |= WS_CAPTION | WS_SYSMENU; break;
   case 225: D(225,180,233); break; case 227: D(227,316,206); break;
-  case 233: width=181; height=79; title="<title>"; break;
+  case 233: width=181; height=79; title="<title>"; style |= WS_CAPTION | WS_SYSMENU; break;
   case 234: D(234,264,162); break; case 235: D(235,132,207); break;
   case 239: D(239,283,218); break; case 240: D(240,151,124); break;
   case 243: D(243,124,61); break; case 244: D(244,117,150); break;
@@ -195,7 +208,10 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   default: return NULL;
   }
 #undef D
-  return make_dialog(instance, parent, title, width, height, style, specs, count);
+  dialog = make_dialog(instance, parent, title, width, height, style, specs, count);
+  if (dialog && (id == 224 || id == 233))
+    shandalar_win32_set_render_caption(dialog, TRUE);
+  return dialog;
 }
 
 void duel_register_dialog_resources(void)

@@ -284,22 +284,10 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_CREATE:
     font = g_tell_user_font;
     SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)font);
-#ifdef SHANDALAR
-    /*
-     * The native owner-draw path paints these labels from globals rather than
-     * from the BUTTON captions. The SDL/ImGui compatibility control uses the
-     * caption, so expose the same text there without changing the command path.
-     */
-    g_duel_client_window = CreateWindowExA(0, "BUTTON", g_duel_status_text, 0x4080000b,
-                                           0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
-    g_duel_main_window = CreateWindowExA(0, "BUTTON", g_custom_duel_action_text, 0x4080000b,
-                                         0, 0, 0, 0, hwnd, (HMENU)2, g_app_instance, (LPVOID)0);
-#else
     g_duel_client_window = CreateWindowExA(0, "BUTTON", g_telluser_short_text_1, 0x4080000b,
                                            0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
     g_duel_main_window = CreateWindowExA(0, "BUTTON", g_telluser_short_text_2, 0x4080000b,
                                          0, 0, 0, 0, hwnd, (HMENU)2, g_app_instance, (LPVOID)0);
-#endif
     if (g_duel_client_window == (HWND)0 || g_duel_main_window == (HWND)0)
     {
       return -1;

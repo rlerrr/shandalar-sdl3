@@ -90,6 +90,12 @@ static LRESULT CALLBACK dialog_window_proc(HWND window, UINT message, WPARAM wpa
       break;
     }
   }
+  if (message == WM_ERASEBKGND) {
+    RECT client;
+    if (GetClientRect(window, &client))
+      FillRect((HDC)wparam, &client, (HBRUSH)GetStockObject(LTGRAY_BRUSH));
+    return TRUE;
+  }
   return DefWindowProcA(window, message, wparam, lparam);
 }
 

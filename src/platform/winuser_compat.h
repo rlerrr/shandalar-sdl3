@@ -539,6 +539,8 @@ BOOL IsWindowVisible(HWND window);
 BOOL EnableWindow(HWND window, BOOL enable);
 BOOL IsWindowEnabled(HWND window);
 BOOL IsWindow(HWND window);
+void shandalar_win32_set_render_caption(HWND window, BOOL render);
+BOOL shandalar_win32_should_render_caption(HWND window);
 BOOL shandalar_win32_accepts_double_click(HWND window);
 BOOL ClientToScreen(HWND window, POINT *point);
 BOOL ScreenToClient(HWND window, POINT *point);
@@ -689,6 +691,7 @@ void shandalar_controls_reset(void);
 void shandalar_win32_reset(void);
 HDC shandalar_window_backing_dc(HWND window);
 uint64_t shandalar_window_content_revision(HWND window);
+void shandalar_window_content_changed(HWND window);
 
 #include "platform/winreg_compat.h"
 

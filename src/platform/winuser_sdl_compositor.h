@@ -30,6 +30,9 @@ void shandalar_win32_sdl_compositor_visit_subtree(
 SDL_Texture *shandalar_win32_sdl_compositor_texture(HWND window,
                                                      int *width,
                                                      int *height);
+SDL_Texture *shandalar_win32_sdl_compositor_control_texture(HWND window,
+                                                             int *width,
+                                                             int *height);
 int shandalar_win32_is_builtin_control(HWND window);
 void shandalar_win32_sdl_compositor_shutdown(void);
 
