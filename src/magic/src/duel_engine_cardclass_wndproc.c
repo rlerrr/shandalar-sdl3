@@ -2899,6 +2899,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
   int scratch;
   int player;
   HWND hidden_parent;
+  int long_press_previewed;
 
   if (msg == WM_MOUSEMOVE || msg == WM_NCMOUSEMOVE)
   {
@@ -3627,9 +3628,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_LBUTTONDOWN:
+    long_press_previewed = 0;
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
     hidden_parent = (HWND)GetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
+    test_point.x = (short)((unsigned int)lparam & 0xffff);
+    test_point.y = (short)(((unsigned int)lparam >> 16) & 0xffff);
+    ClientToScreen(hwnd, &test_point);
     counter_power = GetDoubleClickTime();
     scratch = GetMessageTime();
     damage_on_card = GetTickCount();
@@ -3651,10 +3656,12 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     }
     ReleaseCapture();
     if (!PeekMessageA((MSG *)&paint_struct, hwnd,
-                      WM_LBUTTONUP, WM_LBUTTONUP, 0))
+                      WM_LBUTTONUP, WM_LBUTTONUP, 0) &&
+        !PeekMessageA((MSG *)&paint_struct, hwnd,
+                      WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0))
     {
       SendMessageA(hwnd, WM_COMMAND, 0x6e, 0);
-      return 0;
+      long_press_previewed = 1;
     }
 #else
     Sleep(counter_power - (scratch - damage_on_card));
@@ -3678,6 +3685,11 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         hidden_parent = (HWND)0;
       }
       GetWindowRect(previous_z_order, &client_rect);
+#ifdef SHANDALAR
+      if (!PeekMessageA((MSG *)&paint_struct, hwnd,
+                        WM_LBUTTONUP, WM_LBUTTONUP, 0))
+        shandalar_win32_set_system_drag_origin(test_point.x, test_point.y, 5);
+#endif
       hidden_parent = GetWindow(previous_z_order, GW_HWNDPREV);
       SendMessageA(previous_z_order, WM_SYSCOMMAND, 0xf012, 0);
       GetWindowRect(previous_z_order, &damage_rect);
@@ -3699,7 +3711,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
       is_target = 0;
     }
     get_current_duel_selection(&counter_m1m1, &counter_p1p0);
-    if (is_target == 0 && g_duel_modal_action_active != 0 && card_window_matches_action_request(hwnd) != 0)
+    if (is_target == 0 && long_press_previewed == 0 &&
+        g_duel_modal_action_active != 0 &&
+        card_window_matches_action_request(hwnd) != 0)
     {
       g_recorded_action_player = cuecard_found;
       post_card_action_selection(hwnd);

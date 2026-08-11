@@ -62,6 +62,9 @@ static int g_quit_code;
 static ShandalarWin32PumpProc g_pump_proc;
 static POINT g_system_drag_endpoint;
 static int g_has_system_drag_endpoint;
+static POINT g_system_drag_origin;
+static int g_system_drag_dead_zone;
+static int g_has_system_drag_origin;
 
 static char *copy_string(const char *text)
 {
@@ -393,9 +396,19 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
       POINT cursor;
       RECT window_rect;
       HWND parent;
+      int drag_started;
+      int drag_dead_zone;
       int width;
       int height;
-      GetCursorPos(&drag_origin);
+      if (g_has_system_drag_origin) {
+        drag_origin = g_system_drag_origin;
+        drag_dead_zone = g_system_drag_dead_zone;
+        g_has_system_drag_origin = 0;
+      } else {
+        GetCursorPos(&drag_origin);
+        drag_dead_zone = 0;
+      }
+      drag_started = drag_dead_zone <= 0;
       GetWindowRect(window, &window_rect);
       width = window_rect.right - window_rect.left;
       height = window_rect.bottom - window_rect.top;
@@ -404,6 +417,11 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
         if (drag_message.message == WM_MOUSEMOVE) {
           POINT destination;
           GetCursorPos(&cursor);
+          if (!drag_started &&
+              abs(cursor.x - drag_origin.x) +
+                      abs(cursor.y - drag_origin.y) < drag_dead_zone)
+            continue;
+          drag_started = 1;
           destination.x = window_rect.left + cursor.x - drag_origin.x;
           destination.y = window_rect.top + cursor.y - drag_origin.y;
           parent = GetParent(window);
@@ -1158,6 +1176,14 @@ void shandalar_win32_clear_system_drag_endpoint(void)
   g_has_system_drag_endpoint = 0;
 }
 
+void shandalar_win32_set_system_drag_origin(int x, int y, int dead_zone)
+{
+  g_system_drag_origin.x = x;
+  g_system_drag_origin.y = y;
+  g_system_drag_dead_zone = dead_zone > 0 ? dead_zone : 0;
+  g_has_system_drag_origin = 1;
+}
+
 void shandalar_win32_reset(void)
 {
   RegisteredClass *registered;
@@ -1192,6 +1218,7 @@ void shandalar_win32_reset(void)
   g_quit_code = 0;
   g_pump_proc = NULL;
   g_has_system_drag_endpoint = 0;
+  g_has_system_drag_origin = 0;
   shandalar_controls_reset();
   shandalar_win32_runtime_reset();
   shandalar_win32_mm_timers_reset();

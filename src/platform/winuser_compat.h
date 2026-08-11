@@ -680,6 +680,7 @@ BOOL shandalar_win32_pump(BOOL wait);
 void shandalar_win32_clear_quit_message(void);
 void shandalar_win32_set_system_drag_endpoint(int x, int y);
 void shandalar_win32_clear_system_drag_endpoint(void);
+void shandalar_win32_set_system_drag_origin(int x, int y, int dead_zone);
 void shandalar_win32_set_cursor_position(int x, int y);
 void shandalar_win32_runtime_tick(void);
 void shandalar_win32_runtime_reset(void);
