@@ -32,6 +32,14 @@
 
 #define WM_DECKBUILDER_DRAG_SELL_HOVER (WM_APP + 0x442)
 
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+#define DECK_FULL_CARD_LONG_PRESS_TIMER_ID 2
+#define DECK_FULL_CARD_LONG_PRESS_DEAD_ZONE 8
+static HWND g_deck_full_card_press_window;
+static POINT g_deck_full_card_press_origin;
+static int g_deck_full_card_press_timer_active;
+#endif
+
 #define MAKELONG2(a, b) ((LONG)(((a) & 0xffff) | ((DWORD)((WORD)(b))) << 16))
 #define MAKELONG3(a, b) ((LONG)(((a) & 0xffff) | ((DWORD)((b) & 0xffff)) << 16))
 
@@ -2943,13 +2951,73 @@ LRESULT CALLBACK wndproc_FullCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     static DWORD last_click = 0;
     DWORD now = GetTickCount();
     if (now - last_click <= GetDoubleClickTime()) {
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+      if (g_deck_full_card_press_window != (HWND)0)
+        KillTimer(g_deck_full_card_press_window, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
+      if (GetCapture() == hwnd)
+        ReleaseCapture();
+      g_deck_full_card_press_window = (HWND)0;
+      g_deck_full_card_press_timer_active = 0;
+#endif
       SendMessageA(hwnd, WM_COMMAND, RES_FULLCARDMENU_EXPAND, 0);
       last_click = 0;
       return 0;
     }
     last_click = now;
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    if (g_deck_full_card_press_window != (HWND)0)
+      KillTimer(g_deck_full_card_press_window, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
+    g_deck_full_card_press_window = hwnd;
+    g_deck_full_card_press_origin.x = (short)LOWORD(lparam);
+    g_deck_full_card_press_origin.y = (short)HIWORD(lparam);
+    g_deck_full_card_press_timer_active = 1;
+    SetCapture(hwnd);
+    SetTimer(hwnd, DECK_FULL_CARD_LONG_PRESS_TIMER_ID, GetDoubleClickTime(), NULL);
+    return 0;
+#else
     return DefWindowProcA(hwnd, msg, wparam, lparam);
+#endif
   }
+
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+  case WM_MOUSEMOVE:
+    if (g_deck_full_card_press_window == hwnd &&
+        g_deck_full_card_press_timer_active != 0 &&
+        (wparam & MK_LBUTTON) != 0)
+    {
+      int press_x = (short)LOWORD(lparam);
+      int press_y = (short)HIWORD(lparam);
+      if (abs(press_x - g_deck_full_card_press_origin.x) > DECK_FULL_CARD_LONG_PRESS_DEAD_ZONE ||
+          abs(press_y - g_deck_full_card_press_origin.y) > DECK_FULL_CARD_LONG_PRESS_DEAD_ZONE)
+      {
+        KillTimer(hwnd, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
+        g_deck_full_card_press_timer_active = 0;
+      }
+    }
+    return 0;
+
+  case WM_LBUTTONUP:
+    if (g_deck_full_card_press_window == hwnd)
+    {
+      KillTimer(hwnd, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
+      if (GetCapture() == hwnd)
+        ReleaseCapture();
+      g_deck_full_card_press_window = (HWND)0;
+      g_deck_full_card_press_timer_active = 0;
+    }
+    return 0;
+
+  case WM_TIMER:
+    if (wparam == DECK_FULL_CARD_LONG_PRESS_TIMER_ID &&
+        g_deck_full_card_press_window == hwnd &&
+        g_deck_full_card_press_timer_active != 0)
+    {
+      KillTimer(hwnd, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
+      g_deck_full_card_press_timer_active = 0;
+      SendMessageA(hwnd, WM_COMMAND, RES_FULLCARDMENU_EXPAND, 0);
+    }
+    return 0;
+#endif
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
