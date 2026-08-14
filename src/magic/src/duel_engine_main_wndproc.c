@@ -1497,7 +1497,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
       SetBkMode(ctl_hdc, TRANSPARENT);
       brush = GetStockObject(NULL_BRUSH);
     }
-    return (BOOL)brush;
+    return (INT_PTR)brush;
 
   case WM_DRAWITEM:
     draw_item = (DRAWITEMSTRUCT *)lparam;

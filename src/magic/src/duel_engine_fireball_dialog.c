@@ -362,10 +362,10 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         (ctl_id != FIREBALL_EXTRA_TARGET_COST))
     {
       SetBkMode(ctl_hdc, TRANSPARENT);
-      return (BOOL)GetStockObject(NULL_BRUSH);
+      return (INT_PTR)GetStockObject(NULL_BRUSH);
     }
     SetBkMode(ctl_hdc, TRANSPARENT);
-    return (BOOL)g_fireball_dialog_button_brush;
+    return (INT_PTR)g_fireball_dialog_button_brush;
 
   case WM_PAINT:
     erase_dc = BeginPaint(hwnd, &paint);

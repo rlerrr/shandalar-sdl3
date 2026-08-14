@@ -551,7 +551,7 @@ INT_PTR WINAPI dlgproc_choose_color(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
     {
       SetTextColor(ctl_hdc, g_choose_color_label_text_color);
     }
-    return (BOOL)GetStockObject(NULL_BRUSH);
+    return (INT_PTR)GetStockObject(NULL_BRUSH);
 
   case WM_DRAWITEM:
     draw_item = (DRAWITEMSTRUCT *)lparam;
@@ -1033,12 +1033,12 @@ INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
         SetTextColor(ctl_hdc, g_magical_hack_label_text_color);
       SetBkMode(ctl_hdc, TRANSPARENT);
       ctl_brush = (HBRUSH)GetStockObject(NULL_BRUSH);
-      return (BOOL)ctl_brush;
+      return (INT_PTR)ctl_brush;
     }
     SetTextColor(ctl_hdc, g_magical_hack_label_text_color);
     SetBkMode(ctl_hdc, TRANSPARENT);
     ctl_brush = g_magical_hack_button_brush;
-    return (BOOL)ctl_brush;
+    return (INT_PTR)ctl_brush;
 
   case WM_MOUSEMOVE:
   case WM_RBUTTONDOWN:

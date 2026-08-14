@@ -558,7 +558,7 @@ INT_PTR CALLBACK dlgproc_ViewAntes(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lp
     ctl_id = GetDlgCtrlID(ctl_hwnd);
     SetBkMode(ctl_dc, TRANSPARENT);
     SetTextColor(ctl_dc, g_view_antes_text_color);
-    return (BOOL)GetStockObject(NULL_BRUSH);
+    return (INT_PTR)GetStockObject(NULL_BRUSH);
 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:

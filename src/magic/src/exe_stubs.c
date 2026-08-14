@@ -444,7 +444,7 @@ INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wpar
       SetBkMode(ctl_hdc, TRANSPARENT);
       brush = GetStockObject(NULL_BRUSH);
     }
-    return (BOOL)brush;
+    return (INT_PTR)brush;
 
   case WM_DRAWITEM:
     draw_item = (DRAWITEMSTRUCT *)lparam;
@@ -3226,7 +3226,7 @@ INT_PTR CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wpara
     ctl_id = GetDlgCtrlID(ctl_hwnd);
     SetBkMode(ctl_hdc, TRANSPARENT);
     SetTextColor(ctl_hdc, g_life_total_dialog_text_color);
-    return (BOOL)GetStockObject(NULL_BRUSH);
+    return (INT_PTR)GetStockObject(NULL_BRUSH);
 
   case WM_DRAWITEM:
     draw_item = (DRAWITEMSTRUCT *)lparam;

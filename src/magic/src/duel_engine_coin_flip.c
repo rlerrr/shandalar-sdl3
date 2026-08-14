@@ -393,7 +393,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wp
     ctl_id = GetDlgCtrlID(ctl_hwnd);
     SetBkMode(ctl_dc, TRANSPARENT);
     SetTextColor(ctl_dc, g_coin_flip_animation_dialog_text_color);
-    return (BOOL)g_coin_flip_animation_dialog_brush;
+    return (INT_PTR)g_coin_flip_animation_dialog_brush;
 
   case 0x30f:
   case 0x310:
@@ -847,7 +847,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
     ctl_id = GetDlgCtrlID(ctl_hwnd);
     SetBkMode(ctl_dc, TRANSPARENT);
     SetTextColor(ctl_dc, g_redraw_ante_dialog_text_color);
-    return (BOOL)GetStockObject(HOLLOW_BRUSH);
+    return (INT_PTR)GetStockObject(HOLLOW_BRUSH);
 
   case WM_DRAWITEM:
     draw_item = (DRAWITEMSTRUCT *)lparam;
@@ -1388,7 +1388,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     ctl_id = GetDlgCtrlID(ctl_hwnd);
     SetBkMode(hdc_a, TRANSPARENT);
     SetTextColor(hdc_a, g_coin_flip_dialog_text_color);
-    return (BOOL)GetStockObject(HOLLOW_BRUSH);
+    return (INT_PTR)GetStockObject(HOLLOW_BRUSH);
 
   case WM_DRAWITEM:
     draw_item = (DRAWITEMSTRUCT *)lparam;
