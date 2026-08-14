@@ -1483,8 +1483,7 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
   RECT paint_rect;
   int hit_color;
   int column;
-  int mouse_x;
-  int mouse_y;
+  POINT mouse_point;
   int row;
   RECT mouse_rect;
   int hit_found;
@@ -1503,8 +1502,8 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
 
   case WM_MOUSEMOVE:
     selected_color = GetWindowLongA(hwnd, g_palette_selected_color_window_long_offset);
-    mouse_x = lparam & 0xffff;
-    mouse_y = (unsigned short)((lparam >> 16) & 0xffff);
+    mouse_point.x = (short)LOWORD(lparam);
+    mouse_point.y = (short)HIWORD(lparam);
     hit_found = 0;
     for (row = 0; row < 16 && hit_found == 0; row = row + 1)
     {
@@ -1512,7 +1511,7 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
       {
         SetRect(&mouse_rect, column << 4, row << 4, (column + 1) << 4, (row + 1) << 4);
         OffsetRect(&mouse_rect, g_palette_grid_x_offset, g_palette_grid_y_offset);
-        if (((BOOL(WINAPI *)(const RECT *, int, int))PtInRect)(&mouse_rect, mouse_x, mouse_y) != 0)
+        if (PtInRect(&mouse_rect, mouse_point) != 0)
         {
           hit_found = 1;
           hit_color = (row << 4) + column;

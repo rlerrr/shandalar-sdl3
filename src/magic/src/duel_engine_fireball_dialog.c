@@ -163,8 +163,7 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   char pad_168[8];
   PAINTSTRUCT paint;
   RECT card_rect;
-  unsigned int mouse_x;
-  unsigned int mouse_y;
+  POINT mouse_point;
   RECT preview_rect;
   HDC erase_dc;
   RECT erase_rect;
@@ -397,17 +396,15 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 
   case WM_MOUSEMOVE:
   case WM_RBUTTONDOWN:
-    mouse_x = LOWORD(lparam);
-    mouse_y = HIWORD(lparam);
+    mouse_point.x = (short)LOWORD(lparam);
+    mouse_point.y = (short)HIWORD(lparam);
     if (((msg == WM_MOUSEMOVE) && (g_duel_interface_options.layout != 2)) ||
         ((msg == WM_RBUTTONDOWN) && (g_duel_interface_options.layout == 2)))
     {
       GetWindowRect(GetDlgItem(hwnd, FIREBALL_CARD_DISPLAY), &preview_rect);
       MapWindowPoints((HWND)0, hwnd, (LPPOINT)&preview_rect, 2);
-      erase_rect.left = mouse_x;
-      erase_rect.top = mouse_y;
       if ((g_fireball_dialog_card_id != -1) &&
-          PtInRect(&preview_rect, *(POINT *)&erase_rect))
+          PtInRect(&preview_rect, mouse_point))
       {
         SendMessageA(g_duel_card_preview_window_hwnd, 0x401,
                      g_fireball_dialog_card_id, 0);

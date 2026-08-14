@@ -22,11 +22,6 @@
 #define CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET g_cardclass_snapshot_window_long_offset
 #define CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET g_cardclass_previous_z_order_window_long_offset
 
-typedef BOOL(WINAPI *PtInRectByCoordsProc)(const RECT *rect, LONG x, LONG y);
-
-#define PtInRectByCoords(rect_, x_, y_) \
-  (((PtInRectByCoordsProc)PtInRect)((rect_), (LONG)(x_), (LONG)(y_)))
-
 int load_text_with_tab_escapes(char *filename, char *section_name);
 LRESULT handle_duel_inactive_cursor(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void draw_duel_face_window(HDC dc, RECT *rect, int player);
@@ -2876,8 +2871,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
   char cuecard_text[100];
   unsigned int untap_status;
   unsigned int counter_p1p1;
-  unsigned int mouse_x;
-  unsigned int mouse_y;
+  POINT mouse_point;
   int cuecard_found;
   unsigned int counter_p1p0;
   int ability_loop_index;
@@ -2912,8 +2906,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
     card_id = get_displayed_card_id(player, card);
-    mouse_x = (unsigned int)lparam & 0xffff;
-    mouse_y = (unsigned short)((((unsigned int)lparam >> 0x10) & 0xffff));
+    mouse_point.x = (short)LOWORD(lparam);
+    mouse_point.y = (short)HIWORD(lparam);
     if (player != -1 && card == -1)
     {
       cuecard_found = 1;
@@ -2925,9 +2919,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
       GetClientRect(hwnd, &client_rect);
       if ((get_displayed_card_ui_flags(player, card) & 2) != 0)
       {
-        temp_mouse = mouse_x;
-        mouse_x = mouse_y;
-        mouse_y = client_rect.bottom - temp_mouse;
+        temp_mouse = mouse_point.x;
+        mouse_point.x = mouse_point.y;
+        mouse_point.y = client_rect.bottom - temp_mouse;
       }
 
       ability_flags = get_displayed_card_regen_status(player, card);
@@ -2939,7 +2933,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         {
           get_ability_icon_rect(&ability_rect, g_cardclass_ability_masks[ability_loop_index],
                                 &client_rect, ability_flags);
-          if (PtInRectByCoords(&ability_rect, mouse_x, mouse_y) != 0)
+          if (PtInRect(&ability_rect, mouse_point) != 0)
           {
             ability_index = ability_loop_index;
           }
@@ -2960,7 +2954,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
 
       if ((untap_status & 1) != 0 &&
           (untap_status & 2) != 0 &&
-          PtInRectByCoords(&untap_rect, mouse_x, mouse_y) != 0)
+          PtInRect(&untap_rect, mouse_point) != 0)
       {
         strcpy(cuecard_text, gs_cuecard_this_card_will_untap_00925040);
         cuecard_found = 1;
@@ -2971,27 +2965,27 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         cuecard_found = 1;
       }
       else if (damage_on_card > 0 &&
-               PtInRectByCoords(&damage_rect, mouse_x, mouse_y) != 0)
+               PtInRect(&damage_rect, mouse_point) != 0)
       {
         sprintf(cuecard_text, gs_cuecard_damage_n_0091b290, damage_on_card);
         cuecard_found = 1;
       }
       else if ((int)special_counters > 0 &&
-               PtInRectByCoords(&special_counter_rect, mouse_x, mouse_y) != 0)
+               PtInRect(&special_counter_rect, mouse_point) != 0)
       {
         format_special_counter_cuecard_text(cuecard_text, card_id, special_counters);
         cuecard_found = 1;
       }
       else if ((int)(counter_p1p1 + counter_m1m1 + counter_power) > 0 &&
-               (int)mouse_y > (client_rect.bottom * 0x23) / 100 &&
-               (client_rect.bottom * 0x3e) / 100 > (int)mouse_y)
+               mouse_point.y > (client_rect.bottom * 0x23) / 100 &&
+               (client_rect.bottom * 0x3e) / 100 > mouse_point.y)
       {
         counter_column_width = (client_rect.right - client_rect.left) / 3;
-        if ((int)mouse_x < client_rect.left + counter_column_width)
+        if (mouse_point.x < client_rect.left + counter_column_width)
         {
           format_standard_counter_cuecard_text(cuecard_text, 1, counter_p1p1);
         }
-        else if ((int)mouse_x < counter_column_width * 2 + client_rect.left)
+        else if (mouse_point.x < counter_column_width * 2 + client_rect.left)
         {
           format_standard_counter_cuecard_text(cuecard_text, 2, counter_m1m1);
         }
@@ -3002,11 +2996,11 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         cuecard_found = 1;
       }
       else if ((int)(counter_p1p0 + counter_p0p1) > 0 &&
-               (int)mouse_y > (client_rect.bottom * 0x35) / 100 &&
-               (client_rect.bottom * 0x59) / 100 > (int)mouse_y)
+               mouse_point.y > (client_rect.bottom * 0x35) / 100 &&
+               (client_rect.bottom * 0x59) / 100 > mouse_point.y)
       {
         counter_column_width = (client_rect.right - client_rect.left) / 2;
-        if ((int)mouse_x < client_rect.left + (client_rect.right - client_rect.left) / 2)
+        if (mouse_point.x < client_rect.left + (client_rect.right - client_rect.left) / 2)
         {
           format_standard_counter_cuecard_text(cuecard_text, 4, counter_p0p1);
         }
@@ -3018,16 +3012,16 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
       }
       else
       {
-        if (is_displayed_card_owned_by_opponent(player, card) != player && (client_rect.bottom * 0xc) / 100 > (int)mouse_y)
+        if (is_displayed_card_owned_by_opponent(player, card) != player && (client_rect.bottom * 0xc) / 100 > mouse_point.y)
         {
           strcpy(cuecard_text, gs_cuecard_not_controlled_by_owner_008a8e40);
           cuecard_found = 1;
         }
         else if (((is_target != 0 || can_target_again != 0) &&
-                  (int)mouse_x > (client_rect.right * 5) / 100 &&
-                  (client_rect.right * 0x5f) / 100 > (int)mouse_x &&
-                  (int)mouse_y > (client_rect.bottom * 0xf) / 100 &&
-                  (client_rect.bottom * 0x5f) / 100 > (int)mouse_y))
+                  mouse_point.x > (client_rect.right * 5) / 100 &&
+                  (client_rect.right * 0x5f) / 100 > mouse_point.x &&
+                  mouse_point.y > (client_rect.bottom * 0xf) / 100 &&
+                  (client_rect.bottom * 0x5f) / 100 > mouse_point.y))
         {
           if (is_target != 0 && can_target_again != 0)
           {
@@ -3044,18 +3038,18 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
           cuecard_found = 1;
         }
         else if (kill_code == 2 &&
-                 (client_rect.right * 5) / 100 < (int)mouse_x &&
-                 (int)mouse_x < (client_rect.right * 0x5f) / 100 &&
-                 (client_rect.bottom * 0xf) / 100 < (int)mouse_y &&
-                 (int)mouse_y < (client_rect.bottom * 0x5f) / 100)
+                 (client_rect.right * 5) / 100 < mouse_point.x &&
+                 mouse_point.x < (client_rect.right * 0x5f) / 100 &&
+                 (client_rect.bottom * 0xf) / 100 < mouse_point.y &&
+                 mouse_point.y < (client_rect.bottom * 0x5f) / 100)
         {
           strcpy(cuecard_text, gs_cuecard_dying_0091c640);
           cuecard_found = 1;
         }
-        else if ((client_rect.right * 5) / 100 < (int)mouse_x &&
-                 (int)mouse_x < (client_rect.right * 0x5f) / 100 &&
-                 (client_rect.bottom * 0xf) / 100 < (int)mouse_y &&
-                 (int)mouse_y < (client_rect.bottom * 0x5f) / 100)
+        else if ((client_rect.right * 5) / 100 < mouse_point.x &&
+                 mouse_point.x < (client_rect.right * 0x5f) / 100 &&
+                 (client_rect.bottom * 0xf) / 100 < mouse_point.y &&
+                 mouse_point.y < (client_rect.bottom * 0x5f) / 100)
         {
           if ((get_displayed_card_type(player, card) & 2) != 0 &&
               (get_displayed_card_ui_flags(player, card) & 1) != 0 &&

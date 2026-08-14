@@ -840,7 +840,7 @@ int choose_magical_hack_colors(int player, target_t *target, const char *prompt,
 // FUNCTION: SHANDALAR 0x0053e1d9
 INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  char pad_60[12];
+  POINT preview_point;
   RECT preview_rect;
   HDC paint_dc;
   int saved_dc;
@@ -850,6 +850,7 @@ INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
   HWND ctl_hwnd;
   int ctl_id;
   HDC ctl_hdc;
+  HBRUSH ctl_brush;
   HWND focus_lost;
   HWND focus_gained;
   unsigned int command_id;
@@ -1031,11 +1032,13 @@ INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
       else
         SetTextColor(ctl_hdc, g_magical_hack_label_text_color);
       SetBkMode(ctl_hdc, TRANSPARENT);
-      return (BOOL)GetStockObject(NULL_BRUSH);
+      ctl_brush = (HBRUSH)GetStockObject(NULL_BRUSH);
+      return (BOOL)ctl_brush;
     }
     SetTextColor(ctl_hdc, g_magical_hack_label_text_color);
     SetBkMode(ctl_hdc, TRANSPARENT);
-    return (BOOL)g_magical_hack_button_brush;
+    ctl_brush = g_magical_hack_button_brush;
+    return (BOOL)ctl_brush;
 
   case WM_MOUSEMOVE:
   case WM_RBUTTONDOWN:
@@ -1044,10 +1047,10 @@ INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
     {
       GetWindowRect(GetDlgItem(hwnd, MAGICAL_HACK_CARD_DISPLAY), &preview_rect);
       MapWindowPoints((HWND)0, hwnd, (LPPOINT)&preview_rect, 2);
-      paint_rect.left = (short)LOWORD(lparam);
-      paint_rect.top = (short)HIWORD(lparam);
+      preview_point.x = (short)LOWORD(lparam);
+      preview_point.y = (short)HIWORD(lparam);
       if ((g_magical_hack_displayed_card_id != -1) &&
-          PtInRect(&preview_rect, *(POINT *)&paint_rect))
+          PtInRect(&preview_rect, preview_point))
       {
         SendMessageA(g_duel_card_preview_window_hwnd, 0x401,
                      g_magical_hack_displayed_card_id, 0);

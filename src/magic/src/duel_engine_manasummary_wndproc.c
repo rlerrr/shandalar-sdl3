@@ -193,8 +193,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
   RECT client_rect;
   COLORREF shadow_color;
   int clicked_mana_pool[7];
-  unsigned int click_x;
-  unsigned int click_y;
+  POINT click_point;
   MSG peek_msg;
   RECT click_rect;
   int peek_result;
@@ -208,8 +207,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
   mana_summary_values_t updated_mana_pool;
   char cuecard_text[100];
   int hit_color;
-  unsigned int cuecard_x;
-  unsigned int cuecard_y;
+  POINT cuecard_point;
   int has_cuecard;
   unsigned int cuecard_player;
   RECT cuecard_rect;
@@ -219,41 +217,41 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
   switch (msg)
   {
   case 0x437:
-    cuecard_x = lparam & 0xffff;
-    cuecard_y = HIWORD(lparam);
+    cuecard_point.x = (short)((unsigned int)lparam & 0xffff);
+    cuecard_point.y = (short)HIWORD(lparam);
     hit_color = -2;
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 1);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 1;
     }
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 5);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 5;
     }
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 2);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 2;
     }
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 3);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 3;
     }
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 4);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 4;
     }
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 0);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 0;
     }
     get_mana_pool_text_rect(&cuecard_rect, hwnd, 6);
-    if (PtInRect(&cuecard_rect, *(POINT *)&cuecard_x) != 0)
+    if (PtInRect(&cuecard_rect, cuecard_point) != 0)
     {
       hit_color = 6;
     }
@@ -355,15 +353,16 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
       peek_result = PeekMessageA(&peek_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
       get_displayed_mana_pool((mana_summary_values_t *)clicked_mana_pool, (unsigned int)(g_duel_active_popup_window != hwnd));
       GetClientRect(hwnd, &click_client_rect);
-      click_x = lparam & 0xffff;
-      click_y = HIWORD(lparam);
+      click_point.x = (short)((unsigned int)lparam & 0xffff);
+      click_point.y = (short)HIWORD(lparam);
       unused_row_height = unused_row_bottom = click_client_rect.bottom / 6;
       g_recorded_action_controller = g_duel_active_popup_window == hwnd ? 0 : 1;
       g_recorded_action_phase = -1;
       for (click_color = 0; click_color < 7; click_color++)
       {
         get_mana_pool_text_rect(&click_rect, hwnd, click_color);
-        if (PtInRect(&click_rect, *(POINT *)&click_x) != 0 && 0 < clicked_mana_pool[click_color])
+        if (PtInRect(&click_rect, click_point) != 0 &&
+            0 < clicked_mana_pool[click_color])
         {
           g_recorded_action_phase = click_color;
         }
