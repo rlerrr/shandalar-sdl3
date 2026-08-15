@@ -1462,7 +1462,7 @@ redraw_buy_cards_screen:
   AnimateVisitBackdropZoomIn(GET_TOWN_PIC(town_index));
   g_town_menu_result_state = -2;
   FreeSpriteBlob(g_buy_cards_preview_panel_sprite);
-  FreeSpriteBlob(g_buy_cards_done_button_sprites[0]);
+  FreeSpriteBlob(g_buy_cards_confirm_button_sprites[0]);
   return 0;
 }
 
