@@ -50,7 +50,6 @@ extern int g_mouse_x;
 extern int g_mouse_y;
 extern int g_mouse_button_down_mask;
 extern int g_mouse_button_released_mask;
-extern int g_ui_tick_count;
 extern int g_worker_should_exit;
 extern int g_worker_exit_code;
 extern int g_ui_ready;

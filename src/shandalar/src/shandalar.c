@@ -143,8 +143,14 @@ UINT g_timer_event_handle;
 int g_cursor_visibility_depth;
 // GLOBAL: SHANDALAR 0x00589de4
 UINT g_timer_period_ms = 0x21;
+
+#ifdef __EMSCRIPTEN__
+static unsigned int g_ui_tick_wall_base;
+#else
 // GLOBAL: SHANDALAR 0x00589df0
 int g_ui_tick_count = 0;
+#endif
+
 // GLOBAL: SHANDALAR 0x00589dec
 int g_default_palette_fade_steps = 0x30;
 // GLOBAL: SHANDALAR 0x00748400
@@ -932,9 +938,9 @@ opening_menu:
       while ((int)(SDL_GetTicks() - last_tick) < 0x3c)
       {
 #ifdef __EMSCRIPTEN__
-  emscripten_sleep(0);
+        emscripten_sleep(0);
 #else
-  SDL_Delay(1);
+        SDL_Delay(1);
 #endif
       }
       last_tick = SDL_GetTicks();
@@ -1376,7 +1382,17 @@ void DrawCenteredTextLineClamped(char *text, int center_x, int y, int color_inde
 // FUNCTION: SHANDALAR 0x004ce97d
 int GetUiTickCount(void)
 {
+#ifdef __EMSCRIPTEN__
+  /* Native Shandalar advances g_ui_tick_count from a multimedia-timer thread
+     that keeps running while the duel engine computes.  Single-threaded wasm
+     only fires that timer while pumping messages, so CPU-bound loops such as
+     the AI's damage-prevention search would never see time pass and would
+     spin forever.  Derive the tick count from the real clock instead,
+     measured against the baseline set by ConsumeUiTickCount(). */
+  return (int)((GetTickCount() / g_timer_period_ms) - g_ui_tick_wall_base);
+#else
   return g_ui_tick_count;
+#endif
 }
 
 // FUNCTION: SHANDALAR 0x004ce955
@@ -1384,8 +1400,13 @@ int ConsumeUiTickCount(void)
 {
   int queued_ticks;
 
+#ifdef __EMSCRIPTEN__
+  queued_ticks = (int)((GetTickCount() / g_timer_period_ms) - g_ui_tick_wall_base);
+  g_ui_tick_wall_base = GetTickCount() / g_timer_period_ms;
+#else
   queued_ticks = g_ui_tick_count;
   g_ui_tick_count = 0;
+#endif
   return queued_ticks;
 }
 
@@ -1750,11 +1771,11 @@ int EndMenuContext(void)
 // FUNCTION: SHANDALAR 0x004ce992
 void DelayUiTicks(int delay)
 {
-  int start = g_ui_tick_count;
+  int start = GetUiTickCount();
   do
   {
     PumpOpeningMenuWait();
-  } while ((g_ui_tick_count - start) < (delay / 2));
+  } while ((GetUiTickCount() - start) < (delay / 2));
 }
 
 // FUNCTION: SHANDALAR 0x004bdd0a
@@ -6728,7 +6749,9 @@ void CALLBACK UiTimerTickCallback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, 
     DuplicateHandle(GetCurrentProcess(), g_timer_thread_handle, GetCurrentProcess(), &g_timer_thread_handle, 0x1f03ff, FALSE, 0);
   }
 
+#ifndef __EMSCRIPTEN__
   ++g_ui_tick_count;
+#endif
 
   if (g_sound_loader_busy != 0)
   {
