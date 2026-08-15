@@ -696,8 +696,6 @@ void shandalar_win32_reset(void);
 HDC shandalar_window_backing_dc(HWND window);
 uint64_t shandalar_window_content_revision(HWND window);
 void shandalar_window_content_changed(HWND window);
-void shandalar_window_notify_dc_changed(HDC dc);
-void shandalar_window_notify_all_changed(void);
 
 #include "platform/winreg_compat.h"
 

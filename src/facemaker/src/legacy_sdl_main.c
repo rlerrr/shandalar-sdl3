@@ -12,6 +12,7 @@
 #endif
 
 extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
+extern HWND g_main_hwnd;
 
 HDC global_main_hdc;
 int global_screen_width;
@@ -89,6 +90,7 @@ static BOOL pump_facemaker_ui(BOOL wait)
     }
   }
 
+  shandalar_window_content_changed(g_main_hwnd);
   SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
   SDL_RenderClear(g_renderer);
   shandalar_win32_sdl_compositor_present(g_renderer);

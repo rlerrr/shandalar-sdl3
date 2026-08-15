@@ -9,9 +9,6 @@
 
 #include "platform/legacy_io.h"
 
-extern void shandalar_window_notify_dc_changed(HDC dc);
-extern void shandalar_window_notify_all_changed(void);
-
 enum ObjectKind {
   OBJECT_BITMAP = 0x424d,
   OBJECT_PALETTE = 0x504c,
@@ -702,7 +699,6 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
           apply_rop(&target[x], source[x], rop);
       }
     }
-    shandalar_window_notify_dc_changed(dst);
     return TRUE;
   }
   temp = (COLORREF *)malloc((size_t)width * (size_t)height * sizeof(*temp));
@@ -717,7 +713,6 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
       write_pixel_color(dst, dx + x, dy + y, temp[y * width + x], rop);
     }
   free(temp);
-  shandalar_window_notify_dc_changed(dst);
   return TRUE;
 }
 
@@ -770,7 +765,6 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
           apply_rop(target, *source, rop);
       }
     }
-    shandalar_window_notify_dc_changed(dst);
     return TRUE;
   }
   for (y = 0; y < dh; ++y)
@@ -781,7 +775,6 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
       if (color != UINT32_MAX)
         write_pixel_color(dst, dx + x, dy + y, color, rop);
     }
-  shandalar_window_notify_dc_changed(dst);
   return TRUE;
 }
 
@@ -1277,7 +1270,6 @@ BOOL DrawFocusRect(HDC dc, const RECT *rect)
   int y;
   if (!dc || !dc->bitmap || !rect)
     return FALSE;
-
   left = map_x(dc, rect->left);
   top = map_y(dc, rect->top);
   right = map_x(dc, rect->right);
@@ -1879,7 +1871,6 @@ int SetDIBitsToDevice(HDC dc, int x, int y, DWORD width, DWORD height,
       if (target) *target = ((const unsigned char *)bits)[row * src_pitch + col];
     }
   }
-  shandalar_window_notify_dc_changed(dc);
   return (int)height;
 }
 
@@ -2142,7 +2133,7 @@ BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
     cached_palette_hash = palette_hash;
     memset(palette_indices_valid, 0, sizeof(palette_indices_valid));
   }
-    for (y = 0; y < height; ++y) {
+  for (y = 0; y < height; ++y) {
     const uint32_t *source =
         (const uint32_t *)((const unsigned char *)pixels + y * pitch_bytes);
     for (x = 0; x < width; ++x) {
@@ -2167,7 +2158,6 @@ BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
       }
     }
   }
-  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 

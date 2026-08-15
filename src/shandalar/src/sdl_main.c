@@ -54,6 +54,7 @@ extern int g_worker_should_exit;
 extern int g_worker_exit_code;
 extern int g_ui_ready;
 extern int g_mouse_button_down;
+extern HWND g_main_hwnd;
 
 int shandalar_runtime_init(const char *asset_root);
 void shandalar_runtime_shutdown(void);
@@ -272,6 +273,7 @@ static BOOL pump_facemaker_ui(BOOL wait)
     }
   }
 
+  shandalar_window_content_changed(g_main_hwnd);
   SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
   SDL_RenderClear(g_renderer);
   shandalar_win32_sdl_compositor_present(g_renderer);
