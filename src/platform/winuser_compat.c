@@ -1243,6 +1243,32 @@ void shandalar_window_content_changed(HWND window)
     ++window->content_revision;
 }
 
+void shandalar_window_notify_dc_changed(HDC dc)
+{
+  struct ShandalarWindow *window;
+  if (!dc)
+    return;
+  for (window = g_allocations; window; window = window->allocation_next) {
+    if (valid_window(window) && window->backing_dc == dc) {
+      ++window->content_revision;
+      return;
+    }
+  }
+  if (valid_window(&g_desktop) && g_desktop.backing_dc == dc)
+    ++g_desktop.content_revision;
+}
+
+void shandalar_window_notify_all_changed(void)
+{
+  struct ShandalarWindow *window;
+  for (window = g_allocations; window; window = window->allocation_next) {
+    if (valid_window(window))
+      ++window->content_revision;
+  }
+  if (valid_window(&g_desktop))
+    ++g_desktop.content_revision;
+}
+
 void shandalar_window_backing_dc_changed(HWND window, HDC dc)
 {
   if (valid_window(window) && dc == window->backing_dc)

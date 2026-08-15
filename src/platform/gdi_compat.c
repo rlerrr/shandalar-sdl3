@@ -9,6 +9,9 @@
 
 #include "platform/legacy_io.h"
 
+extern void shandalar_window_notify_dc_changed(HDC dc);
+extern void shandalar_window_notify_all_changed(void);
+
 enum ObjectKind {
   OBJECT_BITMAP = 0x424d,
   OBJECT_PALETTE = 0x504c,
@@ -699,6 +702,7 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
           apply_rop(&target[x], source[x], rop);
       }
     }
+    shandalar_window_notify_dc_changed(dst);
     return TRUE;
   }
   temp = (COLORREF *)malloc((size_t)width * (size_t)height * sizeof(*temp));
@@ -713,6 +717,7 @@ BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int
       write_pixel_color(dst, dx + x, dy + y, temp[y * width + x], rop);
     }
   free(temp);
+  shandalar_window_notify_dc_changed(dst);
   return TRUE;
 }
 
@@ -765,6 +770,7 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
           apply_rop(target, *source, rop);
       }
     }
+    shandalar_window_notify_dc_changed(dst);
     return TRUE;
   }
   for (y = 0; y < dh; ++y)
@@ -775,6 +781,7 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
       if (color != UINT32_MAX)
         write_pixel_color(dst, dx + x, dy + y, color, rop);
     }
+  shandalar_window_notify_dc_changed(dst);
   return TRUE;
 }
 
@@ -800,6 +807,7 @@ BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
   } else {
     *pixel = color_to_index(dc, color);
   }
+  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -869,6 +877,7 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
         if (pixel) *pixel = index;
       }
   }
+  shandalar_window_notify_dc_changed(dc);
   return 1;
 }
 
@@ -950,6 +959,7 @@ BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
       write_pixel_color(dc, right - 1 - inset, y, pen->color, SRCCOPY);
     }
   }
+  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -1270,6 +1280,7 @@ BOOL DrawFocusRect(HDC dc, const RECT *rect)
   int y;
   if (!dc || !dc->bitmap || !rect)
     return FALSE;
+
   left = map_x(dc, rect->left);
   top = map_y(dc, rect->top);
   right = map_x(dc, rect->right);
@@ -1298,6 +1309,7 @@ BOOL DrawFocusRect(HDC dc, const RECT *rect)
     if (right - 1 != left && ((right - left + y - top - 1) & 1) == 0)
       invert_focus_pixel(dc, right - 1, y);
   }
+  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -1392,6 +1404,8 @@ HPALETTE SelectPalette(HDC dc, HPALETTE palette, BOOL background)
   (void)background;
   if (!dc) return NULL;
   previous = dc->palette; dc->palette = palette;
+  if (palette != previous)
+    shandalar_window_notify_dc_changed(dc);
   return previous;
 }
 UINT RealizePalette(HDC dc)
@@ -1399,6 +1413,7 @@ UINT RealizePalette(HDC dc)
   if (!dc || !dc->palette)
     return 0;
   g_realized_palette = dc->palette;
+  shandalar_window_notify_all_changed();
   return 256;
 }
 BOOL UnrealizeObject(HGDIOBJ object) { return object != NULL; }
@@ -1417,6 +1432,7 @@ UINT SetPaletteEntries(HPALETTE palette, UINT start, UINT count, const PALETTEEN
   if (count > 256 - start) count = 256 - start;
   memcpy(palette->entries + start, entries, count * sizeof(*entries));
   ++palette->revision;
+  shandalar_window_notify_all_changed();
   return count;
 }
 
@@ -1435,6 +1451,7 @@ UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
   }
   dc->bitmap->has_color_table = 1;
   ++dc->bitmap->color_table_revision;
+  shandalar_window_notify_dc_changed(dc);
   return count;
 }
 int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
@@ -1607,6 +1624,7 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
   draw_text_surface(dc, surface, x, y, dc->bitmap->width, dc->bitmap->height);
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
+  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -1755,6 +1773,7 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   max_width = surface->h;
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
+  shandalar_window_notify_dc_changed(dc);
   return logical_from_device(max_width, device_scale_y(dc));
 }
 
@@ -1871,6 +1890,7 @@ int SetDIBitsToDevice(HDC dc, int x, int y, DWORD width, DWORD height,
       if (target) *target = ((const unsigned char *)bits)[row * src_pitch + col];
     }
   }
+  shandalar_window_notify_dc_changed(dc);
   return (int)height;
 }
 
@@ -2133,7 +2153,7 @@ BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
     cached_palette_hash = palette_hash;
     memset(palette_indices_valid, 0, sizeof(palette_indices_valid));
   }
-  for (y = 0; y < height; ++y) {
+    for (y = 0; y < height; ++y) {
     const uint32_t *source =
         (const uint32_t *)((const unsigned char *)pixels + y * pitch_bytes);
     for (x = 0; x < width; ++x) {
@@ -2158,6 +2178,7 @@ BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
       }
     }
   }
+  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
