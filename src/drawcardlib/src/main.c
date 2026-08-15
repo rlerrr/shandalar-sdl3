@@ -1458,8 +1458,7 @@ uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
           idx = idx + 1;
           buf[idx] = '\0';
           GetTextExtentPoint32A(dc, buf, idx, &size);
-          if (drawSymbols != 0)
-            TextOutA(dc, left, top, buf, strlen(buf));
+          TextOutA(dc, left, top, buf, strlen(buf));
           left = left + size.cx;
         }
       }
@@ -1483,8 +1482,7 @@ uint DrawManaText(HDC dc, RECT *rect, char *text, int drawSymbols)
           top = top + line_height;
           left = rect->left;
         }
-        if (drawSymbols != 0)
-          TextOutA(dc, left, top, buf, strlen(buf));
+        TextOutA(dc, left, top, buf, strlen(buf));
         left = left + size.cx;
       }
     }

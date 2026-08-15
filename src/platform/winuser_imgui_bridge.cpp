@@ -152,7 +152,10 @@ void draw_window_scrollbars(HWND window)
       GetScrollRange(window, SB_VERT, &minimum, &maximum) && maximum > minimum) {
     const float slider_height =
         static_cast<float>(client.bottom) - vertical_extent * 2.0f;
-    position = GetScrollPos(window, SB_VERT);
+    /* ImGui vertical sliders put their minimum at the bottom, opposite to a
+     * Win32 scrollbar.  Mirror the display value in both directions so the
+     * Win32 minimum remains at the top. */
+    position = maximum - (GetScrollPos(window, SB_VERT) - minimum);
     ImGui::SetCursorScreenPos(
         ImVec2(static_cast<float>(origin.x + client.right),
                static_cast<float>(origin.y)));
@@ -166,7 +169,8 @@ void draw_window_scrollbars(HWND window)
                           minimum, maximum, "",
                           ImGuiSliderFlags_AlwaysClamp))
       SendMessageA(window, WM_VSCROLL,
-                   MAKEWPARAM(SB_THUMBPOSITION, position), 0);
+                   MAKEWPARAM(SB_THUMBPOSITION,
+                              maximum - (position - minimum)), 0);
     ImGui::SetCursorScreenPos(
         ImVec2(static_cast<float>(origin.x + client.right),
                static_cast<float>(origin.y + client.bottom) - vertical_extent));
@@ -527,6 +531,22 @@ void draw_control_tree(HWND window, HWND modal)
     draw_list->PopClipRect();
 }
 
+void draw_popups_of_hidden_owners(SDL_Renderer *renderer, HWND owner,
+                                  ImDrawList *draw_list)
+{
+  HWND child = GetWindow(owner, GW_CHILD);
+  if (child)
+    child = GetWindow(child, GW_HWNDLAST);
+  for (; child; child = GetWindow(child, GW_HWNDPREV)) {
+    if (IsWindowVisible(child) && !IsWindowVisible(owner) &&
+        (GetWindowLongA(child, GWL_STYLE) & WS_POPUP) == WS_POPUP) {
+      draw_window_tree(renderer, child, draw_list);
+    } else {
+      draw_popups_of_hidden_owners(renderer, child, draw_list);
+    }
+  }
+}
+
 void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
 {
   RECT rect = {};
@@ -795,6 +815,7 @@ extern "C" void shandalar_win32_imgui_present(SDL_Renderer *renderer)
     window = GetWindow(window, GW_HWNDLAST);
   for (; window; window = GetWindow(window, GW_HWNDPREV))
     draw_window_tree(renderer, window, draw_list);
+  draw_popups_of_hidden_owners(renderer, desktop, draw_list);
   draw_controls();
 }
 

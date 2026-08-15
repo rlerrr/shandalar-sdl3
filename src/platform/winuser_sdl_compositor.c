@@ -152,6 +152,25 @@ static void visit_window_tree(HWND window,
     visit_window_tree(child, visitor, userdata);
 }
 
+static void visit_popups_of_hidden_owners(
+    HWND owner, ShandalarWin32WindowTextureVisitor visitor, void *userdata)
+{
+  HWND child = GetWindow(owner, GW_CHILD);
+  if (child)
+    child = GetWindow(child, GW_HWNDLAST);
+  for (; child; child = GetWindow(child, GW_HWNDPREV)) {
+    if (IsWindowVisible(child) && !IsWindowVisible(owner) &&
+        (GetWindowLongA(child, GWL_STYLE) & WS_POPUP) == WS_POPUP) {
+      /* Draw independently visible owned popups after the normal tree.  In
+       * particular, minimized combat/spell buttons must sit above the phase
+       * bar even though the full window which owns them is hidden. */
+      visit_window_tree(child, visitor, userdata);
+    } else {
+      visit_popups_of_hidden_owners(child, visitor, userdata);
+    }
+  }
+}
+
 int shandalar_win32_sdl_compositor_init(SDL_Renderer *renderer)
 {
   if (!renderer)
@@ -185,6 +204,7 @@ void shandalar_win32_sdl_compositor_update(void)
     window = GetWindow(window, GW_HWNDLAST);
   for (; window; window = GetWindow(window, GW_HWNDPREV))
     visit_window_tree(window, update_only, NULL);
+  visit_popups_of_hidden_owners(desktop, update_only, NULL);
 }
 
 static void render_texture(HWND window, SDL_Texture *texture,
@@ -221,6 +241,7 @@ void shandalar_win32_sdl_compositor_visit_all(
     window = GetWindow(window, GW_HWNDLAST);
   for (; window; window = GetWindow(window, GW_HWNDPREV))
     visit_window_tree(window, visitor, userdata);
+  visit_popups_of_hidden_owners(desktop, visitor, userdata);
 }
 
 void shandalar_win32_sdl_compositor_visit_subtree(
@@ -389,6 +410,25 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   }
   if (shandalar_win32_is_builtin_control(target))
     return 0;
+
+  if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+    LRESULT hit = SendMessageA(target, WM_NCHITTEST, 0,
+                              MAKELPARAM(screen.x, screen.y));
+    if (hit != HTCLIENT && hit != HTNOWHERE) {
+      if (event->button.button == SDL_BUTTON_LEFT) {
+        g_mouse_buttons |= MK_LBUTTON;
+        PostMessageA(target, WM_NCLBUTTONDOWN, (WPARAM)hit,
+                     MAKELPARAM(screen.x, screen.y));
+        return 1;
+      }
+      if (event->button.button == SDL_BUTTON_RIGHT) {
+        g_mouse_buttons |= MK_RBUTTON;
+        PostMessageA(target, WM_NCRBUTTONDOWN, (WPARAM)hit,
+                     MAKELPARAM(screen.x, screen.y));
+        return 1;
+      }
+    }
+  }
 
   client = screen;
   ScreenToClient(target, &client);

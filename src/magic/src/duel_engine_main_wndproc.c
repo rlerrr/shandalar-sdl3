@@ -3442,7 +3442,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     g_duel_palette_window_hwnd = CreateWindowExA(0, "MAGIC_PaletteClass", "Palette", 0x80cc0000,
                                                  0x14, 0x14, 300, 0x15e, hwnd, (HMENU)0,
                                                  g_app_instance, (LPVOID)0);
-    shandalar_win32_set_render_caption(g_duel_palette_window_hwnd, TRUE);
     g_your_attack_window_hwnd = (HWND)0;
     g_duel_timer_id = 0x14;
     return 0;

@@ -94,11 +94,38 @@ static int valid_window(HWND window)
 
 static BOOL set_window_text_storage(HWND window, LPCSTR text);
 
+static int uses_custom_nonclient_paint(HWND window)
+{
+  return valid_window(window) &&
+         (window->style & WS_CAPTION) == WS_CAPTION &&
+         !window->render_caption;
+}
+
+#define CUSTOM_NONCLIENT_FRAME 6
+
+static void get_client_bounds(HWND window, RECT *rect)
+{
+  SetRect(rect, 0, 0, window->width, window->height);
+  SendMessageA(window, WM_NCCALCSIZE, FALSE, (LPARAM)rect);
+  if (window->style & WS_HSCROLL)
+    rect->bottom -= GetSystemMetrics(SM_CYHSCROLL);
+  if (window->style & WS_VSCROLL)
+    rect->right -= GetSystemMetrics(SM_CXVSCROLL);
+  if (rect->right < rect->left)
+    rect->right = rect->left;
+  if (rect->bottom < rect->top)
+    rect->bottom = rect->top;
+}
+
 static int effectively_visible(HWND window)
 {
   while (valid_window(window) && window != &g_desktop) {
     if (!window->visible)
       return 0;
+    /* WS_POPUP windows use hwndParent as an owner.  Their visibility is not
+     * clipped by that owner's visibility. */
+    if ((window->style & WS_POPUP) == WS_POPUP)
+      return 1;
     window = window->parent;
   }
   return 1;
@@ -199,11 +226,13 @@ static void absolute_origin(HWND window, int *x, int *y)
     ay = window->y;
     if ((window->style & WS_CHILD) == WS_CHILD &&
         valid_window(window->parent) && window->parent != &g_desktop) {
+      RECT parent_client;
       absolute_origin(window->parent, &ax, &ay);
       ax += window->x;
       ay += window->y;
-      if ((window->parent->style & WS_CAPTION) == WS_CAPTION)
-        ay += GetSystemMetrics(SM_CYCAPTION);
+      get_client_bounds(window->parent, &parent_client);
+      ax += parent_client.left;
+      ay += parent_client.top;
     }
   }
   if (x)
@@ -214,9 +243,15 @@ static void absolute_origin(HWND window, int *x, int *y)
 
 static void client_origin(HWND window, int *x, int *y)
 {
+  RECT client;
   absolute_origin(window, x, y);
-  if (valid_window(window) && (window->style & WS_CAPTION) == WS_CAPTION && y)
-    *y += GetSystemMetrics(SM_CYCAPTION);
+  if (valid_window(window)) {
+    get_client_bounds(window, &client);
+    if (x)
+      *x += client.left;
+    if (y)
+      *y += client.top;
+  }
 }
 
 ATOM RegisterClassA(const WNDCLASSA *window_class)
@@ -285,6 +320,8 @@ HWND CreateWindowExA(DWORD ex_style, LPCSTR class_name, LPCSTR window_name,
   window->menu = menu;
   window->control_id = (style & WS_CHILD) ? (int)(intptr_t)menu : 0;
   window->style = style;
+  window->render_caption =
+      ((style & WS_CAPTION) == WS_CAPTION) && (style & WS_SYSMENU);
   window->ex_style = ex_style;
   window->x = x;
   window->y = y;
@@ -385,6 +422,43 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
     return 0;
   case WM_GETTEXTLENGTH:
     return GetWindowTextLengthA(window);
+  case WM_NCHITTEST:
+    {
+      POINT point;
+      POINT client_origin = {0, 0};
+      RECT window_rect;
+      RECT client_rect;
+      point.x = (short)LOWORD(lparam);
+      point.y = (short)HIWORD(lparam);
+      if (!GetWindowRect(window, &window_rect) ||
+          point.x < window_rect.left || point.x >= window_rect.right ||
+          point.y < window_rect.top || point.y >= window_rect.bottom)
+        return HTNOWHERE;
+      GetClientRect(window, &client_rect);
+      ClientToScreen(window, &client_origin);
+      if (point.x >= client_origin.x &&
+          point.x < client_origin.x + client_rect.right &&
+          point.y >= client_origin.y &&
+          point.y < client_origin.y + client_rect.bottom)
+        return HTCLIENT;
+      if ((window->style & WS_CAPTION) == WS_CAPTION &&
+          point.y < client_origin.y)
+        return HTCAPTION;
+      return HTBORDER;
+    }
+  case WM_NCCALCSIZE:
+    if (lparam && (window->style & WS_CAPTION) == WS_CAPTION) {
+      RECT *rect = (RECT *)lparam;
+      if (uses_custom_nonclient_paint(window)) {
+        int frame = CUSTOM_NONCLIENT_FRAME;
+        rect->left += frame;
+        rect->right -= frame;
+        rect->bottom -= frame;
+        rect->top += frame;
+      }
+      rect->top += GetSystemMetrics(SM_CYCAPTION);
+    }
+    return 0;
   case WM_SYSCOMMAND:
     if ((wparam & 0xfff0) == SC_MOVE && g_has_system_drag_endpoint) {
       shandalar_win32_set_cursor_position(g_system_drag_endpoint.x,
@@ -440,14 +514,15 @@ LRESULT DefWindowProcA(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
     }
     return 0;
   case WM_PAINT:
-    /* DefWindowProc validates the update region for controls which do not
-     * implement their own paint handler.  ImGui renders those controls. */
-    if (window->erase) {
-      SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
-      ++window->content_revision;
+    /* Even windows which delegate painting here receive a client DC on
+     * Windows.  Going straight to the full-window backing DC paints a
+     * captioned window's client-sized background at (0, 0), leaving an
+     * unpainted strip along the bottom. */
+    {
+      PAINTSTRUCT paint;
+      if (BeginPaint(window, &paint))
+        EndPaint(window, &paint);
     }
-    window->dirty = 0;
-    window->erase = 0;
     return 0;
   default:
     return 0;
@@ -622,7 +697,12 @@ LONG SetWindowLongA(HWND window, int index, LONG value)
   case GWL_HINSTANCE: window->instance = (HINSTANCE)(intptr_t)value; break;
   case GWL_HWNDPARENT: SetParent(window, (HWND)(intptr_t)value); break;
   case GWL_ID: window->control_id = value; break;
-  case GWL_STYLE: window->style = (DWORD)value; break;
+  case GWL_STYLE:
+    window->style = (DWORD)value;
+    window->render_caption =
+        (((DWORD)value & WS_CAPTION) == WS_CAPTION) &&
+        ((DWORD)value & WS_SYSMENU);
+    break;
   case GWL_EXSTYLE: window->ex_style = (DWORD)value; break;
   case GWL_USERDATA: window->user_data = value; break;
   default: return extra_set(window, index, value, sizeof(LONG));
@@ -743,19 +823,11 @@ DWORD GetWindowThreadProcessId(HWND window, DWORD *process_id)
 
 BOOL GetClientRect(HWND window, RECT *rect)
 {
-  int width;
-  int height;
+  RECT bounds;
   if (!valid_window(window) || !rect)
     return FALSE;
-  width = window->width;
-  height = window->height;
-  if ((window->style & WS_CAPTION) == WS_CAPTION)
-    height -= GetSystemMetrics(SM_CYCAPTION);
-  if (window->style & WS_HSCROLL)
-    height -= GetSystemMetrics(SM_CYHSCROLL);
-  if (window->style & WS_VSCROLL)
-    width -= GetSystemMetrics(SM_CXVSCROLL);
-  SetRect(rect, 0, 0, width > 0 ? width : 0, height > 0 ? height : 0);
+  get_client_bounds(window, &bounds);
+  SetRect(rect, 0, 0, bounds.right - bounds.left, bounds.bottom - bounds.top);
   return TRUE;
 }
 
@@ -772,9 +844,21 @@ BOOL GetWindowRect(HWND window, RECT *rect)
 
 BOOL AdjustWindowRect(RECT *rect, DWORD style, BOOL menu)
 {
-  (void)style;
   (void)menu;
-  return rect != NULL;
+  if (!rect)
+    return FALSE;
+  if ((style & WS_CAPTION) == WS_CAPTION && !(style & WS_SYSMENU)) {
+    rect->left -= CUSTOM_NONCLIENT_FRAME;
+    rect->top -= GetSystemMetrics(SM_CYCAPTION) + CUSTOM_NONCLIENT_FRAME;
+    rect->right += CUSTOM_NONCLIENT_FRAME;
+    rect->bottom += CUSTOM_NONCLIENT_FRAME;
+  } else if (style & WS_BORDER) {
+    rect->left -= GetSystemMetrics(SM_CXBORDER);
+    rect->top -= GetSystemMetrics(SM_CXBORDER);
+    rect->right += GetSystemMetrics(SM_CXBORDER);
+    rect->bottom += GetSystemMetrics(SM_CXBORDER);
+  }
+  return TRUE;
 }
 
 BOOL SetWindowPos(HWND window, HWND insert_after, int x, int y, int width, int height, UINT flags)
@@ -1049,6 +1133,8 @@ BOOL UpdateWindow(HWND window)
   if (!valid_window(window) || !window->dirty)
     return FALSE;
   SendMessageA(window, WM_PAINT, 0, 0);
+  if (uses_custom_nonclient_paint(window))
+    SendMessageA(window, WM_NCPAINT, 1, 0);
   window->dirty = 0;
   window->erase = 0;
   return TRUE;
@@ -1057,15 +1143,24 @@ BOOL UpdateWindow(HWND window)
 HDC BeginPaint(HWND window, PAINTSTRUCT *paint)
 {
   int erase;
+  RECT client;
   if (!valid_window(window) || !paint)
     return NULL;
   erase = window->erase;
-  if (erase)
-    SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
   memset(paint, 0, sizeof(*paint));
   paint->hdc = window->backing_dc;
+  if (uses_custom_nonclient_paint(window)) {
+    get_client_bounds(window, &client);
+    paint->fRestore = SaveDC(paint->hdc);
+    shandalar_dc_set_device_origin(paint->hdc, client.left, client.top);
+    IntersectClipRect(paint->hdc, 0, 0,
+                      client.right - client.left,
+                      client.bottom - client.top);
+  }
+  if (erase)
+    SendMessageA(window, WM_ERASEBKGND, (WPARAM)window->backing_dc, 0);
   paint->fErase = erase;
-  SetRect(&paint->rcPaint, 0, 0, window->width, window->height);
+  GetClientRect(window, &paint->rcPaint);
   window->dirty = 0;
   window->erase = 0;
   return paint->hdc;
@@ -1075,6 +1170,9 @@ BOOL EndPaint(HWND window, const PAINTSTRUCT *paint)
 {
   if (!valid_window(window) || !paint)
     return FALSE;
+  if (paint->fRestore)
+    RestoreDC(paint->hdc, paint->fRestore);
+  shandalar_dc_set_device_origin(paint->hdc, 0, 0);
   ++window->content_revision;
   return TRUE;
 }

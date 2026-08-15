@@ -7,6 +7,8 @@ extern HINSTANCE global_hinstance;
 
 #define SX(value) ((value) * 3 / 2)
 #define SY(value) ((value) * 5 / 3)
+#define NOSYS_DLG_STYLE (WS_POPUP | WS_CAPTION)
+#define DFLT_DLG_STYLE (NOSYS_DLG_STYLE | WS_SYSMENU)
 
 static HWND add_control(HWND dialog, const char *class_name, int id,
                         int x, int y, int width, int height, DWORD style)
@@ -17,16 +19,23 @@ static HWND add_control(HWND dialog, const char *class_name, int id,
                          (HMENU)(intptr_t)id, global_hinstance, NULL);
 }
 
-static HWND make_dialog(HINSTANCE instance, HWND parent, int width, int height)
+static HWND make_dialog(HINSTANCE instance, HWND parent, int width, int height,
+                        DWORD style)
 {
   RECT desktop;
+  HWND dialog;
   int pixel_width = SX(width);
-  int pixel_height = SY(height) + GetSystemMetrics(SM_CYCAPTION);
+  int pixel_height = SY(height) +
+                     (((style & WS_CAPTION) == WS_CAPTION) ?
+                          GetSystemMetrics(SM_CYCAPTION) : 0);
   GetClientRect(GetDesktopWindow(), &desktop);
-  return shandalar_win32_create_dialog(instance, parent, "",
-                                       (desktop.right - pixel_width) / 2,
-                                       (desktop.bottom - pixel_height) / 2,
-                                       pixel_width, pixel_height);
+  dialog = shandalar_win32_create_dialog(instance, parent, "",
+                                         (desktop.right - pixel_width) / 2,
+                                         (desktop.bottom - pixel_height) / 2,
+                                         pixel_width, pixel_height);
+  if (dialog)
+    SetWindowLongA(dialog, GWL_STYLE, style);
+  return dialog;
 }
 
 static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND parent)
@@ -35,14 +44,14 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
   HWND dialog;
   switch (id) {
   case RES_DIALOG_ASK_VALUE:
-    dialog = make_dialog(instance, parent, 114, 61);
+    dialog = make_dialog(instance, parent, 114, 61, DFLT_DLG_STYLE);
     add_control(dialog, "EDIT", RES_ASKVALUE_EDITTEXT, 42, 10, 30, 12, WS_BORDER);
     add_control(dialog, "BUTTON", RES_BUTTON_OK, 10, 35, 35, 14, BS_DEFPUSHBUTTON);
     add_control(dialog, "BUTTON", RES_BUTTON_CANCEL, 60, 35, 45, 14, 0);
     return dialog;
 
   case RES_DIALOG_FILTER_LIST:
-    dialog = make_dialog(instance, parent, 164, 216);
+    dialog = make_dialog(instance, parent, 164, 216, DFLT_DLG_STYLE);
     add_control(dialog, "LISTBOX", RES_FILTERLIST_LISTBOX, 5, 5, 155, 135,
                 WS_BORDER | WS_VSCROLL | WS_HSCROLL | LBS_SORT | LBS_MULTIPLESEL);
     add_control(dialog, "BUTTON", RES_BUTTON_OK, 10, 190, 65, 14, BS_DEFPUSHBUTTON);
@@ -54,7 +63,7 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
     return dialog;
 
   case RES_DIALOG_DECKINFO:
-    dialog = make_dialog(instance, parent, 279, 180);
+    dialog = make_dialog(instance, parent, 279, 180, DFLT_DLG_STYLE);
     add_control(dialog, "EDIT", RES_DECKINFO_DECKTITLE_EDITTEXT, 65, 15, 185, 12, WS_BORDER);
     add_control(dialog, "EDIT", RES_DECKINFO_DESCRIPTION_EDITTEXT, 65, 30, 185, 12, WS_BORDER);
     add_control(dialog, "EDIT", RES_DECKINFO_NAME_EDITTEXT, 65, 45, 185, 12, WS_BORDER);
@@ -79,10 +88,10 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
     return dialog;
 
   case RES_DIALOG_DECKSTATS:
-    return make_dialog(instance, parent, 270, 179);
+    return make_dialog(instance, parent, 270, 179, DFLT_DLG_STYLE);
 
   case RES_DIALOG_INFOBOX:
-    dialog = make_dialog(instance, parent, 219, 151);
+    dialog = make_dialog(instance, parent, 219, 151, NOSYS_DLG_STYLE);
     add_control(dialog, "BUTTON", RES_BUTTON_OK, 25, 130, 85, 14, BS_DEFPUSHBUTTON);
     add_control(dialog, "BUTTON", RES_BUTTON_CANCEL, 135, 130, 60, 14, 0);
     add_control(dialog, "STATIC", RES_INFOBOX_DESCRIPTION, 20, 15, 190, 10, 0);
@@ -97,7 +106,7 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
       RES_GROUPMOVE_BUTTON_WHITE, RES_GROUPMOVE_BUTTON_ARTIFACT
     };
     int i;
-    dialog = make_dialog(instance, parent, 164, 136);
+    dialog = make_dialog(instance, parent, 164, 136, NOSYS_DLG_STYLE);
     for (i = 0; i < 5; ++i)
       add_control(dialog, "BUTTON", button_ids[i], 45, 15 + i * 15, 95, 10,
                   BS_AUTOCHECKBOX);
@@ -108,7 +117,7 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
   }
 
   case RES_DIALOG_LOADDECK:
-    dialog = make_dialog(instance, parent, 342, 94);
+    dialog = make_dialog(instance, parent, 342, 94, DFLT_DLG_STYLE);
     add_control(dialog, "STATIC", RES_LOADDECK_PLAYERDECK, 9, 6, 47, 19, 0);
     add_control(dialog, "COMBOBOX", RES_LOADDECK_DECKLIST, 61, 6, 259, 14,
                 WS_VSCROLL | CBS_DROPDOWNLIST | CBS_SORT);

@@ -79,6 +79,8 @@ typedef struct PaintObject {
   ObjectHeader header;
   COLORREF color;
   int is_null;
+  int style;
+  int width;
 } PaintObject;
 
 typedef struct CompatRegion {
@@ -108,6 +110,8 @@ struct ShandalarDC {
   int window_org_y;
   int viewport_org_x;
   int viewport_org_y;
+  int device_org_x;
+  int device_org_y;
   int has_clip;
   RECT clip;
   DCState saved[16];
@@ -389,6 +393,7 @@ HDC CreateCompatibleDC(HDC unused)
     dc->text_color = RGB(0, 0, 0);
     dc->background_color = PALETTEINDEX(0);
     dc->background_mode = OPAQUE;
+    dc->font = (HFONT)GetStockObject(SYSTEM_FONT);
     dc->window_ext_x = dc->viewport_ext_x = 1;
     dc->window_ext_y = dc->viewport_ext_y = 1;
   }
@@ -400,8 +405,8 @@ static int map_x(HDC dc, int x)
   if (!dc)
     return x;
   if (dc->map_mode == MM_TEXT)
-    return dc->viewport_org_x + x - dc->window_org_x;
-  return dc->viewport_org_x +
+    return dc->device_org_x + dc->viewport_org_x + x - dc->window_org_x;
+  return dc->device_org_x + dc->viewport_org_x +
          (x - dc->window_org_x) * dc->viewport_ext_x / dc->window_ext_x;
 }
 
@@ -410,8 +415,8 @@ static int map_y(HDC dc, int y)
   if (!dc)
     return y;
   if (dc->map_mode == MM_TEXT)
-    return dc->viewport_org_y + y - dc->window_org_y;
-  return dc->viewport_org_y +
+    return dc->device_org_y + dc->viewport_org_y + y - dc->window_org_y;
+  return dc->device_org_y + dc->viewport_org_y +
          (y - dc->window_org_y) * dc->viewport_ext_y / dc->window_ext_y;
 }
 
@@ -716,6 +721,8 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
   int x, y;
   int right;
   int bottom;
+  int flip_x = 0;
+  int flip_y = 0;
   int logical_dx = dx;
   int logical_dy = dy;
   right = map_x(dst, logical_dx + dw);
@@ -724,16 +731,36 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
   dy = map_y(dst, logical_dy);
   dw = right - dx;
   dh = bottom - dy;
+  if (dw < 0) {
+    dx += dw;
+    dw = -dw;
+    flip_x = 1;
+  }
+  if (dh < 0) {
+    dy += dh;
+    dh = -dh;
+    flip_y = 1;
+  }
   if (!dst || !src || !dst->bitmap || !src->bitmap || dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0)
     return FALSE;
   if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
       can_copy_indexed_pixels_directly(dst, src) &&
       (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
     for (y = 0; y < dh; ++y) {
-      int source_y = sy + y * sh / dh;
+      int source_y = sy + (flip_y ? dh - 1 - y : y) * sh / dh;
       for (x = 0; x < dw; ++x) {
-        unsigned char *source = pixel_at(src->bitmap, sx + x * sw / dw, source_y);
-        unsigned char *target = pixel_at(dst->bitmap, dx + x, dy + y);
+        int target_x = dx + x;
+        int target_y = dy + y;
+        unsigned char *source;
+        unsigned char *target;
+        if (dst->has_clip &&
+            (target_x < dst->clip.left || target_x >= dst->clip.right ||
+             target_y < dst->clip.top || target_y >= dst->clip.bottom))
+          continue;
+        source = pixel_at(src->bitmap,
+                          sx + (flip_x ? dw - 1 - x : x) * sw / dw,
+                          source_y);
+        target = pixel_at(dst->bitmap, target_x, target_y);
         if (source && target)
           apply_rop(target, *source, rop);
       }
@@ -742,7 +769,9 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
   }
   for (y = 0; y < dh; ++y)
     for (x = 0; x < dw; ++x) {
-      COLORREF color = read_pixel_color(src, sx + x * sw / dw, sy + y * sh / dh);
+      COLORREF color = read_pixel_color(
+          src, sx + (flip_x ? dw - 1 - x : x) * sw / dw,
+          sy + (flip_y ? dh - 1 - y : y) * sh / dh);
       if (color != UINT32_MAX)
         write_pixel_color(dst, dx + x, dy + y, color, rop);
     }
@@ -781,6 +810,7 @@ static PaintObject *create_paint(int kind, COLORREF color, int is_null)
     object->header.kind = kind;
     object->color = color;
     object->is_null = is_null;
+    object->width = 1;
   }
   return object;
 }
@@ -788,8 +818,21 @@ static PaintObject *create_paint(int kind, COLORREF color, int is_null)
 HBRUSH CreateSolidBrush(COLORREF color) { return create_paint(OBJECT_BRUSH, color, 0); }
 HBRUSH CreateBrushIndirect(const LOGBRUSH *brush) { return CreateSolidBrush(brush ? brush->lbColor : 0); }
 HBRUSH CreateHatchBrush(int hatch, COLORREF color) { (void)hatch; return CreateSolidBrush(color); }
-HPEN CreatePen(int style, int width, COLORREF color) { (void)style; (void)width; return create_paint(OBJECT_PEN, color, 0); }
-HPEN CreatePenIndirect(const LOGPEN *pen) { return CreatePen(0, 1, pen ? pen->lopnColor : 0); }
+HPEN CreatePen(int style, int width, COLORREF color)
+{
+  PaintObject *pen = create_paint(OBJECT_PEN, color, 0);
+  if (pen) {
+    pen->style = style;
+    pen->width = width > 0 ? width : 1;
+  }
+  return pen;
+}
+HPEN CreatePenIndirect(const LOGPEN *pen)
+{
+  return CreatePen(pen ? (int)pen->lopnStyle : 0,
+                   pen && pen->lopnWidth.x > 0 ? pen->lopnWidth.x : 1,
+                   pen ? pen->lopnColor : 0);
+}
 
 int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
 {
@@ -881,6 +924,10 @@ BOOL LineTo(HDC dc, int x1, int y1)
 BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
 {
   RECT fill_rect;
+  PaintObject *pen;
+  int inset;
+  int x;
+  int y;
   if (!dc)
     return FALSE;
   SetRect(&fill_rect, left, top, right, bottom);
@@ -889,9 +936,29 @@ BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
   top = map_y(dc, top);
   right = map_x(dc, right);
   bottom = map_y(dc, bottom);
-  MoveToEx(dc, left, top, NULL); LineTo(dc, right - 1, top);
-  LineTo(dc, right - 1, bottom - 1); LineTo(dc, left, bottom - 1); LineTo(dc, left, top);
+  pen = (PaintObject *)dc->pen;
+  if (!pen || pen->is_null)
+    return TRUE;
+  for (inset = 0; inset < pen->width && left + inset < right - inset &&
+                   top + inset < bottom - inset; ++inset) {
+    for (x = left + inset; x < right - inset; ++x) {
+      write_pixel_color(dc, x, top + inset, pen->color, SRCCOPY);
+      write_pixel_color(dc, x, bottom - 1 - inset, pen->color, SRCCOPY);
+    }
+    for (y = top + inset + 1; y < bottom - 1 - inset; ++y) {
+      write_pixel_color(dc, left + inset, y, pen->color, SRCCOPY);
+      write_pixel_color(dc, right - 1 - inset, y, pen->color, SRCCOPY);
+    }
+  }
   return TRUE;
+}
+
+void shandalar_dc_set_device_origin(HDC dc, int x, int y)
+{
+  if (!dc)
+    return;
+  dc->device_org_x = x;
+  dc->device_org_y = y;
 }
 
 BOOL Ellipse(HDC dc, int left, int top, int right, int bottom)
@@ -1178,10 +1245,60 @@ BOOL OffsetRect(RECT *rect, int dx, int dy)
   return TRUE;
 }
 
+static void invert_focus_pixel(HDC dc, int x, int y)
+{
+  unsigned char *pixel;
+  int component;
+  if (dc->has_clip &&
+      (x < dc->clip.left || x >= dc->clip.right ||
+       y < dc->clip.top || y >= dc->clip.bottom))
+    return;
+  pixel = pixel_at(dc->bitmap, x, y);
+  if (!pixel)
+    return;
+  for (component = 0; component < dc->bitmap->bits_per_pixel / 8; ++component)
+    pixel[component] ^= 0xff;
+}
+
 BOOL DrawFocusRect(HDC dc, const RECT *rect)
 {
-  if (!dc || !rect) return FALSE;
-  return Rectangle(dc, rect->left, rect->top, rect->right, rect->bottom);
+  int left;
+  int top;
+  int right;
+  int bottom;
+  int x;
+  int y;
+  if (!dc || !dc->bitmap || !rect)
+    return FALSE;
+  left = map_x(dc, rect->left);
+  top = map_y(dc, rect->top);
+  right = map_x(dc, rect->right);
+  bottom = map_y(dc, rect->bottom);
+  if (right < left) {
+    x = left;
+    left = right;
+    right = x;
+  }
+  if (bottom < top) {
+    y = top;
+    top = bottom;
+    bottom = y;
+  }
+  if (right <= left || bottom <= top)
+    return FALSE;
+
+  for (x = left; x < right; x += 2) {
+    invert_focus_pixel(dc, x, top);
+    if (bottom - 1 != top)
+      invert_focus_pixel(dc, x, bottom - 1);
+  }
+  for (y = top + 1; y < bottom - 1; ++y) {
+    if (((y - top) & 1) != 0)
+      invert_focus_pixel(dc, left, y);
+    if (right - 1 != left && ((right - left + y - top - 1) & 1) == 0)
+      invert_focus_pixel(dc, right - 1, y);
+  }
+  return TRUE;
 }
 
 int SetMapMode(HDC dc, int mode) { int old = dc ? dc->map_mode : 0; if (dc) dc->map_mode = mode; return old; }
@@ -1198,8 +1315,10 @@ BOOL DPtoLP(HDC dc, LPPOINT points, int count)
     return FALSE;
   if (dc->map_mode == MM_TEXT) {
     for (i = 0; i < count; ++i) {
-      points[i].x = dc->window_org_x + points[i].x - dc->viewport_org_x;
-      points[i].y = dc->window_org_y + points[i].y - dc->viewport_org_y;
+      points[i].x = dc->window_org_x + points[i].x - dc->device_org_x -
+                    dc->viewport_org_x;
+      points[i].y = dc->window_org_y + points[i].y - dc->device_org_y -
+                    dc->viewport_org_y;
     }
     return TRUE;
   }
@@ -1207,10 +1326,12 @@ BOOL DPtoLP(HDC dc, LPPOINT points, int count)
     return FALSE;
   for (i = 0; i < count; ++i) {
     points[i].x = dc->window_org_x +
-                  (points[i].x - dc->viewport_org_x) * dc->window_ext_x /
+                  (points[i].x - dc->device_org_x - dc->viewport_org_x) *
+                    dc->window_ext_x /
                     dc->viewport_ext_x;
     points[i].y = dc->window_org_y +
-                  (points[i].y - dc->viewport_org_y) * dc->window_ext_y /
+                  (points[i].y - dc->device_org_y - dc->viewport_org_y) *
+                    dc->window_ext_y /
                     dc->viewport_ext_y;
   }
   return TRUE;

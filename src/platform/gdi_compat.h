@@ -358,6 +358,7 @@ void LeaveCriticalSection(CRITICAL_SECTION *section);
 void shandalar_set_screen_dc(HDC dc);
 HDC shandalar_create_screen_dc(int width, int height);
 void shandalar_destroy_screen_dc(HDC dc);
+void shandalar_dc_set_device_origin(HDC dc, int x, int y);
 const void *shandalar_dc_pixels(HDC dc, int *pitch);
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes);
 COLORREF shandalar_dc_resolve_color(HDC dc, COLORREF color);

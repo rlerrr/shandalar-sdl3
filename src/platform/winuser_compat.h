@@ -280,8 +280,11 @@ typedef struct tagWINDOWPOS {
 #define WM_PALETTECHANGED 0x0311
 #define WM_USER 0x0400
 
+#define HTNOWHERE 0
+#define HTCLIENT 1
 #define HTCAPTION 2
 #define HTMINBUTTON 8
+#define HTBORDER 18
 #define DLGC_BUTTON 0x2000
 #define WA_ACTIVE 1
 #define WA_CLICKACTIVE 2

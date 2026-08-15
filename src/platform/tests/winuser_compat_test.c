@@ -122,10 +122,11 @@ int main(void)
   CHECK(child);
   CHECK(creates == 3);
   caption_window = CreateWindowExA(0, "CompatTest", "caption",
-                                   WS_VISIBLE | WS_CAPTION,
+                                   WS_VISIBLE | WS_CAPTION | WS_SYSMENU,
                                    100, 120, 200, 100,
                                    NULL, NULL, NULL, NULL);
   CHECK(caption_window);
+  CHECK(shandalar_win32_should_render_caption(caption_window));
   caption_child = CreateWindowExA(0, "CompatTest", "caption child",
                                   WS_CHILD | WS_VISIBLE,
                                   4, 6, 20, 10,

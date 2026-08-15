@@ -58,9 +58,36 @@ static HWND hit_test_children(HWND parent, POINT point)
   return NULL;
 }
 
+/* Owned popups live in the owner's bookkeeping tree in the compatibility
+ * layer, but unlike WS_CHILD controls they can remain visible outside (or
+ * while hiding) that owner. */
+static HWND hit_test_owned_popups(HWND parent, POINT point)
+{
+  HWND child = GetWindow(parent, GW_CHILD);
+  while (child) {
+    HWND nested = hit_test_owned_popups(child, point);
+    if (nested)
+      return nested;
+    if ((GetWindowLongA(child, GWL_STYLE) & WS_POPUP) == WS_POPUP &&
+        IsWindowVisible(child)) {
+      RECT rect;
+      if (GetWindowRect(child, &rect) &&
+          point.x >= rect.left && point.x < rect.right &&
+          point.y >= rect.top && point.y < rect.bottom) {
+        HWND descendant = hit_test_children(child, point);
+        return descendant ? descendant : child;
+      }
+    }
+    child = GetWindow(child, GW_HWNDNEXT);
+  }
+  return NULL;
+}
+
 HWND WindowFromPoint(POINT point)
 {
-  HWND hit = hit_test_children(GetDesktopWindow(), point);
+  HWND hit = hit_test_owned_popups(GetDesktopWindow(), point);
+  if (!hit)
+    hit = hit_test_children(GetDesktopWindow(), point);
   return hit ? hit : GetDesktopWindow();
 }
 
@@ -142,6 +169,7 @@ int GetSystemMetrics(int index)
   case SM_CXBORDER: return 1;
   case SM_CYCAPTION: return 19;
   case SM_CYHSCROLL: return 17;
+  case SM_CXSIZE: return 18;
   default: return 0;
   }
 }
@@ -227,8 +255,11 @@ BOOL DestroyIcon(HICON icon)
 
 HBITMAP LoadBitmapA(HINSTANCE instance, LPCSTR resource_name)
 {
+  UINT_PTR resource_id = (UINT_PTR)resource_name;
   (void)instance;
-  (void)resource_name;
+  if (resource_id == 0x7fed)
+    return CreateBitmap(GetSystemMetrics(SM_CXSIZE),
+                        GetSystemMetrics(SM_CYCAPTION) - 1, 1, 8, NULL);
   return CreateBitmap(1, 1, 1, 8, NULL);
 }
 
