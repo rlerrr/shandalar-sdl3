@@ -807,7 +807,6 @@ BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
   } else {
     *pixel = color_to_index(dc, color);
   }
-  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -877,7 +876,6 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
         if (pixel) *pixel = index;
       }
   }
-  shandalar_window_notify_dc_changed(dc);
   return 1;
 }
 
@@ -959,7 +957,6 @@ BOOL Rectangle(HDC dc, int left, int top, int right, int bottom)
       write_pixel_color(dc, right - 1 - inset, y, pen->color, SRCCOPY);
     }
   }
-  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -1309,7 +1306,6 @@ BOOL DrawFocusRect(HDC dc, const RECT *rect)
     if (right - 1 != left && ((right - left + y - top - 1) & 1) == 0)
       invert_focus_pixel(dc, right - 1, y);
   }
-  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -1404,8 +1400,6 @@ HPALETTE SelectPalette(HDC dc, HPALETTE palette, BOOL background)
   (void)background;
   if (!dc) return NULL;
   previous = dc->palette; dc->palette = palette;
-  if (palette != previous)
-    shandalar_window_notify_dc_changed(dc);
   return previous;
 }
 UINT RealizePalette(HDC dc)
@@ -1413,7 +1407,6 @@ UINT RealizePalette(HDC dc)
   if (!dc || !dc->palette)
     return 0;
   g_realized_palette = dc->palette;
-  shandalar_window_notify_all_changed();
   return 256;
 }
 BOOL UnrealizeObject(HGDIOBJ object) { return object != NULL; }
@@ -1432,7 +1425,6 @@ UINT SetPaletteEntries(HPALETTE palette, UINT start, UINT count, const PALETTEEN
   if (count > 256 - start) count = 256 - start;
   memcpy(palette->entries + start, entries, count * sizeof(*entries));
   ++palette->revision;
-  shandalar_window_notify_all_changed();
   return count;
 }
 
@@ -1451,7 +1443,6 @@ UINT SetDIBColorTable(HDC dc, UINT start, UINT count, const RGBQUAD *colors)
   }
   dc->bitmap->has_color_table = 1;
   ++dc->bitmap->color_table_revision;
-  shandalar_window_notify_dc_changed(dc);
   return count;
 }
 int SetStretchBltMode(HDC dc, int mode) { (void)dc; return mode; }
@@ -1624,7 +1615,6 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
   draw_text_surface(dc, surface, x, y, dc->bitmap->width, dc->bitmap->height);
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
-  shandalar_window_notify_dc_changed(dc);
   return TRUE;
 }
 
@@ -1773,7 +1763,6 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   max_width = surface->h;
   SDL_DestroySurface(surface);
   restore_font_size(dc, old_size);
-  shandalar_window_notify_dc_changed(dc);
   return logical_from_device(max_width, device_scale_y(dc));
 }
 

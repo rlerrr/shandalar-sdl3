@@ -18,6 +18,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
       "-sALLOW_MEMORY_GROWTH=1"
       "-sFORCE_FILESYSTEM=1"
       "-sASYNCIFY=1"
+      "-sASYNCIFY_STACK_SIZE=16384"
       "-sEXIT_RUNTIME=1"
       "-sFETCH=1"
       "--profiling-funcs"

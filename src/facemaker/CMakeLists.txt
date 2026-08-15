@@ -55,6 +55,7 @@ if(SHANDALAR_BUILD_FACEMAKER)
       "-sFORCE_FILESYSTEM=1"
       "-sMAXIMUM_MEMORY=1GB"
       "-sASYNCIFY=1"
+      "-sASYNCIFY_STACK_SIZE=16384"
       "-sEXIT_RUNTIME=1"
       "-sFETCH=1"
       "--profiling-funcs"
