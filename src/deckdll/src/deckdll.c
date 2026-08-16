@@ -1444,7 +1444,7 @@ init_deckbuilder(HINSTANCE dll, int unused)
   global_deckbuilder_unknown_1019f010 = 0;
   global_current_deck = 0;
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(__EMSCRIPTEN__)
   // Allow debugging directly from output directory
   if (getcwd(global_base_directory, sizeof(global_base_directory)) == NULL)
   {

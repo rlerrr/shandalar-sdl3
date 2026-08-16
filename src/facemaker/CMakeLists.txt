@@ -58,7 +58,6 @@ if(SHANDALAR_BUILD_FACEMAKER)
       "-sASYNCIFY_STACK_SIZE=16384"
       "-sEXIT_RUNTIME=1"
       "-sFETCH=1"
-      "--profiling-funcs"
       "-lidbfs.js"
     )
     if(SHANDALAR_ASSET_DIR)

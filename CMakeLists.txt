@@ -119,7 +119,8 @@ if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_SHANDALAR)
 endif()
 
 if(EMSCRIPTEN)
-  add_compile_options(-g)
+  add_compile_options("$<$<CONFIG:Debug>:-g>")
+  add_link_options("$<IF:$<CONFIG:Debug>,-g,--profiling-funcs>")
 endif()
 
 if(MSVC)

@@ -33,7 +33,7 @@ if /I "%APP%"=="deck" (
 )
 
 call emcmake cmake -S . -B "%BUILD_DIR%" -G Ninja ^
-  -DCMAKE_BUILD_TYPE=MinSizeRel ^
+  -DCMAKE_BUILD_TYPE=Debug ^
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="%CD%/out/bin/%BIN_DIR%" ^
   -DSHANDALAR_ASSET_DIR="%SHANDALAR_ASSET_DIR%" ^
   -DSHANDALAR_BUILD_FACEMAKER=%BUILD_FACEMAKER% ^
