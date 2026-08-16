@@ -31,8 +31,10 @@ extern int g_duel_network_flags;
 extern int g_shared_startup_completed;
 extern int g_response_prompt_enabled;
 extern char global_base_directory[];
+extern char g_graveyard_menu_view_text[];
 extern char g_graveyard_menu_view_exile_text[];
 extern char g_graveyard_menu_view_antes_text[];
+int copy_cached_graveyard_cards_and_get_count(void *cards, int player);
 int copy_cached_exile_cards_and_get_count(void *cards, int player);
 card_id_t get_displayed_card_id(int player, int card);
 unsigned int get_displayed_card_ui_flags(int player, int card);
@@ -517,7 +519,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
   int unique_inner_index;
   int unique_outer_index;
   int unique_flag_id;
-  int menu_exile_cards[500];
+  int menu_zone_cards[500];
   int show_index;
   int hidden_index;
   HWND hidden_parent;
@@ -1015,6 +1017,12 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
     case 0x73:
       SendMessageA(g_duel_player_graveyard_window_hwnd, WM_COMMAND, 0x66, 0);
       break;
+    case 0x74:
+      SendMessageA(hwnd == g_duel_player_battlefield_window_hwnd
+                       ? g_duel_player_graveyard_window_hwnd
+                       : g_phasebar_your_untap_window_hwnd,
+                   WM_COMMAND, 100, 0);
+      break;
     case 0x6e:
       help_context = 0x7e2;
       strcpy(help_path, global_base_directory);
@@ -1266,9 +1274,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
 
     // These are from graveyard class but copied here to be accessible on mobile
     territory_player = g_duel_player_battlefield_window_hwnd == hwnd ? 0 : 1;
+    AppendMenuA(g_territory_popup_menu, MF_STRING, 0x74,
+                g_graveyard_menu_view_text);
+    if (copy_cached_graveyard_cards_and_get_count(menu_zone_cards, territory_player) == 0)
+    {
+      EnableMenuItem(g_territory_popup_menu, 0x74, MF_GRAYED);
+    }
     AppendMenuA(g_territory_popup_menu, MF_STRING, 0x72,
                 g_graveyard_menu_view_exile_text);
-    if (copy_cached_exile_cards_and_get_count(menu_exile_cards, territory_player) == 0)
+    if (copy_cached_exile_cards_and_get_count(menu_zone_cards, territory_player) == 0)
     {
       EnableMenuItem(g_territory_popup_menu, 0x72, MF_GRAYED);
     }

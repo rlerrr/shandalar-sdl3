@@ -702,6 +702,11 @@ LRESULT CALLBACK wndproc_GraveyardCards(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     }
     return 0;
 
+  case WM_LBUTTONDOWN:
+    card_id = GetWindowLongA(hwnd, g_graveyard_card_id_window_long_offset);
+    SendMessageA(g_duel_card_preview_window_hwnd, 0x401, card_id, 0);
+    return 0;
+
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:

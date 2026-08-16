@@ -1224,8 +1224,18 @@ LRESULT CALLBACK wndproc_ExpandedGraveyard(HWND hwnd, UINT msg, WPARAM wparam, L
     return 0;
 
   case WM_LBUTTONDOWN:
-    SendMessageA(g_duel_player_graveyard_window_hwnd, 0x400, 0, 0);
-    SendMessageA(g_phasebar_your_untap_window_hwnd, 0x400, 0, 0);
+    GetCursorPos(&mouse_point);
+    target_hwnd = WindowFromPoint(mouse_point);
+    MapWindowPoints((HWND)0, target_hwnd, &mouse_point, 1);
+    if (GetParent(target_hwnd) == hwnd)
+    {
+      SendMessageA(target_hwnd, msg, wparam, MAKELONG(mouse_point.x, mouse_point.y));
+    }
+    else
+    {
+      SendMessageA(g_duel_player_graveyard_window_hwnd, 0x400, 0, 0);
+      SendMessageA(g_phasebar_your_untap_window_hwnd, 0x400, 0, 0);
+    }
     return 0;
 
   case WM_MOUSEMOVE:
