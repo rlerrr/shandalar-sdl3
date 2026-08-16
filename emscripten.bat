@@ -11,6 +11,8 @@ set "PATH=C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\Comm
 
 set "APP=%~1"
 if "%APP%"=="" set "APP=facemaker"
+set "BUILD_TYPE=%~2"
+if "%BUILD_TYPE%"=="" set "BUILD_TYPE=Debug"
 
 if /I "%APP%"=="deck" (
   set "BUILD_DIR=out\build\deck-wasm"
@@ -33,7 +35,7 @@ if /I "%APP%"=="deck" (
 )
 
 call emcmake cmake -S . -B "%BUILD_DIR%" -G Ninja ^
-  -DCMAKE_BUILD_TYPE=Debug ^
+  -DCMAKE_BUILD_TYPE=%BUILD_TYPE% ^
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="%CD%/out/bin/%BIN_DIR%" ^
   -DSHANDALAR_ASSET_DIR="%SHANDALAR_ASSET_DIR%" ^
   -DSHANDALAR_BUILD_FACEMAKER=%BUILD_FACEMAKER% ^
