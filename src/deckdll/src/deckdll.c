@@ -1249,7 +1249,7 @@ bool register_DeckSurfaceClass(void)
 {
   WNDCLASS hwnd;
 
-  hwnd.style = 0;
+  hwnd.style = CS_DBLCLKS;
   hwnd.lpfnWndProc = wndproc_DeckSurfaceClass;
   hwnd.cbClsExtra = 0;
   hwnd.cbWndExtra = 0;
@@ -5047,6 +5047,7 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
   int ctrl_id;   /* ebp - 0x2c */
   int i;         /* ebp - 0x28 */
   HWND new_hwnd; /* ebp - 0x24 */
+  HWND replacement_insert_after;
   int num;       /* ebp - 0x20 (low word) */
   HWND parent;   /* ebp - 0x1c */
   RECT r;        /* ebp - 0x18 */
@@ -5063,6 +5064,7 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
 
   if (amt32 >= 2)
   {
+    replacement_insert_after = GetWindow(hwnd, GW_HWNDPREV);
     pt.x = r.left;
     pt.y = r.top;
     SendMessageA(hwnd, 0x401, 1, 0);
@@ -5071,7 +5073,13 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
     new_hwnd = CreateWindowExA(0, "MAGICDECK_CardClass", "", 0x54000000, pt.x, pt.y, global_smallcard_width,
                                global_smallcard_height, parent, (HMENU)1, global_hinstance, (LPVOID)csvid);
     SendMessageA(new_hwnd, 0x401, amt32 - 1, 0);
-    BringWindowToTop(new_hwnd);
+    /* Keep the remainder of a split stack in the original card's order.
+     * Creating it at the top made deck refresh lay it out at the bottom,
+     * moving the card after every double-click removal. */
+    SetWindowPos(new_hwnd,
+                 replacement_insert_after ? replacement_insert_after : HWND_TOP,
+                 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
   }
 
   if (singleclick == 1)

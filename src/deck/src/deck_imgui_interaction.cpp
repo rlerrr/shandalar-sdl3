@@ -17,6 +17,15 @@ namespace {
 HWND g_left_down_target;
 HWND g_deckbuilder_drag_hover_title;
 ImVec2 g_left_down_position;
+bool g_left_drag_started;
+
+bool left_drag_threshold_crossed(const ImVec2 &mouse)
+{
+  const float threshold = ImGui::GetIO().MouseDragThreshold;
+  const float dx = mouse.x - g_left_down_position.x;
+  const float dy = mouse.y - g_left_down_position.y;
+  return dx * dx + dy * dy >= threshold * threshold;
+}
 
 bool is_descendant_or_self(HWND window, HWND ancestor)
 {
@@ -112,7 +121,8 @@ void draw_drag_preview(void)
   int texture_width;
   int texture_height;
 
-  if (!g_left_down_target || !IsWindow(g_left_down_target) ||
+  if (!g_left_drag_started || !g_left_down_target ||
+      !IsWindow(g_left_down_target) ||
       !ImGui::GetIO().MouseDown[ImGuiMouseButton_Left])
     return;
   texture = shandalar_win32_sdl_compositor_texture(
@@ -186,18 +196,25 @@ void forward_mouse(void)
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && g_left_down_target) {
     HWND source = g_left_down_target;
     ImVec2 down = g_left_down_position;
+    bool was_dragged = g_left_drag_started || left_drag_threshold_crossed(mouse);
     g_left_down_target = nullptr;
-    shandalar_win32_set_cursor_position(static_cast<int>(down.x),
-                                        static_cast<int>(down.y));
-    shandalar_win32_set_system_drag_endpoint(static_cast<int>(mouse.x),
-                                              static_cast<int>(mouse.y));
-    SendMessageA(source, WM_LBUTTONDOWN, buttons | MK_LBUTTON,
-                 mouse_lparam(source, down));
-    shandalar_win32_clear_system_drag_endpoint();
-    shandalar_win32_set_cursor_position(static_cast<int>(mouse.x),
-                                        static_cast<int>(mouse.y));
-    SendMessageA(source, WM_LBUTTONUP, buttons & ~MK_LBUTTON,
-                 mouse_lparam(source, mouse));
+    g_left_drag_started = false;
+    // A stationary card click is selection/double-click input, not a drag.
+    // Sending the legacy button-down handler would remove and reinsert the
+    // card, changing its deck-surface order before a second click can arrive.
+    if (was_dragged) {
+      shandalar_win32_set_cursor_position(static_cast<int>(down.x),
+                                          static_cast<int>(down.y));
+      shandalar_win32_set_system_drag_endpoint(static_cast<int>(mouse.x),
+                                                static_cast<int>(mouse.y));
+      SendMessageA(source, WM_LBUTTONDOWN, buttons | MK_LBUTTON,
+                   mouse_lparam(source, down));
+      shandalar_win32_clear_system_drag_endpoint();
+      shandalar_win32_set_cursor_position(static_cast<int>(mouse.x),
+                                          static_cast<int>(mouse.y));
+      SendMessageA(source, WM_LBUTTONUP, buttons & ~MK_LBUTTON,
+                   mouse_lparam(source, mouse));
+    }
     clear_drag_hover();
     completed_drag_release = true;
   }
@@ -205,14 +222,18 @@ void forward_mouse(void)
     return;
   if (modal && !is_descendant_or_self(target, modal)) {
     g_left_down_target = nullptr;
+    g_left_drag_started = false;
     BringWindowToTop(modal);
     return;
   }
   if (shandalar_win32_is_builtin_control(target))
     return;
   LPARAM local = mouse_lparam(target, mouse);
-  if (g_left_down_target &&
-      ImGui::GetIO().MouseDown[ImGuiMouseButton_Left])
+  if (g_left_down_target && io.MouseDown[ImGuiMouseButton_Left] &&
+      !g_left_drag_started && left_drag_threshold_crossed(mouse))
+    g_left_drag_started = true;
+  if (g_left_drag_started && g_left_down_target &&
+      io.MouseDown[ImGuiMouseButton_Left])
     notify_drag_source(find_deckbuilder_title_window(g_left_down_target),
                        g_left_down_target);
   PostMessageA(target, WM_MOUSEMOVE, buttons, local);
@@ -220,18 +241,20 @@ void forward_mouse(void)
   if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
     if (ImGui::IsAnyItemHovered()) {
       g_left_down_target = nullptr;
+      g_left_drag_started = false;
     } else if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) &&
                shandalar_win32_accepts_double_click(target)) {
       g_left_down_target = nullptr;
+      g_left_drag_started = false;
       SendMessageA(target, WM_LBUTTONDBLCLK, buttons, local);
     } else if (!is_card_drag_source(target)) {
       g_left_down_target = nullptr;
+      g_left_drag_started = false;
       SendMessageA(target, WM_LBUTTONDOWN, buttons | MK_LBUTTON, local);
     } else {
       g_left_down_target = target;
       g_left_down_position = mouse;
-      notify_drag_source(find_deckbuilder_title_window(g_left_down_target),
-                         g_left_down_target);
+      g_left_drag_started = false;
     }
   }
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
@@ -268,4 +291,5 @@ extern "C" void shandalar_deck_imgui_interaction_shutdown(void)
 {
   clear_drag_hover();
   g_left_down_target = nullptr;
+  g_left_drag_started = false;
 }

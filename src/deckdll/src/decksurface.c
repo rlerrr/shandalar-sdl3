@@ -1046,6 +1046,10 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     return 0;
   }
 
+  case WM_LBUTTONDBLCLK:
+    SendMessageA(hwnd, WM_COMMAND, RES_MENU_SORTDECK, 0);
+    return 0;
+
   case WM_RBUTTONDOWN:
   {
     popup_pt.x = (int)((unsigned)lparam & 0xFFFF);
