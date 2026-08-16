@@ -9,6 +9,7 @@
 #include "magic/src/global_other.h"
 #include "magic/src/global_state.h"
 #include "magic/src/global_strings.h"
+#include "platform/winuser_imgui_bridge.h"
 
 extern int load_text_with_tab_escapes(char *filename, char *section_name);
 extern LRESULT handle_duel_inactive_cursor(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
@@ -30,6 +31,9 @@ extern int g_duel_network_flags;
 extern int g_shared_startup_completed;
 extern int g_response_prompt_enabled;
 extern char global_base_directory[];
+extern char g_graveyard_menu_view_exile_text[];
+extern char g_graveyard_menu_view_antes_text[];
+int copy_cached_exile_cards_and_get_count(void *cards, int player);
 card_id_t get_displayed_card_id(int player, int card);
 unsigned int get_displayed_card_ui_flags(int player, int card);
 void get_displayed_card_attachment(int *player_and_card, int player, int card);
@@ -497,6 +501,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
   int menu_item_count;
   char menu_text[100];
   int action_code;
+  int territory_player;
   POINT popup_point;
   RECT popup_rect;
   HDC erase_dc;
@@ -512,6 +517,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
   int unique_inner_index;
   int unique_outer_index;
   int unique_flag_id;
+  int menu_exile_cards[500];
   int show_index;
   int hidden_index;
   HWND hidden_parent;
@@ -1000,6 +1006,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
     case 0x71:
       g_response_prompt_enabled ^= 1;
       break;
+    case 0x72:
+      SendMessageA(hwnd == g_duel_player_battlefield_window_hwnd
+                       ? g_duel_player_graveyard_window_hwnd
+                       : g_phasebar_your_untap_window_hwnd,
+                   WM_COMMAND, 0x65, 0);
+      break;
+    case 0x73:
+      SendMessageA(g_duel_player_graveyard_window_hwnd, WM_COMMAND, 0x66, 0);
+      break;
     case 0x6e:
       help_context = 0x7e2;
       strcpy(help_path, global_base_directory);
@@ -1038,6 +1053,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
     return 0;
 
   case WM_CREATE:
+    shandalar_win32_imgui_register_territory_menu(hwnd);
     card_count = 0;
     SetWindowLongA(hwnd, g_duel_window_userdata_card_offset, card_count);
     card_windows = malloc(800);
@@ -1064,6 +1080,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
     return 0;
 
   case WM_DESTROY:
+    shandalar_win32_imgui_unregister_territory_menu(hwnd);
     card_windows = (void *)GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
     free(card_windows);
     background_bitmap = (HWND)GetWindowLongA(hwnd, g_duel_window_userdata_8_offset);
@@ -1114,7 +1131,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
     {
       if ((g_duel_action_request_copy.allow_cancel & 2) != 0)
       {
-        AppendMenuA(g_territory_popup_menu, MF_STRING, 0x66, g_custom_duel_action_text);
+        // "Done"
+        // AppendMenuA(g_territory_popup_menu, MF_STRING, 0x66, g_custom_duel_action_text);
       }
       if ((g_duel_action_request_copy.allow_cancel & 1) != 0)
       {
@@ -1243,42 +1261,47 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
         AppendMenuA(g_territory_popup_menu, MF_STRING, 0x6f, g_territory_menu_action_6f_text);
       }
     }
-    AppendMenuA(g_territory_popup_menu, MF_STRING, 0x6e, g_territory_menu_main_window_text);
+    // "Help..."
+    // AppendMenuA(g_territory_popup_menu, MF_STRING, 0x6e, g_territory_menu_main_window_text);
+
+    // These are from graveyard class but copied here to be accessible on mobile
+    territory_player = g_duel_player_battlefield_window_hwnd == hwnd ? 0 : 1;
+    AppendMenuA(g_territory_popup_menu, MF_STRING, 0x72,
+                g_graveyard_menu_view_exile_text);
+    if (copy_cached_exile_cards_and_get_count(menu_exile_cards, territory_player) == 0)
+    {
+      EnableMenuItem(g_territory_popup_menu, 0x72, MF_GRAYED);
+    }
+    AppendMenuA(g_territory_popup_menu, MF_STRING, 0x73,
+                g_graveyard_menu_view_antes_text);
+
     if (g_duel_modal_action_active != 0)
     {
-      AppendMenuA(g_territory_popup_menu, MF_SEPARATOR, 0, NULL);
+      // "Concede"
+      // AppendMenuA(g_territory_popup_menu, MF_SEPARATOR, 0, NULL);
       AppendMenuA(g_territory_popup_menu, MF_POPUP, (UINT)g_territory_submenu,
                   g_territory_menu_submenu_text);
     }
     if (g_duel_cheats_state != 0)
     {
       AppendMenuA(g_territory_popup_menu, MF_SEPARATOR, 0, NULL);
-      AppendMenuA(g_territory_popup_menu, MF_SEPARATOR, 0, NULL);
-      g_territory_debug_menu_a = g_territory_popup_menu;
-      AppendMenuA(g_territory_debug_menu_a, MF_STRING, 0x272,
-                  "Show player,card and # on library\tI");
-      if (g_duel_dialog_refresh_state != 0)
-      {
-        CheckMenuItem(g_territory_debug_menu_a, 0x272, MF_CHECKED);
-      }
-      AppendMenuA(g_territory_debug_menu_a, MF_STRING, 0x271, "Show the palette\tP");
-      AppendMenuA(g_territory_debug_menu_a, MF_STRING, 0x276, "Flash small cards on repaint\tF");
-      if (g_duel_palette_refresh_pending != 0)
-      {
-        CheckMenuItem(g_territory_debug_menu_a, 0x276, MF_CHECKED);
-      }
-      AppendMenuA(g_territory_debug_menu_a, MF_STRING, 0x277, "Show Kim debug window\tK");
-      if (IsWindowVisible(g_duel_toggleable_status_window_hwnd) != 0)
-      {
-        CheckMenuItem(g_territory_debug_menu_a, 0x277, MF_CHECKED);
-      }
       g_territory_debug_menu_b = g_territory_popup_menu;
-      AppendMenuA(g_territory_popup_menu, MF_SEPARATOR, 0, NULL);
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x25f, "Save game\tS");
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x26b, "Put a specific card IN PLAY (your/oppon's territory)\tG/F2");
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x26d, "Put a specific card into your/oppon's HAND\tH/F3");
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x269, "DRAW a card into your/oppon's hand\tD/AltD");
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x26f, "+10 to your/oppon's LIFE\tL/AltL");
+      AppendMenuA(g_territory_debug_menu_b, MF_STRING,
+                  territory_player == 0 ? 0x26b : 0x26c,
+                  territory_player == 0 ? "Put a specific card IN PLAY for you"
+                                        : "Put a specific card IN PLAY for opponent");
+      AppendMenuA(g_territory_debug_menu_b, MF_STRING,
+                  territory_player == 0 ? 0x26d : 0x26e,
+                  territory_player == 0 ? "Put a specific card into your HAND"
+                                        : "Put a specific card into opponent's HAND");
+      AppendMenuA(g_territory_debug_menu_b, MF_STRING,
+                  territory_player == 0 ? 0x269 : 0x26a,
+                  territory_player == 0 ? "DRAW a card into your hand"
+                                        : "DRAW a card into opponent's hand");
+      AppendMenuA(g_territory_debug_menu_b, MF_STRING,
+                  territory_player == 0 ? 0x26f : 0x270,
+                  territory_player == 0 ? "SET your LIFE total"
+                                        : "SET opponent's LIFE total");
       AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x267, "Win\tW");
       AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x263, "Tie (draw)\tT");
       AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x25c, "Show opponent's hand\tF8");
@@ -1286,14 +1309,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_TerritoryClass(HWND hwnd, UINT msg, WPARAM wp
       {
         CheckMenuItem(g_territory_debug_menu_b, 0x25c, MF_CHECKED);
       }
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x25d, "Show opponent's library\tF9");
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x25e, "Show your library\tF10");
-      AppendMenuA(g_territory_debug_menu_b, MF_STRING, 0x273, "Show art on cards\tA");
-      if (g_shared_startup_completed != 0)
-      {
-        CheckMenuItem(g_territory_debug_menu_b, 0x273, MF_CHECKED);
-      }
-      AppendMenuA(g_territory_popup_menu, MF_STRING, 599, "Turn off cheats\tF12");
+      AppendMenuA(g_territory_debug_menu_b, MF_STRING,
+                  territory_player == 0 ? 0x25e : 0x25d,
+                  territory_player == 0 ? "Show your library"
+                                        : "Show opponent's library");
     }
     return 0;
 

@@ -2,6 +2,7 @@
 
 #include "platform/winuser_compat.h"
 #include "platform/winuser_sdl_compositor.h"
+#include "facemaker/src/facemaker_types.h"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
@@ -13,6 +14,10 @@
 namespace {
 
 SDL_Renderer *g_renderer;
+HWND g_territory_menu_windows[2];
+ImU32 g_shared_menu_sprite_pixels[64 * 64];
+int g_shared_menu_sprite_width;
+int g_shared_menu_sprite_height;
 
 bool is_builtin_control(HWND window)
 {
@@ -38,6 +43,25 @@ bool is_dialog_control(HWND window)
       return true;
   }
   return false;
+}
+
+void strip_mnemonic_markers(char *text)
+{
+  size_t source = 0;
+  size_t destination = 0;
+  while (text[source]) {
+    if (text[source] == '&') {
+      if (text[source + 1] == '&') {
+        text[destination++] = '&';
+        source += 2;
+      } else {
+        ++source;
+      }
+    } else {
+      text[destination++] = text[source++];
+    }
+  }
+  text[destination] = '\0';
 }
 
 bool push_child_clip_rect(HWND window, ImDrawList *draw_list)
@@ -341,13 +365,16 @@ bool draw_coin_flip_title(HWND window, const char *text, const RECT &rect)
 
 void draw_builtin_control(HWND window)
 {
-  if (!IsWindowVisible(window) || !IsWindowEnabled(window))
+  if (!IsWindowVisible(window))
     return;
   char class_name[32] = {};
   char text[1024] = {};
   RECT rect = {};
   GetClassNameA(window, class_name, sizeof(class_name));
   GetWindowTextA(window, text, sizeof(text));
+  if (SDL_strcasecmp(class_name, "BUTTON") == 0 ||
+      SDL_strcasecmp(class_name, "STATIC") == 0)
+    strip_mnemonic_markers(text);
   GetWindowRect(window, &rect);
   float width = static_cast<float>(rect.right - rect.left);
   float height = static_cast<float>(rect.bottom - rect.top);
@@ -509,17 +536,20 @@ void draw_control_tree(HWND window, HWND modal)
   if (modal && window == modal)
     return;
   bool disabled_by_modal = modal && !is_descendant_or_self(window, modal);
-  if (disabled_by_modal) {
-    ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f);
+  bool disabled = disabled_by_modal || !IsWindowEnabled(window);
+  if (disabled) {
+    if (disabled_by_modal)
+      ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f);
     ImGui::BeginDisabled();
   }
   if (is_builtin_control(window))
     draw_builtin_control(window);
   else
     draw_window_scrollbars(window);
-  if (disabled_by_modal) {
+  if (disabled) {
     ImGui::EndDisabled();
-    ImGui::PopStyleVar();
+    if (disabled_by_modal)
+      ImGui::PopStyleVar();
   }
   HWND child = GetWindow(window, GW_CHILD);
   if (child) child = GetWindow(child, GW_HWNDLAST);
@@ -589,6 +619,8 @@ void draw_window_caption(HWND window)
   char title[512] = {};
   RECT rect = {};
   int caption_height;
+  const bool has_close_button =
+      (GetWindowLongA(window, GWL_STYLE) & WS_SYSMENU) != 0;
   if (!window || !IsWindowVisible(window) || !GetWindowRect(window, &rect))
     return;
   if (!shandalar_win32_should_render_caption(window))
@@ -599,7 +631,8 @@ void draw_window_caption(HWND window)
   ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.left),
                                    static_cast<float>(rect.top)));
   ImGui::InvisibleButton("##dialog-caption",
-                         ImVec2(static_cast<float>(rect.right - rect.left - caption_height),
+                         ImVec2(static_cast<float>(rect.right - rect.left -
+                                                   (has_close_button ? caption_height : 0)),
                                 static_cast<float>(caption_height)));
   ImDrawList *draw_list = ImGui::GetWindowDrawList();
   draw_list->AddRectFilled(ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
@@ -619,11 +652,13 @@ void draw_window_caption(HWND window)
     MoveWindow(window, position.x, position.y, rect.right - rect.left,
                rect.bottom - rect.top, TRUE);
   }
-  ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.right - caption_height),
-                                   static_cast<float>(rect.top)));
-  if (ImGui::Button("X", ImVec2(static_cast<float>(caption_height),
-                                 static_cast<float>(caption_height))))
-    PostMessageA(window, WM_CLOSE, 0, 0);
+  if (has_close_button) {
+    ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.right - caption_height),
+                                     static_cast<float>(rect.top)));
+    if (ImGui::Button("X", ImVec2(static_cast<float>(caption_height),
+                                   static_cast<float>(caption_height))))
+      PostMessageA(window, WM_CLOSE, 0, 0);
+  }
   ImGui::PopID();
 }
 
@@ -717,6 +752,123 @@ void draw_popup_menu(void)
   }
 }
 
+void draw_territory_menu_button(HWND territory, int index,
+                                bool interaction_enabled)
+{
+  const float size = 30.0f;
+  const float inset = 5.0f;
+  const float corner = 4.0f;
+  RECT rect = {};
+  POINT popup_point;
+  ImVec2 position;
+  ImVec2 plaque_min;
+  ImVec2 plaque_max;
+  ImVec2 plaque_points[8];
+  ImDrawList *draw_list;
+  ImU32 fill;
+  ImU32 border;
+  const ImU32 shadow = IM_COL32(8, 14, 30, 190);
+  ImU32 glyph;
+  bool hovered;
+  bool held;
+
+  if (!territory || !IsWindow(territory) || !IsWindowVisible(territory) ||
+      !GetWindowRect(territory, &rect) ||
+      rect.right - rect.left < static_cast<int>(size + inset * 2.0f) ||
+      rect.bottom - rect.top < static_cast<int>(size + inset * 2.0f))
+    return;
+
+  position = ImVec2(static_cast<float>(rect.right) - size - inset,
+                    static_cast<float>(rect.bottom) - size - inset);
+  ImGui::PushID(index);
+  ImGui::SetCursorScreenPos(position);
+  if (!interaction_enabled)
+    ImGui::BeginDisabled();
+  ImGui::InvisibleButton("##territory-menu-button", ImVec2(size, size));
+  hovered = interaction_enabled && ImGui::IsItemHovered();
+  held = interaction_enabled && ImGui::IsItemActive();
+  if (interaction_enabled && ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+    popup_point.x = rect.right - rect.left -
+                    static_cast<LONG>(inset + size * 0.5f);
+    popup_point.y = rect.bottom - rect.top -
+                    static_cast<LONG>(inset + size);
+    SendMessageA(territory, WM_RBUTTONDOWN, 0,
+                 MAKELPARAM(popup_point.x, popup_point.y));
+  }
+  if (!interaction_enabled)
+    ImGui::EndDisabled();
+  ImGui::PopID();
+
+  draw_list = ImGui::GetWindowDrawList();
+  plaque_min = ImVec2(position.x + 1.0f, position.y + 1.0f);
+  plaque_max = ImVec2(position.x + size - 1.0f, position.y + size - 1.0f);
+  plaque_points[0] = ImVec2(plaque_min.x + corner, plaque_min.y);
+  plaque_points[1] = ImVec2(plaque_max.x - corner, plaque_min.y);
+  plaque_points[2] = ImVec2(plaque_max.x, plaque_min.y + corner);
+  plaque_points[3] = ImVec2(plaque_max.x, plaque_max.y - corner);
+  plaque_points[4] = ImVec2(plaque_max.x - corner, plaque_max.y);
+  plaque_points[5] = ImVec2(plaque_min.x + corner, plaque_max.y);
+  plaque_points[6] = ImVec2(plaque_min.x, plaque_max.y - corner);
+  plaque_points[7] = ImVec2(plaque_min.x, plaque_min.y + corner);
+
+  fill = held ? IM_COL32(32, 43, 75, 248)
+              : hovered ? IM_COL32(66, 83, 125, 246)
+                        : IM_COL32(43, 57, 94, 238);
+  border = hovered ? IM_COL32(190, 211, 220, 255)
+                   : IM_COL32(107, 134, 166, 255);
+  glyph = hovered ? IM_COL32(225, 237, 239, 255)
+                  : IM_COL32(157, 181, 201, 255);
+
+  for (int point_index = 0; point_index < 8; ++point_index) {
+    plaque_points[point_index].x += 1.0f;
+    plaque_points[point_index].y += 2.0f;
+  }
+  draw_list->AddConvexPolyFilled(plaque_points, 8, shadow);
+  for (int point_index = 0; point_index < 8; ++point_index) {
+    plaque_points[point_index].x -= 1.0f;
+    plaque_points[point_index].y -= 2.0f;
+  }
+  draw_list->AddConvexPolyFilled(plaque_points, 8, fill);
+  draw_list->AddPolyline(plaque_points, 8, border, ImDrawFlags_Closed, 1.0f);
+  if (g_shared_menu_sprite_width > 0 && g_shared_menu_sprite_height > 0) {
+    const float icon_size = 22.0f;
+    const float icon_left = position.x + (size - icon_size) * 0.5f;
+    const float icon_top = position.y + (size - icon_size) * 0.5f;
+    for (int y = 0; y < g_shared_menu_sprite_height; ++y) {
+      int x = 0;
+      while (x < g_shared_menu_sprite_width) {
+        const ImU32 color =
+            g_shared_menu_sprite_pixels[y * g_shared_menu_sprite_width + x];
+        if (color == 0) {
+          ++x;
+          continue;
+        }
+        int run_end = x + 1;
+        while (run_end < g_shared_menu_sprite_width &&
+               g_shared_menu_sprite_pixels[y * g_shared_menu_sprite_width +
+                                            run_end] == color)
+          ++run_end;
+        draw_list->AddRectFilled(
+            ImVec2(icon_left + icon_size * x / g_shared_menu_sprite_width,
+                   icon_top + icon_size * y / g_shared_menu_sprite_height),
+            ImVec2(icon_left + icon_size * run_end / g_shared_menu_sprite_width,
+                   icon_top + icon_size * (y + 1) /
+                                  g_shared_menu_sprite_height),
+            color);
+        x = run_end;
+      }
+    }
+  } else {
+    for (int line_index = 0; line_index < 3; ++line_index) {
+      const float y = position.y + 10.0f + line_index * 5.0f;
+      draw_list->AddLine(ImVec2(position.x + 9.0f, y + 1.0f),
+                         ImVec2(position.x + 21.0f, y + 1.0f), shadow, 2.0f);
+      draw_list->AddLine(ImVec2(position.x + 9.0f, y),
+                         ImVec2(position.x + 21.0f, y), glyph, 2.0f);
+    }
+  }
+}
+
 void draw_controls(void)
 {
   RECT desktop_rect = {};
@@ -748,6 +900,9 @@ void draw_controls(void)
   for (; window; window = GetWindow(window, GW_HWNDPREV))
     draw_window_caption_tree(window, modal);
   draw_window_caption(modal);
+  for (int index = 0; index < 2; ++index)
+    draw_territory_menu_button(g_territory_menu_windows[index], index,
+                               modal == nullptr);
   draw_popup_menu();
   ImGui::End();
   ImGui::PopStyleVar();
@@ -835,4 +990,75 @@ extern "C" void shandalar_win32_imgui_shutdown(void)
     ImGui::DestroyContext();
   }
   g_renderer = nullptr;
+  g_territory_menu_windows[0] = nullptr;
+  g_territory_menu_windows[1] = nullptr;
+  g_shared_menu_sprite_width = 0;
+  g_shared_menu_sprite_height = 0;
+}
+
+extern "C" void shandalar_win32_imgui_set_menu_sprite(
+    const void *encoded_sprite, const unsigned char *palette_bgra)
+{
+  const EncodedImage *sprite = static_cast<const EncodedImage *>(encoded_sprite);
+  const unsigned char *span;
+  int row;
+
+  g_shared_menu_sprite_width = 0;
+  g_shared_menu_sprite_height = 0;
+  if (!sprite || !palette_bgra || sprite->width <= 0 || sprite->height <= 0 ||
+      sprite->width > 64 || sprite->height > 64)
+    return;
+
+  SDL_memset(g_shared_menu_sprite_pixels, 0,
+             sizeof(g_shared_menu_sprite_pixels));
+  span = sprite->spans;
+  for (row = 0; row < sprite->row_count; ++row) {
+    const int y = sprite->first_row + row;
+    int offset = *span++;
+    int length;
+    int x;
+    if (offset == 0xff)
+      continue;
+    length = *span++;
+    if (length == 0xfe)
+      length = *span++;
+    for (x = 0; x < length; ++x) {
+      const unsigned int palette_index = span[x];
+      if (palette_index != 0 && y >= 0 && y < sprite->height &&
+          offset + x >= 0 && offset + x < sprite->width) {
+        const unsigned char *color = palette_bgra + palette_index * 4;
+        g_shared_menu_sprite_pixels[y * sprite->width + offset + x] =
+            IM_COL32(color[2], color[1], color[0], 255);
+      }
+    }
+    span += length;
+  }
+  g_shared_menu_sprite_width = sprite->width;
+  g_shared_menu_sprite_height = sprite->height;
+}
+
+extern "C" void shandalar_win32_imgui_register_territory_menu(HWND territory)
+{
+  int index;
+  if (!territory)
+    return;
+  for (index = 0; index < 2; ++index) {
+    if (g_territory_menu_windows[index] == territory)
+      return;
+  }
+  for (index = 0; index < 2; ++index) {
+    if (!g_territory_menu_windows[index] ||
+        !IsWindow(g_territory_menu_windows[index])) {
+      g_territory_menu_windows[index] = territory;
+      return;
+    }
+  }
+}
+
+extern "C" void shandalar_win32_imgui_unregister_territory_menu(HWND territory)
+{
+  for (int index = 0; index < 2; ++index) {
+    if (g_territory_menu_windows[index] == territory)
+      g_territory_menu_windows[index] = nullptr;
+  }
 }

@@ -1,10 +1,14 @@
 #include "deck/src/deck_imgui_interaction.h"
 
 #include "platform/winuser_compat.h"
+#include "platform/winuser_imgui_bridge.h"
 #include "platform/winuser_sdl_compositor.h"
+#include "facemaker/src/facemaker_types.h"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
+
+extern "C" HWND global_decksurface_hwnd;
 
 namespace {
 
@@ -18,6 +22,152 @@ HWND g_left_down_target;
 HWND g_deckbuilder_drag_hover_title;
 ImVec2 g_left_down_position;
 bool g_left_drag_started;
+bool g_deck_menu_button_left_down;
+ImU32 g_deck_menu_sprite_pixels[64 * 64];
+int g_deck_menu_sprite_width;
+int g_deck_menu_sprite_height;
+
+void draw_deck_menu_sprite(ImDrawList *draw_list, const ImVec2 &position,
+                           float button_size)
+{
+  const float icon_size = 22.0f;
+  const float icon_left = position.x + (button_size - icon_size) * 0.5f;
+  const float icon_top = position.y + (button_size - icon_size) * 0.5f;
+  int y;
+
+  for (y = 0; y < g_deck_menu_sprite_height; ++y) {
+    int x = 0;
+    while (x < g_deck_menu_sprite_width) {
+      const ImU32 color =
+          g_deck_menu_sprite_pixels[y * g_deck_menu_sprite_width + x];
+      int run_end;
+      float x0;
+      float x1;
+      float y0;
+      float y1;
+      if (color == 0) {
+        ++x;
+        continue;
+      }
+      run_end = x + 1;
+      while (run_end < g_deck_menu_sprite_width &&
+             g_deck_menu_sprite_pixels[y * g_deck_menu_sprite_width +
+                                       run_end] == color)
+        ++run_end;
+      x0 = icon_left + icon_size * x / g_deck_menu_sprite_width;
+      x1 = icon_left + icon_size * run_end / g_deck_menu_sprite_width;
+      y0 = icon_top + icon_size * y / g_deck_menu_sprite_height;
+      y1 = icon_top + icon_size * (y + 1) / g_deck_menu_sprite_height;
+      draw_list->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), color);
+      x = run_end;
+    }
+  }
+}
+
+void draw_deck_surface_menu_button()
+{
+  const ImGuiWindowFlags window_flags =
+      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground |
+      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+      ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
+      ImGuiWindowFlags_NoBringToFrontOnFocus;
+  const float size = 30.0f;
+  const float inset = 5.0f;
+  const float corner = 4.0f;
+  RECT rect = {};
+  POINT popup_point;
+  ImVec2 position;
+  ImVec2 plaque_min;
+  ImVec2 plaque_max;
+  ImVec2 plaque_points[8];
+  ImDrawList *draw_list;
+  ImU32 fill;
+  ImU32 border;
+  ImU32 shadow;
+  ImU32 glyph;
+  const ImVec2 mouse = ImGui::GetIO().MousePos;
+  bool hovered;
+  bool held;
+  int line_index;
+
+  if (!global_decksurface_hwnd || !IsWindow(global_decksurface_hwnd) ||
+      !GetWindowRect(global_decksurface_hwnd, &rect) ||
+      rect.right - rect.left < static_cast<int>(size + inset * 2.0f) ||
+      rect.bottom - rect.top < static_cast<int>(size + inset * 2.0f))
+    return;
+
+  position = ImVec2(static_cast<float>(rect.right) - size - inset,
+                    static_cast<float>(rect.top) + inset);
+  ImGui::SetNextWindowPos(position);
+  ImGui::SetNextWindowSize(ImVec2(size, size));
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+  if (!ImGui::Begin("##deck-surface-menu-button", nullptr, window_flags)) {
+    ImGui::End();
+    ImGui::PopStyleVar();
+    return;
+  }
+
+  hovered = mouse.x >= position.x && mouse.x < position.x + size &&
+            mouse.y >= position.y && mouse.y < position.y + size;
+  held = hovered && ImGui::GetIO().MouseDown[ImGuiMouseButton_Left];
+  if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+    g_deck_menu_button_left_down = true;
+    popup_point.x = rect.right - rect.left -
+                    static_cast<LONG>(inset + size * 0.5f);
+    popup_point.y = static_cast<LONG>(inset + size);
+    SendMessageA(global_decksurface_hwnd, WM_RBUTTONDOWN, 0,
+                 MAKELPARAM(popup_point.x, popup_point.y));
+  }
+
+  draw_list = ImGui::GetWindowDrawList();
+  plaque_min = ImVec2(position.x + 1.0f, position.y + 1.0f);
+  plaque_max = ImVec2(position.x + size - 1.0f, position.y + size - 1.0f);
+  plaque_points[0] = ImVec2(plaque_min.x + corner, plaque_min.y);
+  plaque_points[1] = ImVec2(plaque_max.x - corner, plaque_min.y);
+  plaque_points[2] = ImVec2(plaque_max.x, plaque_min.y + corner);
+  plaque_points[3] = ImVec2(plaque_max.x, plaque_max.y - corner);
+  plaque_points[4] = ImVec2(plaque_max.x - corner, plaque_max.y);
+  plaque_points[5] = ImVec2(plaque_min.x + corner, plaque_max.y);
+  plaque_points[6] = ImVec2(plaque_min.x, plaque_max.y - corner);
+  plaque_points[7] = ImVec2(plaque_min.x, plaque_min.y + corner);
+
+  fill = held ? IM_COL32(32, 43, 75, 248)
+              : hovered ? IM_COL32(66, 83, 125, 246)
+                        : IM_COL32(43, 57, 94, 238);
+  border = hovered ? IM_COL32(190, 211, 220, 255)
+                   : IM_COL32(107, 134, 166, 255);
+  shadow = IM_COL32(8, 14, 30, 190);
+  glyph = hovered ? IM_COL32(225, 237, 239, 255)
+                  : IM_COL32(157, 181, 201, 255);
+
+  for (int point_index = 0; point_index < 8; ++point_index) {
+    plaque_points[point_index].x += 1.0f;
+    plaque_points[point_index].y += 2.0f;
+  }
+  draw_list->AddConvexPolyFilled(plaque_points, 8, shadow);
+  for (int point_index = 0; point_index < 8; ++point_index) {
+    plaque_points[point_index].x -= 1.0f;
+    plaque_points[point_index].y -= 2.0f;
+  }
+  draw_list->AddConvexPolyFilled(plaque_points, 8, fill);
+  draw_list->AddPolyline(plaque_points, 8, border,
+                         ImDrawFlags_Closed, 1.0f);
+
+  if (g_deck_menu_sprite_width > 0 && g_deck_menu_sprite_height > 0) {
+    draw_deck_menu_sprite(draw_list, position, size);
+  } else {
+    for (line_index = 0; line_index < 3; ++line_index) {
+      const float y = position.y + 10.0f + line_index * 5.0f;
+      draw_list->AddLine(ImVec2(position.x + 9.0f, y + 1.0f),
+                         ImVec2(position.x + 21.0f, y + 1.0f), shadow, 2.0f);
+      draw_list->AddLine(ImVec2(position.x + 9.0f, y),
+                         ImVec2(position.x + 21.0f, y), glyph, 2.0f);
+    }
+  }
+
+  ImGui::End();
+  ImGui::PopStyleVar();
+}
 
 bool left_drag_threshold_crossed(const ImVec2 &mouse)
 {
@@ -187,6 +337,11 @@ void forward_mouse(void)
     return;
   shandalar_win32_set_cursor_position(static_cast<int>(mouse.x),
                                       static_cast<int>(mouse.y));
+  if (g_deck_menu_button_left_down) {
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+      g_deck_menu_button_left_down = false;
+    return;
+  }
   POINT screen = {static_cast<LONG>(mouse.x), static_cast<LONG>(mouse.y)};
   HWND target = GetCapture();
   if (!target)
@@ -279,10 +434,54 @@ void forward_mouse(void)
 
 }  // namespace
 
+extern "C" void shandalar_deck_imgui_set_menu_sprite(
+    const void *encoded_sprite, const unsigned char *palette_bgra)
+{
+  const EncodedImage *sprite = static_cast<const EncodedImage *>(encoded_sprite);
+  const unsigned char *span;
+  int row;
+
+  shandalar_win32_imgui_set_menu_sprite(encoded_sprite, palette_bgra);
+
+  g_deck_menu_sprite_width = 0;
+  g_deck_menu_sprite_height = 0;
+  if (!sprite || !palette_bgra || sprite->width <= 0 || sprite->height <= 0 ||
+      sprite->width > 64 || sprite->height > 64)
+    return;
+
+  SDL_memset(g_deck_menu_sprite_pixels, 0,
+             sizeof(g_deck_menu_sprite_pixels));
+  span = sprite->spans;
+  for (row = 0; row < sprite->row_count; ++row) {
+    const int y = sprite->first_row + row;
+    int offset = *span++;
+    int length;
+    int x;
+    if (offset == 0xff)
+      continue;
+    length = *span++;
+    if (length == 0xfe)
+      length = *span++;
+    for (x = 0; x < length; ++x) {
+      const unsigned int palette_index = span[x];
+      if (palette_index != 0 && y >= 0 && y < sprite->height &&
+          offset + x >= 0 && offset + x < sprite->width) {
+        const unsigned char *color = palette_bgra + palette_index * 4;
+        g_deck_menu_sprite_pixels[y * sprite->width + offset + x] =
+            IM_COL32(color[2], color[1], color[0], 255);
+      }
+    }
+    span += length;
+  }
+  g_deck_menu_sprite_width = sprite->width;
+  g_deck_menu_sprite_height = sprite->height;
+}
+
 extern "C" void shandalar_deck_imgui_interaction_present(void)
 {
   if (!ImGui::GetCurrentContext())
     return;
+  draw_deck_surface_menu_button();
   draw_drag_preview();
   forward_mouse();
 }
@@ -292,4 +491,7 @@ extern "C" void shandalar_deck_imgui_interaction_shutdown(void)
   clear_drag_hover();
   g_left_down_target = nullptr;
   g_left_drag_started = false;
+  g_deck_menu_button_left_down = false;
+  g_deck_menu_sprite_width = 0;
+  g_deck_menu_sprite_height = 0;
 }

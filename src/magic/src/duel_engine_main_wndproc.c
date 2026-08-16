@@ -2794,6 +2794,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
   int player_backdrop_color;
   int enemy_backdrop_color;
   int player_backdrop_result;
+  int requested_life_total;
 
   int backdrop_player_color;
   int backdrop_enemy_color;
@@ -3310,10 +3311,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
         {
           player_backdrop_color = 1;
         }
-        g_life[player_backdrop_color] = prompt_for_life_total(0,
-                                                              player_backdrop_color == 0 ? "Set player lives to:" : "Set opponent lives tp:",
-                                                              g_life[player_backdrop_color]);
-        notify_duel_action(0, 0xff);
+        requested_life_total = prompt_for_life_total(
+            0,
+            player_backdrop_color == 0 ? "Set player life to:" : "Set opponent life to:",
+            g_life[player_backdrop_color]);
+        if (requested_life_total != -1)
+        {
+          g_life[player_backdrop_color] = requested_life_total;
+          notify_duel_action(0, 0xff);
+        }
       }
       break;
 

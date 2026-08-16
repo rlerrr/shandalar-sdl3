@@ -13,6 +13,7 @@
 #include "shandalar_global_strings.h"
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
+#include "deck/src/deck_imgui_interaction.h"
 
 // GLOBAL: SHANDALAR 0x0059076c
 int g_world_ui_top_offset = 128;
@@ -319,9 +320,11 @@ extern EncodedImage *g_world_magic_avatar_sprites[5];
 extern EncodedImage *g_worlds_extra_sprite_entries[4];
 extern EncodedImage *g_main_menu_button_sprites_normal[4];
 extern EncodedImage *g_main_menu_button_sprites_highlight[4];
+extern EncodedImage *g_ttsprite_special_sprite_b;
 extern EncodedImage *g_castles_sprite_entries[20];
 extern EncodedImage *g_wizard_controlled_town_sprite_entries[5];
 extern EncodedImage *g_current_location_marker_sprite;
+extern RGBQUAD g_palette_rgb[256];
 extern WorldMagicChoiceButtonSpriteBank g_world_magic_choice_button_sprite_bank;
 
 extern int g_next_duel_life_delta;
@@ -1463,37 +1466,78 @@ void DrawAdventureRightClickMenuButton(void)
   int size;
   int left;
   int top;
+  int plaque_inset;
+  int plaque_size;
+  int corner;
+  int line;
+  int icon_size;
+  int icon_left;
+  int icon_top;
   int fill_color;
   int border_light;
   int border_dark;
   EncodedImage *sprite;
 
   pad = ScaleUiCoordinate(4);
-  size = ScaleUiCoordinate(0x20);
+  size = ScaleUiCoordinate(0x14);
   left = global_screen_width - size - pad;
   top = pad;
+  plaque_inset = ScaleUiCoordinate(1);
+  plaque_size = size - plaque_inset * 2;
+  corner = ScaleUiCoordinate(2);
+  line = ScaleUiCoordinate(1);
+  icon_size = ScaleUiCoordinate(0xe);
+  icon_left = left + (size - icon_size) / 2;
+  icon_top = top + (size - icon_size) / 2;
 
-  fill_color = 0x1a;
-  border_light = 0xfe;
+  fill_color = 0x18;
+  border_light = 0x1a;
   border_dark = 0x1b;
-  sprite = g_main_menu_button_sprites_normal[0];
+  /* ttsprite[73], fitted to the compact menu plaque. */
+  sprite = g_ttsprite_special_sprite_b;
+  shandalar_deck_imgui_set_menu_sprite(sprite,
+                                       (const unsigned char *)g_palette_rgb);
   if (IsAdventureRightClickMenuButtonHit(g_mouse_x, g_mouse_y) != 0)
   {
     fill_color = (g_mouse_button_down_mask & 1) ? 0x18 : 0x1b;
-    border_light = 0xff;
+    border_light = (g_mouse_button_down_mask & 1) ? 0x1a : 0xfe;
     border_dark = 0x1a;
-    sprite = g_main_menu_button_sprites_highlight[0] ? g_main_menu_button_sprites_highlight[0] : sprite;
   }
 
-  FillGraphicsRect(g_page0_window_bounds, left, top, size, size, fill_color);
-  FillGraphicsRect(g_page0_window_bounds, left, top, size, ScaleUiCoordinate(1), border_light);
-  FillGraphicsRect(g_page0_window_bounds, left, top, ScaleUiCoordinate(1), size, border_light);
-  FillGraphicsRect(g_page0_window_bounds, left, top + size - ScaleUiCoordinate(1), size, ScaleUiCoordinate(1), border_dark);
-  FillGraphicsRect(g_page0_window_bounds, left + size - ScaleUiCoordinate(1), top, ScaleUiCoordinate(1), size, border_dark);
+  /* A compact chamfered plaque keeps the affordance without looking like a toolbar tile. */
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner, top + plaque_inset,
+                   plaque_size - corner * 2, plaque_size, fill_color);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset, top + plaque_inset + corner,
+                   plaque_size, plaque_size - corner * 2, fill_color);
+
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner, top + plaque_inset,
+                   plaque_size - corner * 2, line, border_light);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset, top + plaque_inset + corner,
+                   line, plaque_size - corner * 2, border_light);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + line, top + plaque_inset + corner - line,
+                   corner - line, line, border_light);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner - line, top + plaque_inset + line,
+                   line, corner - line, border_light);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - corner,
+                   top + plaque_inset + line, line, corner - line, border_light);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - corner + line,
+                   top + plaque_inset + corner - line, corner - line, line, border_light);
+
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner,
+                   top + plaque_inset + plaque_size - line, plaque_size - corner * 2, line, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - line,
+                   top + plaque_inset + corner, line, plaque_size - corner * 2, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - corner,
+                   top + plaque_inset + plaque_size - line * 2, corner - line, line, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - line * 2,
+                   top + plaque_inset + plaque_size - corner, line, corner - line, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + line,
+                   top + plaque_inset + plaque_size - corner, line, corner - line, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + line * 2,
+                   top + plaque_inset + plaque_size - corner + line, corner - line, line, border_dark);
   if (sprite != 0)
   {
-    DrawEncodedImageResampled(g_page0_window_bounds, left + ScaleUiCoordinate(3), top + ScaleUiCoordinate(3),
-                              size - ScaleUiCoordinate(6), size - ScaleUiCoordinate(6), sprite);
+    DrawEncodedImageResampled(g_page0_window_bounds, icon_left, icon_top, icon_size, icon_size, sprite);
   }
 }
 

@@ -14,7 +14,7 @@ static HWND add_control(HWND dialog, const char *class_name, int id,
                         int x, int y, int width, int height, DWORD style)
 {
   return CreateWindowExA(0, class_name, "", WS_CHILD | WS_VISIBLE | style,
-                         SX(x), SY(y) + GetSystemMetrics(SM_CYCAPTION),
+                         SX(x), SY(y),
                          SX(width), SY(height), dialog,
                          (HMENU)(intptr_t)id, global_hinstance, NULL);
 }

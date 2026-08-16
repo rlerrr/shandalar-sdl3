@@ -4647,7 +4647,7 @@ int IsAdventureRightClickMenuButtonHit(int x, int y)
   int top;
 
   pad = ScaleUiCoordinate(4);
-  size = ScaleUiCoordinate(0x20);
+  size = ScaleUiCoordinate(0x14);
   left = global_screen_width - size - pad;
   top = pad;
   return left <= x && x <= left + size && top <= y && y <= top + size;

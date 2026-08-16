@@ -320,8 +320,7 @@ HWND CreateWindowExA(DWORD ex_style, LPCSTR class_name, LPCSTR window_name,
   window->menu = menu;
   window->control_id = (style & WS_CHILD) ? (int)(intptr_t)menu : 0;
   window->style = style;
-  window->render_caption =
-      ((style & WS_CAPTION) == WS_CAPTION) && (style & WS_SYSMENU);
+  window->render_caption = ((style & WS_CAPTION) == WS_CAPTION);
   window->ex_style = ex_style;
   window->x = x;
   window->y = y;
@@ -699,9 +698,7 @@ LONG SetWindowLongA(HWND window, int index, LONG value)
   case GWL_ID: window->control_id = value; break;
   case GWL_STYLE:
     window->style = (DWORD)value;
-    window->render_caption =
-        (((DWORD)value & WS_CAPTION) == WS_CAPTION) &&
-        ((DWORD)value & WS_SYSMENU);
+    window->render_caption = (((DWORD)value & WS_CAPTION) == WS_CAPTION);
     break;
   case GWL_EXSTYLE: window->ex_style = (DWORD)value; break;
   case GWL_USERDATA: window->user_data = value; break;
