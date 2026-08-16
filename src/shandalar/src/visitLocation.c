@@ -95,7 +95,6 @@ typedef struct
 extern DialogBoxSpriteBank g_dialog_box_sprite_bank;
 extern EncodedImage *g_icons_sprite_entries[0x18];
 
-extern WorldMagicSlotTimer g_world_magic_slot_timers[0xc];
 
 typedef struct
 {
@@ -1274,7 +1273,7 @@ int RunTownBuyCardsScreen(AdvMenuControl *control)
   mana_mask = (int)GetWorldTileMagicMask(GetWorldTileType(g_town_slots[town_index].world_x, g_town_slots[town_index].world_y));
 
   item_count = g_town_slots[town_index].location_type + 3;
-  if (g_world_magic_slot_timers[1].town_index == 0)
+  if (Scards[WORLDMAGIC_HAGGLERS_COIN].worldmagic_city == 0)
   {
     item_count = item_count + 1;
   }
@@ -1898,7 +1897,7 @@ int RunTownServicesMenu(int town_index)
   tile_magic_mask = GetWorldTileMagicMask(GetWorldTileType(g_town_slots[town_index].world_x, g_town_slots[town_index].world_y));
 
   slot_count = g_town_slots[g_active_town_services_town_index].location_type + 3;
-  if (g_world_magic_slot_timers[1].town_index == 0)
+  if (Scards[WORLDMAGIC_HAGGLERS_COIN].worldmagic_city == 0)
   {
     slot_count = slot_count + 1;
   }
@@ -3399,7 +3398,7 @@ LAB_00531afb:
           strcpy(g_wiseman_city_block_subst_a, gs_worldmagic_names_00780660[g_wiseman_city_block_world_magic_slot_index]);
         }
         strcpy(g_wiseman_city_block_subst_b,
-               BuildTownDisplayName(g_world_magic_slot_timers[g_wiseman_city_block_world_magic_slot_index].town_index));
+               BuildTownDisplayName(Scards[g_wiseman_city_block_world_magic_slot_index].worldmagic_city));
         FormatMessageFromStringStripCarriageReturns(g_ui_message_buffer, 0x1000, text_page, g_wiseman_city_block_subst_a, g_wiseman_city_block_subst_b);
         DrawFormattedTextShadowed(g_page0_window_bounds, 0xc1, ScaleUiCoordinate(0x50),
                                   ScaleUiCoordinate(0x13c) - GetFontLineHeight(g_page0_window_bounds->font_slot) * city_line_count, g_ui_message_buffer);
@@ -4811,13 +4810,13 @@ int VisitTownSlot(int town_index)
     sprite = (EncodedImage *)999;
     for (world_magic_slot_index = 0; world_magic_slot_index < 0xc; world_magic_slot_index = world_magic_slot_index + 1)
     {
-      if (g_world_magic_slot_timers[world_magic_slot_index].town_index == 0)
+      if (Scards[world_magic_slot_index].worldmagic_city == 0)
       {
         continue;
       }
 
-      world_magic_distance = ApproximateDistance(g_town_slots[town_index].world_x - g_town_slots[g_world_magic_slot_timers[world_magic_slot_index].town_index].world_x,
-                                                 g_town_slots[town_index].world_y - g_town_slots[g_world_magic_slot_timers[world_magic_slot_index].town_index].world_y);
+      world_magic_distance = ApproximateDistance(g_town_slots[town_index].world_x - g_town_slots[Scards[world_magic_slot_index].worldmagic_city].world_x,
+                                                 g_town_slots[town_index].world_y - g_town_slots[Scards[world_magic_slot_index].worldmagic_city].world_y);
       if (world_magic_distance < (int)sprite)
       {
         sprite = (EncodedImage *)world_magic_distance;
@@ -4875,14 +4874,14 @@ int VisitTownSlot(int town_index)
       if (sprite)
       {
         // These are calcualted but unused
-        world_magic_delta_x = g_town_slots[g_world_magic_slot_timers[distance].town_index].world_x - g_town_slots[town_index].world_x;
-        world_magic_delta_y = g_town_slots[g_world_magic_slot_timers[distance].town_index].world_y - g_town_slots[town_index].world_y;
+        world_magic_delta_x = g_town_slots[Scards[distance].worldmagic_city].world_x - g_town_slots[town_index].world_x;
+        world_magic_delta_y = g_town_slots[Scards[distance].worldmagic_city].world_y - g_town_slots[town_index].world_y;
 
         /* Message: where to find it (direction + town name). */
-        world_quadrant = GetRelativeWorldQuadrant(g_town_slots[g_world_magic_slot_timers[distance].town_index].world_x,
-                                                  g_town_slots[g_world_magic_slot_timers[distance].town_index].world_y);
+        world_quadrant = GetRelativeWorldQuadrant(g_town_slots[Scards[distance].worldmagic_city].world_x,
+                                                  g_town_slots[Scards[distance].worldmagic_city].world_y);
 
-        FormatMessageFromStringStripCarriageReturns(g_ui_message_buffer, 0x1000, gs_visit_0077c4f0[0x1f], gs_directions_00765d50[world_quadrant], BuildTownDisplayName(g_world_magic_slot_timers[distance].town_index));
+        FormatMessageFromStringStripCarriageReturns(g_ui_message_buffer, 0x1000, gs_visit_0077c4f0[0x1f], gs_directions_00765d50[world_quadrant], BuildTownDisplayName(Scards[distance].worldmagic_city));
 
         world_magic_text_y = world_magic_text_y + 8;
         DrawUiScaledCenteredText(g_ui_message_buffer, world_magic_center_x, world_magic_text_y, 0x8d);
@@ -4895,7 +4894,7 @@ int VisitTownSlot(int town_index)
       {
         /* Purchase prompt. */
         FormatMessageFromStringStripCarriageReturns(g_ui_message_buffer, 0x1000, gs_visit_0077c4f0[0x20], gs_worldmagic_names_00780660[distance],
-                                                    BuildTownDisplayName(g_world_magic_slot_timers[distance].town_index), Scards[distance].worldmagic_price / 2);
+                                                    BuildTownDisplayName(Scards[distance].worldmagic_city), Scards[distance].worldmagic_price / 2);
         strcat(g_ui_message_buffer, gs_visit_0077c4f0[0x21]);
 
         ClearInputAndWaitForMouseRelease();
@@ -4909,7 +4908,7 @@ int VisitTownSlot(int town_index)
         {
           Gold = Gold - Scards[distance].worldmagic_price / 2;
           g_world_magic_bitmap = g_world_magic_bitmap | (1 << (unsigned char)g_world_magic_offer_slot_index);
-          g_world_magic_slot_timers[g_world_magic_offer_slot_index].town_index = 0;
+          Scards[g_world_magic_offer_slot_index].worldmagic_city = 0;
           AddJournalEntry(JOURNAL_ENTRY_WORLD_MAGIC_LEARNED, distance);
         }
         g_world_magic_offer_slot_index = -1;

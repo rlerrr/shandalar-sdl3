@@ -41,7 +41,6 @@ extern FacemakerWindowBounds *g_page1_window_bounds;
 extern FacemakerWindowBounds *g_page2_window_bounds;
 
 extern int g_world_scroll_cache_ready;
-extern WorldMagicSlotTimer g_world_magic_slot_timers[0xc];
 
 // External functions
 int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch);
@@ -803,7 +802,7 @@ int __cdecl DrawCityInfoTownRow(FacemakerWindowBounds *dst, int town_index, int 
   strcpy(g_ui_message_buffer, "");
   for (i = 0; i < 0xc; i++)
   {
-    if ((town_index != 0) && (g_world_magic_slot_timers[i].town_index == town_index))
+    if ((town_index != 0) && (Scards[i].worldmagic_city == town_index))
     {
       world_magic_slot_result = FindWorldMagicCardIndex(i);
       strcat(g_ui_message_buffer, gs_worldmagic_names_00780660[i]);
