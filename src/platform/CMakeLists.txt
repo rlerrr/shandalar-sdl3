@@ -1,5 +1,6 @@
 add_library(shandalar_platform STATIC
   asset_manager.c
+  cheat_options.c
   file_io.c
   gdi_compat.c
   legacy_io.c

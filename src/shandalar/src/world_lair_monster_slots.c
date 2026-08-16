@@ -13,6 +13,7 @@
 #include "shandalar_global_strings.h"
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
+#include "platform/cheat_options.h"
 
 extern int global_screen_width;
 extern int global_screen_height;
@@ -435,7 +436,8 @@ void UpdateWorldLairAndMonsterSlots(void)
     if ((slot_index < 6) &&
         ((g_lair_or_monster_slots[slot_index].entry_type == SHANDALAR_ENTRY_NONE) || (tile_dist_x > 4) || (tile_dist_y > 4)))
     {
-      do
+      color = 0;
+      for (i = 0; (i < 0x100) && (color == 0); i = i + 1)
       {
         if (internal_rand(2) != 0)
         {
@@ -450,7 +452,12 @@ void UpdateWorldLairAndMonsterSlots(void)
 
         tile_y = GetWorldTileType(spawn_x, spawn_y);
         color = GetWorldTileMagicMask(tile_y);
-      } while (color == 0);
+      }
+
+      if (color == 0)
+      {
+        continue;
+      }
 
       do
       {
@@ -1030,6 +1037,11 @@ void StartWizardTownSiege(void)
   int dist;
   int best_town_index;
   int score;
+
+  if (shandalar_cheat_enabled(SHANDALAR_CHEAT_DISABLE_SIEGES))
+  {
+    return;
+  }
 
   if (g_siege_indicator != 0)
   {

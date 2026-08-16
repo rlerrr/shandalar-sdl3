@@ -1,8 +1,6 @@
-#ifdef MODERN_FIXES
 #include "platform/winuser_compat.h"
-#else
-#include <windows.h>
-#endif
+#include "platform/cheat_options.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -2380,6 +2378,11 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
   DWORD thread_exit_code; /* ebp - 0x04 */
 
   (void)card_id;
+  
+  if (shandalar_cheat_enabled(SHANDALAR_CHEAT_INSTA_WIN_DUELS))
+  {
+    return 1;
+  }
 
   g_duel_state_00742fc0 = 1;
   DestroyCachedCardArt();

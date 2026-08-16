@@ -905,21 +905,27 @@ retry:
       UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
       if ((g_mouse_button_down_mask != 0) && (g_reveal_all_world_info != 0) && (g_map_menu_selection < 0))
       {
-        BlitGraphicsRect(g_page1_window_bounds, screen_x - 1, screen_y - 1, 4, 4, g_page0_window_bounds, screen_x - 1, screen_y - 1);
-        screen_x = screen_x_unscaled_debug = g_mouse_x_snapshot;
-        screen_y = screen_y_unscaled_debug = g_mouse_y_snapshot;
+        screen_x_unscaled_debug = g_mouse_x_snapshot;
+        screen_y_unscaled_debug = g_mouse_y_snapshot;
 
         screen_x_unscaled_debug = (screen_x_unscaled_debug * 0x280) / global_screen_width;
         screen_y_unscaled_debug = ((screen_y_unscaled_debug - ScaleUiCoordinate(0x40)) * 0x1e0) / global_screen_height;
-        ConvertMapScreenToWorldTileCoords(screen_x_unscaled_debug, screen_y_unscaled_debug, &g_world_player_tile_x, &g_world_player_tile_y);
-        g_world_player_x = g_world_player_tile_x * 0x20 + 0x10;
-        g_world_player_y = g_world_player_tile_y * 0x20 + 0x10;
+        ConvertMapScreenToWorldTileCoords(screen_x_unscaled_debug, screen_y_unscaled_debug, &tile_x, &tile_y);
+        if ((tile_x >= 0) && (tile_x < 0x40) && (tile_y >= 0) && (tile_y < 0x40) &&
+            (GetWorldTileMagicMask(GetWorldTileType(tile_x, tile_y)) != 0))
+        {
+          BlitGraphicsRect(g_page1_window_bounds, screen_x - 1, screen_y - 1, 4, 4, g_page0_window_bounds, screen_x - 1, screen_y - 1);
+          g_world_player_tile_x = tile_x;
+          g_world_player_tile_y = tile_y;
+          g_world_player_x = g_world_player_tile_x * 0x20 + 0x10;
+          g_world_player_y = g_world_player_tile_y * 0x20 + 0x10;
 
-        ConvertWorldTileToMapScreenCoords(g_world_player_tile_x, g_world_player_tile_y, &screen_x, &screen_y);
-        screen_x = (screen_x * global_screen_width) / 0x280;
-        screen_y = ScaleUiCoordinate(0x40) + (screen_y * global_screen_height) / 0x1e0;
+          ConvertWorldTileToMapScreenCoords(g_world_player_tile_x, g_world_player_tile_y, &screen_x, &screen_y);
+          screen_x = (screen_x * global_screen_width) / 0x280;
+          screen_y = ScaleUiCoordinate(0x40) + (screen_y * global_screen_height) / 0x1e0;
 
-        g_world_scroll_cache_ready = 0;
+          g_world_scroll_cache_ready = 0;
+        }
       }
     }
     else

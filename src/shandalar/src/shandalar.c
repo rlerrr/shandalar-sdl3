@@ -1,10 +1,6 @@
-#ifdef MODERN_FIXES
 #include "platform/winuser_compat.h"
-#else
-#include <windows.h>
-#include <mmsystem.h>
-#include <direct.h>
-#endif
+#include "platform/cheat_options.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -495,11 +491,9 @@ int g_shandalar_initialized = 0;
 
 extern int g_selected_save_slot_index;
 
-#ifdef _DEBUG
 extern int g_reveal_all_world_info;
 int g_debug_lair_event_type = -1;
 int RunWorldLairMonsterEncounter(int slot_index, int monster_color);
-#endif
 
 int InitLicenseSecretsFromRegistry(void);
 int LoadAdvStringsFile(const char *filename);
@@ -632,11 +626,7 @@ void destroy_create_fonts_resources(void);
 void FillGraphicsRect(FacemakerWindowBounds *window_bounds, int x, int y, int width, int height, unsigned int color_index);
 unsigned int __cdecl save_or_load_ver1(void);
 void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
-
-#ifdef _DEBUG
 void RunLairExplorationEvent(int color);
-#endif
-
 void DelayUiTicks(int ticks);
 int FindCardIndexByCsvid(int csvid);
 unsigned int PickRandomColorBitExcludingMask(unsigned int excluded_mask);
@@ -652,6 +642,7 @@ int UpdateStatWindowProgress(void *progress_values);
 int MapWizardColorToDisplayIndex(int wizard_color);
 int ConsumeMouseButtonReleaseMask(void);
 int RunTextMenuAt(char *menu_text, int left_x, int top_y);
+int RunTextMenuAtWithCancel(char *menu_text, int left_x, int top_y);
 int RunTextMenuCore(char *menu_text, int clear_input_before_show);
 int RunTextMenuAtScaled(char *menu_text, int x_320_scale, unsigned int y_200_scale);
 int DrawTextMenu(char *menu_text, int selected_option);
@@ -907,12 +898,6 @@ opening_menu:
   }
   else
   {
-
-#ifdef _DEBUG
-    // This normally only runs on new world creation which is annoying for debugging.
-    g_world_scene_reveal_effect_pending = 1;
-#endif
-
     last_tick = 0;
     do
     {
@@ -968,6 +953,19 @@ int RunTextMenuAt(char *menu_text, int left_x, int top_y)
   g_text_menu_top = top_y;
   g_text_menu_initial_selection = -1;
   return RunTextMenuCore(menu_text, 1);
+}
+
+int RunTextMenuAtWithCancel(char *menu_text, int left_x, int top_y)
+{
+  char menu_with_cancel[sizeof(g_ui_message_buffer)];
+  int menu_selection;
+  int menu_text_length;
+
+  menu_text_length = strlen(menu_text);
+  snprintf(menu_with_cancel, sizeof(menu_with_cancel), "%s%s Cancel\n", menu_text,
+           (menu_text_length != 0) && (menu_text[menu_text_length - 1] == '\n') ? "" : "\n");
+  menu_selection = RunTextMenuAt(menu_with_cancel, left_x, top_y);
+  return menu_selection == g_text_menu_option_count - 1 ? -1 : menu_selection;
 }
 
 // FUNCTION: SHANDALAR 0x00412bae
@@ -3325,13 +3323,6 @@ void MarkPathConnection(int x, int y, int direction_index)
 void SaveGameToSlot(int save_slot_index)
 {
   int save_drive_index;
-#ifdef _DEBUG
-  if (save_slot_index == 3)
-  {
-    // Disable auto-save in the debugger
-    return;
-  }
-#endif
   g_save_errno = 0;
   global_saveload_loading = g_save_errno;
   HideMouseCursorNested();
@@ -4183,7 +4174,6 @@ void RefreshAdventureInterfaceLayout(void)
   }
 }
 
-#ifdef _DEBUG
 void RunDebugEncounterLairMenu(void)
 {
   int lair_index;
@@ -4197,7 +4187,7 @@ void RunDebugEncounterLairMenu(void)
     strcat(g_ui_message_buffer, "\n");
   }
 
-  lair_index = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  lair_index = RunTextMenuAtWithCancel(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
   if (lair_index != -1)
   {
     if (lair_index < 5)
@@ -4252,7 +4242,7 @@ void RunDebugToggleWorldMagicMenu(void)
               ((g_world_magic_bitmap & (1 << (unsigned char)world_magic_index)) != 0) ? "ON" : "OFF");
     }
 
-    menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+    menu_selection = RunTextMenuAtWithCancel(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
     if (menu_selection != -1)
     {
       if ((g_world_magic_bitmap & (1 << (unsigned char)menu_selection)) != 0)
@@ -4299,7 +4289,7 @@ void RunDebugEncounterCreatureMenu(void)
     }
   }
 
-  menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  menu_selection = RunTextMenuAtWithCancel(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
   if (menu_selection == -1)
   {
     return;
@@ -4337,7 +4327,7 @@ void RunDebugEncounterCreatureMenu(void)
     }
   }
 
-  menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  menu_selection = RunTextMenuAtWithCancel(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
   if (menu_selection == -1 || menu_selection >= submenu_count)
   {
     return;
@@ -4384,7 +4374,7 @@ void RunDebugRightClickMenu(void)
 
   sprintf(g_ui_message_buffer, "DEBUG\n Encounter Lair\n Encounter Creature\n Toggle World Magic\n Reveal All World Info [%s]\n",
           (g_reveal_all_world_info != 0) ? "ON" : "OFF");
-  menu_selection = RunTextMenuAt(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  menu_selection = RunTextMenuAtWithCancel(g_ui_message_buffer, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
   switch (menu_selection)
   {
   case 0:
@@ -4402,7 +4392,6 @@ void RunDebugRightClickMenu(void)
     break;
   }
 }
-#endif
 
 // FUNCTION: SHANDALAR 0x0055e1b2
 int RunRightClickMenuAndQueueInput(void)
@@ -4416,12 +4405,14 @@ int RunRightClickMenuAndQueueInput(void)
   menu_text = g_text_lines[1];
   g_page0_window_bounds->font_slot = 4;
 
-#ifdef _DEBUG
-  strcpy(g_ui_message_buffer, menu_text);
-  strcat(g_ui_message_buffer, " DEBUG\n");
-  menu_text = g_ui_message_buffer;
-#endif
-  menu_selection = RunTextMenuAt(menu_text, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
+  if (shandalar_cheat_enabled(SHANDALAR_CHEAT_ENABLE_DEBUG_MENU))
+  {
+    strcpy(g_ui_message_buffer, menu_text);
+    strcat(g_ui_message_buffer, " DEBUG\n");
+    menu_text = g_ui_message_buffer;
+  }
+
+  menu_selection = RunTextMenuAtWithCancel(menu_text, ScaleUiCoordinate(0x50), ScaleUiCoordinate(0x40));
   switch (menu_selection + 1)
   {
   case 1:
@@ -4451,12 +4442,10 @@ int RunRightClickMenuAndQueueInput(void)
   case 9:
     PushQueuedKeyInput(0x4000);
     break;
-#ifdef _DEBUG
   case 10:
     RunDebugRightClickMenu();
     RefreshAdventureInterfaceLayout();
     break;
-#endif
   default:
     RefreshAdventureInterfaceLayout();
     break;

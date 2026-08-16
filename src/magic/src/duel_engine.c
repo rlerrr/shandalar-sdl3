@@ -10,6 +10,7 @@
 #include "deckdll/src/magsnd.h"
 #include "deckdll/src/shared_resources.h"
 #include "drawcardlib/Drawcardlib.h"
+#include "platform/cheat_options.h"
 #include "magic/src/game_support.h"
 #include "magic/src/global_duel_ui_ids.h"
 #include "magic/src/global_state.h"
@@ -632,12 +633,8 @@ int initialize_duel_engine_window(void)
 
   created_window = 1;
   InitializeCriticalSection(&g_duel_render_lock);
-#ifdef _DEBUG
-  // This is annoying to toggle since F12 is the debugger pause hotkey in VS, so start enabled
-  g_duel_cheats_state = 1;
-#else
-  g_duel_cheats_state = 0;
-#endif
+  g_duel_cheats_state = shandalar_cheat_enabled(SHANDALAR_CHEAT_ENABLE_DEBUG_MENU);
+
   g_duel_surface_reset_state = 0;
   g_shared_startup_completed = 1;
   g_duel_dialog_refresh_state = 0;

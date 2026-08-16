@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "platform/gdi_compat.h"
+#include "platform/cheat_options.h"
 #include "platform/legacy_io.h"
 
 #include "defs.h"
@@ -603,10 +604,6 @@ void LoadDuelInterfaceRegistryOptions(void)
         g_duel_interface_options.player_territory_type = 2;
     }
 
-    g_has_expansion_10 = 0;
-    value_size = 10;
-    has_expansion = HasExpansion(0x10);
-    g_has_expansion_10 = (has_expansion != 0);
   }
   else
   {
@@ -635,6 +632,10 @@ void LoadDuelInterfaceRegistryOptions(void)
       g_duel_interface_options.player_territory_type = 2;
     }
   }
+
+  has_expansion = HasExpansion(0x10);
+  g_has_expansion_10 = ((has_expansion != 0) ||
+                        shandalar_cheat_enabled(SHANDALAR_CHEAT_ENABLE_DEBUG_MENU));
 }
 
 // FUNCTION: SHANDALAR 0x00522e00
