@@ -247,7 +247,8 @@ static char *utf8_from_windows_text(LPCSTR text, int length, int *out_length)
   return utf8;
 }
 
-#define COLOR_CACHE_SIZE 256
+#define COLOR_CACHE_BITS 12
+#define COLOR_CACHE_SIZE (1u << COLOR_CACHE_BITS)
 #define COLOR_CACHE_MASK (COLOR_CACHE_SIZE - 1)
 static struct {
   COLORREF color;
@@ -280,10 +281,10 @@ static unsigned int effective_bitmap_colors_revision(HDC dc)
   return palette ? palette->revision : 0;
 }
 
-static unsigned char color_to_index(HDC dc, COLORREF color)
+static unsigned char color_to_index_with_colors(COLORREF color,
+                                                const PALETTEENTRY *entries,
+                                                unsigned int entries_revision)
 {
-  const PALETTEENTRY *entries;
-  unsigned int entries_revision;
   unsigned int i;
   unsigned int slot;
   unsigned int best = 0;
@@ -296,9 +297,8 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
     return (unsigned char)(color & 0xffu);
   color &= 0x00ffffffu;
 
-  entries = effective_bitmap_colors(dc);
-  entries_revision = effective_bitmap_colors_revision(dc);
-  slot = (color >> 2) & COLOR_CACHE_MASK;
+  /* Hash all 24 RGB bits; the old hash used only part of red and green. */
+  slot = (color * 2654435761u) >> (32 - COLOR_CACHE_BITS);
   if (g_color_cache[slot].color == color &&
       g_color_cache[slot].colors == entries &&
       g_color_cache[slot].colors_revision == entries_revision)
@@ -325,6 +325,14 @@ static unsigned char color_to_index(HDC dc, COLORREF color)
   g_color_cache[slot].colors_revision = entries_revision;
   g_color_cache[slot].index = (unsigned char)best;
   return (unsigned char)best;
+}
+
+static unsigned char color_to_index(HDC dc, COLORREF color)
+{
+  if ((color & 0xff000000u) == 0x01000000u)
+    return (unsigned char)(color & 0xffu);
+  return color_to_index_with_colors(color, effective_bitmap_colors(dc),
+                                    effective_bitmap_colors_revision(dc));
 }
 
 static void apply_rop(unsigned char *dst, unsigned char src, DWORD rop);
@@ -441,27 +449,25 @@ static int logical_from_device(int value, double scale)
   return (int)lround((double)value / scale);
 }
 
-static float prepare_font_for_dc(HDC dc)
+static void prepare_font_for_dc(HDC dc)
 {
-  float old_size;
   float device_size;
   if (!dc || !dc->font || !dc->font->font)
-    return 0.0f;
-  old_size = TTF_GetFontSize(dc->font->font);
+    return;
   device_size = (float)((double)dc->font->size * dc->font->font_size_to_cell_height *
                         device_scale_y(dc) * g_font_device_scale);
   if (device_size < 1.0f)
     device_size = 1.0f;
-  if (fabsf(old_size - device_size) > 0.01f)
+  /*
+   * Keep the SDL_ttf font at the last device size used for this HFONT.  Every
+   * GDI text entry point prepares the font before touching SDL_ttf, so
+   * restoring its construction size afterward only forces the next call to
+   * resize it again.  SDL_ttf rebuilds size-specific glyph state when that
+   * happens, which is especially costly for the measure/shadow/foreground
+   * sequence used by full-card drawing.
+   */
+  if (fabsf(TTF_GetFontSize(dc->font->font) - device_size) > 0.01f)
     TTF_SetFontSize(dc->font->font, device_size);
-  return old_size;
-}
-
-static void restore_font_size(HDC dc, float old_size)
-{
-  if (dc && dc->font && dc->font->font && old_size > 0.0f &&
-      fabsf(TTF_GetFontSize(dc->font->font) - old_size) > 0.01f)
-    TTF_SetFontSize(dc->font->font, old_size);
 }
 
 HDC WINAPI shandalar_GetDC(HWND window)
@@ -668,6 +674,56 @@ static int can_copy_indexed_pixels_directly(HDC dst, HDC src)
           memcmp(dst_colors, src_colors, 256 * sizeof(*dst_colors)) == 0);
 }
 
+static BOOL stretch_blt_bgr24_to_indexed(HDC dst, int dx, int dy,
+                                         int dw, int dh, HDC src,
+                                         int sx, int sy, int sw, int sh,
+                                         int flip_x, int flip_y)
+{
+  const PALETTEENTRY *entries = effective_bitmap_colors(dst);
+  unsigned int entries_revision = effective_bitmap_colors_revision(dst);
+  int x;
+  int y;
+  for (y = 0; y < dh; ++y) {
+    int target_y = dy + y;
+    int source_y = sy + (flip_y ? dh - 1 - y : y) * sh / dh;
+    int source_row;
+    int target_row;
+    unsigned char *source_pixels;
+    unsigned char *target_pixels;
+    if (target_y < 0 || target_y >= dst->bitmap->height ||
+        source_y < 0 || source_y >= src->bitmap->height)
+      continue;
+    if (dst->has_clip &&
+        (target_y < dst->clip.top || target_y >= dst->clip.bottom))
+      continue;
+    source_row = src->bitmap->top_down
+                   ? source_y
+                   : src->bitmap->height - 1 - source_y;
+    target_row = dst->bitmap->top_down
+                   ? target_y
+                   : dst->bitmap->height - 1 - target_y;
+    source_pixels = src->bitmap->pixels + source_row * src->bitmap->pitch;
+    target_pixels = dst->bitmap->pixels + target_row * dst->bitmap->pitch;
+    for (x = 0; x < dw; ++x) {
+      int target_x = dx + x;
+      int source_x = sx + (flip_x ? dw - 1 - x : x) * sw / dw;
+      const unsigned char *source;
+      COLORREF color;
+      if (target_x < 0 || target_x >= dst->bitmap->width ||
+          source_x < 0 || source_x >= src->bitmap->width)
+        continue;
+      if (dst->has_clip &&
+          (target_x < dst->clip.left || target_x >= dst->clip.right))
+        continue;
+      source = source_pixels + source_x * 3;
+      color = RGB(source[2], source[1], source[0]);
+      target_pixels[target_x] =
+          color_to_index_with_colors(color, entries, entries_revision);
+    }
+  }
+  return TRUE;
+}
+
 BOOL BitBlt(HDC dst, int dx, int dy, int width, int height, HDC src, int sx, int sy, DWORD rop)
 {
   int x, y;
@@ -743,6 +799,10 @@ BOOL StretchBlt(HDC dst, int dx, int dy, int dw, int dh, HDC src, int sx, int sy
   }
   if (!dst || !src || !dst->bitmap || !src->bitmap || dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0)
     return FALSE;
+  if (rop == SRCCOPY && dst->bitmap->bits_per_pixel == 8 &&
+      src->bitmap->bits_per_pixel == 24)
+    return stretch_blt_bgr24_to_indexed(dst, dx, dy, dw, dh, src,
+                                        sx, sy, sw, sh, flip_x, flip_y);
   if (dst->bitmap->bits_per_pixel == 8 && src->bitmap->bits_per_pixel == 8 &&
       can_copy_indexed_pixels_directly(dst, src) &&
       (rop == SRCCOPY || rop == SRCAND || rop == SRCPAINT)) {
@@ -1447,7 +1507,6 @@ int SetROP2(HDC dc, int mode) { (void)dc; return mode; }
 
 BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size)
 {
-  float old_size;
   int width;
   int height;
   char *utf8;
@@ -1458,16 +1517,14 @@ BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size)
     utf8 = utf8_from_windows_text(text, length, &utf8_length);
     if (!utf8)
       return FALSE;
-    old_size = prepare_font_for_dc(dc);
+    prepare_font_for_dc(dc);
     if (!TTF_GetStringSize(dc->font->font, utf8, (size_t)utf8_length, &width, &height)) {
       free(utf8);
-      restore_font_size(dc, old_size);
       return FALSE;
     }
     free(utf8);
     size->cx = logical_from_device(width, device_scale_x(dc));
     size->cy = logical_from_device(height, device_scale_y(dc));
-    restore_font_size(dc, old_size);
     return TRUE;
   }
   size->cx = length * 8; size->cy = 12;
@@ -1476,12 +1533,11 @@ BOOL GetTextExtentPoint32A(HDC dc, LPCSTR text, int length, SIZE *size)
 
 BOOL GetTextMetricsA(HDC dc, TEXTMETRICA *metrics)
 {
-  float old_size;
   double scale;
   if (!metrics) return FALSE;
   memset(metrics, 0, sizeof(*metrics));
   if (dc && dc->font && dc->font->font) {
-    old_size = prepare_font_for_dc(dc);
+    prepare_font_for_dc(dc);
     scale = device_scale_y(dc);
     metrics->tmHeight = logical_from_device(TTF_GetFontHeight(dc->font->font), scale);
     metrics->tmAscent = logical_from_device(TTF_GetFontAscent(dc->font->font), scale);
@@ -1497,7 +1553,6 @@ BOOL GetTextMetricsA(HDC dc, TEXTMETRICA *metrics)
       metrics->tmInternalLeading =
           metrics->tmHeight - metrics->tmAscent - metrics->tmDescent;
     }
-    restore_font_size(dc, old_size);
   } else {
     metrics->tmHeight = 12; metrics->tmAscent = 10; metrics->tmDescent = 2;
   }
@@ -1576,7 +1631,6 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
 {
   SDL_Surface *surface;
   SDL_Color white = {255,255,255,255};
-  float old_size;
   char *utf8;
   int utf8_length;
   if (!dc || !dc->bitmap || !dc->font || !dc->font->font || !text) return FALSE;
@@ -1586,13 +1640,12 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
   utf8 = utf8_from_windows_text(text, length, &utf8_length);
   if (!utf8)
     return FALSE;
-  old_size = prepare_font_for_dc(dc);
+  prepare_font_for_dc(dc);
   surface = TTF_RenderText_Blended(dc->font->font, utf8, (size_t)utf8_length, white);
   if (!surface) {
     SDL_Log("gdi: TTF_RenderText_Blended failed for \"%.*s\": %s",
             length, text, SDL_GetError());
     free(utf8);
-    restore_font_size(dc, old_size);
     return FALSE;
   }
   free(utf8);
@@ -1606,7 +1659,6 @@ BOOL TextOutA(HDC dc, int x, int y, LPCSTR text, int length)
     y -= surface->h;
   draw_text_surface(dc, surface, x, y, dc->bitmap->width, dc->bitmap->height);
   SDL_DestroySurface(surface);
-  restore_font_size(dc, old_size);
   return TRUE;
 }
 
@@ -1656,7 +1708,6 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   int underline_offset = -1;
   int underline_x = 0;
   int underline_width = 0;
-  float old_size;
   double scale_x;
   double scale_y;
   char *utf8;
@@ -1689,7 +1740,7 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
     free(display_text);
     return 0;
   }
-  old_size = prepare_font_for_dc(dc);
+  prepare_font_for_dc(dc);
   surface = single_line
               ? TTF_RenderText_Blended(dc->font->font, utf8, (size_t)utf8_length, white)
               : TTF_RenderText_Blended_Wrapped(dc->font->font, utf8, (size_t)utf8_length,
@@ -1697,7 +1748,6 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   if (!surface) {
     free(utf8);
     free(display_text);
-    restore_font_size(dc, old_size);
     return 0;
   }
   if (single_line && underline_offset >= 0) {
@@ -1730,7 +1780,6 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
     rect->right = rect->left + logical_from_device(surface->w, scale_x);
     rect->bottom = rect->top + logical_from_device(surface->h, scale_y);
     SDL_DestroySurface(surface);
-    restore_font_size(dc, old_size);
     return rect->bottom - rect->top;
   }
   if (format & DT_RIGHT)
@@ -1754,7 +1803,6 @@ int DrawTextA(HDC dc, LPCSTR text, int length, RECT *rect, UINT format)
   }
   max_width = surface->h;
   SDL_DestroySurface(surface);
-  restore_font_size(dc, old_size);
   return logical_from_device(max_width, device_scale_y(dc));
 }
 
@@ -2175,6 +2223,7 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
 {
   HBITMAP bitmap;
   const PALETTEENTRY *entries;
+  uint32_t rgba_palette[256];
   int x, y, height, width;
   if (!dc || !dc->bitmap || !pixels || pitch_bytes < dc->bitmap->width * 4)
     return FALSE;
@@ -2196,15 +2245,17 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
   } else if ((entries = effective_bitmap_colors(dc)) != NULL) {
     unsigned char *base = bitmap->pixels;
     int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
+    for (x = 0; x < 256; ++x) {
+      const PALETTEENTRY *entry = &entries[x];
+      rgba_palette[x] = 0xff000000u | ((uint32_t)entry->peRed << 16) |
+                        ((uint32_t)entry->peGreen << 8) | entry->peBlue;
+    }
     for (y = 0; y < height; ++y) {
       int row = top_down ? y : height - 1 - y;
       unsigned char *src = base + row * src_pitch;
       uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
-      for (x = 0; x < width; ++x) {
-        const PALETTEENTRY *entry = &entries[src[x]];
-        dst[x] = 0xff000000u | ((uint32_t)entry->peRed << 16) |
-                 ((uint32_t)entry->peGreen << 8) | entry->peBlue;
-      }
+      for (x = 0; x < width; ++x)
+        dst[x] = rgba_palette[src[x]];
     }
   } else {
     unsigned char *base = bitmap->pixels;

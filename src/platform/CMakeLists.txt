@@ -60,6 +60,10 @@ if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_SHANDALAR)
 endif()
 
 if(SHANDALAR_BUILD_TESTS)
+  add_executable(gdi_compat_test tests/gdi_compat_test.c)
+  target_link_libraries(gdi_compat_test PRIVATE shandalar_platform)
+  add_test(NAME gdi_compat_test COMMAND gdi_compat_test)
+
   add_executable(winuser_compat_test tests/winuser_compat_test.c)
   target_link_libraries(winuser_compat_test PRIVATE shandalar_platform)
   add_test(NAME winuser_compat_test COMMAND winuser_compat_test)
