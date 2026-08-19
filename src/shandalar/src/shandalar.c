@@ -34,6 +34,9 @@
 #include <emscripten.h>
 #endif
 
+#define OVERWORLD_LOGIC_INTERVAL_NS (60ULL * 1000000ULL)
+#define OVERWORLD_FRAME_INTERVAL_NS (1000000000ULL / 30ULL)
+
 #ifdef MODERN_FIXES
 #endif
 
@@ -729,7 +732,7 @@ opening_menu:
 
         AdvanceSmoothWorldCamera(frame_delta_ms);
 
-        while ((now_ns - last_tick_ns) >= 60ULL * 1000000ULL)
+        if ((now_ns - last_tick_ns) >= OVERWORLD_LOGIC_INTERVAL_NS)
         {
           ConsumeUiTickCount();
 
@@ -753,7 +756,26 @@ opening_menu:
           }
           ClearQueuedKeyInput();
 
-          last_tick_ns += 60ULL * 1000000ULL;
+          // Modal locations and duels can hold this call for a long time.
+          // Restart both clocks when they return so their elapsed time affects
+          // neither camera velocity nor overworld movement.
+          if ((SDL_GetTicksNS() - now_ns) >= OVERWORLD_LOGIC_INTERVAL_NS)
+          {
+            now_ns = SDL_GetTicksNS();
+            last_tick_ns = now_ns;
+            last_frame_ns = now_ns;
+          }
+          else
+          {
+            last_tick_ns += OVERWORLD_LOGIC_INTERVAL_NS;
+
+            // Drop stale backlog from a host hitch instead of replaying it as
+            // a burst of overworld movement over subsequent frames.
+            if ((now_ns - last_tick_ns) >= OVERWORLD_LOGIC_INTERVAL_NS)
+            {
+              last_tick_ns = now_ns;
+            }
+          }
         }
 
         if ((fabs(g_cam_smooth_x - (double)g_world_player_x) >= 32.0) ||
@@ -772,6 +794,18 @@ opening_menu:
 
         shandalar_host_pump();
         setjmp(g_adventure_world_exit_jump_buffer);
+
+        // This is an old 2D game; rendering faster than 30 FPS adds heat and
+        // makes fractional scrolling look unnaturally busy without improving
+        // its 60 ms gameplay cadence.
+        while ((SDL_GetTicksNS() - now_ns) < OVERWORLD_FRAME_INTERVAL_NS)
+        {
+#ifdef __EMSCRIPTEN__
+          emscripten_sleep(0);
+#else
+          SDL_Delay(1);
+#endif
+        }
       } while (g_adventure_world_exit_requested == 0);
     }
   }
