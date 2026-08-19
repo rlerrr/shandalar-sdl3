@@ -118,18 +118,13 @@ void SyncSmoothWorldCameraDirection(int player_x, int player_y, int move_directi
   }
 
   // Velocity describes the interval following the last accepted movement
-  // gate. A turn or stop invalidates that prediction immediately.
+  // gate. A turn or stop invalidates that prediction immediately. The sprite
+  // changes heading without an animation blend, so make the camera corner just
+  // as sharply instead of carrying fractional motion around the turn.
   g_cam_vel_x = 0.0;
   g_cam_vel_y = 0.0;
-
-  // Keep the current fractional position through an ordinary turn; the next
-  // accepted step retargets from there. A full stop must resynchronize now so
-  // modal visits and blocked movement cannot leave the camera displaced.
-  if (move_direction == 0)
-  {
-    g_cam_smooth_x = player_x;
-    g_cam_smooth_y = player_y;
-  }
+  g_cam_smooth_x = player_x;
+  g_cam_smooth_y = player_y;
   g_cam_last_gate_x = player_x;
   g_cam_last_gate_y = player_y;
   g_cam_move_direction = move_direction;
