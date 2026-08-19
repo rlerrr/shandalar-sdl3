@@ -227,6 +227,7 @@ typedef struct tagWINDOWPOS {
 #define WM_QUIT 0x0012
 #define WM_ERASEBKGND 0x0014
 #define WM_SHOWWINDOW 0x0018
+#define WM_CANCELMODE 0x001f
 #define WM_SETCURSOR 0x0020
 #define WM_NCHITTEST 0x0084
 #define WM_NCPAINT 0x0085

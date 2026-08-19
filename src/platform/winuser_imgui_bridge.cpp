@@ -542,10 +542,16 @@ void draw_control_tree(HWND window, HWND modal)
       ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f);
     ImGui::BeginDisabled();
   }
-  if (is_builtin_control(window))
+  if (is_builtin_control(window)) {
+    // Modal controls are submitted later in this same ImGui window.  Allow
+    // their items to overlap disabled controls beneath the dialog; otherwise
+    // an underlying button can silently consume the dialog's hit area.
+    if (disabled_by_modal)
+      ImGui::SetNextItemAllowOverlap();
     draw_builtin_control(window);
-  else
+  } else {
     draw_window_scrollbars(window);
+  }
   if (disabled) {
     ImGui::EndDisabled();
     if (disabled_by_modal)

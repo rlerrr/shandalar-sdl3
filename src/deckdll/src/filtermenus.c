@@ -172,6 +172,13 @@ static bool global_filtermenu_artist_enabled;
 // GLOBAL: DECKDLL 0x10113d08
 static bool global_filtermenu_gold_enabled;
 
+#define FILTER_LONG_PRESS_TIMER_ID 1
+#define FILTER_LONG_PRESS_MS 500
+
+static int global_filter_pressed_button = -1;
+static POINT global_filter_press_point;
+static bool global_filter_press_can_activate;
+
 // GLOBAL: DECKDLL 0x101a9190
 struct global_filters_t global_filters;
 
@@ -224,6 +231,23 @@ static int filterbuttons_setcoords(const RECT *r, int button_number, RECT *rval)
 
   CopyRect(rval, &temp_rect);
   return 1;
+}
+
+static int
+filter_button_at_point(HWND hwnd, POINT point)
+{
+  int i;
+  RECT client_rect;
+  RECT button_rect;
+
+  GetClientRect(hwnd, &client_rect);
+  for (i = 0; i < 35; ++i)
+  {
+    filterbuttons_setcoords(&client_rect, i, &button_rect);
+    if (PtInRect(&button_rect, point))
+      return i;
+  }
+  return -1;
 }
 
 // FUNCTION: DECKDLL 0x1001eaa5
@@ -343,6 +367,17 @@ static HMENU select_filter_menu(HWND hwnd, POINT p)
     return global_filtermenu_artist;
 
   return global_filtermenu_default;
+}
+
+static void
+show_filter_menu(HWND hwnd, POINT point)
+{
+  HMENU menu = select_filter_menu(hwnd, point);
+  if (menu)
+  {
+    ClientToScreen(hwnd, &point);
+    TrackPopupMenu(menu, TPM_RIGHTBUTTON, point.x, point.y, 0, hwnd, NULL);
+  }
 }
 
 // FUNCTION: DECKDLL 0x1001d7bc
@@ -718,6 +753,30 @@ toggle_filterbutton(int n)
   }
 }
 
+static void
+activate_filter_button(HWND hwnd, int button_number)
+{
+  RECT client_rect;
+
+  GetClientRect(hwnd, &client_rect);
+  FillRect(global_filter_buttons_hdc, &client_rect, global_create_brush_5);
+
+  if (toggle_filterbutton(button_number))
+  {
+    if (global_cfg.effects)
+      play_sound(4, 400, 0, 0);
+  }
+  else if (global_cfg.effects)
+  {
+    play_sound(5, 400, 0, 0);
+  }
+
+  SendMessage(global_horzlist_hwnd, 0x186, 0, 0);
+  filter_cards_in_lists(global_listbox_hwnd, global_horzlist_hwnd);
+  draw_filter_buttons(global_filter_buttons_hdc, client_rect);
+  InvalidateRect(hwnd, NULL, FALSE);
+}
+
 // FUNCTION: DECKDLL 0x1001f97e
 static void create_filter_menus(void)
 {
@@ -903,11 +962,8 @@ wndproc_CardListFilterClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   HDC hdc2;
   PAINTSTRUCT paint; // ebp - 0xa4
   POINT pt2;
-  HMENU menu;           // ebp - 0x5c
   POINT pt;             // ebp - 0x58
   int i;                // ebp - 0x50
-  RECT r;               // ebp - 0x4c
-  RECT r2;              // ebp - 0x3c
   UINT refresh_filters; // ebp - 0x2c
   HDC hdc;              // ebp - 0x28
   int cmd;              // ebp - 0x24
@@ -1325,6 +1381,9 @@ wndproc_CardListFilterClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   }
 
   case WM_CREATE:
+    global_filter_pressed_button = -1;
+    global_filter_press_can_activate = false;
+
     global_filters.colors = FC_WHITE | FC_GREEN | FC_RED | FC_BLACK | FC_BLUE;
 
     global_filters.expansions = FE_4TH_EDITION | FE_REVISED | FE_UNLIMITED;
@@ -1395,7 +1454,11 @@ wndproc_CardListFilterClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_DESTROY:
     destroy_filter_button_resources();
     destroy_filter_menus();
-    KillTimer(hwnd, 1);
+    KillTimer(hwnd, FILTER_LONG_PRESS_TIMER_ID);
+    if (GetCapture() == hwnd)
+      ReleaseCapture();
+    global_filter_pressed_button = -1;
+    global_filter_press_can_activate = false;
     return 0;
 
   case WM_INITMENU:
@@ -1507,47 +1570,75 @@ wndproc_CardListFilterClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     return 0;
 
   case WM_LBUTTONDOWN:
-  {
     pt.x = lparam & 0xffff;
     pt.y = GET_Y_LPARAM(lparam);
-
-    GetClientRect(hwnd, &r);
-    for (i = 0; i < 35; ++i)
+    i = filter_button_at_point(hwnd, pt);
+    if (i >= 0)
     {
-      filterbuttons_setcoords(&r, i, &r2);
-      if (PtInRect(&r2, pt))
+      global_filter_pressed_button = i;
+      global_filter_press_point = pt;
+      global_filter_press_can_activate = true;
+      SetCapture(hwnd);
+      SetTimer(hwnd, FILTER_LONG_PRESS_TIMER_ID, FILTER_LONG_PRESS_MS, NULL);
+    }
+    return 0;
+
+  case WM_MOUSEMOVE:
+    if (global_filter_pressed_button >= 0 && global_filter_press_can_activate)
+    {
+      pt.x = lparam & 0xffff;
+      pt.y = GET_Y_LPARAM(lparam);
+      if (filter_button_at_point(hwnd, pt) != global_filter_pressed_button)
       {
-        FillRect(global_filter_buttons_hdc, &r, global_create_brush_5);
-
-        if (toggle_filterbutton(i))
-        {
-          if (global_cfg.effects)
-            play_sound(4, 400, 0, 0);
-        }
-        else if (global_cfg.effects)
-        {
-          play_sound(5, 400, 0, 0);
-        }
-
-        SendMessage(global_horzlist_hwnd, 0x186, 0, 0);
-        filter_cards_in_lists(global_listbox_hwnd, global_horzlist_hwnd);
-        draw_filter_buttons(global_filter_buttons_hdc, r);
-        InvalidateRect(hwnd, NULL, FALSE);
-        return 0;
+        global_filter_press_can_activate = false;
+        KillTimer(hwnd, FILTER_LONG_PRESS_TIMER_ID);
       }
     }
     return 0;
-  }
+
+  case WM_LBUTTONUP:
+    i = global_filter_pressed_button;
+    KillTimer(hwnd, FILTER_LONG_PRESS_TIMER_ID);
+    if (GetCapture() == hwnd)
+      ReleaseCapture();
+    global_filter_pressed_button = -1;
+    if (i >= 0 && global_filter_press_can_activate)
+    {
+      pt.x = lparam & 0xffff;
+      pt.y = GET_Y_LPARAM(lparam);
+      if (filter_button_at_point(hwnd, pt) == i)
+        activate_filter_button(hwnd, i);
+    }
+    global_filter_press_can_activate = false;
+    return 0;
+
+  case WM_TIMER:
+    if (wparam == FILTER_LONG_PRESS_TIMER_ID &&
+        global_filter_pressed_button >= 0 &&
+        global_filter_press_can_activate)
+    {
+      KillTimer(hwnd, FILTER_LONG_PRESS_TIMER_ID);
+      global_filter_pressed_button = -1;
+      global_filter_press_can_activate = false;
+      if (GetCapture() == hwnd)
+        ReleaseCapture();
+      show_filter_menu(hwnd, global_filter_press_point);
+      return 0;
+    }
+    break;
+
+  case WM_CANCELMODE:
+    KillTimer(hwnd, FILTER_LONG_PRESS_TIMER_ID);
+    if (GetCapture() == hwnd)
+      ReleaseCapture();
+    global_filter_pressed_button = -1;
+    global_filter_press_can_activate = false;
+    return 0;
 
   case WM_RBUTTONDOWN:
     pt2.x = lparam & 0xffff;
     pt2.y = GET_Y_LPARAM(lparam);
-    menu = select_filter_menu(hwnd, pt2);
-    if (menu)
-    {
-      ClientToScreen(hwnd, &pt2);
-      TrackPopupMenu(menu, TPM_RIGHTBUTTON, pt2.x, pt2.y, 0, hwnd, NULL);
-    }
+    show_filter_menu(hwnd, pt2);
     return 0;
 
   case WM_PAINT:
