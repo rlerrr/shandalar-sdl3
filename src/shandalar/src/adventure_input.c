@@ -521,6 +521,10 @@ void UpdateAdventureWorldInputAndMovement(void)
     g_adventure_demo_idle_ticks = 300;
   }
 
+  // Input can change direction between movement-gate ticks. Cancel the
+  // preceding direction's camera velocity before applying this tick's move.
+  SyncSmoothWorldCameraDirection(g_world_player_x, g_world_player_y, g_world_move_dir_index);
+
   random_value = g_neighbor_dx[g_world_move_dir_index] + g_world_player_x;
   random_world_x = g_neighbor_dy[g_world_move_dir_index] + g_world_player_y;
   tile_type = GetWorldTileType(random_value / 32, random_world_x / 32);

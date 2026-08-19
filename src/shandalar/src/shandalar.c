@@ -48,6 +48,7 @@ static double g_cam_vel_x;
 static double g_cam_vel_y;
 static int g_cam_last_gate_x;
 static int g_cam_last_gate_y;
+static int g_cam_move_direction;
 
 static void AdvanceSmoothWorldCamera(double elapsed_ms)
 {
@@ -97,10 +98,38 @@ static void GetSmoothWorldCameraRenderPosition(double *world_x, double *world_y)
 
 void SetSmoothWorldCameraVelocity(int player_x, int player_y, int movement_tick_interval)
 {
-  g_cam_vel_x = (double)(player_x - g_cam_last_gate_x) / (double)movement_tick_interval;
-  g_cam_vel_y = (double)(player_y - g_cam_last_gate_y) / (double)movement_tick_interval;
+  // Retarget from the camera's actual fractional position. This normally
+  // equals the preceding gate position, while also recovering cleanly after a
+  // direction change or a late frame without retaining a permanent offset.
+  g_cam_vel_x = ((double)player_x - g_cam_smooth_x) / (double)movement_tick_interval;
+  g_cam_vel_y = ((double)player_y - g_cam_smooth_y) / (double)movement_tick_interval;
   g_cam_last_gate_x = player_x;
   g_cam_last_gate_y = player_y;
+}
+
+void SyncSmoothWorldCameraDirection(int player_x, int player_y, int move_direction)
+{
+  if (move_direction == g_cam_move_direction)
+  {
+    return;
+  }
+
+  // Velocity describes the interval following the last accepted movement
+  // gate. A turn or stop invalidates that prediction immediately.
+  g_cam_vel_x = 0.0;
+  g_cam_vel_y = 0.0;
+
+  // Keep the current fractional position through an ordinary turn; the next
+  // accepted step retargets from there. A full stop must resynchronize now so
+  // modal visits and blocked movement cannot leave the camera displaced.
+  if (move_direction == 0)
+  {
+    g_cam_smooth_x = player_x;
+    g_cam_smooth_y = player_y;
+  }
+  g_cam_last_gate_x = player_x;
+  g_cam_last_gate_y = player_y;
+  g_cam_move_direction = move_direction;
 }
 
 
@@ -686,6 +715,7 @@ opening_menu:
       g_cam_vel_y = 0.0;
       g_cam_last_gate_x = g_world_player_x;
       g_cam_last_gate_y = g_world_player_y;
+      g_cam_move_direction = g_world_move_dir_index;
       last_frame_ns = SDL_GetTicksNS();
       last_tick_ns = last_frame_ns;
 
@@ -711,6 +741,7 @@ opening_menu:
           QueuePendingMenuActionInput();
 
           UpdateAdventureWorldInputAndMovement();
+          SyncSmoothWorldCameraDirection(g_world_player_x, g_world_player_y, g_world_move_dir_index);
           UpdateWorldLairAndMonsterSlots();
 
           TickWorldMagicSlotTimers();

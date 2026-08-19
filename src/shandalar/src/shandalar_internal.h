@@ -377,6 +377,7 @@ void TickWorldMagicSlotTimers(void);
 void UpdateMouseSnapshot(void);
 void UpdateMouseSnapshotImpl(void);
 void SetSmoothWorldCameraVelocity(int player_x, int player_y, int movement_tick_interval);
+void SyncSmoothWorldCameraDirection(int player_x, int player_y, int move_direction);
 int BeginMenuContext(void);
 int ResetMenuContext(int context_index);
 int AddMenuControlsToContext(AdvMenuControl *controls, int control_count, int context_index);
