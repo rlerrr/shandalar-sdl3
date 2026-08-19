@@ -309,7 +309,7 @@ void UpdateAdventureWorldInputAndMovement(void)
   unsigned int tile_type;        // ebp - 0x14
   int nearest_slot_distance;     // ebp - 0x10
   int nearest_slot_index;        // ebp - 0xc
-  int deck_index;                // ebp - 0x8
+  int movement_tick_interval;    // ebp - 0x8
   int dungeon_index;             // ebp - 0x4
 
   if (IsKeyInputQueueEmpty() == 0)
@@ -537,37 +537,37 @@ void UpdateAdventureWorldInputAndMovement(void)
     abs_delta_y = 0;
   }
 
-  deck_index = 1;
+  movement_tick_interval = 1;
   g_world_player_tile_x = g_world_player_x / 32;
   g_world_player_tile_y = g_world_player_y / 32;
   if ((tile_type == 2) || ((tile_type == 3 && ((g_world_magic_bitmap & 8U) == 0)) || (tile_type == 4 && ((g_world_magic_bitmap & 0x200U) == 0))))
   {
-    deck_index = 3;
+    movement_tick_interval = 3;
   }
   if ((tile_type == 5) && ((g_world_magic_bitmap & 0x200U) == 0))
   {
-    deck_index = 3;
+    movement_tick_interval = 3;
   }
   if (WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y, g_world_move_dir_index) != 0)
   {
-    deck_index = 1;
+    movement_tick_interval = 1;
   }
   if (WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y, (g_world_move_dir_index + 3U & 7) + 1) != 0)
   {
-    deck_index = 1;
+    movement_tick_interval = 1;
   }
   if (g_food == 0)
   {
-    deck_index = ClampIntToRange(deck_index + 2, 0, 4);
+    movement_tick_interval = ClampIntToRange(movement_tick_interval + 2, 0, 4);
   }
 
   random_value = g_world_player_x / 32;
   random_world_x = g_world_player_y / 32;
   previous_world_x = g_world_player_x;
   previous_world_y = g_world_player_y;
-  if (g_monster_timer % deck_index == 0)
+  if (g_monster_timer % movement_tick_interval == 0)
   {
-    if (deck_index == 3)
+    if (movement_tick_interval == 3)
     {
       g_world_player_x += g_neighbor_dx[g_world_move_dir_index] * 2;
     }
@@ -576,7 +576,7 @@ void UpdateAdventureWorldInputAndMovement(void)
       g_world_player_x += g_neighbor_dx[g_world_move_dir_index];
     }
 
-    if (deck_index == 3)
+    if (movement_tick_interval == 3)
     {
       g_world_player_y += g_neighbor_dy[g_world_move_dir_index] * 2;
     }
@@ -622,7 +622,7 @@ void UpdateAdventureWorldInputAndMovement(void)
       g_world_player_y = previous_world_y;
     }
 
-    SetSmoothWorldCameraVelocity(g_world_player_x, g_world_player_y, deck_index);
+    SetSmoothWorldCameraVelocity(g_world_player_x, g_world_player_y, movement_tick_interval);
 
     if ((internal_rand(0x28) == 0) && (g_skip_world_sfx_preload == 0))
     {
