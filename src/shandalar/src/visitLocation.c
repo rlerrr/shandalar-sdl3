@@ -2621,8 +2621,7 @@ int ParseDeckFileIntoInitialLibrary(char *deck_path, csvid_and_numcards *library
   header_line_index = deck_type;
   entry_index = (unsigned int)header_line_index;
 
-  scan_ret = fscanf(f, "%[^\n]", line);
-  scan_ret = fscanf(f, "%[\n]", line);
+  (void)fgets(line, sizeof(line), f);
 
   current_color_filter = 0;
   current_speed_filter = -1;
@@ -2634,7 +2633,22 @@ int ParseDeckFileIntoInitialLibrary(char *deck_path, csvid_and_numcards *library
 
   do
   {
-    scan_ret = fscanf(f, "%[^\n]\0\0", line);
+    scan_ret = (fgets(line, sizeof(line), f) != NULL) ? 1 : -1;
+    if (scan_ret == -1)
+    {
+      break;
+    }
+
+    space = strpbrk(line, "\r\n");
+    if (space != (char *)0)
+    {
+      *space = '\0';
+    }
+    if (line[0] == '\0')
+    {
+      continue;
+    }
+
     if (line[0] == '.')
     {
       if (line[1] != 'v')
@@ -2740,7 +2754,6 @@ int ParseDeckFileIntoInitialLibrary(char *deck_path, csvid_and_numcards *library
         deck_type = -2;
       }
     }
-    scan_ret = fscanf(f, "%[\n]\0\0\0", line);
   } while ((((int)entry_index < 200) && (total_cards < 500) && (scan_ret != -1)) &&
            ((csvid != 0) || (numcards != 0)));
 
