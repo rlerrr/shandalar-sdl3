@@ -14,6 +14,13 @@ if "%APP%"=="" set "APP=facemaker"
 set "BUILD_TYPE=%~2"
 if "%BUILD_TYPE%"=="" set "BUILD_TYPE=Debug"
 
+rem CMake silently accepts unknown single-config build types without applying
+rem any configuration flags. Reject typos instead of producing unoptimized wasm.
+if /I not "%BUILD_TYPE%"=="Debug" if /I not "%BUILD_TYPE%"=="Release" if /I not "%BUILD_TYPE%"=="RelWithDebInfo" if /I not "%BUILD_TYPE%"=="MinSizeRel" (
+  echo Invalid build type "%BUILD_TYPE%". Use Debug, Release, RelWithDebInfo, or MinSizeRel.
+  exit /b 2
+)
+
 if /I "%APP%"=="deck" (
   set "BUILD_DIR=out\build\deck-wasm"
   set "BIN_DIR=deck-wasm"
