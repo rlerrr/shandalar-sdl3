@@ -7,20 +7,16 @@
 #include <stdarg.h>
 
 #include "facemaker/src/facemaker_types.h"
+#include "shandalar_internal.h"
 
-int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow, int scale_to_screen, int center_x, int center_y,
-                      int x, int y, int *format_and_args);
 int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
                         int scale_to_screen, int center_x, int center_y,
                         int x, int y, char *format, va_list args);
-void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int width, int height, EncodedImage *encoded_image);
 
-extern FontSlot g_font_slots[0x10];
 
 // From visitLocation.c (used by BlitRectByStaggeredRandomTileOrder)
 extern int g_ui_fx_lcg_multipliers[0x14];
 
-void shandalar_host_pump(void);
 
 // Time it takes for random blit rect effect to finish
 #define TILE_REVEAL_MS 1000

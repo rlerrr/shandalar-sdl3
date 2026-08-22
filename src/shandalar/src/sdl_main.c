@@ -13,6 +13,7 @@
 #include "platform/winuser_imgui_bridge.h"
 #include "platform/winuser_sdl_compositor.h"
 #include "statwin/statwin.h"
+#include "shandalar_internal.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -42,14 +43,6 @@ EM_JS(void, load_shandalar_asset_bundle, (), {
 });
 #endif
 
-extern HDC global_main_hdc;
-extern int global_screen_width;
-extern int global_screen_height;
-extern DIBSurface *g_graphics_pages[10];
-extern int g_mouse_x;
-extern int g_mouse_y;
-extern int g_mouse_button_down_mask;
-extern int g_mouse_button_released_mask;
 extern int g_worker_should_exit;
 extern int g_worker_exit_code;
 extern int g_ui_ready;
@@ -59,7 +52,6 @@ extern HWND g_main_hwnd;
 int shandalar_runtime_init(const char *asset_root);
 void shandalar_runtime_shutdown(void);
 void ShutdownGraphicsSystem(void);
-void PushQueuedKeyInput(int key_code);
 extern int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 extern int WINAPI FacemakerWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd);
 

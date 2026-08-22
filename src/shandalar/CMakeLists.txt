@@ -3,6 +3,13 @@ include("${SHANDALAR_SRC_ROOT}/magic/duel_sources.cmake")
 add_executable(shandalar
   src/sdl_main.c
   src/shandalar.c
+  src/adventure_input.c
+  src/adventure_main_menu.c
+  src/adventure_new_game.c
+  src/adventure_save.c
+  src/adventure_sound.c
+  src/adventure_ui.c
+  src/world_generation.c
   src/opt57_shandalar_core.c
   src/opt57_shandalar_only.c
   src/opt57_shandalar_ui_fx.c

@@ -13,6 +13,7 @@
 #include "platform/gdi_compat.h"
 #include "platform/legacy_io.h"
 #include "platform/winuser_compat.h"
+#include "shandalar_internal.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -24,57 +25,19 @@ char global_cardart_path[0x110];
 char global_duel_dat_path[0x110];
 char szDeckName[0x104];
 
-extern void LoadPcxResource(int page, int x, int y, char *path, void *palette);
-extern void LoadPcxIntoPage(int page_number, char *path);
-extern void FillGraphicsRect(FacemakerWindowBounds *window_bounds, int x, int y,
-                             int width, int height, unsigned int color_index);
-extern void BlitGraphicsRect(FacemakerWindowBounds *dst, unsigned int dst_x, int dst_y,
-                             unsigned int width, DWORD height, FacemakerWindowBounds *src,
-                             int src_x, int src_y);
-extern void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y,
-                                    int src_w, int src_h, FacemakerWindowBounds *src,
-                                    int src_x, int src_y, int copy_w, int copy_h);
-extern void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y,
-                                      int width, int height, EncodedImage *encoded_image);
 extern int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
                                int scale_to_screen, int center_x, int center_y,
                                int x, int y, char *format, va_list args);
 extern DIBSurface *InitializeGraphicsSystem(int width, int height, int bits_per_pixel);
-extern void *CreateGraphicsPage(int page_number, int width, int height, int bits_per_pixel);
-extern void SetGraphicsPage(int page_number, void *page);
-extern int LoadSystemFont(int font_id, unsigned int point_size, char *font_file,
-                          char *font_name, int weight, int italic);
-extern int ScaleUiCoordinate(int value);
-extern int FileExists(const char *filename);
 extern int RunNameEntryDialog(char *name_buffer);
-extern void BeginSpriteEncodeSession(void);
-extern EncodedImage *EncodeSpriteFromPage(int page_number, int x, int y, int width, int height);
-extern void FinalizeSpriteEncodeSession(void);
-extern void FreeSpriteBlob(void *memory);
-extern void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
 extern int shandalar_host_run_facemaker(const char *asset_root, const char *writable_root);
 extern void shandalar_host_begin_deckbuilder(void);
 extern void shandalar_host_end_deckbuilder(void);
 extern void deck_register_dialog_resources(void);
 extern void duel_register_dialog_resources(void);
 extern char global_base_directory[0x105];
-extern int global_screen_width;
-extern int global_screen_height;
-extern int g_graphics_bpp;
-extern DIBSurface *g_graphics_pages[10];
-extern RpBitsPalettePacket g_palette_data_words;
-extern FacemakerWindowBounds *g_page0_window_bounds;
-extern FacemakerWindowBounds *g_page1_window_bounds;
-extern FacemakerWindowBounds *g_page2_window_bounds;
-extern FacemakerWindowBounds *g_page3_window_bounds;
-extern FacemakerWindowBounds *g_page5_window_bounds;
 extern int g_selected_wizard_color;
 extern int g_name_entry_cursor;
-extern int g_menu_selection_value;
-extern int g_color_menu_selection_to_deck_color[5];
-extern DIBSurface *g_facemaker_page4_dib;
-extern HBITMAP g_facemaker_page4_bitmap;
-extern card_data_t global_cards_data[];
 static EncodedImage *g_name_entry_portrait_sprite;
 static int g_deckbuilder_attached;
 static int g_card_libraries_initialized;
