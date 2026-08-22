@@ -1040,12 +1040,17 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   HDC desktop_hdc;
   HACCEL accel;
   int host_pump_active;
+  int preserve_shared_card_resources;
 
   unused_zero = 0;
   host_pump_active = 0;
+  preserve_shared_card_resources = 0;
 
   global_db_flags_1 = db_flags_1;
   global_db_flags_2 = db_flags_2;
+
+  // The hosted deckbuilder and Shandalar share these globals; Shandalar owns their lifetime.
+  preserve_shared_card_resources = (global_db_flags_1 & DBFLAGS_SHANDALAR) != 0;
 
   InitializeCriticalSection(&global_critical_section_for_unknown);
 
@@ -1140,7 +1145,7 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
     return 0;
   }
 
-  if (!create_fonts())
+  if ((!preserve_shared_card_resources || !global_smallcard_pt_font) && !create_fonts())
   {
     fatal_err("WinMain: Couldn't load the card background bitmaps", 0);
     return 0;
@@ -1221,7 +1226,8 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   delete_resources();
   if (!(global_db_flags_1 & DBFLAGS_SHANDALAR))
     ShutdownCardArtGdiResources();
-  destroy_create_fonts_resources();
+  if (!preserve_shared_card_resources)
+    destroy_create_fonts_resources();
   DeleteCriticalSection(&global_critical_section_for_unknown);
 #ifdef SHANDALAR_SDL_WIN32_COMPAT
   if (host_pump_active && g_host_end_deckbuilder)
