@@ -522,6 +522,11 @@ void UpdateWorldLairAndMonsterSlots(void)
 
       if (creature_tier != 0)
       {
+        if (shandalar_cheat_enabled(SHANDALAR_CHEAT_DISABLE_MONSTER_SPAWNS))
+        {
+          continue;
+        }
+
         if (((g_shandalar_difficulty == 0) && ((slot_index == 5) || (slot_index == 6))) ||
             ((g_shandalar_difficulty == 1) && (slot_index == 6)))
         {
