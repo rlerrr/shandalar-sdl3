@@ -38,7 +38,7 @@ jobs:
           emcmake cmake -S "${{ github.workspace }}" \
                        -B "${{ github.workspace }}/build-${{ matrix.target }}" \
                        -G Ninja \
-                       -DCMAKE_BUILD_TYPE=MinSizeRel \
+                       -DCMAKE_BUILD_TYPE=Release \
                        -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{ github.workspace }}/out/${{ matrix.target }}" \
                        -DSHANDALAR_ASSET_DIR="${{ github.workspace }}/assets" \
                        -DSHANDALAR_BUILD_TESTS=OFF \
