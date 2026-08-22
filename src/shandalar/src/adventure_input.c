@@ -365,7 +365,7 @@ void UpdateAdventureWorldInputAndMovement(void)
       break;
 
     case 0x3b00:
-      if ((g_world_magic_bitmap & 8U) != 0)
+      if ((g_world_magic_bitmap & (1U << WORLDMAGIC_CONJURERS_WILL)) != 0)
       {
         key_code = 0x31;
         goto handle_world_magic_hotkey;
