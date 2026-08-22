@@ -68,4 +68,8 @@ if(SHANDALAR_BUILD_TESTS)
   add_executable(winuser_compat_test tests/winuser_compat_test.c)
   target_link_libraries(winuser_compat_test PRIVATE shandalar_platform)
   add_test(NAME winuser_compat_test COMMAND winuser_compat_test)
+
+  add_executable(winuser_caption_test tests/winuser_caption_test.c)
+  target_link_libraries(winuser_caption_test PRIVATE shandalar_platform)
+  add_test(NAME winuser_caption_test COMMAND winuser_caption_test)
 endif()

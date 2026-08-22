@@ -32,6 +32,8 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+
+static unsigned int g_ui_tick_wall_base;
 #endif
 
 // FUNCTION: SHANDALAR 0x005501fe

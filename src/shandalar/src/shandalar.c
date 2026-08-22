@@ -86,9 +86,7 @@ int g_cursor_visibility_depth;
 // GLOBAL: SHANDALAR 0x00589de4
 UINT g_timer_period_ms = 0x21;
 
-#ifdef __EMSCRIPTEN__
-static unsigned int g_ui_tick_wall_base;
-#else
+#ifndef __EMSCRIPTEN__
 // GLOBAL: SHANDALAR 0x00589df0
 int g_ui_tick_count = 0;
 #endif

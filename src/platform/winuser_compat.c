@@ -94,6 +94,18 @@ static int valid_window(HWND window)
 
 static BOOL set_window_text_storage(HWND window, LPCSTR text);
 
+static int should_render_caption(HWND window, DWORD style)
+{
+  if (!valid_window(window) || (style & WS_CAPTION) != WS_CAPTION)
+    return 0;
+  /* The game's themed windows use WS_CAPTION without WS_SYSMENU and paint
+   * their own non-client frames.  #32770 dialogs may intentionally omit a
+   * close button, but still need the bridge's generic caption. */
+  return (style & WS_SYSMENU) != 0 ||
+         (window->window_class &&
+          strcmp(window->window_class->name, "#32770") == 0);
+}
+
 static int uses_custom_nonclient_paint(HWND window)
 {
   return valid_window(window) &&
@@ -320,7 +332,7 @@ HWND CreateWindowExA(DWORD ex_style, LPCSTR class_name, LPCSTR window_name,
   window->menu = menu;
   window->control_id = (style & WS_CHILD) ? (int)(intptr_t)menu : 0;
   window->style = style;
-  window->render_caption = ((style & WS_CAPTION) == WS_CAPTION);
+  window->render_caption = should_render_caption(window, style);
   window->ex_style = ex_style;
   window->x = x;
   window->y = y;
@@ -698,7 +710,7 @@ LONG SetWindowLongA(HWND window, int index, LONG value)
   case GWL_ID: window->control_id = value; break;
   case GWL_STYLE:
     window->style = (DWORD)value;
-    window->render_caption = (((DWORD)value & WS_CAPTION) == WS_CAPTION);
+    window->render_caption = should_render_caption(window, (DWORD)value);
     break;
   case GWL_EXSTYLE: window->ex_style = (DWORD)value; break;
   case GWL_USERDATA: window->user_data = value; break;

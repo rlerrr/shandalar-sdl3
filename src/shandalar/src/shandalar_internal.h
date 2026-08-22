@@ -481,7 +481,6 @@ int ShutdownLegacyMouseStub(void);
 void *InitializeGraphicsSystemDefaultMode(void);
 void SetGraphicsPage(int page_number, void *page);
 void PresentGraphicsPage(int page_number);
-PaletteLog *ReadPalette(char *palette_text_path, char *palette_binary_path);
 int ScaleUiCoordinate(int value);
 int LoadFontConfigIfPresent(char *executable_name, char *config_name);
 int LoadSystemFont(int font_id, unsigned int point_size, char *font_file, char *font_name, int weight, DWORD italic);
@@ -575,9 +574,7 @@ void FillGraphicsRect(FacemakerWindowBounds *window_bounds, int x, int y, int wi
 unsigned int __cdecl save_or_load_ver1(void);
 void BuildFacemakerPortraitSprites(FacemakerWindowBounds *page);
 
-#ifdef _DEBUG
 void RunLairExplorationEvent(int color);
-#endif
 
 void DelayUiTicks(int ticks);
 int FindCardIndexByCsvid(int csvid);

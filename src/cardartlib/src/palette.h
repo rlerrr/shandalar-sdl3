@@ -21,6 +21,7 @@ BOOL CreateOffscreen32bppDibSection(int width, int height, HDC *out_dc, BITMAPIN
 BOOL SetupDuelPalette(void);
 COLORREF GetPaletteColor(int index);
 void DestroyCardArtPalette(void);
+PaletteLog *ReadPalette(char *palette_text_path, char *palette_binary_path);
 
 extern CRITICAL_SECTION global_critical_section_for_drawing;
 extern HDC global_screen_dc;

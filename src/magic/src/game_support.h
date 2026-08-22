@@ -490,6 +490,9 @@ int raw_do_dialog(int bigcard_player, int bigcard_card, int smallcard_player, in
                   char *prompt, int dialog_mode);
 void append_to_trace_txt(char *text);
 int GetCardRarity(int internal_card_id);
+#ifdef SHANDALAR
+int GetUiTickCount(void);
+#endif
 int choose_a_color_dialog(int player, const char *prompt, int use_color_names_instead_of_land,
                           int ai_choice, unsigned int available_colors);
 HBITMAP load_pic(char *filename);
