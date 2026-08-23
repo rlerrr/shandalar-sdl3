@@ -21,6 +21,7 @@ int main(void)
   HDC destination;
   HDC source;
   HBITMAP source_bitmap;
+  HBITMAP temporary_bitmap;
   void *source_bits;
   unsigned char *bgr;
   uint32_t rgba[16];
@@ -47,6 +48,14 @@ int main(void)
   source = CreateCompatibleDC(NULL);
   CHECK(source_bitmap && source && source_bits);
   SelectObject(source, source_bitmap);
+
+  CHECK(SaveDC(source) == 1);
+  temporary_bitmap = CreateCompatibleBitmap(source, 1, 1);
+  CHECK(temporary_bitmap);
+  CHECK(SelectObject(source, temporary_bitmap) == source_bitmap);
+  CHECK(DeleteObject(source_bitmap));
+  CHECK(RestoreDC(source, -1));
+  CHECK(DeleteObject(temporary_bitmap));
 
   bgr = (unsigned char *)source_bits;
   bgr[0] = 0; bgr[1] = 0; bgr[2] = 255;
@@ -80,7 +89,6 @@ int main(void)
   CHECK(rgba[0] == 0xff0000ffu);
 
   CHECK(DeleteDC(source));
-  CHECK(DeleteObject(source_bitmap));
   shandalar_destroy_screen_dc(destination);
   CHECK(DeleteObject(palette));
   return 0;

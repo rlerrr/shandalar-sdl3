@@ -22,6 +22,8 @@ typedef struct ObjectHeader { int kind; } ObjectHeader;
 
 struct ShandalarBitmap {
   ObjectHeader header;
+  unsigned int dc_references;
+  int delete_pending;
   int width;
   int height;
   int pitch;
@@ -126,6 +128,30 @@ static double g_font_device_scale = 1.0;
 static HFONT g_default_gui_font;
 
 static HFONT open_font(const LOGFONTA *description);
+
+static void destroy_bitmap(HBITMAP bitmap)
+{
+  if (!bitmap)
+    return;
+  if (bitmap->owns_pixels)
+    free(bitmap->pixels);
+  free(bitmap);
+}
+
+static void reference_bitmap(HBITMAP bitmap)
+{
+  if (bitmap)
+    ++bitmap->dc_references;
+}
+
+static void release_bitmap(HBITMAP bitmap)
+{
+  if (!bitmap || !bitmap->dc_references)
+    return;
+  --bitmap->dc_references;
+  if (!bitmap->dc_references && bitmap->delete_pending)
+    destroy_bitmap(bitmap);
+}
 
 static void destroy_font(HFONT font)
 {
@@ -522,9 +548,12 @@ BOOL DeleteDC(HDC dc)
   int saved_index;
   if (!dc)
     return FALSE;
+  release_bitmap(dc->bitmap);
   release_font(dc->font);
-  for (saved_index = 0; saved_index < dc->saved_count; ++saved_index)
+  for (saved_index = 0; saved_index < dc->saved_count; ++saved_index) {
+    release_bitmap(dc->saved[saved_index].bitmap);
     release_font(dc->saved[saved_index].font);
+  }
   free(dc);
   return TRUE;
 }
@@ -607,7 +636,14 @@ HGDIOBJ SelectObject(HDC dc, HGDIOBJ object)
   if (!dc || !header)
     return NULL;
   switch (header->kind) {
-  case OBJECT_BITMAP: previous = dc->bitmap; dc->bitmap = (HBITMAP)object; break;
+  case OBJECT_BITMAP:
+    previous = dc->bitmap;
+    if (previous != object) {
+      reference_bitmap((HBITMAP)object);
+      dc->bitmap = (HBITMAP)object;
+      release_bitmap((HBITMAP)previous);
+    }
+    break;
   case OBJECT_FONT:
     previous = dc->font;
     if (previous != (HFONT)object) {
@@ -632,8 +668,12 @@ BOOL DeleteObject(HGDIOBJ object)
     return TRUE;
   if (header->kind == OBJECT_BITMAP) {
     HBITMAP bitmap = (HBITMAP)object;
-    if (bitmap->owns_pixels)
-      free(bitmap->pixels);
+    if (bitmap->dc_references) {
+      bitmap->delete_pending = 1;
+      return TRUE;
+    }
+    destroy_bitmap(bitmap);
+    return TRUE;
   } else if (header->kind == OBJECT_FONT) {
     HFONT font = (HFONT)object;
     /*
@@ -1257,6 +1297,7 @@ int SaveDC(HDC dc)
   if (!dc || dc->saved_count >= (int)(sizeof(dc->saved) / sizeof(dc->saved[0])))
     return 0;
   copy_dc_to_state(&dc->saved[dc->saved_count], dc);
+  reference_bitmap(dc->saved[dc->saved_count].bitmap);
   reference_font(dc->saved[dc->saved_count].font);
   ++dc->saved_count;
   return dc->saved_count;
@@ -1266,6 +1307,8 @@ BOOL RestoreDC(HDC dc, int saved)
 {
   int index;
   int saved_index;
+  HBITMAP old_bitmap;
+  HBITMAP restored_bitmap;
   HFONT old_font;
   HFONT restored_font;
   if (!dc || !dc->saved_count || saved == 0)
@@ -1273,13 +1316,19 @@ BOOL RestoreDC(HDC dc, int saved)
   index = saved < 0 ? dc->saved_count + saved : saved - 1;
   if (index < 0 || index >= dc->saved_count)
     return FALSE;
+  old_bitmap = dc->bitmap;
+  restored_bitmap = dc->saved[index].bitmap;
   old_font = dc->font;
   restored_font = dc->saved[index].font;
+  reference_bitmap(restored_bitmap);
   reference_font(restored_font);
   copy_state_to_dc(dc, &dc->saved[index]);
+  release_bitmap(old_bitmap);
   release_font(old_font);
-  for (saved_index = index; saved_index < dc->saved_count; ++saved_index)
+  for (saved_index = index; saved_index < dc->saved_count; ++saved_index) {
+    release_bitmap(dc->saved[saved_index].bitmap);
     release_font(dc->saved[saved_index].font);
+  }
   dc->saved_count = index;
   return TRUE;
 }
