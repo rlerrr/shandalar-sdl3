@@ -8,6 +8,7 @@
 #include "magic/src/global_state.h"
 #include "facemaker/src/facemaker_types.h"
 #include "drawcardlib/src/pic.h"
+#include "shandalar_build_version.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -597,6 +598,10 @@ loop:
   FadeInPaletteFromGray(0, g_default_palette_fade_steps);
   g_page0_window_bounds->font_slot = 5;
   g_page0_window_bounds->font_slot = 1;
+  DrawFormattedTextNoShadowCentered(
+      g_page0_window_bounds, 0xff, global_screen_width / 2,
+      global_screen_height - GetFontLineHeight(g_page0_window_bounds->font_slot),
+      "%s", SHANDALAR_BUILD_VERSION);
 
   g_opening_menu_entry_enabled[2] = FileExists(map_name);
   for (loop_index = 4; loop_index < 0xe; loop_index = loop_index + 1)

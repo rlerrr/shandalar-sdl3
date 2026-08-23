@@ -1,5 +1,17 @@
 include("${SHANDALAR_SRC_ROOT}/magic/duel_sources.cmake")
 
+set(shandalar_version_header
+  "${CMAKE_CURRENT_BINARY_DIR}/generated/shandalar_build_version.h"
+)
+add_custom_target(shandalar_version_header_target
+  COMMAND "${CMAKE_COMMAND}"
+          "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}"
+          "-DOUTPUT_FILE=${shandalar_version_header}"
+          -P "${CMAKE_SOURCE_DIR}/cmake/GenerateGitVersion.cmake"
+  BYPRODUCTS "${shandalar_version_header}"
+  VERBATIM
+)
+
 add_executable(shandalar
   src/sdl_main.c
   src/shandalar.c
@@ -36,6 +48,7 @@ add_executable(shandalar
   ../magic/src/shared_startup.c
   ../magic/src/carddata.c
 )
+add_dependencies(shandalar shandalar_version_header_target)
 
 target_compile_definitions(shandalar PRIVATE
   MODERN_FIXES
@@ -51,6 +64,7 @@ endif()
 target_include_directories(shandalar PRIVATE
   "${SHANDALAR_SRC_ROOT}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 target_include_directories(shandalar BEFORE PRIVATE
   "${SHANDALAR_SRC_ROOT}/magic/compat"
