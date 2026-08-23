@@ -22,6 +22,31 @@ typedef struct DialogFactoryRegistration {
 
 static DialogFactoryRegistration *g_factories;
 
+static BOOL is_descendant_or_self(HWND window, HWND ancestor)
+{
+  while (window) {
+    if (window == ancestor)
+      return TRUE;
+    window = GetParent(window);
+  }
+  return FALSE;
+}
+
+static BOOL is_mouse_message(UINT message)
+{
+  return (message >= WM_MOUSEMOVE && message <= WM_MOUSEWHEEL) ||
+         message == WM_NCMOUSEMOVE || message == WM_NCLBUTTONDOWN ||
+         message == WM_NCRBUTTONDOWN;
+}
+
+static BOOL is_capture_release_message(const MSG *message)
+{
+  return message->hwnd == GetCapture() &&
+         (message->message == WM_LBUTTONUP ||
+          message->message == WM_RBUTTONUP ||
+          message->message == WM_MBUTTONUP);
+}
+
 static BOOL dialog_focusable(HWND window)
 {
   char class_name[32];
@@ -141,6 +166,16 @@ INT_PTR DialogBoxParamA(HINSTANCE instance, LPCSTR template_name, HWND parent,
   dialog_proc(window, WM_INITDIALOG, 0, init_param);
   ShowWindow(window, SW_SHOW);
   while (!state.ended && GetMessageA(&message, NULL, 0, 0)) {
+    /*
+     * A mouse-down queued just before the modal dialog disabled its owner can
+     * otherwise start a nested move/drag loop behind the dialog.  Ignore
+     * background mouse input, but allow an existing capture to receive its
+     * button-up so any loop that was already active can unwind.
+     */
+    if (is_mouse_message(message.message) &&
+        !is_descendant_or_self(message.hwnd, window) &&
+        !is_capture_release_message(&message))
+      continue;
     if (handle_dialog_key(window, &message))
       continue;
     TranslateMessage(&message);

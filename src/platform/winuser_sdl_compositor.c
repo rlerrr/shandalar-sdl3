@@ -353,6 +353,8 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   LPARAM local;
   float x;
   float y;
+  int force_captured_release = 0;
+  int target_has_capture;
   UINT message;
 
   if (!renderer || !event)
@@ -386,17 +388,34 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
     return 1;
   }
   target = GetCapture();
+  target_has_capture = target != NULL;
   if (!target)
     target = WindowFromPoint(screen);
   if (!target || target == GetDesktopWindow())
     return 0;
   modal = shandalar_win32_active_dialog();
   if (modal && !is_descendant_or_self(target, modal)) {
-    BringWindowToTop(modal);
-    return 1;
+    /* A modal dialog may appear after this target captured a button-down.
+     * Deliver the matching button-up so its nested drag loop can terminate. */
+    force_captured_release =
+        target_has_capture && event->type == SDL_EVENT_MOUSE_BUTTON_UP;
+    if (!force_captured_release) {
+      if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
+          event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+        WPARAM button = event->button.button == SDL_BUTTON_LEFT ? MK_LBUTTON :
+                        event->button.button == SDL_BUTTON_RIGHT ? MK_RBUTTON : 0;
+        if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+          g_mouse_buttons |= button;
+        else
+          g_mouse_buttons &= ~button;
+      }
+      BringWindowToTop(modal);
+      return 1;
+    }
   }
-  if (point_in_rendered_scrollbar(target, screen) ||
-      point_in_rendered_caption(target, screen)) {
+  if (!force_captured_release &&
+      (point_in_rendered_scrollbar(target, screen) ||
+       point_in_rendered_caption(target, screen))) {
     if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
         event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
       WPARAM button = event->button.button == SDL_BUTTON_LEFT ? MK_LBUTTON :
@@ -408,7 +427,7 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
     }
     return 0;
   }
-  if (shandalar_win32_is_builtin_control(target))
+  if (!force_captured_release && shandalar_win32_is_builtin_control(target))
     return 0;
 
   if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {

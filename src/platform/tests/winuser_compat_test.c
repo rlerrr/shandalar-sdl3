@@ -14,6 +14,32 @@ static int paints;
 static int menu_initializations;
 static int menu_closures;
 static int text_changes;
+static int mouse_downs;
+static int mouse_ups;
+
+static HWND modal_test_factory(HINSTANCE instance, LPCSTR template_name,
+                               HWND parent)
+{
+  (void)template_name;
+  return shandalar_win32_create_dialog(instance, parent, "modal test",
+                                       20, 20, 100, 60);
+}
+
+static INT_PTR CALLBACK modal_test_proc(HWND window, UINT message,
+                                        WPARAM wparam, LPARAM lparam)
+{
+  (void)wparam;
+  (void)lparam;
+  if (message == WM_INITDIALOG) {
+    PostMessageA(window, WM_USER + 2, 0, 0);
+    return TRUE;
+  }
+  if (message == WM_USER + 2) {
+    EndDialog(window, 77);
+    return TRUE;
+  }
+  return FALSE;
+}
 
 static LRESULT CALLBACK test_wndproc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
@@ -35,6 +61,13 @@ static LRESULT CALLBACK test_wndproc(HWND window, UINT message, WPARAM wparam, L
   case WM_SETTEXT:
     ++text_changes;
     return DefWindowProcA(window, message, wparam, lparam);
+  case WM_LBUTTONDOWN:
+    ++mouse_downs;
+    return 0;
+  case WM_LBUTTONUP:
+    ++mouse_ups;
+    ReleaseCapture();
+    return 0;
   case WM_INITMENU:
     ++menu_initializations;
     CHECK(AppendMenuA((HMENU)wparam, MF_STRING, 101, "test item"));
@@ -121,6 +154,16 @@ int main(void)
                           5, 7, 100, 50, parent, (HMENU)42, NULL, NULL);
   CHECK(child);
   CHECK(creates == 3);
+  CHECK(shandalar_win32_register_dialog_factory(900, modal_test_factory));
+  CHECK(PostMessageA(parent, WM_LBUTTONDOWN, MK_LBUTTON, 0));
+  CHECK(DialogBoxParamA(NULL, (LPCSTR)900, parent, modal_test_proc, 0) == 77);
+  CHECK(mouse_downs == 0);
+  CHECK(IsWindowEnabled(parent));
+  CHECK(SetCapture(parent) == NULL);
+  CHECK(PostMessageA(parent, WM_LBUTTONUP, 0, 0));
+  CHECK(DialogBoxParamA(NULL, (LPCSTR)900, parent, modal_test_proc, 0) == 77);
+  CHECK(mouse_ups == 1);
+  CHECK(GetCapture() == NULL);
   caption_window = CreateWindowExA(0, "CompatTest", "caption",
                                    WS_VISIBLE | WS_CAPTION | WS_SYSMENU,
                                    100, 120, 200, 100,

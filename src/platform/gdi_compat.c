@@ -43,6 +43,8 @@ struct ShandalarPalette {
 struct ShandalarFont {
   ObjectHeader header;
   TTF_Font *font;
+  unsigned int dc_references;
+  int delete_pending;
   int size;
   double font_size_to_cell_height;
   unsigned int units_per_em;
@@ -124,6 +126,30 @@ static double g_font_device_scale = 1.0;
 static HFONT g_default_gui_font;
 
 static HFONT open_font(const LOGFONTA *description);
+
+static void destroy_font(HFONT font)
+{
+  if (!font)
+    return;
+  TTF_CloseFont(font->font);
+  free(font);
+}
+
+static void reference_font(HFONT font)
+{
+  if (font)
+    ++font->dc_references;
+}
+
+static void release_font(HFONT font)
+{
+  if (!font || !font->dc_references)
+    return;
+  --font->dc_references;
+  if (!font->dc_references && font->delete_pending &&
+      font != g_default_gui_font)
+    destroy_font(font);
+}
 
 static unsigned int read_be16(const unsigned char *data)
 {
@@ -402,6 +428,7 @@ HDC CreateCompatibleDC(HDC unused)
     dc->background_color = PALETTEINDEX(0);
     dc->background_mode = OPAQUE;
     dc->font = (HFONT)GetStockObject(SYSTEM_FONT);
+    reference_font(dc->font);
     dc->window_ext_x = dc->viewport_ext_x = 1;
     dc->window_ext_y = dc->viewport_ext_y = 1;
   }
@@ -492,6 +519,12 @@ int ReleaseDC(HWND window, HDC dc)
 
 BOOL DeleteDC(HDC dc)
 {
+  int saved_index;
+  if (!dc)
+    return FALSE;
+  release_font(dc->font);
+  for (saved_index = 0; saved_index < dc->saved_count; ++saved_index)
+    release_font(dc->saved[saved_index].font);
   free(dc);
   return TRUE;
 }
@@ -575,7 +608,14 @@ HGDIOBJ SelectObject(HDC dc, HGDIOBJ object)
     return NULL;
   switch (header->kind) {
   case OBJECT_BITMAP: previous = dc->bitmap; dc->bitmap = (HBITMAP)object; break;
-  case OBJECT_FONT: previous = dc->font; dc->font = (HFONT)object; break;
+  case OBJECT_FONT:
+    previous = dc->font;
+    if (previous != (HFONT)object) {
+      reference_font((HFONT)object);
+      dc->font = (HFONT)object;
+      release_font((HFONT)previous);
+    }
+    break;
   case OBJECT_PEN: previous = dc->pen; dc->pen = (HPEN)object; break;
   case OBJECT_BRUSH: previous = dc->brush; dc->brush = (HBRUSH)object; break;
   default: break;
@@ -596,7 +636,20 @@ BOOL DeleteObject(HGDIOBJ object)
       free(bitmap->pixels);
   } else if (header->kind == OBJECT_FONT) {
     HFONT font = (HFONT)object;
-    TTF_CloseFont(font->font);
+    /*
+     * Win32 does not destroy a GDI object while it is selected into a DC.
+     * Several legacy controls rely on that rule: they delete a temporary
+     * font before their persistent window DC is torn down.  Closing the
+     * TTF_Font here left those DCs pointing into SDL_ttf's freed glyph cache,
+     * and a nested UI paint could then corrupt that cache.  Defer destruction
+     * until the last current or saved DC selection releases the font.
+     */
+    if (font->dc_references) {
+      font->delete_pending = 1;
+      return TRUE;
+    }
+    destroy_font(font);
+    return TRUE;
   } else if (header->kind == OBJECT_PALETTE && (HPALETTE)object == g_realized_palette) {
     g_realized_palette = NULL;
   }
@@ -1204,6 +1257,7 @@ int SaveDC(HDC dc)
   if (!dc || dc->saved_count >= (int)(sizeof(dc->saved) / sizeof(dc->saved[0])))
     return 0;
   copy_dc_to_state(&dc->saved[dc->saved_count], dc);
+  reference_font(dc->saved[dc->saved_count].font);
   ++dc->saved_count;
   return dc->saved_count;
 }
@@ -1211,12 +1265,21 @@ int SaveDC(HDC dc)
 BOOL RestoreDC(HDC dc, int saved)
 {
   int index;
+  int saved_index;
+  HFONT old_font;
+  HFONT restored_font;
   if (!dc || !dc->saved_count || saved == 0)
     return FALSE;
   index = saved < 0 ? dc->saved_count + saved : saved - 1;
   if (index < 0 || index >= dc->saved_count)
     return FALSE;
+  old_font = dc->font;
+  restored_font = dc->saved[index].font;
+  reference_font(restored_font);
   copy_state_to_dc(dc, &dc->saved[index]);
+  release_font(old_font);
+  for (saved_index = index; saved_index < dc->saved_count; ++saved_index)
+    release_font(dc->saved[saved_index].font);
   dc->saved_count = index;
   return TRUE;
 }
