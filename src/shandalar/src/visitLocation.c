@@ -2734,19 +2734,19 @@ void RemoveCardFromDeckById(unsigned int card_id)
 void WisemanChooseLairCreatureAndSetupDuel(unsigned char amulet_color)
 {
   int aiStack_50[16];
+  int amulet_color_mask;
   int chosen_creature_type;
   int i;
   int count;
 
-  /* The original overwrites the param stack slot with a precomputed bitmask. */
-  *(int *)&amulet_color = 1 << amulet_color;
+  amulet_color_mask = 1 << amulet_color;
 
   strcpy(g_ui_message_buffer, gs_lair_0077e180[0x11]);
   count = 0;
 
   for (i = 1; i < (int)gs_creature_name_count_00593934; i = i + 1)
   {
-    if ((*(int *)&amulet_color & (int)(signed char)g_shandalar_monster_definitions[i].plural[0x36]) != 0)
+    if ((amulet_color_mask & (int)(signed char)g_shandalar_monster_definitions[i].color_mask) != 0)
     {
       aiStack_50[count] = i;
       count = count + 1;
