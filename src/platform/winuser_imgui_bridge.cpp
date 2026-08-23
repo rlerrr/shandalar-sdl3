@@ -15,6 +15,7 @@ namespace {
 
 SDL_Renderer *g_renderer;
 HWND g_territory_menu_windows[2];
+/* This cache is an adventure asset and survives duel ImGui contexts. */
 ImU32 g_shared_menu_sprite_pixels[64 * 64];
 int g_shared_menu_sprite_width;
 int g_shared_menu_sprite_height;
@@ -998,8 +999,6 @@ extern "C" void shandalar_win32_imgui_shutdown(void)
   g_renderer = nullptr;
   g_territory_menu_windows[0] = nullptr;
   g_territory_menu_windows[1] = nullptr;
-  g_shared_menu_sprite_width = 0;
-  g_shared_menu_sprite_height = 0;
 }
 
 extern "C" void shandalar_win32_imgui_set_menu_sprite(
