@@ -2526,7 +2526,7 @@ int card_magical_hack(int player, int card, event_t event)
     replace_card_hack_color(s.target.player,
                             s.target.card,
                             (unsigned char)PLAYER_CARD_INSTANCE(player, card).info_slot,
-                            *((unsigned char *)&PLAYER_CARD_INSTANCE(player, card).info_slot + 1));
+                            BYTE1(PLAYER_CARD_INSTANCE(player, card).info_slot));
     PLAYER_CARD_INSTANCE(player, card).number_of_targets = 0;
     kill_card(player, card, KILL_BURY);
   }
@@ -3620,7 +3620,7 @@ int card_reverse_damage(int player, int card, event_t event)
               s.damage_amounts[s.count] = g_damage_accumulators[s.controller][s.current_card][player].amount;
               if (PLAYER_CARD_INSTANCE(s.controller, s.current_card).internal_card_id == -1)
               {
-                s.internal_card_ids[s.count] = *(int *)((char *)&PLAYER_CARD_INSTANCE(s.controller, s.current_card) + 0x38);
+                s.internal_card_ids[s.count] = PLAYER_CARD_INSTANCE(s.controller, s.current_card).info_slot;
                 s.count = s.count + 1;
               }
               else

@@ -3003,7 +3003,7 @@ int card_mind_twist(int player, int card, event_t event)
     {
       PLAYER_CARD_INSTANCE(player, card).info_slot = g_x_value;
       PLAYER_CARD_INSTANCE(player, card).targets[0] = target;
-      *((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x32) = 1;
+      PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
       if (player == g_other_player)
       {
         amount = (g_duel_summary.hand_counts[1 - player] - g_x_value) * 0xc;
@@ -3031,7 +3031,7 @@ int card_mind_twist(int player, int card, event_t event)
     {
       discard(PLAYER_CARD_INSTANCE(player, card).targets[0].player, 1, 0);
     }
-    *((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x32) = 0;
+    PLAYER_CARD_INSTANCE(player, card).number_of_targets = 0;
     kill_card(player, card, KILL_BURY);
   }
 
@@ -3498,11 +3498,9 @@ int card_disintegrate(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0044f4db
 int card_drain_life(int player, int card, event_t event)
 {
-  card_instance_t *instance;
-  card_instance_t *effect;
-  int effect_card;
-
-  instance = &PLAYER_CARD_INSTANCE(player, card);
+  card_instance_t *damage_legacy;
+  int damage_legacy_card;
+  int damage_dealt;
 
   if (event == EVENT_CAN_CAST)
   {
@@ -3523,11 +3521,11 @@ int card_drain_life(int player, int card, event_t event)
       {
         return 0;
       }
-      instance->info_slot = g_x_value;
+      PLAYER_CARD_INSTANCE(player, card).info_slot = g_x_value;
     }
     else
     {
-      instance->info_slot = PLAYER_CARD_INSTANCE(g_current_spell_player, g_current_spell_card).info_slot;
+      PLAYER_CARD_INSTANCE(player, card).info_slot = PLAYER_CARD_INSTANCE(g_current_spell_player, g_current_spell_card).info_slot;
     }
     if (g_duel_ai_mode_state != 1)
     {
@@ -3538,34 +3536,34 @@ int card_drain_life(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_SPELL)
   {
-    effect_card = deal_damage_to_selected_target(player, card, EVENT_RESOLVE_SPELL, instance->info_slot);
-    if (effect_card == 0 || instance->info_slot < 1)
+    damage_dealt = deal_damage_to_selected_target(player, card, EVENT_RESOLVE_SPELL, PLAYER_CARD_INSTANCE(player, card).info_slot);
+    if (damage_dealt == 0 || PLAYER_CARD_INSTANCE(player, card).info_slot < 1)
     {
-      instance->info_slot = 0;
+      PLAYER_CARD_INSTANCE(player, card).info_slot = 0;
     }
     else
     {
-      effect_card = add_card_to_hand(player, 0xD7);
-      if (effect_card != -1)
+      damage_legacy_card = add_card_to_hand(player, g_duel_generated_internal_card_id_19);
+      if (damage_legacy_card != -1)
       {
-        effect = &PLAYER_CARD_INSTANCE(player, effect_card);
-        effect->damage_target_player = instance->internal_card_id;
-        effect->state |= 2;
-        *(int *)((char *)effect + 0x5c) = 0x44;
-        effect->token_status = 0xD7;
-        TENTATIVE_set_timestamps(player, effect_card);
-        effect->damage_source_player = (char)player;
-        effect->damage_source_card = card;
+        damage_legacy = &PLAYER_CARD_INSTANCE(player, damage_legacy_card);
+        damage_legacy->original_internal_card_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
+        damage_legacy->state |= STATE_IN_PLAY;
+        damage_legacy->display_pic_info = CARD_ID_DRAIN_LIFE;
+        damage_legacy->unknown0x14 = TRIGGER_DEAL_DAMAGE;
+        TENTATIVE_set_timestamps(player, damage_legacy_card);
+        damage_legacy->damage_source_player = (char)player;
+        damage_legacy->damage_source_card = card;
       }
     }
-    instance->number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(player, card).number_of_targets = 0;
     kill_card(player, card, KILL_BURY);
   }
 
   if (((event == EVENT_DEAL_DAMAGE) && PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).internal_card_id == g_damage_card_internal_card_id) && PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).damage_target_card == -1 && PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).damage_source_player == player && PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).damage_source_card == card && PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).info_slot != 0)
   {
-    instance->damage_source_player = (char)g_affected_card_controller;
-    instance->damage_source_card = g_affected_card;
+    PLAYER_CARD_INSTANCE(player, card).damage_source_player = (char)g_affected_card_controller;
+    PLAYER_CARD_INSTANCE(player, card).damage_source_card = g_affected_card;
   }
 
   return 0;
@@ -3714,7 +3712,7 @@ int card_drain_power(int player, int card, event_t event)
     else
     {
       instance->targets[0] = target;
-      *((char *)instance + 0x32) = 1;
+      instance->number_of_targets = 1;
     }
     return 0;
   }
@@ -3731,7 +3729,7 @@ int card_drain_power(int player, int card, event_t event)
         g_raw_mana_available[target_player][color_index] = 0;
       }
     }
-    *((char *)instance + 0x32) = 0;
+    instance->number_of_targets = 0;
     kill_card(player, card, KILL_BURY);
   }
 

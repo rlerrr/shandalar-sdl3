@@ -1683,7 +1683,7 @@ void setup_ai_combat_abilities(int player)
     saved_state = global_card_instances[player][card].state;
     if (g_other_player == player)
     {
-      if (((unsigned char *)&global_card_instances[player][card].state)[1] & 0x20)
+      if (global_card_instances[player][card].state & STATE_VIGILANCE)
       {
         global_card_instances[player][card].state |= STATE_ATTACKING;
       }

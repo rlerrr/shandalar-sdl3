@@ -927,8 +927,8 @@ int card_animate_dead(int player, int card, event_t event)
                                                PLAYER_CARD_INSTANCE(player, card).damage_target_card)
              .state |= 0x20;
         PLAYER_CARD_INSTANCE(player, card).eot_toughness = 1;
-        *((int *)((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x78)) = chosen_graveyard;
-        *((int *)((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x7c)) = graveyard_data[3];
+        PLAYER_CARD_INSTANCE(player, card).targets[1].player = chosen_graveyard;
+        PLAYER_CARD_INSTANCE(player, card).targets[1].card = graveyard_data[3];
         PLAYER_CARD_INSTANCE(player, card).targets[0].player = (int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player;
         PLAYER_CARD_INSTANCE(player, card).targets[0].card = PLAYER_CARD_INSTANCE(player, card).damage_target_card;
         PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
@@ -938,8 +938,8 @@ int card_animate_dead(int player, int card, event_t event)
   }
   else if (event == EVENT_RESOLVE_SPELL)
   {
-    graveyard_data[3] = *((int *)((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x7c));
-    chosen_graveyard = *((int *)((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x78));
+    graveyard_data[3] = PLAYER_CARD_INSTANCE(player, card).targets[1].card;
+    chosen_graveyard = PLAYER_CARD_INSTANCE(player, card).targets[1].player;
     if (global_graveyard_slots[chosen_graveyard][graveyard_data[3]] == -1)
     {
       kill_card(player, card, KILL_DESTROY);
@@ -954,9 +954,9 @@ int card_animate_dead(int player, int card, event_t event)
       PLAYER_CARD_INSTANCE(player, card).eot_toughness = 0;
       process_card_enters_play((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
                                PLAYER_CARD_INSTANCE(player, card).damage_target_card);
-      *((short *)((char *)&PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                                                PLAYER_CARD_INSTANCE(player, card).damage_target_card) +
-                  0x0e)) = -1;
+      PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
+                           PLAYER_CARD_INSTANCE(player, card).damage_target_card)
+          .toughness = -1;
     }
     PLAYER_CARD_INSTANCE(player, card).number_of_targets = 0;
     return 0;
@@ -977,9 +977,9 @@ int card_animate_dead(int player, int card, event_t event)
       {
         if (PLAYER_CARD_INSTANCE(player, card).eot_toughness != 0)
         {
-          *(unsigned int *)((char *)&PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                                                          PLAYER_CARD_INSTANCE(player, card).damage_target_card) +
-                            0x18) |= 8;
+          PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
+                               PLAYER_CARD_INSTANCE(player, card).damage_target_card)
+              .token_status |= STATUS_OBLITERATED;
         }
         current_player = (char)PLAYER_CARD_INSTANCE(player, card).damage_target_player;
         PLAYER_CARD_INSTANCE(player, card).damage_target_player = -1;
@@ -3621,7 +3621,7 @@ int card_mana_flare(int player, int card, event_t event)
   {
     if ((PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).state & STATE_TAPPED) == 0)
     {
-      s.land_color = *(char *)((char *)&PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card) + 0x58);
+      s.land_color = PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).mana_color;
       s.color_index = 0;
       s.color_count = 0;
       for (; s.color_index < 7; ++s.color_index)
@@ -4937,9 +4937,9 @@ int card_blessing(int player, int card, event_t event)
       PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                            PLAYER_CARD_INSTANCE(player, card).parent_card)
           .info_slot += (PLAYER_CARD_INSTANCE(player, card).eot_toughness & 0xff) * 0x100;
-      *(char *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
-                                     PLAYER_CARD_INSTANCE(player, card).parent_card)
-           .number_of_targets = 0;
+      PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
+                           PLAYER_CARD_INSTANCE(player, card).parent_card)
+          .number_of_targets = 0;
       if ((PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                 PLAYER_CARD_INSTANCE(player, card).parent_card)
                .info_slot &
@@ -5562,7 +5562,7 @@ int card_stasis(int player, int card, event_t event)
 
   if (event == 0x85 && card == g_affected_card && player == g_affected_card_controller && player == g_current_player && g_event_player == g_current_player)
   {
-    *(unsigned int *)((char *)&PLAYER_CARD_INSTANCE(player, card) + 0x5c) |= 1;
+    PLAYER_CARD_INSTANCE(player, card).upkeep_flags |= UPKEEP_UPKEEP_TRIGGER;
     ++PLAYER_CARD_INSTANCE(player, card).upkeep_blue;
     return 0;
   }
@@ -5809,9 +5809,9 @@ int card_paralyze(int player, int card, event_t event)
   if (event == EVENT_UNTAP && PLAYER_CARD_INSTANCE(player, card).damage_target_card == g_affected_card &&
       PLAYER_CARD_INSTANCE(player, card).damage_target_player == g_affected_card_controller && g_affected_card != -1)
   {
-    *(unsigned int *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                                           PLAYER_CARD_INSTANCE(player, card).damage_target_card)
-         .dummy3 &= 0xfffffffc;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player,
+                         PLAYER_CARD_INSTANCE(player, card).damage_target_card)
+        .untap_status &= ~3;
     return 0;
   }
 

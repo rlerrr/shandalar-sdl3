@@ -308,7 +308,7 @@ int card_black_vise(int player, int card, event_t event)
   {
     if (is_in_play(player, card))
     {
-      if ((((unsigned char *)&PLAYER_CARD_INSTANCE(player, card).state)[1] & 0x10) == 0)
+      if ((PLAYER_CARD_INSTANCE(player, card).state & STATE_OWNED_BY_OPPONENT) == 0)
       {
         s.damaged_player = g_other_player;
       }
@@ -355,7 +355,7 @@ int card_black_vise(int player, int card, event_t event)
       }
     }
 
-    if ((((unsigned char *)&PLAYER_CARD_INSTANCE(player, card).state)[1] & 0x10) == 0)
+    if ((PLAYER_CARD_INSTANCE(player, card).state & STATE_OWNED_BY_OPPONENT) == 0)
     {
       s.damaged_player = g_other_player;
     }
@@ -392,7 +392,7 @@ int card_the_rack(int player, int card, event_t event)
   {
     if (is_in_play(player, card))
     {
-      if ((((unsigned char *)&PLAYER_CARD_INSTANCE(player, card).state)[1] & 0x10) == 0)
+      if ((PLAYER_CARD_INSTANCE(player, card).state & STATE_OWNED_BY_OPPONENT) == 0)
       {
         damaged_player = g_other_player;
       }
@@ -439,7 +439,7 @@ int card_the_rack(int player, int card, event_t event)
       }
     }
 
-    if ((((unsigned char *)&PLAYER_CARD_INSTANCE(player, card).state)[1] & 0x10) == 0)
+    if ((PLAYER_CARD_INSTANCE(player, card).state & STATE_OWNED_BY_OPPONENT) == 0)
     {
       damaged_player = g_other_player;
     }
@@ -2183,9 +2183,9 @@ int card_tawnos_s_weaponry(int player, int card, event_t event)
           PLAYER_CARD_INSTANCE(player, legacy_card).token_status |= STATUS_PERMANENT;
           PLAYER_CARD_INSTANCE(player, legacy_card).counter_power = 1;
           PLAYER_CARD_INSTANCE(player, legacy_card).counter_toughness = 1;
-          *(char *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
+          SET_SBYTE0(PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                          PLAYER_CARD_INSTANCE(player, card).parent_card)
-               .eot_toughness = (char)player;
+                         .eot_toughness) = (char)player;
           PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                PLAYER_CARD_INSTANCE(player, card).parent_card)
               .info_slot = legacy_card;
@@ -2200,14 +2200,16 @@ int card_tawnos_s_weaponry(int player, int card, event_t event)
           PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).eot_toughness, PLAYER_CARD_INSTANCE(player, card).info_slot).damage_target_card == g_affected_card)
       {
         PLAYER_CARD_INSTANCE(player, card).info_slot = -1;
-        *(char *)&PLAYER_CARD_INSTANCE(player, card).eot_toughness = (char)PLAYER_CARD_INSTANCE(player, card).info_slot;
+        SET_SBYTE0(PLAYER_CARD_INSTANCE(player, card).eot_toughness) =
+            (char)PLAYER_CARD_INSTANCE(player, card).info_slot;
       }
 
       if (card == g_affected_card && player == g_affected_card_controller && PLAYER_CARD_INSTANCE(player, card).info_slot != -1)
       {
         kill_card((int)(char)PLAYER_CARD_INSTANCE(player, card).eot_toughness, PLAYER_CARD_INSTANCE(player, card).info_slot, KILL_BURY);
         PLAYER_CARD_INSTANCE(player, card).info_slot = -1;
-        *(char *)&PLAYER_CARD_INSTANCE(player, card).eot_toughness = (char)PLAYER_CARD_INSTANCE(player, card).info_slot;
+        SET_SBYTE0(PLAYER_CARD_INSTANCE(player, card).eot_toughness) =
+            (char)PLAYER_CARD_INSTANCE(player, card).info_slot;
       }
     }
 

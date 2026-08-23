@@ -1314,8 +1314,7 @@ int card_personal_incarnation(int player, int card, event_t event)
                                         selected->damage_source_player, selected->damage_source_card);
           if (damage_card != -1)
           {
-            *(int *)((char *)&PLAYER_CARD_INSTANCE(player, damage_card) + 0x60) =
-                *(int *)((char *)selected + 0x60);
+            PLAYER_CARD_INSTANCE(player, damage_card).attack_rating = selected->attack_rating;
             instance->info_slot &= ~1;
             selected->info_slot -= damage_to_deal;
           }
@@ -1335,9 +1334,9 @@ int card_personal_incarnation(int player, int card, event_t event)
     replacement_card = add_card_to_hand(player, g_duel_generated_internal_card_id_12);
     if (replacement_card != -1)
     {
-      *(int *)((char *)&PLAYER_CARD_INSTANCE(player, replacement_card) + 0x38) = instance->internal_card_id;
+      PLAYER_CARD_INSTANCE(player, replacement_card).info_slot = instance->internal_card_id;
       PLAYER_CARD_INSTANCE(player, replacement_card).state |= (instance->state & 0x1000) | STATE_IN_PLAY;
-      *(int *)((char *)&PLAYER_CARD_INSTANCE(player, replacement_card) + 0x60) = 0xb5;
+      PLAYER_CARD_INSTANCE(player, replacement_card).attack_rating = 0xb5;
       TENTATIVE_set_timestamps(player, replacement_card);
     }
   }
@@ -6110,7 +6109,7 @@ int card_birds_of_paradise(int player, int card, event_t event)
   }
   else if ((event == EVENT_ACTIVATE) && ((instance->state & STATE_TAPPED) == 0))
   {
-    available_colors = (unsigned int)(unsigned char)instance->damage_source_card;
+    available_colors = instance->mana_color;
     if ((((player == g_other_player) && ((g_duel_network_flags & 2) == 0)) || (g_duel_ai_mode_state == 1)) || (g_duel_network_state != 0))
     {
       choice_hint = -1;
@@ -6146,7 +6145,7 @@ int card_birds_of_paradise(int player, int card, event_t event)
       {
         load_text("prompts.txt", "BIRDS_OF_PARADISE");
       }
-      color = choose_a_color(player, g_text_lines[0], 1, choice_hint, (unsigned char)instance->damage_source_card);
+      color = choose_a_color(player, g_text_lines[0], 1, choice_hint, instance->mana_color);
       if (color == ~COLOR_COLORLESS)
       {
         g_spell_fizzled = 1;
@@ -6154,7 +6153,7 @@ int card_birds_of_paradise(int player, int card, event_t event)
       else
       {
         produce_mana(player, color, 1);
-        undeclare_mana_available_hex(player, (unsigned char)instance->damage_source_card, 1);
+        undeclare_mana_available_hex(player, instance->mana_color, 1);
         instance->state |= STATE_TAPPED;
         g_produced_mana_color = color;
         if (((player == g_other_player) && ((g_duel_network_flags & 2) == 0)) && (g_duel_ai_mode_state != 1))
@@ -6189,7 +6188,7 @@ int card_birds_of_paradise(int player, int card, event_t event)
   {
     if ((instance->state & 0x20010) == 0)
     {
-      declare_mana_available_hex(player, (unsigned char)instance->damage_source_card, 1);
+      declare_mana_available_hex(player, instance->mana_color, 1);
     }
   }
   else if ((event == 0x8a) && (card == g_affected_card) && (player == g_affected_card_controller))
@@ -6441,7 +6440,7 @@ int card_nether_shadow(int player, int card, event_t event)
     if (hand_card != -1)
     {
       *(unsigned int *)&PLAYER_CARD_INSTANCE(hand_player, hand_card).state |= 2;
-      *(int *)((char *)&PLAYER_CARD_INSTANCE(hand_player, hand_card) + 0x64) =
+      PLAYER_CARD_INSTANCE(hand_player, hand_card).display_pic_info =
           global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].id;
     }
   }

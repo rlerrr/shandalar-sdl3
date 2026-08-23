@@ -283,9 +283,9 @@ int card_two_headed_giant_of_foriys_legacy(int player, int card, event_t event)
       kill_card(player, card, KILL_BURY);
       g_battlefield_extra_ability_flags &= 0xfffffffb;
 
-      *(unsigned int *)((char *)&PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
-                                                      PLAYER_CARD_INSTANCE(player, card).damage_source_card) +
-                        0x18) &= 0xf7ffffff;
+      PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
+                           PLAYER_CARD_INSTANCE(player, card).damage_source_card)
+          .token_status &= ~STATUS_SPECIAL_BLOCKER;
     }
   }
 
@@ -600,7 +600,8 @@ int is_basic_land_internal_card_id_of_color(int internal_card_id, color_t color)
   {
     result = 1;
   }
-  if ((char)global_cards_data[internal_card_id].subtype == 12 && ((1 << color) & (int)*(char *)&PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).mana_color) != 0)
+  if ((char)global_cards_data[internal_card_id].subtype == 12 &&
+      ((1 << color) & (int)PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).mana_color) != 0)
   {
     result = 1;
   }
