@@ -141,11 +141,14 @@ void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list
   HWND child = GetWindow(window, GW_CHILD);
   if (child)
     child = GetWindow(child, GW_HWNDLAST);
-  const bool clipped = child && push_child_clip_rect(window, draw_list);
-  for (; child; child = GetWindow(child, GW_HWNDPREV))
+  for (; child; child = GetWindow(child, GW_HWNDPREV)) {
+    const bool clipped =
+        (GetWindowLongA(child, GWL_STYLE) & WS_CHILD) == WS_CHILD &&
+        push_child_clip_rect(window, draw_list);
     draw_window_tree(renderer, child, draw_list);
-  if (clipped)
-    draw_list->PopClipRect();
+    if (clipped)
+      draw_list->PopClipRect();
+  }
 }
 
 void send_control_command(HWND window, int notification)
@@ -672,11 +675,14 @@ void draw_control_tree(HWND window, HWND modal)
   HWND child = GetWindow(window, GW_CHILD);
   if (child) child = GetWindow(child, GW_HWNDLAST);
   ImDrawList *draw_list = ImGui::GetWindowDrawList();
-  const bool clipped = child && push_child_clip_rect(window, draw_list);
-  for (; child; child = GetWindow(child, GW_HWNDPREV))
+  for (; child; child = GetWindow(child, GW_HWNDPREV)) {
+    const bool clipped =
+        (GetWindowLongA(child, GWL_STYLE) & WS_CHILD) == WS_CHILD &&
+        push_child_clip_rect(window, draw_list);
     draw_control_tree(child, modal);
-  if (clipped)
-    draw_list->PopClipRect();
+    if (clipped)
+      draw_list->PopClipRect();
+  }
 }
 
 void draw_popups_of_hidden_owners(SDL_Renderer *renderer, HWND owner,
@@ -725,11 +731,14 @@ void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
   }
   HWND child = GetWindow(window, GW_CHILD);
   if (child) child = GetWindow(child, GW_HWNDLAST);
-  const bool clipped = child && push_child_clip_rect(window, draw_list);
-  for (; child; child = GetWindow(child, GW_HWNDPREV))
+  for (; child; child = GetWindow(child, GW_HWNDPREV)) {
+    const bool clipped =
+        (GetWindowLongA(child, GWL_STYLE) & WS_CHILD) == WS_CHILD &&
+        push_child_clip_rect(window, draw_list);
     draw_window_overlay_tree(child, draw_list);
-  if (clipped)
-    draw_list->PopClipRect();
+    if (clipped)
+      draw_list->PopClipRect();
+  }
 }
 
 void draw_window_caption(HWND window)
@@ -1058,6 +1067,14 @@ extern "C" int shandalar_win32_imgui_init(SDL_Window *window, SDL_Renderer *rend
   return shandalar_win32_sdl_compositor_init(renderer) &&
          ImGui_ImplSDL3_InitForSDLRenderer(window, renderer) &&
          ImGui_ImplSDLRenderer3_Init(renderer);
+}
+
+extern "C" void shandalar_win32_imgui_set_safe_area_padding(float horizontal,
+                                                               float vertical)
+{
+  if (!ImGui::GetCurrentContext())
+    return;
+  ImGui::GetStyle().DisplaySafeAreaPadding = ImVec2(horizontal, vertical);
 }
 
 extern "C" int shandalar_win32_imgui_process_event(SDL_Renderer *renderer,

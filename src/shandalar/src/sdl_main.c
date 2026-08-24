@@ -41,6 +41,86 @@ EM_JS(void, load_shandalar_asset_bundle, (), {
     .then(() => console.log("Shandalar asset bundle loaded"))
     .catch((error) => console.error("Failed to load Shandalar asset bundle:", error));
 });
+
+EM_JS(void, prepare_edge_to_edge_viewport, (), {
+  let viewport = document.querySelector('meta[name="viewport"]');
+  if (!viewport) {
+    viewport = document.createElement('meta');
+    viewport.name = 'viewport';
+    document.head.appendChild(viewport);
+  }
+  const values = new Set((viewport.content || "")
+    .split(',').map((value) => value.trim()).filter(Boolean));
+  values.add('width=device-width');
+  values.add('initial-scale=1');
+  values.add('viewport-fit=cover');
+  viewport.content = Array.from(values).join(', ');
+});
+
+EM_JS(int, browser_viewport_size, (int dimension), {
+  const viewport = window.visualViewport;
+  const value = dimension === 0
+    ? (viewport ? viewport.width : window.innerWidth)
+    : (viewport ? viewport.height : window.innerHeight);
+  return Math.max(1, Math.round(value));
+});
+
+EM_JS(int, browser_safe_area_inset, (int edge), {
+  let probe = document.getElementById('shandalar-safe-area-probe');
+  if (!probe) {
+    probe = document.createElement('div');
+    probe.id = 'shandalar-safe-area-probe';
+    probe.style.cssText = [
+      'position:fixed', 'visibility:hidden', 'pointer-events:none',
+      'left:0', 'top:0', 'width:0', 'height:0',
+      'padding-top:env(safe-area-inset-top, 0px)',
+      'padding-right:env(safe-area-inset-right, 0px)',
+      'padding-bottom:env(safe-area-inset-bottom, 0px)',
+      'padding-left:env(safe-area-inset-left, 0px)'
+    ].join(';');
+    document.body.appendChild(probe);
+  }
+  const style = getComputedStyle(probe);
+  const values = [style.paddingLeft, style.paddingTop,
+                  style.paddingRight, style.paddingBottom];
+  return Math.max(0, Math.ceil(parseFloat(values[edge]) || 0));
+});
+
+EM_JS(void, set_duel_canvas_mode, (int enabled), {
+  const canvas = Module.canvas;
+  if (!canvas)
+    return;
+  if (enabled) {
+    if (!Object.prototype.hasOwnProperty.call(Module, 'shandalarCanvasStyle')) {
+      Module.shandalarCanvasStyle = canvas.getAttribute('style');
+      Module.shandalarBodyOverflow = document.body.style.overflow;
+    }
+    const viewport = window.visualViewport;
+    const width = viewport ? viewport.width : window.innerWidth;
+    const height = viewport ? viewport.height : window.innerHeight;
+    const left = viewport ? viewport.offsetLeft : 0;
+    const top = viewport ? viewport.offsetTop : 0;
+    canvas.style.position = 'fixed';
+    canvas.style.left = `${left}px`;
+    canvas.style.top = `${top}px`;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    canvas.style.margin = '0';
+    canvas.style.maxWidth = 'none';
+    canvas.style.maxHeight = 'none';
+    canvas.style.zIndex = '2147483647';
+    canvas.style.touchAction = 'none';
+    document.body.style.overflow = 'hidden';
+  } else if (Object.prototype.hasOwnProperty.call(Module, 'shandalarCanvasStyle')) {
+    if (Module.shandalarCanvasStyle === null)
+      canvas.removeAttribute('style');
+    else
+      canvas.setAttribute('style', Module.shandalarCanvasStyle);
+    document.body.style.overflow = Module.shandalarBodyOverflow || "";
+    delete Module.shandalarCanvasStyle;
+    delete Module.shandalarBodyOverflow;
+  }
+});
 #endif
 
 extern int g_worker_should_exit;
@@ -69,6 +149,22 @@ static int g_quit_requested;
 static int g_facemaker_host_active;
 static int g_deckbuilder_host_active;
 static int g_duel_host_active;
+static int g_duel_safe_left;
+static int g_duel_safe_top;
+static int g_duel_safe_right;
+static int g_duel_safe_bottom;
+
+void shandalar_host_get_duel_safe_area(int *left, int *top, int *right, int *bottom)
+{
+  if (left)
+    *left = g_duel_safe_left;
+  if (top)
+    *top = g_duel_safe_top;
+  if (right)
+    *right = g_duel_safe_right;
+  if (bottom)
+    *bottom = g_duel_safe_bottom;
+}
 
 static int legacy_key(SDL_Keycode key)
 {
@@ -499,8 +595,34 @@ void shandalar_host_end_deckbuilder(void)
 
 void shandalar_host_begin_duel(void)
 {
+  int duel_width = global_screen_width;
+  int duel_height = global_screen_height;
+#ifdef __EMSCRIPTEN__
+  int viewport_width = browser_viewport_size(0);
+  int viewport_height = browser_viewport_size(1);
+  int safe_left = browser_safe_area_inset(0);
+  int safe_top = browser_safe_area_inset(1);
+  int safe_right = browser_safe_area_inset(2);
+  int safe_bottom = browser_safe_area_inset(3);
+
+  duel_width = (duel_height * viewport_width + viewport_height - 1) /
+               viewport_height;
+  if (duel_width < global_screen_width)
+    duel_width = global_screen_width;
+  g_duel_safe_left = (safe_left * duel_height + viewport_height - 1) /
+                     viewport_height;
+  g_duel_safe_top = (safe_top * duel_height + viewport_height - 1) /
+                    viewport_height;
+  g_duel_safe_right = (safe_right * duel_height + viewport_height - 1) /
+                      viewport_height;
+  g_duel_safe_bottom = (safe_bottom * duel_height + viewport_height - 1) /
+                       viewport_height;
+  SDL_SetWindowSize(g_window, duel_width, duel_height);
+  set_duel_canvas_mode(1);
+#endif
+  shandalar_win32_set_desktop_size(duel_width, duel_height);
   SDL_SetWindowTitle(g_window, "Magic: The Gathering");
-  SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
+  SDL_SetRenderLogicalPresentation(g_renderer, duel_width, duel_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_StartTextInput(g_window);
   if (!shandalar_win32_imgui_init(g_window, g_renderer))
@@ -508,6 +630,11 @@ void shandalar_host_begin_duel(void)
     printf("shandalar: duel imgui init failed\n");
     return;
   }
+  shandalar_win32_imgui_set_safe_area_padding(
+      (float)(g_duel_safe_left > g_duel_safe_right
+                  ? g_duel_safe_left : g_duel_safe_right),
+      (float)(g_duel_safe_top > g_duel_safe_bottom
+                  ? g_duel_safe_top : g_duel_safe_bottom));
   shandalar_win32_clear_quit_message();
   g_duel_host_active = 1;
   shandalar_win32_set_pump_proc(pump_duel_ui);
@@ -521,6 +648,15 @@ void shandalar_host_end_duel(void)
   shandalar_win32_imgui_shutdown();
   SDL_StopTextInput(g_window);
   SDL_StartTextInput(g_window);
+  g_duel_safe_left = 0;
+  g_duel_safe_top = 0;
+  g_duel_safe_right = 0;
+  g_duel_safe_bottom = 0;
+  shandalar_win32_set_desktop_size(global_screen_width, global_screen_height);
+#ifdef __EMSCRIPTEN__
+  set_duel_canvas_mode(0);
+  SDL_SetWindowSize(g_window, global_screen_width, global_screen_height);
+#endif
   SDL_SetWindowTitle(g_window, "Magic: Shandalar");
   SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -701,6 +837,7 @@ int main(int argc, char **argv)
   int result;
 #ifdef __EMSCRIPTEN__
   asset_root = argc > 1 ? argv[1] : "/assets";
+  prepare_edge_to_edge_viewport();
 #endif
   if (!SDL_Init(SDL_INIT_VIDEO))
     return 1;

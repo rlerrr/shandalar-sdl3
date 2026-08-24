@@ -652,8 +652,8 @@ int initialize_duel_engine_window(void)
 
   if ((g_duel_mode_flags & 1) != 0)
   {
-    width = global_screen_width;
-    height = global_screen_height;
+    width = GetSystemMetrics(SM_CXSCREEN);
+    height = GetSystemMetrics(SM_CYSCREEN);
   }
   else
   {
@@ -671,6 +671,22 @@ int initialize_duel_engine_window(void)
     strcat(startup_error, g_text_lines[8]);
     strcat(startup_error, "\n");
   }
+#ifdef SHANDALAR
+  else
+  {
+    BOOL was_visible = IsWindowVisible(g_duel_window_hwnd);
+
+    /* Shared startup creates the native drawing scratch buffer at the
+     * adventure resolution.  Reuse the duel window's display-change path to
+     * recreate it after the WASM host expands the compatibility desktop.
+     * That handler shows the root window, so restore its startup state; the
+     * normal initialization path reveals the root and both hand windows. */
+    SendMessageA(g_duel_window_hwnd, WM_DISPLAYCHANGE,
+                 (WPARAM)g_display_color_depth, MAKELPARAM(width, height));
+    if (!was_visible)
+      ShowWindow(g_duel_window_hwnd, SW_HIDE);
+  }
+#endif
 
   g_duel_accelerators = LoadAcceleratorsA(g_app_instance, (LPCSTR)0x6f);
   if ((g_duel_mode_flags & 1) == 0)

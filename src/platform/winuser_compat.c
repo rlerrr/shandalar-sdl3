@@ -1331,6 +1331,15 @@ HWND GetDesktopWindow(void)
   return &g_desktop;
 }
 
+void shandalar_win32_set_desktop_size(int width, int height)
+{
+  HWND desktop = GetDesktopWindow();
+  if (width > 0)
+    desktop->width = width;
+  if (height > 0)
+    desktop->height = height;
+}
+
 static int window_matches(HWND window, LPCSTR class_name, LPCSTR window_name)
 {
   if (!valid_window(window))

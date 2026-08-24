@@ -206,6 +206,22 @@ void update_hand_window_title(char *title, HWND hwnd, int card_count)
   InvalidateRect(hwnd, NULL, TRUE);
 }
 
+static void resize_hand_window_preserving_right_edge(HWND hwnd, int width, int height)
+{
+  RECT rect;
+
+  if (GetWindowRect(hwnd, &rect) && rect.right > rect.left)
+  {
+    SetWindowPos(hwnd, (HWND)0, rect.right - width, rect.top, width, height,
+                 SWP_NOZORDER);
+  }
+  else
+  {
+    SetWindowPos(hwnd, (HWND)0, 0, 0, width, height,
+                 SWP_NOMOVE | SWP_NOZORDER);
+  }
+}
+
 // FUNCTION: MAGIC 0x004bd131
 // FUNCTION: SHANDALAR 0x00470468
 void resize_duel_hand_window(HWND hwnd)
@@ -231,6 +247,10 @@ void resize_duel_hand_window(HWND hwnd)
   HBITMAP background_bitmap;
   int window_height;
   int bottom_margin;
+  int card_spacing;
+  int card_column_step;
+  int card_slot;
+  int visible_row_count;
 
   max_visible_cards = 8;
   card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
@@ -244,31 +264,42 @@ void resize_duel_hand_window(HWND hwnd)
   calculate_hand_art_offsets(g_showlist_smallcard_width, g_showlist_smallcard_height,
                              art_width, art_title_height, art_side_width, art_bottom_height,
                              &title_height, &bottom_margin, &side_margin, &edge_width);
+  card_spacing = g_duel_selected_card_window * 3;
+  card_column_step = g_showlist_smallcard_width;
 
   if (g_duel_full_card_window_hwnd == hwnd ||
       (g_duel_life_window_hwnd == hwnd && g_duel_surface_reset_state != 0))
   {
     visible_count = max_visible_cards < card_count ? max_visible_cards : card_count;
+    visible_row_count = (visible_count + 1) / 2;
     window_width = edge_width + edge_width + side_margin + side_margin +
-                   g_showlist_smallcard_width;
+                   g_showlist_smallcard_width +
+                   (visible_count > 1 ? card_column_step : 0);
     if (card_count == 0)
     {
       window_height = bottom_margin + title_height;
     }
     else
     {
-      window_height = (visible_count - 1) * g_duel_selected_card_window + bottom_margin +
+      window_height = (visible_row_count - 1) * card_spacing + bottom_margin +
                       title_height + g_showlist_smallcard_height;
     }
 
     if (card_count > 0)
     {
-      card_x = edge_width + side_margin;
-      card_y = (window_height - bottom_margin) - g_showlist_smallcard_height;
       card_index = selected_index;
       previous_card = (HWND)0;
-      for (loop_index = 1; loop_index <= visible_count; loop_index++)
+      for (loop_index = 0; loop_index < visible_count; loop_index++)
       {
+        card_slot = loop_index;
+        if ((visible_count & 1) != 0 && loop_index > 0)
+        {
+          card_slot++;
+        }
+        card_x = edge_width + side_margin +
+                 (card_slot % 2) * card_column_step;
+        card_y = title_height +
+                 (visible_row_count - 1 - card_slot / 2) * card_spacing;
         MoveWindow(card_windows[card_index], card_x, card_y,
                    g_showlist_smallcard_width, g_showlist_smallcard_height, TRUE);
         if (previous_card == (HWND)0)
@@ -289,7 +320,6 @@ void resize_duel_hand_window(HWND hwnd)
         {
           card_index--;
         }
-        card_y -= g_duel_selected_card_window;
       }
       for (loop_index = visible_count; card_count > loop_index; loop_index++)
       {
@@ -306,8 +336,7 @@ void resize_duel_hand_window(HWND hwnd)
     }
 
     UpdateWindow(hwnd);
-    SetWindowPos(hwnd, (HWND)0, 0, 0, window_width, window_height,
-                 SWP_NOMOVE | SWP_NOZORDER);
+    resize_hand_window_preserving_right_edge(hwnd, window_width, window_height);
   }
   else
   {
@@ -318,8 +347,7 @@ void resize_duel_hand_window(HWND hwnd)
     {
       MoveWindow(card_windows[card_index], -1, -1, 0, 0, TRUE);
     }
-    SetWindowPos(hwnd, (HWND)0, 0, 0, window_width, window_height,
-                 SWP_NOMOVE | SWP_NOZORDER);
+    resize_hand_window_preserving_right_edge(hwnd, window_width, window_height);
   }
 }
 

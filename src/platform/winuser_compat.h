@@ -584,6 +584,7 @@ HDC BeginPaint(HWND window, PAINTSTRUCT *paint);
 BOOL EndPaint(HWND window, const PAINTSTRUCT *paint);
 HDC GetWindowDC(HWND window);
 HWND GetDesktopWindow(void);
+void shandalar_win32_set_desktop_size(int width, int height);
 HWND FindWindowA(LPCSTR class_name, LPCSTR window_name);
 HWND FindWindowExA(HWND parent, HWND child_after, LPCSTR class_name, LPCSTR window_name);
 BOOL GetCursorPos(POINT *point);

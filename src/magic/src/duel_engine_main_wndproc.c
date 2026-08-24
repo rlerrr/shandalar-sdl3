@@ -64,6 +64,7 @@ int CountDuelPoolEligibleTowns(void);
 char *GetCreatureName(int creature_type);
 #ifdef SHANDALAR
 int SeedRandomFromTickCount(void);
+void shandalar_host_get_duel_safe_area(int *left, int *top, int *right, int *bottom);
 #else
 void SeedRandomFromTickCount(void);
 #endif
@@ -890,6 +891,22 @@ void resize_battlefield_child_card_windows(HWND hwnd)
   SendMessageA(hwnd, 0x410, (WPARAM)snapshot_window, 0);
 }
 
+static void get_duel_layout_rect(HWND hwnd, RECT *rect)
+{
+  GetClientRect(hwnd, rect);
+#ifdef SHANDALAR
+  {
+    int safe_left;
+    int safe_right;
+    shandalar_host_get_duel_safe_area(&safe_left, NULL, &safe_right, NULL);
+    rect->left += safe_left;
+    rect->right -= safe_right;
+    if (rect->right < rect->left)
+      rect->right = rect->left;
+  }
+#endif
+}
+
 // FUNCTION: MAGIC 0x004dc512
 // FUNCTION: SHANDALAR 0x005431cd
 void layout_duel_child_windows(HWND hwnd, int layout)
@@ -955,9 +972,15 @@ void layout_duel_child_windows(HWND hwnd, int layout)
   int player_battlefield_width;
   int opponent_life_x;
   int right_battlefield_x;
+  int fixed_layout_width;
 
-  GetClientRect(hwnd, &rect);
-  g_showlist_smallcard_width = rect.right / 8;
+  get_duel_layout_rect(hwnd, &rect);
+  fixed_layout_width = rect.right - rect.left;
+#ifdef SHANDALAR
+  if (fixed_layout_width > global_screen_width)
+    fixed_layout_width = global_screen_width;
+#endif
+  g_showlist_smallcard_width = fixed_layout_width / 8;
   g_showlist_smallcard_height = g_showlist_smallcard_width;
   g_duel_selected_card_window = (g_showlist_smallcard_height * 0x21) / 0x118;
 
@@ -965,10 +988,10 @@ void layout_duel_child_windows(HWND hwnd, int layout)
   {
     GetWindowTextA(g_duel_tooltip_window, tooltip_text1, 100);
     set_duel_tooltip_text(tooltip_text1);
-    GetClientRect(hwnd, &rect);
-    client_width = rect.right;
+    get_duel_layout_rect(hwnd, &rect);
+    client_width = rect.right - rect.left;
     client_height = rect.bottom;
-    preview_width = client_width / 4;
+    preview_width = fixed_layout_width / 4;
     preview_height = client_height / 2;
     preview_left = rect.left;
     preview_top = rect.top + (client_height - preview_height) / 2;
@@ -979,8 +1002,8 @@ void layout_duel_child_windows(HWND hwnd, int layout)
     GetWindowRect(g_duel_card_preview_window_hwnd, &rect);
     preview_width = rect.right - rect.left;
     preview_height = rect.bottom - rect.top;
-    GetClientRect(hwnd, &rect);
-    client_width = rect.right;
+    get_duel_layout_rect(hwnd, &rect);
+    client_width = rect.right - rect.left;
     client_height = rect.bottom;
     left_phasebar_width = preview_width / 2;
     preview_y = rect.top;
@@ -1078,10 +1101,10 @@ void layout_duel_child_windows(HWND hwnd, int layout)
   {
     GetWindowTextA(g_duel_tooltip_window, tooltip_text2, 100);
     set_duel_tooltip_text(tooltip_text2);
-    GetClientRect(hwnd, &rect);
-    client_width = rect.right;
+    get_duel_layout_rect(hwnd, &rect);
+    client_width = rect.right - rect.left;
     client_height = rect.bottom;
-    preview_width = (client_width * 0x23) / 100;
+    preview_width = (fixed_layout_width * 0x23) / 100;
     preview_height = (client_height * 0x3c) / 100;
     preview_left = rect.left;
     preview_top = rect.top;
@@ -1089,10 +1112,10 @@ void layout_duel_child_windows(HWND hwnd, int layout)
     GetWindowRect(g_duel_card_preview_window_hwnd, &rect);
     preview_width = rect.right - rect.left;
     preview_height = rect.bottom - rect.top;
-    GetClientRect(hwnd, &rect);
-    client_width = rect.right;
+    get_duel_layout_rect(hwnd, &rect);
+    client_width = rect.right - rect.left;
     client_height = rect.bottom;
-    small_chat_height = client_width / 8;
+    small_chat_height = fixed_layout_width / 8;
     player_life_height = client_height / 8;
     top_middle_height = player_life_height;
     player_life_x = rect.left;

@@ -18,6 +18,7 @@ void shandalar_win32_imgui_begin_frame(void);
 void shandalar_win32_imgui_present(SDL_Renderer *renderer);
 void shandalar_win32_imgui_render(SDL_Renderer *renderer);
 void shandalar_win32_imgui_shutdown(void);
+void shandalar_win32_imgui_set_safe_area_padding(float horizontal, float vertical);
 void shandalar_win32_imgui_set_menu_sprite(const void *encoded_sprite,
                                             const unsigned char *palette_bgra);
 void shandalar_win32_imgui_register_territory_menu(HWND territory);
