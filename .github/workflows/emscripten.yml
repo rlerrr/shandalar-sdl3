@@ -1,4 +1,4 @@
-name: Emscripten Build
+name: Emscripten Stable Build
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
           r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           r2-bucket: shandalar-sdl3
           source-dir: ${{ github.workspace }}/out/${{ matrix.target }}
-          destination-dir: ${{ matrix.target }}
+          destination-dir: stable/${{ matrix.target }}
           output-file-url: false
 
       - name: Upload artifacts (${{ matrix.target }})
