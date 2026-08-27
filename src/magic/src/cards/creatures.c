@@ -5,7 +5,7 @@
 #include "../global_strings.h"
 #include "../network.h"
 
-int get_card_display_pic_num(int card_id, int player, int card);
+int get_card_display_pic_num(card_id_t card_id, int player, int card);
 int check_duel_finished(void);
 int card_sea_serpent(int player, int card, event_t event);
 void replace_text_token(char *text, char *search, int case_sensitive, char *replace);

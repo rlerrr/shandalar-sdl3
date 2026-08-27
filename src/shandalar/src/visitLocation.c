@@ -12,6 +12,7 @@
 #include "magic/src/global_other.h"
 #include "magic/src/global_state.h"
 #include "magic/src/global_strings.h"
+#include "magic/src/game_support.h"
 #include "magic/src/shared_startup.h"
 #include "magic/src/duel_engine.h"
 #include "shandalar_global_strings.h"
