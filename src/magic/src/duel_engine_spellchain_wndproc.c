@@ -379,7 +379,7 @@ int add_spell_chain_entry(HWND hwnd, spell_chain_display_entry_t display_entry, 
   new_entry.target_count = 0;
   for (target_index = 0; target_index < display_entry.number_of_targets && result != 0; ++target_index)
   {
-    create_target = display_entry.targets[target_index];
+    SET_TARGET(create_target, display_entry.targets[target_index]);
     new_entry.target_windows[target_index] =
         CreateWindowExA(0, "MAGICGAME_CardClass", "Spell Target Card", 0x50000000,
                         0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, &create_target);
@@ -473,7 +473,7 @@ int update_spell_chain_entry_targets(HWND hwnd, spell_chain_display_entry_t disp
   new_entry.target_count = 0;
   for (target_index = 0; target_index < display_entry.number_of_targets && result != 0; ++target_index)
   {
-    create_target = display_entry.targets[target_index];
+    SET_TARGET(create_target, display_entry.targets[target_index]);
     new_entry.target_windows[target_index] =
         CreateWindowExA(0, "MAGICGAME_CardClass", "Spell Target Card", 0x50000000,
                         0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, &create_target);

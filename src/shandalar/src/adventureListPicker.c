@@ -147,18 +147,18 @@ static void DrawAdventureListConfirmButtonText(char *text, int center_x, int cen
 }
 
 // FUNCTION: SHANDALAR 0x0055837e
-INT_PTR __cdecl ShowAdventureListCardList(int *card_ids, int card_count, void *title, int require_card_click, char *out_selection)
+INT_PTR __cdecl ShowAdventureListCardList(int *cards, int count, char *title, int require_selection, char *prompt)
 {
   if (g_duel_ai_mode_state == 1)
   {
     return 1;
   }
 
-  return show_cardlist(card_ids, 0, 0, card_count, title, (unsigned int)require_card_click, out_selection);
+  return show_cardlist(cards, 0, 0, count, title, (unsigned int)require_selection, prompt);
 }
 
 // FUNCTION: SHANDALAR 0x0056a515
-int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char *title, int require_card_click, int *out_selection)
+int show_deck(int player, int *cards, int count, char *title, int require_selection, char *prompt)
 {
   char *saved_accept_keys;
   int accept_key;
@@ -213,9 +213,9 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
       (g_duel_ai_mode_state == 1))
   {
     visible_count = 0;
-    for (i = 0; card_count > i; i = i + 1)
+    for (i = 0; count > i; i = i + 1)
     {
-      if (card_ids[i] != -1)
+      if (cards[i] != -1)
       {
         card_indices[visible_count] = i;
         visible_count = visible_count + 1;
@@ -250,10 +250,10 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
 
     x = 0;
     row_count = 0;
-    for (i = 0; card_count > i; i = i + 1)
+    for (i = 0; count > i; i = i + 1)
     {
-      if ((card_ids[i] != -1) &&
-          ((i == 0) || (card_ids[i - 1] != card_ids[i])))
+      if ((cards[i] != -1) &&
+          ((i == 0) || (cards[i - 1] != cards[i])))
       {
         row_count = row_count + 1;
       }
@@ -269,10 +269,10 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
     x = 0x60;
     visible_count = 0;
     y = 0x10;
-    for (i = 0; card_count > i; i = i + 1)
+    for (i = 0; count > i; i = i + 1)
     {
-      if ((card_ids[i] != -1) &&
-          ((i == 0) || (card_ids[i - 1] != card_ids[i])))
+      if ((cards[i] != -1) &&
+          ((i == 0) || (cards[i - 1] != cards[i])))
       {
         card_draw_x[visible_count] = x + 4;
         card_draw_y[visible_count] = y;
@@ -310,7 +310,7 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
     }
     for (i = 0; visible_count > i; i = i + 1)
     {
-      DrawAdventureCard(card_ids[card_indices[i]] & 0xfff, card_draw_x[i], card_draw_y[i], 0, "");
+      DrawAdventureCard(cards[card_indices[i]] & 0xfff, card_draw_x[i], card_draw_y[i], 0, "");
     }
 
   get_input:
@@ -337,13 +337,13 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
       }
 
       if ((selected_index != -1) &&
-          (card_ids[selected_index] != card_ids[hover_index]))
+          (cards[selected_index] != cards[hover_index]))
       {
-        DrawAdventureCard(card_ids[selected_index] & 0xfff, 8, 0x40, 1, "");
+        DrawAdventureCard(cards[selected_index] & 0xfff, 8, 0x40, 1, "");
         hover_index = selected_index;
       }
 
-      if (require_card_click != 0)
+      if (require_selection != 0)
       {
         if (((g_mouse_button_mask_snapshot != 0) ||
              (HasQueuedKeyInput() != 0)) &&
@@ -367,7 +367,7 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
       }
     } while (has_input == 0);
 
-    if (require_card_click != 0)
+    if (require_selection != 0)
     {
       BuildAdventureListConfirmButtonSprites(confirm_button_sprites, screen_palette);
       modal_x = ScaleUiCoordinateFrom320(0xdc) / 2;
@@ -397,7 +397,7 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
                                 modal_w,
                                 modal_h,
                                 buy_button_sprite);
-      DrawAdventureCardSized(card_ids[selected_index] & 0xfff, 0x7a, 0x29, 0x4b, 0x70, 1, "");
+      DrawAdventureCardSized(cards[selected_index] & 0xfff, 0x7a, 0x29, 0x4b, 0x70, 1, "");
 
       g_page0_window_bounds->font_slot = 1;
       DrawScaledTextNoShadow(g_ui_message_buffer, 0x76, 0x20, 0x1b);
@@ -474,7 +474,7 @@ int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char
   }
   else
   {
-    result = (int)ShowAdventureListCardList(card_ids, card_count, title, require_card_click, (char *)out_selection);
+    result = (int)ShowAdventureListCardList(cards, count, title, require_selection, prompt);
   }
 
   if ((player == g_active_player) &&

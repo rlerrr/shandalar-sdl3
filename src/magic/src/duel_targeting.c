@@ -419,9 +419,10 @@ int select_card_from_graveyard(int player,
   return result;
 }
 
+#ifndef SHANDALAR
 // FUNCTION: MOK 0x0047936d
 // FUNCTION: MAGIC 0x004b42aa
-int show_deck(int player, int *cards, int count, void *context, int suppress_done_txt, char *prompt)
+int show_deck(int player, int *cards, int count, char *title, int require_selection, char *prompt)
 {
   int y_step;
   int selected_index;
@@ -517,7 +518,7 @@ int show_deck(int player, int *cards, int count, void *context, int suppress_don
   }
   else
   {
-    result = show_cardlist_if_human(cards, count, context, suppress_done_txt, prompt);
+    result = show_cardlist_if_human(cards, count, title, require_selection, prompt);
     if ((player == g_active_player) && ((g_duel_network_flags & 2) != 0))
     {
       g_network_result_packet.result = result;
@@ -528,6 +529,7 @@ int show_deck(int player, int *cards, int count, void *context, int suppress_don
 
   return result;
 }
+#endif
 
 // FUNCTION: MAGIC 0x004bd7d0
 // FUNCTION: SHANDALAR 0x004be650
@@ -1739,7 +1741,7 @@ int select_target_creature_and_store_without_protection(int player, unsigned int
                            1,
                            &selected_target) != 0)
   {
-    PLAYER_CARD_INSTANCE(player, card).targets[(char)PLAYER_CARD_INSTANCE(player, card).number_of_targets] = selected_target;
+    SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[(char)PLAYER_CARD_INSTANCE(player, card).number_of_targets], selected_target);
     ++PLAYER_CARD_INSTANCE(player, card).number_of_targets;
     return 1;
   }
@@ -1834,7 +1836,7 @@ int select_target_land_and_store(int player, int preferred_controller, int card)
                            1,
                            &selected_target) != 0)
   {
-    PLAYER_CARD_INSTANCE(player, card).targets[PLAYER_CARD_INSTANCE(player, card).number_of_targets] = selected_target;
+    SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[PLAYER_CARD_INSTANCE(player, card).number_of_targets], selected_target);
     ++PLAYER_CARD_INSTANCE(player, card).number_of_targets;
     return 1;
   }

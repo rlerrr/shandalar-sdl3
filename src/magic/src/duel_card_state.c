@@ -476,6 +476,7 @@ int has_effect_source_type(int player, int card, unsigned int flags)
 }
 
 // FUNCTION: MAGIC 0x00483190
+// FUNCTION: SHANDALAR 0x00486ca1
 int find_matching_active_control_effect(int player, int card, int source_player, int source_card, int internal_card_id)
 {
   int result = 0;
@@ -492,6 +493,7 @@ int find_matching_active_control_effect(int player, int card, int source_player,
 }
 
 // FUNCTION: MAGIC 0x00483242
+// FUNCTION: SHANDALAR 0x00486d53
 int find_matching_inactive_control_effect(int player, int card, int source_player, int source_card, int internal_card_id)
 {
   int result = 0;

@@ -11,6 +11,7 @@ int aswan_jaguar_find_library_monster(int player, int start_slot);
 int polka_apply_effect(int player, int card, int amount);
 int polka_has_target_available(int player, int card);
 int faerie_dragon_apply_effect(int player, int card, int effect_index);
+int get_card_display_pic_num(int card_id, int player, int card);
 int whimsy_build_candidates(int player, int card, target_t *candidates, unsigned int type_mask);
 int whimsy_apply_effect(int player, int card, int effect_index);
 int choose_orcish_catapult_targets(int player, int card, target_t *targets);
@@ -243,8 +244,7 @@ int card_aswan_jaguar(int player, int card, event_t event)
         }
         else
         {
-          s.instance->targets[0].player = s.target.player;
-          s.instance->targets[0].card = s.target.card;
+          SET_TARGET(s.instance->targets[0], s.target);
           s.instance->number_of_targets = 1;
           s.selected_monster = *(int *)global_raw_cards_storage[global_cards_data[PLAYER_CARD_INSTANCE(s.target.player, s.target.card).internal_card_id].id].subtype;
           s.instance->state |= STATE_TAPPED;

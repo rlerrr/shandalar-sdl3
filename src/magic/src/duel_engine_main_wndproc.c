@@ -108,12 +108,8 @@ extern HANDLE global_mutex_GameInit;
 extern int g_world_location_music_active;
 extern int g_random_seed_initialized;
 extern int g_random_seed_tick_value;
-// GLOBAL: SHANDALAR 0x0058e048
-// GLOBAL: SHANDALAR 0x0058e04c
-int g_showlibrary_menu_selection = 0;
 color_t single_color_test_bit_to_color_t(color_test_t color_mask);
 void AddJournalEntry(int entry_type, int entry_arg);
-int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char *title, int require_card_click, int *out_selection);
 #endif
 int GetCardRarity(int card_id);
 int IsCardAvailable(csvid_t csvid, int expansion);
@@ -2359,9 +2355,10 @@ void show_opponent_library_window(int unused_color)
 {
   (void)unused_color;
 #ifdef SHANDALAR
-  SelectAdventureListCardIndex(g_active_player, global_library[1], 500, gs_showlibrary_text_0074bcc0.accept_keys, 0, &g_showlibrary_menu_selection);
+  show_deck(g_active_player, global_library[1], 500, gs_showlibrary_text_0074bcc0.accept_keys, 0, "");
 #else
-  show_deck(g_active_player, global_library[1], 500, g_text_lines, 0, "");
+  // TODO: I don't this this actually references g_text_lines?
+  show_deck(g_active_player, global_library[1], 500, g_text_lines[0], 0, "");
 #endif
 }
 
@@ -2371,9 +2368,10 @@ void show_player_library_window(int unused_color)
 {
   (void)unused_color;
 #ifdef SHANDALAR
-  SelectAdventureListCardIndex(g_active_player, global_library[0], 500, gs_showlibrary_text_0074bcc0.title, 0, &g_showlibrary_menu_selection);
+  show_deck(g_active_player, global_library[0], 500, gs_showlibrary_text_0074bcc0.title, 0, "");
 #else
-  show_deck(g_active_player, global_library[0], 500, g_text_lines, 0, "");
+  // TODO: I don't this this actually references g_text_lines?
+  show_deck(g_active_player, global_library[0], 500, g_text_lines[0], 0, "");
 #endif
 }
 

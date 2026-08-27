@@ -90,7 +90,6 @@ int ExitIfNoUsableDeckCards(void);
 ShandalarEntryType PickRandomCreatureTypeForWizardTier(int wizard_color, int creature_tier);
 void LoadCreatureDuelDeck(int creature_type, unsigned int name_id, unsigned int color_filter, int speed_filter);
 int DrawRandomCardFromInitialLibrary(int library_index);
-int SelectAdventureListCardIndex(int player, int *card_ids, int card_count, char *title, int require_card_click, int *out_selection);
 void DrawCreaturePortrait(int creature_type, int x_320, int y_200, int tinted, int mode);
 void PlayDuelMusic(int tune_index);
 void RemoveCardFromDeckById(unsigned int card_id);
@@ -143,7 +142,6 @@ int g_wiseman_city_block_index = -1;
 // GLOBAL: SHANDALAR 0x0058f0ac
 int g_wiseman_card_choice_result = 0;
 
-extern int g_showlibrary_menu_selection;
 // GLOBAL: SHANDALAR 0x0058edd0
 int g_wiseman_city_block_active_town_count = 0;
 
@@ -3443,7 +3441,7 @@ LAB_00531ee7:
       }
     }
 
-    selected_deck_index = SelectAdventureListCardIndex(g_active_player, (int *)deck_card_ids, 500, gs_wiseman_0074d840[0x12], 1, &g_wiseman_card_choice_result);
+    selected_deck_index = show_deck(g_active_player, (int *)deck_card_ids, 500, gs_wiseman_0074d840[0x12], 1, (char *)&g_wiseman_card_choice_result);
     if ((selected_deck_index != -1) &&
         ((selected_deck_slot = AddCardToDeckSorted(deck_card_ids[selected_deck_index])) != -1))
     {
