@@ -2,7 +2,7 @@ set(version "unknown")
 
 if(EXISTS "${SOURCE_DIR}/.git")
   execute_process(
-    COMMAND git -C "${SOURCE_DIR}" describe --tags --always --dirty
+    COMMAND git -C "${SOURCE_DIR}" describe --tags --always --dirty --long
     RESULT_VARIABLE git_describe_result
     OUTPUT_VARIABLE git_describe_output
     ERROR_QUIET
