@@ -12,7 +12,7 @@ set "PATH=C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\Comm
 set "APP=%~1"
 if "%APP%"=="" set "APP=facemaker"
 set "BUILD_TYPE=%~2"
-if "%BUILD_TYPE%"=="" set "BUILD_TYPE=Debug"
+if "%BUILD_TYPE%"=="" set "BUILD_TYPE=Release"
 
 rem CMake silently accepts unknown single-config build types without applying
 rem any configuration flags. Reject typos instead of producing unoptimized wasm.

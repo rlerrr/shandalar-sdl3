@@ -747,6 +747,9 @@ void draw_popup_menu(void)
     ImGui::OpenPopup("##win32-popup");
     opened_menu = menu;
   }
+
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 10.0f));
+  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
   if (ImGui::BeginPopup("##win32-popup")) {
     if (draw_popup_menu_items(menu)) {
       opened_menu = nullptr;
@@ -757,6 +760,7 @@ void draw_popup_menu(void)
     shandalar_win32_dismiss_popup();
     opened_menu = nullptr;
   }
+  ImGui::PopStyleVar(2);
 }
 
 void draw_territory_menu_button(HWND territory, int index,
