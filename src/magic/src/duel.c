@@ -235,7 +235,7 @@ void reset_duel_globals(void)
     }
   }
 
-  g_land_can_be_played = 0;
+  g_land_can_be_played = LCBP_NONE;
   g_max_x_value = -1;
   g_duel_state_0077784c = g_max_x_value;
   g_stop_phase = g_duel_state_0077784c;
@@ -588,9 +588,9 @@ int TENTATIVE_start_turn(int player)
   {
     TENTATIVE_savegame(0);
   }
-  if ((g_land_can_be_played & 0x8000) != 0)
+  if ((g_land_can_be_played & LCBP_SKIP_TURN) != 0)
   {
-    g_land_can_be_played &= -32769;
+    g_land_can_be_played &= ~LCBP_SKIP_TURN;
     C_dispatch_event_raw(0x22);
     return 1;
   }
@@ -598,15 +598,15 @@ int TENTATIVE_start_turn(int player)
   g_current_phase = PHASE_START;
   update_phase_display(player, g_current_phase);
   C_dispatch_event_raw(0x6a);
-  if ((g_land_can_be_played & 0x8000) != 0)
+  if ((g_land_can_be_played & LCBP_SKIP_TURN) != 0)
   {
-    g_land_can_be_played &= -32769;
+    g_land_can_be_played &= ~LCBP_SKIP_TURN;
     C_dispatch_event_raw(0x22);
     return 1;
   }
   g_duel_winner = 0;
   g_attacking_creature_count = 0;
-  g_land_can_be_played &= -512;
+  g_land_can_be_played &= ~LCBP_FLAGS_CLEARED_EACH_TURN;
   for (card = 0; card < g_active_cards_count[player]; card = card + 1)
   {
     global_card_instances[player][card].state &= ~(STATE_ATTACKING | STATE_BLOCKING | STATE_PLAYED_FROM_HAND | STATE_UNKNOWN8000 | STATE_SUMMONSICK_NOATTACK | STATE_SUMMONSICK_NOTAP);
@@ -1732,7 +1732,7 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
     g_duel_state_007161cc = 0;
     if (g_ai_decision_code == 1)
     {
-      if ((g_land_can_be_played & 0x100) != 0)
+      if ((g_land_can_be_played & TENTATIVE_LCBP_DURING_SECOND_MAIN_PHASE) != 0)
       {
         g_current_phase = PHASE_MAIN2;
       }
@@ -1756,7 +1756,7 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
     }
     if (g_ai_decision_code == 4)
     {
-      if ((g_land_can_be_played & 8) != 0)
+      if ((g_land_can_be_played & TENTATIVE_LCBP_DURING_COMBAT) != 0)
       {
         g_current_phase = PHASE_MAIN2;
       }
@@ -1782,7 +1782,7 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
     }
     if (g_ai_decision_code == 7)
     {
-      if ((g_land_can_be_played & 8) != 0)
+      if ((g_land_can_be_played & TENTATIVE_LCBP_DURING_COMBAT) != 0)
       {
         g_current_phase = PHASE_MAIN2;
       }

@@ -464,7 +464,7 @@ int choose_ai_main_phase_action(int player)
   possible_land_colors = missing_land_colors;
   land_colors_needed = possible_land_colors;
   playable_types = 2;
-  if ((g_land_can_be_played & 1U) || (g_duel_summary.hand_counts[player] + g_hand_count_adjustment <= 0))
+  if ((g_land_can_be_played & LCBP_LAND_HAS_BEEN_PLAYED) || (g_duel_summary.hand_counts[player] + g_hand_count_adjustment <= 0))
   {
   }
   else
@@ -654,7 +654,7 @@ int choose_ai_main_phase_action(int player)
       }
       if ((g_ai_recorded_choice == -2) && ((land_colors_needed != 0) || (colorless_land != 0)))
       {
-        g_land_can_be_played |= 1;
+        g_land_can_be_played |= LCBP_LAND_HAS_BEEN_PLAYED;
       }
       else
       {
