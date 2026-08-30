@@ -449,10 +449,8 @@ int has_effect_source_type(int player, int card, unsigned int flags)
         if (PLAYER_CARD_INSTANCE(source_player, source_card).internal_card_id != -1 &&
             global_cards_data[PLAYER_CARD_INSTANCE(source_player, source_card).internal_card_id].id == g_legacy_display_internal_card_id)
         {
-          source_player =
-              PLAYER_CARD_INSTANCE((int)(char)PLAYER_CARD_INSTANCE(source_player, source_card).damage_source_player,
-                                   source_card)
-                  .info_slot;
+          source_player = (int)(char)PLAYER_CARD_INSTANCE(source_player, source_card).damage_source_player;
+          source_player = PLAYER_CARD_INSTANCE(source_player, source_card).damage_source_card;
         }
 
         if (PLAYER_CARD_INSTANCE(source_player, source_card).internal_card_id != -1)

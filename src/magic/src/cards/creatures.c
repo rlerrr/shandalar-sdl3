@@ -1226,8 +1226,6 @@ int card_giant_tortoise(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0048c4db
 int card_personal_incarnation(int player, int card, event_t event)
 {
-  card_instance_t *instance;
-  card_instance_t *selected;
   target_t target;
   int damage_source_player;
   int max_damage;
@@ -1235,20 +1233,18 @@ int card_personal_incarnation(int player, int card, event_t event)
   int damage_card;
   int replacement_card;
 
-  instance = &PLAYER_CARD_INSTANCE(player, card);
-
   if (event == 0x21)
   {
     if (PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).damage_target_player == player && PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).damage_target_card == card)
     {
-      instance->info_slot |= 1;
+      PLAYER_CARD_INSTANCE(player, card).info_slot |= 1;
     }
     return 0;
   }
 
   if (event == 0x73)
   {
-    if ((instance->info_slot & 1) != 0 && (g_land_can_be_played & 4) != 0)
+    if ((PLAYER_CARD_INSTANCE(player, card).info_slot & 1) != 0 && (g_land_can_be_played & 4) != 0)
     {
       return 99;
     }
@@ -1261,9 +1257,9 @@ int card_personal_incarnation(int player, int card, event_t event)
     return 0;
   }
 
-  if (event == EVENT_ACTIVATE && (instance->info_slot & 1) != 0 && (g_land_can_be_played & 4) != 0)
+  if (event == EVENT_ACTIVATE && (PLAYER_CARD_INSTANCE(player, card).info_slot & 1) != 0 && (g_land_can_be_played & 4) != 0)
   {
-    damage_source_player = (instance->state & 0x1000) != 0;
+    damage_source_player = (PLAYER_CARD_INSTANCE(player, card).state & 0x1000) != 0;
     do
     {
       if (g_duel_ai_mode_state != 1)
@@ -1275,33 +1271,32 @@ int card_personal_incarnation(int player, int card, event_t event)
                                COLOR_TEST_0, COLOR_TEST_0, g_damage_card_internal_card_id, ~SUB_WALL,
                                -1, -1, 0, 0, 0, g_text_lines[0], 1, &target))
       {
-        selected = &PLAYER_CARD_INSTANCE(target.player, target.card);
-        if (selected->damage_target_player == player && selected->damage_target_card == card)
+        if (PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_player == player && PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_card == card)
         {
           if (g_duel_ai_mode_state != 1)
           {
             load_text("prompts.txt", "PERSONAL_INCARNATION");
           }
-          if (selected->info_slot + instance->toughness < 6)
+          if (PLAYER_CARD_INSTANCE(target.player, target.card).info_slot + PLAYER_CARD_INSTANCE(player, card).damage_on_card < 6)
           {
             max_damage = 0;
           }
           else
           {
-            max_damage = selected->info_slot - (5 - instance->toughness);
+            max_damage = PLAYER_CARD_INSTANCE(target.player, target.card).info_slot - (5 - PLAYER_CARD_INSTANCE(player, card).damage_on_card);
           }
           damage_to_deal = choose_a_number(player, g_text_lines[1], max_damage);
-          if (damage_to_deal > selected->info_slot)
+          if (damage_to_deal > PLAYER_CARD_INSTANCE(target.player, target.card).info_slot)
           {
-            damage_to_deal = selected->info_slot;
+            damage_to_deal = PLAYER_CARD_INSTANCE(target.player, target.card).info_slot;
           }
           damage_card = damage_creature(damage_source_player, -1, damage_to_deal,
-                                        selected->damage_source_player, selected->damage_source_card);
+                                        PLAYER_CARD_INSTANCE(target.player, target.card).damage_source_player, PLAYER_CARD_INSTANCE(target.player, target.card).damage_source_card);
           if (damage_card != -1)
           {
-            PLAYER_CARD_INSTANCE(player, damage_card).display_pic_info = selected->display_pic_info;
-            instance->info_slot &= ~1;
-            selected->info_slot -= damage_to_deal;
+            PLAYER_CARD_INSTANCE(player, damage_card).display_pic_info = PLAYER_CARD_INSTANCE(target.player, target.card).display_pic_info;
+            PLAYER_CARD_INSTANCE(player, card).info_slot &= ~1;
+            PLAYER_CARD_INSTANCE(target.player, target.card).info_slot -= damage_to_deal;
           }
         }
       }
@@ -1314,17 +1309,17 @@ int card_personal_incarnation(int player, int card, event_t event)
 
   if (event == EVENT_CLEANUP)
   {
-    instance->info_slot &= ~1;
+    PLAYER_CARD_INSTANCE(player, card).info_slot &= ~1;
     return 0;
   }
 
-  if (event == 0x77 && g_affected_card == card && g_affected_card_controller == player && instance->kill_code != 4 && is_in_play(player, card))
+  if (event == 0x77 && g_affected_card == card && g_affected_card_controller == player && PLAYER_CARD_INSTANCE(player, card).kill_code != 4 && is_in_play(player, card))
   {
     replacement_card = add_card_to_hand(player, g_duel_generated_internal_card_id_12);
     if (replacement_card != -1)
     {
-      PLAYER_CARD_INSTANCE(player, replacement_card).original_internal_card_id = instance->internal_card_id;
-      PLAYER_CARD_INSTANCE(player, replacement_card).state |= (instance->state & 0x1000) | STATE_IN_PLAY;
+      PLAYER_CARD_INSTANCE(player, replacement_card).original_internal_card_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
+      PLAYER_CARD_INSTANCE(player, replacement_card).state |= (PLAYER_CARD_INSTANCE(player, card).state & 0x1000) | STATE_IN_PLAY;
       PLAYER_CARD_INSTANCE(player, replacement_card).display_pic_info = 0xb5;
       TENTATIVE_set_timestamps(player, replacement_card);
     }
@@ -1579,7 +1574,7 @@ int card_carrion_ants(int player, int card, event_t event)
       {
         PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                              PLAYER_CARD_INSTANCE(player, card).parent_card)
-            .info_slot &= 0xfff7ffff;
+            .info_slot &= ~STATE_ETB_THIS_TURN;
         legacy_card = create_legacy_effect(g_card_on_stack_controller,
                                            g_card_on_stack,
                                            LEGACY_EFFECT_PUMP,
@@ -1717,7 +1712,7 @@ int card_shivan_dragon(int player, int card, event_t event)
       {
         *(unsigned int *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                                PLAYER_CARD_INSTANCE(player, card).parent_card)
-             .info_slot &= 0xfff7ffff;
+             .info_slot &= ~STATE_ETB_THIS_TURN;
         legacy = create_legacy_effect(g_card_on_stack_controller,
                                       g_card_on_stack,
                                       LEGACY_EFFECT_PUMP,
@@ -1865,7 +1860,7 @@ int card_dragon_whelp(int player, int card, event_t event)
       {
         *(unsigned int *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                                PLAYER_CARD_INSTANCE(player, card).parent_card)
-             .info_slot &= 0xfff7ffff;
+             .info_slot &= ~STATE_ETB_THIS_TURN;
         legacy_card = create_legacy_effect(g_card_on_stack_controller,
                                            g_card_on_stack,
                                            LEGACY_EFFECT_PUMP,
@@ -2106,7 +2101,7 @@ int card_angry_mob(int player, int card, event_t event)
     {
       PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
                            PLAYER_CARD_INSTANCE(player, card).damage_source_card)
-          .eot_toughness &= 0xfffffffd;
+          .eot_toughness &= ~STATE_IN_PLAY;
     }
   }
 
@@ -2117,11 +2112,8 @@ int card_angry_mob(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0048fdcb
 int card_gaea_s_liege(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   int effect_card;
   target_t selected_target;
-
-  instance = &PLAYER_CARD_INSTANCE(player, card);
 
   if (event == EVENT_RESOLVE_SPELL)
   {
@@ -2132,48 +2124,48 @@ int card_gaea_s_liege(int player, int card, event_t event)
       PLAYER_CARD_INSTANCE(player, effect_card).eot_toughness = 0x10d;
       PLAYER_CARD_INSTANCE(player, effect_card).token_status = 0x10020;
       PLAYER_CARD_INSTANCE(player, effect_card).token_status |= 0x2000000;
-      instance->damage_source_player = (char)player;
-      instance->damage_source_card = effect_card;
+      PLAYER_CARD_INSTANCE(player, card).damage_source_player = (char)player;
+      PLAYER_CARD_INSTANCE(player, card).damage_source_card = effect_card;
     }
   }
   else if (((event == EVENT_POWER) || (event == EVENT_TOUGHNESS)) && card == g_affected_card && player == g_affected_card_controller)
   {
-    if ((instance->state & STATE_ATTACKING) == 0)
+    if ((PLAYER_CARD_INSTANCE(player, card).state & STATE_ATTACKING) == 0)
     {
-      PLAYER_CARD_INSTANCE((int)instance->damage_source_player, instance->damage_source_card)
+      PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card)
           .eot_toughness |= 1;
-      PLAYER_CARD_INSTANCE((int)instance->damage_source_player, instance->damage_source_card)
-          .eot_toughness &= 0xfffffffd;
+      PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card)
+          .eot_toughness &= ~STATE_IN_PLAY;
     }
     else
     {
-      PLAYER_CARD_INSTANCE((int)instance->damage_source_player, instance->damage_source_card)
+      PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card)
           .eot_toughness |= 2;
-      PLAYER_CARD_INSTANCE((int)instance->damage_source_player, instance->damage_source_card)
-          .eot_toughness &= 0xfffffffe;
+      PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card)
+          .eot_toughness &= ~STATE_JUST_DRAWED;
     }
   }
   else if (event == EVENT_CAN_ACTIVATE)
   {
-    if ((instance->state & 0x20010) == 0 && real_target_available((int *)0,
-                                                                  TARGET_SCAN_DIRECT,
-                                                                  player,
-                                                                  2,
-                                                                  2,
-                                                                  TARGET_ZONE_IN_PLAY,
-                                                                  TYPE_LAND,
-                                                                  TYPE_NONE,
-                                                                  0,
-                                                                  get_protections_from(player, card),
-                                                                  0,
-                                                                  0,
-                                                                  -1,
-                                                                  -1,
-                                                                  -1,
-                                                                  -1,
-                                                                  0,
-                                                                  0,
-                                                                  0) != 0)
+    if ((PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0 && real_target_available((int *)0,
+                                                                                           TARGET_SCAN_DIRECT,
+                                                                                           player,
+                                                                                           2,
+                                                                                           2,
+                                                                                           TARGET_ZONE_IN_PLAY,
+                                                                                           TYPE_LAND,
+                                                                                           TYPE_NONE,
+                                                                                           0,
+                                                                                           get_protections_from(player, card),
+                                                                                           0,
+                                                                                           0,
+                                                                                           -1,
+                                                                                           -1,
+                                                                                           -1,
+                                                                                           -1,
+                                                                                           0,
+                                                                                           0,
+                                                                                           0) != 0)
     {
       return 1;
     }
@@ -2210,9 +2202,9 @@ int card_gaea_s_liege(int player, int card, event_t event)
                              1,
                              &selected_target))
     {
-      SET_TARGET(instance->targets[0], selected_target);
-      instance->number_of_targets = 1;
-      instance->state |= 0x10;
+      SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], selected_target);
+      PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
+      PLAYER_CARD_INSTANCE(player, card).state |= 0x10;
     }
     else
     {
@@ -2221,7 +2213,7 @@ int card_gaea_s_liege(int player, int card, event_t event)
   }
   else if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(selected_target, instance->targets[0]);
+    SET_TARGET(selected_target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
 
     if (C_real_validate_target(selected_target.player,
                                selected_target.card,
@@ -2244,7 +2236,7 @@ int card_gaea_s_liege(int player, int card, event_t event)
                                0,
                                0))
     {
-      PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card).info_slot = 3;
+      PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).info_slot = 3;
       effect_card = create_legacy_effect(g_card_on_stack_controller,
                                          g_card_on_stack,
                                          g_duel_generated_internal_card_id_0f,
@@ -2260,11 +2252,11 @@ int card_gaea_s_liege(int player, int card, event_t event)
       g_spell_fizzled = 1;
     }
 
-    PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card).number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).number_of_targets = 0;
   }
-  else if ((event == EVENT_CLEANUP || event == EVENT_SHOULD_AI_PLAY) && card == g_affected_card && player == g_affected_card_controller && (instance->info_slot & 0x4000) != 0)
+  else if ((event == EVENT_CLEANUP || event == EVENT_SHOULD_AI_PLAY) && card == g_affected_card && player == g_affected_card_controller && (PLAYER_CARD_INSTANCE(player, card).info_slot & 0x4000) != 0)
   {
-    instance->info_slot &= 0xffffbfff;
+    PLAYER_CARD_INSTANCE(player, card).info_slot &= ~STATE_BLOCKED;
     C_get_abilities(player, card, EVENT_POWER, -1);
     C_get_abilities(player, card, EVENT_TOUGHNESS, -1);
   }
@@ -2461,12 +2453,9 @@ int card_uthden_troll(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x00491025
 int card_vampire_bats(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   int legacy_card;
   int saved_max_x_value;
   int mana_available;
-
-  instance = &PLAYER_CARD_INSTANCE(player, card);
 
   if (event == EVENT_UNTAP_PHASE)
   {
@@ -2479,13 +2468,13 @@ int card_vampire_bats(int player, int card, event_t event)
     if (player == g_other_player &&
         (g_duel_network_flags & 2) == 0 &&
         player == g_current_player &&
-        instance->info_slot != 0 &&
+        PLAYER_CARD_INSTANCE(player, card).info_slot != 0 &&
         g_current_phase < 0x1a)
     {
       return 0;
     }
     return has_mana(player, COLOR_BLACK, 1) &&
-           (int)(instance->eot_toughness & 0xffff0000) < 0x20000;
+           (int)(PLAYER_CARD_INSTANCE(player, card).eot_toughness & 0xffff0000) < 0x20000;
   }
 
   if (event == EVENT_GET_SELECTED_CARD)
@@ -2498,9 +2487,9 @@ int card_vampire_bats(int player, int card, event_t event)
   {
     mana_available = has_mana(player, COLOR_BLACK, 1);
     saved_max_x_value = g_max_x_value;
-    if (mana_available != 0 && (int)(instance->eot_toughness & 0xffff0000) < 0x20000)
+    if (mana_available != 0 && (int)(PLAYER_CARD_INSTANCE(player, card).eot_toughness & 0xffff0000) < 0x20000)
     {
-      if (((instance->eot_toughness >> 16) & 0xf) == 0)
+      if (((PLAYER_CARD_INSTANCE(player, card).eot_toughness >> 16) & 0xf) == 0)
       {
         g_max_x_value = 2;
       }
@@ -2523,16 +2512,16 @@ int card_vampire_bats(int player, int card, event_t event)
       }
 
       g_max_x_value = saved_max_x_value;
-      instance->eot_toughness &= 0xf0000;
+      PLAYER_CARD_INSTANCE(player, card).eot_toughness &= 0xf0000;
       if (g_spell_fizzled != 1)
       {
-        instance->targets[0].player = player;
-        instance->targets[0].card = card;
-        instance->number_of_targets = 1;
-        instance->eot_toughness += g_x_value * 0x10001;
-        if (instance->info_slot == 0)
+        PLAYER_CARD_INSTANCE(player, card).targets[0].player = player;
+        PLAYER_CARD_INSTANCE(player, card).targets[0].card = card;
+        PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
+        PLAYER_CARD_INSTANCE(player, card).eot_toughness += g_x_value * 0x10001;
+        if (PLAYER_CARD_INSTANCE(player, card).info_slot == 0)
         {
-          instance->info_slot |= 0x80000;
+          PLAYER_CARD_INSTANCE(player, card).info_slot |= 0x80000;
         }
       }
     }
@@ -2562,7 +2551,7 @@ int card_vampire_bats(int player, int card, event_t event)
       {
         PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                              PLAYER_CARD_INSTANCE(player, card).parent_card)
-            .info_slot &= 0xfff7ffff;
+            .info_slot &= ~STATE_ETB_THIS_TURN;
         legacy_card = create_legacy_effect(g_card_on_stack_controller,
                                            g_card_on_stack,
                                            LEGACY_EFFECT_PUMP,
@@ -2582,7 +2571,7 @@ int card_vampire_bats(int player, int card, event_t event)
   {
     return ClampIntToRange(g_special_mana_pool[player][COLOR_BLACK],
                            0,
-                           2 - instance->info_slot);
+                           2 - PLAYER_CARD_INSTANCE(player, card).info_slot);
   }
 
   if (event == EVENT_CLEANUP || event == EVENT_SHOULD_AI_PLAY)
@@ -2598,17 +2587,12 @@ int card_vampire_bats(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x00491883
 int card_frozen_shade(int player, int card, event_t event)
 {
-  union
-  {
-    int legacy_effect_card;
-    card_instance_t *instance;
-  } u;
+  int legacy_effect_card;
 
   if (((event == EVENT_CAST_SPELL) && (g_affected_card == card)) && (g_affected_card_controller == player))
   {
-    u.instance = &PLAYER_CARD_INSTANCE(player, card);
-    u.instance->eot_toughness = 0;
-    u.instance->info_slot = u.instance->eot_toughness;
+    PLAYER_CARD_INSTANCE(player, card).eot_toughness = 0;
+    PLAYER_CARD_INSTANCE(player, card).info_slot = PLAYER_CARD_INSTANCE(player, card).eot_toughness;
     return 0;
   }
 
@@ -2636,13 +2620,13 @@ int card_frozen_shade(int player, int card, event_t event)
       if (player == g_current_player)
       {
         charge_mana(player, COLOR_BLACK, -1);
-        if (g_x_value < 1)
+        if (g_x_value > 0)
         {
-          g_spell_fizzled = 1;
+          PLAYER_CARD_INSTANCE(player, card).eot_toughness = g_x_value;
         }
         else
         {
-          PLAYER_CARD_INSTANCE(player, card).eot_toughness = g_x_value;
+          g_spell_fizzled = 1;
         }
       }
       else
@@ -2691,17 +2675,17 @@ int card_frozen_shade(int player, int card, event_t event)
       {
         *(unsigned int *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                                PLAYER_CARD_INSTANCE(player, card).parent_card)
-             .info_slot &= 0xfff7ffff;
-        u.legacy_effect_card = create_legacy_effect(g_card_on_stack_controller,
-                                                    g_card_on_stack,
-                                                    LEGACY_EFFECT_PUMP,
-                                                    g_card_on_stack_controller,
-                                                    g_card_on_stack);
-        if (u.legacy_effect_card != -1)
+             .info_slot &= ~STATE_ETB_THIS_TURN;
+        legacy_effect_card = create_legacy_effect(g_card_on_stack_controller,
+                                                  g_card_on_stack,
+                                                  LEGACY_EFFECT_PUMP,
+                                                  g_card_on_stack_controller,
+                                                  g_card_on_stack);
+        if (legacy_effect_card != -1)
         {
-          PLAYER_CARD_INSTANCE(player, u.legacy_effect_card).counter_power = 1;
-          PLAYER_CARD_INSTANCE(player, u.legacy_effect_card).counter_toughness = 1;
-          *(unsigned int *)&PLAYER_CARD_INSTANCE(player, u.legacy_effect_card).info_slot |= 0x80000;
+          PLAYER_CARD_INSTANCE(player, legacy_effect_card).counter_power = 1;
+          PLAYER_CARD_INSTANCE(player, legacy_effect_card).counter_toughness = 1;
+          *(unsigned int *)&PLAYER_CARD_INSTANCE(player, legacy_effect_card).info_slot |= 0x80000;
         }
       }
     }
@@ -2730,9 +2714,8 @@ int card_frozen_shade(int player, int card, event_t event)
 
   if ((event == EVENT_CLEANUP) || (event == EVENT_SHOULD_AI_PLAY))
   {
-    u.instance = &PLAYER_CARD_INSTANCE(player, card);
-    u.instance->eot_toughness = 0;
-    u.instance->info_slot = u.instance->eot_toughness;
+    PLAYER_CARD_INSTANCE(player, card).eot_toughness = 0;
+    PLAYER_CARD_INSTANCE(player, card).info_slot = PLAYER_CARD_INSTANCE(player, card).eot_toughness;
   }
 
   return 0;
@@ -2977,7 +2960,7 @@ int card_wall_of_water(int player, int card, event_t event)
       {
         *(unsigned int *)&PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller,
                                                PLAYER_CARD_INSTANCE(player, card).parent_card)
-             .info_slot &= 0xfff7ffff;
+             .info_slot &= ~STATE_ETB_THIS_TURN;
         legacy_card = create_legacy_effect(g_card_on_stack_controller,
                                            g_card_on_stack,
                                            LEGACY_EFFECT_PUMP,
@@ -4026,32 +4009,29 @@ int card_stone_giant(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x00495df9
 int card_dwarven_warriors(int player, int card, event_t event)
 {
-  card_instance_t *instance;
-  card_instance_t *parent;
   target_t target;
 
-  instance = &PLAYER_CARD_INSTANCE(player, card);
   if (event == EVENT_CAN_ACTIVATE)
   {
-    if ((instance->state & 0x20010) == 0 && real_target_available((int *)0,
-                                                                  TARGET_SCAN_DIRECT,
-                                                                  player,
-                                                                  2,
-                                                                  2,
-                                                                  TARGET_ZONE_IN_PLAY,
-                                                                  TYPE_CREATURE,
-                                                                  TYPE_NONE,
-                                                                  0,
-                                                                  get_protections_from(player, card),
-                                                                  COLOR_TEST_0,
-                                                                  COLOR_TEST_0,
-                                                                  -1,
-                                                                  -1,
-                                                                  0x2002,
-                                                                  0xffffffff,
-                                                                  0,
-                                                                  0,
-                                                                  0))
+    if ((PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0 && real_target_available((int *)0,
+                                                                                           TARGET_SCAN_DIRECT,
+                                                                                           player,
+                                                                                           2,
+                                                                                           2,
+                                                                                           TARGET_ZONE_IN_PLAY,
+                                                                                           TYPE_CREATURE,
+                                                                                           TYPE_NONE,
+                                                                                           0,
+                                                                                           get_protections_from(player, card),
+                                                                                           COLOR_TEST_0,
+                                                                                           COLOR_TEST_0,
+                                                                                           -1,
+                                                                                           -1,
+                                                                                           0x2002,
+                                                                                           0xffffffff,
+                                                                                           0,
+                                                                                           0,
+                                                                                           0))
     {
       return 1;
     }
@@ -4060,7 +4040,7 @@ int card_dwarven_warriors(int player, int card, event_t event)
   {
     load_recorded_action_target(0);
   }
-  else if ((event == EVENT_ACTIVATE) && ((instance->state & 0x20010) == 0))
+  else if ((event == EVENT_ACTIVATE) && ((PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0))
   {
     if (g_duel_ai_mode_state != 1)
     {
@@ -4087,9 +4067,9 @@ int card_dwarven_warriors(int player, int card, event_t event)
                              1,
                              &target))
     {
-      SET_TARGET(instance->targets[0], target);
-      instance->number_of_targets = 1;
-      instance->state |= STATE_TAPPED;
+      SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], target);
+      PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
+      PLAYER_CARD_INSTANCE(player, card).state |= STATE_TAPPED;
     }
     else
     {
@@ -4098,7 +4078,7 @@ int card_dwarven_warriors(int player, int card, event_t event)
   }
   else if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(target, instance->targets[0]);
+    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
     if (C_real_validate_target(target.player,
                                target.card,
                                (char *)0,
@@ -4126,8 +4106,7 @@ int card_dwarven_warriors(int player, int card, event_t event)
     {
       g_spell_fizzled = 1;
     }
-    parent = &PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card);
-    parent->number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).number_of_targets = 0;
   }
 
   return 0;
@@ -4987,13 +4966,13 @@ int card_leviathan(int player, int card, event_t event)
 
   if (event == EVENT_UNTAP_PHASE)
   {
-    if (!TENTATIVE_sacrifice_leviathan_lands(player, card, 1))
+    if (TENTATIVE_sacrifice_leviathan_lands(player, card, 1))
     {
-      g_event_result |= 1;
+      PLAYER_CARD_INSTANCE(player, card).state &= ~STATE_TAPPED;
     }
     else
     {
-      PLAYER_CARD_INSTANCE(player, card).state &= ~STATE_TAPPED;
+      g_event_result |= 1;
     }
     return 0;
   }
@@ -5017,11 +4996,7 @@ int card_leviathan(int player, int card, event_t event)
       g_trigger_cause_controller == player &&
       g_trigger_cause == card)
   {
-    if (g_basiclandtypes_controlled[player][get_hacked_color(player, card, COLOR_BLUE)] < 2)
-    {
-      g_combat_assignment_cancelled = 1;
-    }
-    else
+    if (g_basiclandtypes_controlled[player][get_hacked_color(player, card, COLOR_BLUE)] >= 2)
     {
       if (event == EVENT_TRIGGER)
       {
@@ -5039,6 +5014,10 @@ int card_leviathan(int player, int card, event_t event)
           PLAYER_CARD_INSTANCE(player, card).eot_toughness = 1;
         }
       }
+    }
+    else
+    {
+      g_combat_assignment_cancelled = 1;
     }
     return 0;
   }
@@ -6280,7 +6259,7 @@ int card_lord_of_the_pit(int player, int card, event_t event)
 
       creature_to_sacrifice = choose_creature_to_sacrifice(player);
 
-      PLAYER_CARD_INSTANCE(player, card).state &= 0xffefffff;
+      PLAYER_CARD_INSTANCE(player, card).state &= ~STATE_CANNOT_TARGET;
       if (creature_to_sacrifice != -1)
       {
         kill_card(player, creature_to_sacrifice, KILL_SACRIFICE);
@@ -6400,7 +6379,7 @@ int card_nether_shadow(int player, int card, event_t event)
   {
     if (player == g_affected_card_controller)
     {
-      *(unsigned int *)&PLAYER_CARD_INSTANCE(player, card).state &= 0xfffcffff;
+      *(unsigned int *)&PLAYER_CARD_INSTANCE(player, card).state &= ~STATE_SUMMONSICK_BOTH;
     }
   }
 
@@ -6427,6 +6406,8 @@ int card_nether_shadow(int player, int card, event_t event)
       PLAYER_CARD_INSTANCE(hand_player, hand_card).display_pic_info =
           global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].id;
     }
+
+    return 0;
   }
 
   return 0;
@@ -6554,10 +6535,8 @@ void destroy_attached_auras_of_color(int player, int card, int color)
 // FUNCTION: SHANDALAR 0x0049c834
 int card_ali_baba(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   target_t target;
 
-  instance = &PLAYER_CARD_INSTANCE(player, card);
   if (event == EVENT_CAN_ACTIVATE)
   {
     return has_mana(player, COLOR_RED, 1) &&
@@ -6620,8 +6599,8 @@ int card_ali_baba(int player, int card, event_t event)
                                  1,
                                  &target))
         {
-          SET_TARGET(instance->targets[0], target);
-          instance->number_of_targets = 1;
+          SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], target);
+          PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
         }
         else
         {
@@ -6634,7 +6613,7 @@ int card_ali_baba(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(target, instance->targets[0]);
+    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
     if (C_real_validate_target(target.player,
                                target.card,
                                (char *)0,
@@ -6662,7 +6641,7 @@ int card_ali_baba(int player, int card, event_t event)
     {
       g_spell_fizzled = 1;
     }
-    PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card).number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).number_of_targets = 0;
     return 0;
   }
 
@@ -6673,31 +6652,29 @@ int card_ali_baba(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0049cbc7
 int card_ley_druid(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   target_t target;
 
-  instance = &PLAYER_CARD_INSTANCE(player, card);
   if (event == EVENT_CAN_ACTIVATE)
   {
-    return (instance->state & 0x20010) == 0 && real_target_available((int *)0,
-                                                                     TARGET_SCAN_DIRECT,
-                                                                     player,
-                                                                     2,
-                                                                     2,
-                                                                     0x200,
-                                                                     TYPE_LAND,
-                                                                     0,
-                                                                     0,
-                                                                     get_protections_from(player, card),
-                                                                     0,
-                                                                     0,
-                                                                     -1,
-                                                                     -1,
-                                                                     -1,
-                                                                     -1,
-                                                                     0,
-                                                                     0,
-                                                                     0) != 0;
+    return (PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0 && real_target_available((int *)0,
+                                                                                              TARGET_SCAN_DIRECT,
+                                                                                              player,
+                                                                                              2,
+                                                                                              2,
+                                                                                              0x200,
+                                                                                              TYPE_LAND,
+                                                                                              0,
+                                                                                              0,
+                                                                                              get_protections_from(player, card),
+                                                                                              0,
+                                                                                              0,
+                                                                                              -1,
+                                                                                              -1,
+                                                                                              -1,
+                                                                                              -1,
+                                                                                              0,
+                                                                                              0,
+                                                                                              0) != 0;
   }
 
   if (event == 0x90)
@@ -6734,9 +6711,9 @@ int card_ley_druid(int player, int card, event_t event)
                              1,
                              &target))
     {
-      instance->state |= STATE_TAPPED;
-      SET_TARGET(instance->targets[0], target);
-      instance->number_of_targets = 1;
+      PLAYER_CARD_INSTANCE(player, card).state |= STATE_TAPPED;
+      SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], target);
+      PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
     }
     else
     {
@@ -6747,7 +6724,7 @@ int card_ley_druid(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(target, instance->targets[0]);
+    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
     if (C_real_validate_target(target.player,
                                target.card,
                                (char *)0,
@@ -6776,7 +6753,7 @@ int card_ley_druid(int player, int card, event_t event)
     {
       g_spell_fizzled = 1;
     }
-    PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card).number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).number_of_targets = 0;
     return 0;
   }
 
@@ -6787,7 +6764,6 @@ int card_ley_druid(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0049cf85
 int card_venom(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   int result;
   int enchanted_player;
   int enchanted_card;
@@ -6810,9 +6786,8 @@ int card_venom(int player, int card, event_t event)
 
   if (event == EVENT_DECLARE_BLOCKERS)
   {
-    instance = &PLAYER_CARD_INSTANCE(player, card);
-    enchanted_player = (int)instance->damage_target_player;
-    enchanted_card = instance->damage_target_card;
+    enchanted_player = (int)PLAYER_CARD_INSTANCE(player, card).damage_target_player;
+    enchanted_card = PLAYER_CARD_INSTANCE(player, card).damage_target_card;
 
     if (enchanted_player != -1 &&
         enchanted_card != -1 &&
@@ -7008,9 +6983,7 @@ int card_sisters_of_the_flame(int player, int card, event_t event)
     return (PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0;
   }
 
-  if (event == EVENT_ACTIVATE &&
-      (PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0 &&
-      has_mana(player, COLOR_BLUE, 1))
+  if (event == EVENT_ACTIVATE && (PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0)
   {
     undeclare_mana_available_and_produce_it(player, COLOR_RED, 1);
     PLAYER_CARD_INSTANCE(player, card).state |= STATE_TAPPED;
@@ -7138,14 +7111,12 @@ int card_abomination(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0049e9a4
 int card_radjan_spirit(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   target_t target;
   int legacy_card;
 
-  instance = &PLAYER_CARD_INSTANCE(player, card);
   if (event == EVENT_CAN_ACTIVATE)
   {
-    return (instance->state & 0x20010) == 0 &&
+    return (PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0 &&
            real_target_available((int *)0,
                                  TARGET_SCAN_DIRECT,
                                  player,
@@ -7173,7 +7144,7 @@ int card_radjan_spirit(int player, int card, event_t event)
     return 0;
   }
 
-  if (event == EVENT_ACTIVATE && (instance->state & 0x20010) == 0)
+  if (event == EVENT_ACTIVATE && (PLAYER_CARD_INSTANCE(player, card).state & 0x20010) == 0)
   {
     if (g_duel_ai_mode_state != 1)
     {
@@ -7201,11 +7172,11 @@ int card_radjan_spirit(int player, int card, event_t event)
                              1,
                              &target))
     {
-      SET_TARGET(instance->targets[0], target);
-      instance->number_of_targets = 1;
-      instance->state |= STATE_TAPPED;
+      SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], target);
+      PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
+      PLAYER_CARD_INSTANCE(player, card).state |= STATE_TAPPED;
       if (g_other_player == player &&
-          (PLAYER_CARD_INSTANCE(instance->targets[0].player, instance->targets[0].card).regen_status &
+          (PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).targets[0].player, PLAYER_CARD_INSTANCE(player, card).targets[0].card).regen_status &
            KEYWORD_FLYING) != 0)
       {
         g_ai_modifier -= 0x48;
@@ -7220,7 +7191,7 @@ int card_radjan_spirit(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(target, instance->targets[0]);
+    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
     if (C_real_validate_target(target.player,
                                target.card,
                                (char *)0,
@@ -7244,7 +7215,7 @@ int card_radjan_spirit(int player, int card, event_t event)
     {
       legacy_card = create_legacy_effect(g_card_on_stack_controller,
                                          g_card_on_stack,
-                                         g_duel_generated_internal_card_id_03,
+                                         g_duel_generated_internal_card_id_07,
                                          target.player,
                                          target.card);
       if (legacy_card != -1)
@@ -7257,7 +7228,7 @@ int card_radjan_spirit(int player, int card, event_t event)
     {
       g_spell_fizzled = 1;
     }
-    PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card).number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).number_of_targets = 0;
     return 0;
   }
 
@@ -7268,15 +7239,12 @@ int card_radjan_spirit(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0049ee8e
 int card_hurr_jackal(int player, int card, event_t event)
 {
-  card_instance_t *instance;
   target_t target;
   int legacy_card;
 
-  instance = &PLAYER_CARD_INSTANCE(player, card);
-
   if (event == EVENT_CAN_ACTIVATE)
   {
-    return (instance->state & (STATE_SUMMONSICK_NOTAP | STATE_TAPPED)) == 0 &&
+    return (PLAYER_CARD_INSTANCE(player, card).state & (STATE_SUMMONSICK_NOTAP | STATE_TAPPED)) == 0 &&
            real_target_available((int *)0,
                                  TARGET_SCAN_DIRECT,
                                  player,
@@ -7304,7 +7272,7 @@ int card_hurr_jackal(int player, int card, event_t event)
     return 0;
   }
 
-  if (event == EVENT_ACTIVATE && (instance->state & (STATE_SUMMONSICK_NOTAP | STATE_TAPPED)) == 0)
+  if (event == EVENT_ACTIVATE && (PLAYER_CARD_INSTANCE(player, card).state & (STATE_SUMMONSICK_NOTAP | STATE_TAPPED)) == 0)
   {
     if (g_duel_ai_mode_state != 1)
     {
@@ -7332,9 +7300,9 @@ int card_hurr_jackal(int player, int card, event_t event)
                              1,
                              &target))
     {
-      instance->state |= STATE_TAPPED;
-      SET_TARGET(instance->targets[0], target);
-      instance->number_of_targets = 1;
+      PLAYER_CARD_INSTANCE(player, card).state |= STATE_TAPPED;
+      SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], target);
+      PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
       if ((PLAYER_CARD_INSTANCE(target.player, target.card).regen_status & 0x200) == 0)
       {
         g_ai_modifier -= 0x30;
@@ -7353,7 +7321,7 @@ int card_hurr_jackal(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(target, instance->targets[0]);
+    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
     if (C_real_validate_target(target.player,
                                target.card,
                                (char *)0,
@@ -7390,7 +7358,7 @@ int card_hurr_jackal(int player, int card, event_t event)
     {
       g_spell_fizzled = 1;
     }
-    PLAYER_CARD_INSTANCE(instance->parent_controller, instance->parent_card).number_of_targets = 0;
+    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).parent_controller, PLAYER_CARD_INSTANCE(player, card).parent_card).number_of_targets = 0;
     return 0;
   }
 
