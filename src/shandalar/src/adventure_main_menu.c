@@ -367,6 +367,14 @@ int HandlePortraitMainMenuControlEvent(AdvMenuControl *control, int event_type)
   {
     return 0;
   }
+  if (sprite == (EncodedImage *)0 || sprite->width <= 0 || sprite->height <= 0)
+  {
+    if (event_type == 2 && control->on_activate != (AdvMenuActivateCallback)0)
+    {
+      control->on_activate(control);
+    }
+    return 1;
+  }
   draw_height = (DWORD)ScaleUiCoordinate(0x30);
   draw_width = (unsigned int)ScaleUiCoordinate((sprite->width * 0x30) / (int)sprite->height);
   draw_x = ScaleUiCoordinate(0x20) - (int)draw_width / 2;

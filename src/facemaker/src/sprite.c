@@ -37,20 +37,27 @@ static size_t g_sprite_blob_byte_count;
 
 static void shrink_sprite_blob(size_t byte_count)
 {
+#ifdef _MSC_VER
   size_t cursor_offset;
   void *resized;
+#endif
   if (!g_sprite_blob_base)
     return;
-  cursor_offset = (size_t)((char *)g_sprite_blob_cursor - (char *)g_sprite_blob_base);
 #ifdef _MSC_VER
+  cursor_offset = (size_t)((char *)g_sprite_blob_cursor - (char *)g_sprite_blob_base);
   resized = _expand((void *)g_sprite_blob_base, byte_count);
-#else
-  resized = realloc((void *)g_sprite_blob_base, byte_count);
-#endif
   if (resized) {
     g_sprite_blob_base = (int *)resized;
     g_sprite_blob_cursor = (int *)((char *)g_sprite_blob_base + cursor_offset);
   }
+#endif
+  /*
+   * EncodeSpriteFromPage returns pointers directly into this allocation.
+   * _expand is safe because it never moves the allocation, but realloc may
+   * move it and leave every previously returned sprite pointer dangling.
+   * There is no portable in-place realloc, so retain the original allocation
+   * on non-MSVC platforms and only record the blob's logical size.
+   */
   g_sprite_blob_byte_count = byte_count;
 }
 
