@@ -209,6 +209,7 @@ extern int g_text_menu_line_height;
 extern int g_text_menu_color_normal;
 extern int g_text_menu_color_selected;
 extern int g_text_menu_line_offsets[0x20];
+extern int g_text_menu_line_y[0x20];
 extern int g_text_menu_color_base;
 extern int g_text_menu_finish_flash;
 extern int g_text_menu_line_count;
