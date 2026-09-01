@@ -259,7 +259,7 @@ int card_ashnod_s_transmogrant(int player, int card, event_t event)
       if ((TARGET_CARD_INSTANCE(player, card, 0).counters & 0xff00) < 0xff01)
       {
         TARGET_CARD_INSTANCE(player, card, 0).counters = ((TARGET_CARD_INSTANCE(player, card, 0).counters + 0x100) & 0xff00) |
-                                                                                                                                                  (TARGET_CARD_INSTANCE(player, card, 0).counters & 0xffff00ff);
+                                                         (TARGET_CARD_INSTANCE(player, card, 0).counters & 0xffff00ff);
       }
       if (g_duel_ai_mode_state != 1)
       {
@@ -578,14 +578,10 @@ int select_land_for_cyclopean_tomb_ai(int player, int card, int target_player)
 // FUNCTION: SHANDALAR 0x00456897
 int card_gauntlet_of_might(int player, int card, event_t event)
 {
-  int chosen_color;
-  unsigned int affected_color;
-
-  if ((event == EVENT_POWER || event == EVENT_TOUGHNESS) && is_in_play(player, card) && (((PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE)))
+  if ((event == EVENT_TOUGHNESS || event == EVENT_POWER) && is_in_play(player, card) && (((PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE)))
   {
-    chosen_color = get_sleighted_color(player, card, 4);
-    affected_color = (unsigned char)PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).color;
-    if (((1 << ((unsigned char)chosen_color)) & affected_color) != 0)
+    if (((1 << (unsigned char)get_sleighted_color(player, card, 4)) &
+         (char)PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).color) != 0)
     {
       ++g_event_result;
     }
@@ -593,8 +589,12 @@ int card_gauntlet_of_might(int player, int card, event_t event)
 
   if (event == EVENT_TAP_CARD)
   {
-    chosen_color = get_hacked_color(player, card, 4);
-    if (card_has_basic_land_type(g_affected_card_controller, g_affected_card, chosen_color) != 0 && is_in_play(player, card) && ((((PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE)) && g_produced_mana_color != -1))
+    if (card_has_basic_land_type(g_affected_card_controller, g_affected_card,
+                                 get_hacked_color(player, card, 4)) != 0 &&
+        is_in_play(player, card) &&
+        ((((PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0) ||
+          (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE)) &&
+         g_produced_mana_color != -1))
     {
       produce_mana(g_affected_card_controller, COLOR_RED, 1);
     }
@@ -602,8 +602,11 @@ int card_gauntlet_of_might(int player, int card, event_t event)
 
   if (event == EVENT_COUNT_MANA)
   {
-    chosen_color = get_hacked_color(player, card, 4);
-    if (card_has_basic_land_type(g_affected_card_controller, g_affected_card, chosen_color) != 0 && is_in_play(player, card) && (((PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE)))
+    if (card_has_basic_land_type(g_affected_card_controller, g_affected_card,
+                                 get_hacked_color(player, card, 4)) != 0 &&
+        is_in_play(player, card) &&
+        (((PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0) ||
+         (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE)))
     {
       declare_mana_available(g_affected_card_controller, COLOR_RED, 1);
     }
@@ -1166,34 +1169,28 @@ int card_obelisk_of_undoing(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x004869b0
 int pyramids_can_destroy_enchantment_on_land(void)
 {
-  card_instance_t *attached;
-  int attached_internal_card_id;
   int can_activate;
-  int current_card;
   int current_player;
 
   can_activate = 0;
-  current_player = 0;
-  while (current_player < 2 && can_activate == 0)
+
+  for (current_player = 0; current_player < 2 && can_activate == 0; current_player++)
   {
-    current_card = 0;
-    while (current_card < g_active_cards_count[current_player] && can_activate == 0)
+    int current_card;
+    for (current_card = 0; current_card < g_active_cards_count[current_player] && can_activate == 0; current_card++)
     {
       if (is_in_play(current_player, current_card) != 0 &&
           (global_cards_data[PLAYER_CARD_INSTANCE(current_player, current_card).internal_card_id].type & TYPE_ENCHANTMENT) != 0 &&
           (int)PLAYER_CARD_INSTANCE(current_player, current_card).damage_target_player != -1)
       {
-        attached = &PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(current_player, current_card).damage_target_player, PLAYER_CARD_INSTANCE(current_player, current_card).damage_target_card);
-        attached_internal_card_id = attached->internal_card_id;
+        int attached_internal_card_id = DAMAGE_TARGET_CARD_INSTANCE(current_player, current_card).internal_card_id;
         if (attached_internal_card_id != -1 &&
             (global_cards_data[attached_internal_card_id].type & TYPE_LAND) != 0)
         {
           can_activate = 1;
         }
       }
-      ++current_card;
     }
-    ++current_player;
   }
 
   return can_activate;
@@ -1226,46 +1223,54 @@ int select_land_target_into_next_slot(int player, unsigned int preferred_control
 // FUNCTION: SHANDALAR 0x00458ab3
 int card_pyramids(int player, int card, event_t event)
 {
-  int target_internal_card_id;
-  int attached_internal_card_id;
-  int can_activate;
-  int done;
-  int current_card;
-  int current_player;
-  target_t target;
+  struct
+  {
+    int can_activate;
+    char damage_target_player;
+    target_t target;
+    int current_player;
+    int damage_target_card;
+    int done;
+    union
+    {
+      int target_internal_card_id;
+      int attached_internal_card_id;
+    } u;
+    int current_card;
+  } s;
 
   if (event == EVENT_CAN_ACTIVATE)
   {
-    can_activate = 0;
+    s.can_activate = 0;
     if (has_mana(player, COLOR_ANY, 2) != 0 &&
         (PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0)
     {
       if ((g_land_can_be_played & LCBP_REGENERATION) != 0)
       {
-        current_player = 0;
-        while (current_player < 2)
+        s.current_player = 0;
+        while (s.current_player < 2)
         {
-          current_card = 0;
-          while (current_card < g_active_cards_count[current_player] && can_activate == 0)
+          s.current_card = 0;
+          while (s.current_card < g_active_cards_count[s.current_player] && s.can_activate == 0)
           {
-            target_internal_card_id = PLAYER_CARD_INSTANCE(current_player, current_card).internal_card_id;
-            if (is_in_play(current_player, current_card) != 0 &&
-                (global_cards_data[target_internal_card_id].type & TYPE_LAND) != 0 &&
-                (int)(char)PLAYER_CARD_INSTANCE(current_player, current_card).kill_code == KILL_DESTROY)
+            s.u.target_internal_card_id = PLAYER_CARD_INSTANCE(s.current_player, s.current_card).internal_card_id;
+            if (is_in_play(s.current_player, s.current_card) != 0 &&
+                (global_cards_data[s.u.target_internal_card_id].type & TYPE_LAND) != 0 &&
+                (int)(char)PLAYER_CARD_INSTANCE(s.current_player, s.current_card).kill_code == KILL_DESTROY)
             {
-              can_activate = 99;
+              s.can_activate = 99;
             }
-            ++current_card;
+            ++s.current_card;
           }
-          ++current_player;
+          ++s.current_player;
         }
       }
       else
       {
-        can_activate = pyramids_can_destroy_enchantment_on_land();
+        s.can_activate = pyramids_can_destroy_enchantment_on_land();
       }
     }
-    return can_activate;
+    return s.can_activate;
   }
 
   if (event == EVENT_GET_SELECTED_CARD)
@@ -1279,7 +1284,7 @@ int card_pyramids(int player, int card, event_t event)
     charge_mana(player, COLOR_COLORLESS, 2);
     if (g_spell_fizzled != 1)
     {
-      done = 0;
+      s.done = 0;
       if ((g_land_can_be_played & LCBP_REGENERATION))
       {
         do
@@ -1292,12 +1297,12 @@ int card_pyramids(int player, int card, event_t event)
           }
           else
           {
-            SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
-            if ((int)(char)PLAYER_CARD_INSTANCE(target.player, target.card).kill_code == KILL_DESTROY)
+            SET_TARGET(s.target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
+            if ((int)(char)PLAYER_CARD_INSTANCE(s.target.player, s.target.card).kill_code == KILL_DESTROY)
             {
-              done = 1;
-              if ((PLAYER_CARD_INSTANCE(target.player, target.card).token_status & 0x200) != 0 ||
-                  target.player == g_active_player)
+              s.done = 1;
+              if ((PLAYER_CARD_INSTANCE(s.target.player, s.target.card).token_status & 0x200) != 0 ||
+                  s.target.player == g_active_player)
               {
                 g_ai_modifier -= 0x30;
               }
@@ -1314,7 +1319,7 @@ int card_pyramids(int player, int card, event_t event)
               set_duel_prompt_text("");
             }
           }
-        } while (g_spell_fizzled != 1 && done == 0);
+        } while (g_spell_fizzled != 1 && s.done == 0);
       }
       else
       {
@@ -1323,14 +1328,11 @@ int card_pyramids(int player, int card, event_t event)
           load_text("promptsX1.txt", "PYRAMIDS");
           if (C_real_select_target(player, 2, 2, TARGET_ZONE_IN_PLAY, TYPE_ENCHANTMENT, TYPE_NONE,
                                    0, get_protections_from(player, card), COLOR_TEST_0, COLOR_TEST_0,
-                                   -1, -1, -1, -1, 0, 0, 0, g_text_lines[2], 1, &target))
+                                   -1, -1, -1, -1, 0, 0, 0, g_text_lines[2], 1, &s.target))
           {
-            if ((int)PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_player == -1 ||
-                PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_card == -1 ||
-                (global_cards_data[PLAYER_CARD_INSTANCE(
-                                       (int)PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_player,
-                                       PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_card)
-                                       .internal_card_id]
+            if ((int)PLAYER_CARD_INSTANCE(s.target.player, s.target.card).damage_target_player == -1 ||
+                PLAYER_CARD_INSTANCE(s.target.player, s.target.card).damage_target_card == -1 ||
+                (global_cards_data[DAMAGE_TARGET_CARD_INSTANCE(s.target.player, s.target.card).internal_card_id]
                      .type &
                  TYPE_LAND) == 0)
             {
@@ -1348,12 +1350,12 @@ int card_pyramids(int player, int card, event_t event)
             }
             else
             {
-              SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], target);
+              SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[0], s.target);
               PLAYER_CARD_INSTANCE(player, card).number_of_targets = 1;
-              done = 1;
+              s.done = 1;
               if (g_other_player == player)
               {
-                if (target.player == g_active_player)
+                if (s.target.player == g_active_player)
                 {
                   g_ai_modifier += 0x30;
                 }
@@ -1368,21 +1370,21 @@ int card_pyramids(int player, int card, event_t event)
           {
             g_spell_fizzled = 1;
           }
-        } while (g_spell_fizzled != 1 && done == 0);
+        } while (g_spell_fizzled != 1 && s.done == 0);
       }
     }
   }
 
   if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
+    SET_TARGET(s.target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
     if ((g_land_can_be_played & LCBP_REGENERATION) != 0)
     {
-      if (C_real_validate_target(target.player, target.card, (char *)0, player, 2, 2, TARGET_ZONE_IN_PLAY,
+      if (C_real_validate_target(s.target.player, s.target.card, (char *)0, player, 2, 2, TARGET_ZONE_IN_PLAY,
                                  TYPE_LAND, TYPE_NONE, 0, 0, COLOR_TEST_0, COLOR_TEST_0,
                                  -1, -1, -1, -1, 0, 0, 0))
       {
-        regenerate_card(target.player, target.card);
+        regenerate_card(s.target.player, s.target.card);
       }
       else
       {
@@ -1391,20 +1393,21 @@ int card_pyramids(int player, int card, event_t event)
     }
     else
     {
-      if (C_real_validate_target(target.player, target.card, (char *)0, player, 2, 2, TARGET_ZONE_IN_PLAY,
+      if (C_real_validate_target(s.target.player, s.target.card, (char *)0, player, 2, 2, TARGET_ZONE_IN_PLAY,
                                  TYPE_ENCHANTMENT, TYPE_NONE, 0, get_protections_from(player, card),
                                  COLOR_TEST_0, COLOR_TEST_0, -1, -1, -1, -1, 0, 0, 0))
       {
-        attached_internal_card_id = -1;
-        if ((int)PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_player != -1 &&
-            PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_card != -1)
+        s.u.attached_internal_card_id = -1;
+        s.damage_target_player = PLAYER_CARD_INSTANCE(s.target.player, s.target.card).damage_target_player;
+        s.damage_target_card = PLAYER_CARD_INSTANCE(s.target.player, s.target.card).damage_target_card;
+        if ((int)s.damage_target_player != -1 && s.damage_target_card != -1)
         {
-          attached_internal_card_id = PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_player, PLAYER_CARD_INSTANCE(target.player, target.card).damage_target_card).internal_card_id;
+          s.u.attached_internal_card_id = PLAYER_CARD_INSTANCE(s.damage_target_player, s.damage_target_card).internal_card_id;
         }
-        if (attached_internal_card_id != -1 &&
-            (global_cards_data[attached_internal_card_id].type & TYPE_LAND))
+        if (s.u.attached_internal_card_id != -1 &&
+            (global_cards_data[s.u.attached_internal_card_id].type & TYPE_LAND))
         {
-          kill_card(target.player, target.card, KILL_DESTROY);
+          kill_card(s.target.player, s.target.card, KILL_DESTROY);
         }
         else
         {
@@ -2110,13 +2113,8 @@ int card_tawnos_s_coffin(int player, int card, event_t event)
 
           s.exiled_power =
               PLAYER_CARD_INSTANCE(
-                  (int)PLAYER_CARD_INSTANCE(
-                      (int)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
-                      PLAYER_CARD_INSTANCE(player, card).damage_source_card)
-                      .damage_target_player,
-                  PLAYER_CARD_INSTANCE((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
-                                       PLAYER_CARD_INSTANCE(player, card).damage_source_card)
-                      .damage_target_card)
+                  (int)DAMAGE_SOURCE_CARD_INSTANCE(player, card).damage_target_player,
+                  DAMAGE_SOURCE_CARD_INSTANCE(player, card).damage_target_card)
                   .power;
 
           s.current_player = 1 - player;
@@ -2219,8 +2217,7 @@ int card_tawnos_s_coffin(int player, int card, event_t event)
     }
     if (event == EVENT_RESOLVE_TRIGGER)
     {
-      tawnos_coffin_phase_in((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
-                             PLAYER_CARD_INSTANCE(player, card).damage_source_card);
+      tawnos_coffin_phase_in((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card);
     }
   }
 
@@ -2230,8 +2227,7 @@ int card_tawnos_s_coffin(int player, int card, event_t event)
         g_affected_card_controller == player &&
         PLAYER_CARD_INSTANCE(player, card).info_slot != -1)
     {
-      tawnos_coffin_phase_in((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
-                             PLAYER_CARD_INSTANCE(player, card).damage_source_card);
+      tawnos_coffin_phase_in((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card);
       PLAYER_CARD_INSTANCE(player, card).info_slot = -1;
     }
 
@@ -2250,8 +2246,7 @@ int card_tawnos_s_coffin(int player, int card, event_t event)
       (PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) == 0)
   {
     PLAYER_CARD_INSTANCE(player, card).info_slot = -1;
-    tawnos_coffin_phase_in((int)PLAYER_CARD_INSTANCE(player, card).damage_source_player,
-                           PLAYER_CARD_INSTANCE(player, card).damage_source_card);
+    tawnos_coffin_phase_in((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_source_player, PLAYER_CARD_INSTANCE(player, card).damage_source_card);
     PLAYER_CARD_INSTANCE(player, card).damage_source_card = -1;
     PLAYER_CARD_INSTANCE(player, card).damage_source_player =
         (char)PLAYER_CARD_INSTANCE(player, card).damage_source_card;

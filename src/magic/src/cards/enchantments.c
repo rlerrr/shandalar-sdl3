@@ -108,8 +108,7 @@ int card_artifact_ward(int player, int card, event_t event)
       }
       if ((int)PLAYER_CARD_INSTANCE(player, card).damage_target_player == g_other_player)
       {
-        g_ai_modifier += C_get_abilities((int)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                                         PLAYER_CARD_INSTANCE(player, card).damage_target_card,
+        g_ai_modifier += C_get_abilities((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player, PLAYER_CARD_INSTANCE(player, card).damage_target_card,
                                          EVENT_POWER, -1) *
                          (g_duel_summary.artifact_counts[0] + 1) * 3;
       }
@@ -260,9 +259,7 @@ int card_consecrate_land(int player, int card, event_t event)
     {
       PLAYER_CARD_INSTANCE(player, card).damage_target_player = PLAYER_CARD_INSTANCE(player, card).targets[0].player;
       PLAYER_CARD_INSTANCE(player, card).damage_target_card = PLAYER_CARD_INSTANCE(player, card).targets[0].card;
-      PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                           PLAYER_CARD_INSTANCE(player, card).damage_target_card)
-          .token_status |= 0x4000000;
+      DAMAGE_TARGET_CARD_INSTANCE(player, card).token_status |= 0x4000000;
       dispatch_three_arg_callback_to_cards_in_play(destroy_other_auras_on_same_permanent, -1);
     }
     else
@@ -283,13 +280,11 @@ int card_consecrate_land(int player, int card, event_t event)
     PLAYER_CARD_INSTANCE(g_affected_card_controller, g_affected_card).unknown0x14 = 0;
     ++g_event_result;
   }
-  if (event == 0x77 && card == g_affected_card && player == g_affected_card_controller && PLAYER_CARD_INSTANCE(player, card).damage_target_player != -1 && PLAYER_CARD_INSTANCE(player, card).damage_target_card != -1 && PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player, PLAYER_CARD_INSTANCE(player, card).damage_target_card).internal_card_id != -1)
+  if (event == 0x77 && card == g_affected_card && player == g_affected_card_controller && PLAYER_CARD_INSTANCE(player, card).damage_target_player != -1 && PLAYER_CARD_INSTANCE(player, card).damage_target_card != -1 && DAMAGE_TARGET_CARD_INSTANCE(player, card).internal_card_id != -1)
   {
-    PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                         PLAYER_CARD_INSTANCE(player, card).damage_target_card)
-        .token_status &= ~0x4000000;
+    DAMAGE_TARGET_CARD_INSTANCE(player, card).token_status &= ~0x4000000;
   }
-  if (g_trigger_condition == 0xd4 && card == g_affected_card && player == g_affected_card_controller && PLAYER_CARD_INSTANCE(player, card).damage_target_player != -1 && PLAYER_CARD_INSTANCE(player, card).damage_target_card != -1 && PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player, PLAYER_CARD_INSTANCE(player, card).damage_target_card).internal_card_id != -1 && player == g_trigger_cause_controller && g_trigger_cause == card && player == g_current_turn)
+  if (g_trigger_condition == 0xd4 && card == g_affected_card && player == g_affected_card_controller && PLAYER_CARD_INSTANCE(player, card).damage_target_player != -1 && PLAYER_CARD_INSTANCE(player, card).damage_target_card != -1 && DAMAGE_TARGET_CARD_INSTANCE(player, card).internal_card_id != -1 && player == g_trigger_cause_controller && g_trigger_cause == card && player == g_current_turn)
   {
     if (event == 0x7d)
     {
@@ -297,9 +292,7 @@ int card_consecrate_land(int player, int card, event_t event)
     }
     if (event == 0x7e)
     {
-      PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                           PLAYER_CARD_INSTANCE(player, card).damage_target_card)
-          .token_status &= ~0x4000000;
+      DAMAGE_TARGET_CARD_INSTANCE(player, card).token_status &= ~0x4000000;
     }
   }
 
@@ -589,10 +582,6 @@ int card_drop_of_honey(int player, int card, event_t event)
     int current_card;
     int max_cards;
     int found_creature;
-    int player_creatures;
-    int opponent_creatures;
-    int player_creature_count;
-    int opponent_creature_count;
     int power;
   } s;
 
@@ -603,12 +592,11 @@ int card_drop_of_honey(int player, int card, event_t event)
 
   if (event == EVENT_CAST_SPELL && card == g_affected_card && player == g_affected_card_controller)
   {
-    s.player_creatures = g_creature_power_by_color[player][7];
-    s.player_creature_count = ClampIntToRange(g_duel_summary.creature_counts[player], 1, 99);
-    s.opponent_creatures = g_creature_power_by_color[1 - player][7];
-    s.opponent_creature_count = ClampIntToRange(g_duel_summary.creature_counts[1 - player], 1, 99);
-    g_ai_modifier += (s.player_creatures * 0xc) / s.player_creature_count -
-                     (s.opponent_creatures * 0xc) / s.opponent_creature_count;
+    g_ai_modifier +=
+        (g_creature_power_by_color[player][7] * 0xc) /
+            ClampIntToRange(g_duel_summary.creature_counts[player], 1, 99) -
+        (g_creature_power_by_color[1 - player][7] * 0xc) /
+            ClampIntToRange(g_duel_summary.creature_counts[1 - player], 1, 99);
   }
 
   if (event == EVENT_CAN_ACTIVATE)
@@ -876,8 +864,7 @@ int card_earthbind(int player, int card, event_t event)
       if ((TARGET_CARD_INSTANCE(player, card, 0).regen_status &
            KEYWORD_FLYING) != 0)
       {
-        damage_creature(PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                        PLAYER_CARD_INSTANCE(player, card).damage_target_card,
+        damage_creature((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player, PLAYER_CARD_INSTANCE(player, card).damage_target_card,
                         2,
                         player,
                         card);
@@ -1100,6 +1087,9 @@ int card_gate_to_phyrexia(int player, int card, event_t event)
   int best_creature_score;
   int best_artifact_score;
   int artifact_player;
+  int result;
+
+  result = 0;
 
   if (event == EVENT_CAN_CAST)
   {
@@ -1123,6 +1113,7 @@ int card_gate_to_phyrexia(int player, int card, event_t event)
                               get_protections_from(player, card), COLOR_TEST_0, COLOR_TEST_0,
                               -1, -1, -1, -1, 0, 0, 0) != 0)
     {
+      result = 1;
       if (player == g_other_player && (g_duel_network_flags & 2) == 0)
       {
         artifact_player = 1 - player;
@@ -1179,9 +1170,8 @@ int card_gate_to_phyrexia(int player, int card, event_t event)
           SET_TARGET(PLAYER_CARD_INSTANCE(player, card).targets[1], creature);
         }
       }
-      return 1;
     }
-    return 0;
+    return result;
   }
 
   if (event == EVENT_GET_SELECTED_CARD)
@@ -1580,9 +1570,7 @@ int card_kudzu(int player, int card, event_t event)
     else
     {
       load_text("promptsX1.txt", "KUDZU");
-      PLAYER_CARD_INSTANCE(PLAYER_CARD_INSTANCE(0, 0).damage_target_player,
-                           PLAYER_CARD_INSTANCE(0, 0).damage_target_card)
-          .state |= 0x300000;
+      DAMAGE_TARGET_CARD_INSTANCE(0, 0).state |= 0x300000;
 
       if (PLAYER_CARD_INSTANCE(0, 0).damage_target_player == g_active_player || (g_duel_network_flags & 2) != 0)
       {
@@ -1884,15 +1872,13 @@ int card_oubliette(int player, int card, event_t event)
     }
     if (event == EVENT_RESOLVE_TRIGGER)
     {
-      tawnos_coffin_phase_in((int)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                             PLAYER_CARD_INSTANCE(player, card).damage_target_card);
+      tawnos_coffin_phase_in((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player, PLAYER_CARD_INSTANCE(player, card).damage_target_card);
     }
   }
 
   if (event == EVENT_GRAVEYARD_FROM_PLAY && g_affected_card == card && g_affected_card_controller == player)
   {
-    tawnos_coffin_phase_in((int)PLAYER_CARD_INSTANCE(player, card).damage_target_player,
-                           PLAYER_CARD_INSTANCE(player, card).damage_target_card);
+    tawnos_coffin_phase_in((int)(char)PLAYER_CARD_INSTANCE(player, card).damage_target_player, PLAYER_CARD_INSTANCE(player, card).damage_target_card);
     PLAYER_CARD_INSTANCE(player, card).damage_target_card = -1;
     PLAYER_CARD_INSTANCE(player, card).damage_target_player = (char)PLAYER_CARD_INSTANCE(player, card).damage_target_card;
   }

@@ -161,6 +161,8 @@ int send_arena_network_choice(int player, int choice)
 int card_arena(int player, int card, event_t event)
 {
   target_t target;
+  target_t first_target;
+  target_t second_target;
   int first_valid;
   int second_valid;
   int first_power;
@@ -271,8 +273,10 @@ int card_arena(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_ACTIVATION)
   {
-    first_valid = C_real_validate_target(PLAYER_CARD_INSTANCE(player, card).targets[0].player,
-                                         PLAYER_CARD_INSTANCE(player, card).targets[0].card,
+    SET_TARGET(first_target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
+    SET_TARGET(second_target, PLAYER_CARD_INSTANCE(player, card).targets[1]);
+    first_valid = C_real_validate_target(first_target.player,
+                                         first_target.card,
                                          (char *)0,
                                          g_active_player,
                                          g_active_player,
@@ -291,8 +295,8 @@ int card_arena(int player, int card, event_t event)
                                          0,
                                          0,
                                          0);
-    second_valid = C_real_validate_target(PLAYER_CARD_INSTANCE(player, card).targets[1].player,
-                                          PLAYER_CARD_INSTANCE(player, card).targets[1].card,
+    second_valid = C_real_validate_target(second_target.player,
+                                          second_target.card,
                                           (char *)0,
                                           g_other_player,
                                           g_other_player,
@@ -314,47 +318,47 @@ int card_arena(int player, int card, event_t event)
 
     if (first_valid)
     {
-      TARGET_CARD_INSTANCE(player, card, 0).state |= STATE_TAPPED;
+      PLAYER_CARD_INSTANCE(first_target.player, first_target.card).state |= STATE_TAPPED;
     }
     if (second_valid)
     {
-      TARGET_CARD_INSTANCE(player, card, 1).state |= STATE_TAPPED;
+      PLAYER_CARD_INSTANCE(second_target.player, second_target.card).state |= STATE_TAPPED;
     }
 
     if (first_valid && second_valid)
     {
-      TARGET_CARD_INSTANCE(player, card, 0).regen_status |= 0x04000000;
-      TARGET_CARD_INSTANCE(player, card, 1).regen_status |= 0x04000000;
-      first_power = C_get_abilities(PLAYER_CARD_INSTANCE(player, card).targets[0].player, PLAYER_CARD_INSTANCE(player, card).targets[0].card, EVENT_POWER, -1);
-      second_power = C_get_abilities(PLAYER_CARD_INSTANCE(player, card).targets[1].player, PLAYER_CARD_INSTANCE(player, card).targets[1].card, EVENT_POWER, -1);
-      damage_creature(PLAYER_CARD_INSTANCE(player, card).targets[0].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[0].card,
+      PLAYER_CARD_INSTANCE(first_target.player, first_target.card).regen_status |= 0x04000000;
+      PLAYER_CARD_INSTANCE(second_target.player, second_target.card).regen_status |= 0x04000000;
+      first_power = C_get_abilities(first_target.player, first_target.card, EVENT_POWER, -1);
+      second_power = C_get_abilities(second_target.player, second_target.card, EVENT_POWER, -1);
+      damage_creature(first_target.player,
+                      first_target.card,
                       second_power,
-                      PLAYER_CARD_INSTANCE(player, card).targets[1].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[1].card);
-      damage_creature(PLAYER_CARD_INSTANCE(player, card).targets[1].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[1].card,
+                      second_target.player,
+                      second_target.card);
+      damage_creature(second_target.player,
+                      second_target.card,
                       first_power,
-                      PLAYER_CARD_INSTANCE(player, card).targets[0].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[0].card);
+                      first_target.player,
+                      first_target.card);
     }
-    else if (first_valid && TARGET_CARD_INSTANCE(player, card, 1).internal_card_id != -1)
+    else if (first_valid && PLAYER_CARD_INSTANCE(second_target.player, second_target.card).internal_card_id != -1)
     {
-      first_power = C_get_abilities(PLAYER_CARD_INSTANCE(player, card).targets[0].player, PLAYER_CARD_INSTANCE(player, card).targets[0].card, EVENT_POWER, -1);
-      damage_creature(PLAYER_CARD_INSTANCE(player, card).targets[1].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[1].card,
+      first_power = C_get_abilities(first_target.player, first_target.card, EVENT_POWER, -1);
+      damage_creature(second_target.player,
+                      second_target.card,
                       first_power,
-                      PLAYER_CARD_INSTANCE(player, card).targets[0].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[0].card);
+                      first_target.player,
+                      first_target.card);
     }
-    else if (second_valid && TARGET_CARD_INSTANCE(player, card, 0).internal_card_id != -1)
+    else if (second_valid && PLAYER_CARD_INSTANCE(first_target.player, first_target.card).internal_card_id != -1)
     {
-      second_power = C_get_abilities(PLAYER_CARD_INSTANCE(player, card).targets[1].player, PLAYER_CARD_INSTANCE(player, card).targets[1].card, EVENT_POWER, -1);
-      damage_creature(PLAYER_CARD_INSTANCE(player, card).targets[0].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[0].card,
+      second_power = C_get_abilities(second_target.player, second_target.card, EVENT_POWER, -1);
+      damage_creature(first_target.player,
+                      first_target.card,
                       second_power,
-                      PLAYER_CARD_INSTANCE(player, card).targets[1].player,
-                      PLAYER_CARD_INSTANCE(player, card).targets[1].card);
+                      second_target.player,
+                      second_target.card);
     }
 
     PARENT_CARD_INSTANCE(player, card).number_of_targets = 0;

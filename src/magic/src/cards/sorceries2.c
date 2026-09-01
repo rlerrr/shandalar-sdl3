@@ -141,6 +141,7 @@ int card_drafna_s_restoration(int player, int card, event_t event)
     int selectable[500];
     int selected[500];
     int selected_count;
+    int selectable_count;
     int graveyard_index;
     int compact_index;
     char (*prompt)[300];
@@ -182,7 +183,7 @@ int card_drafna_s_restoration(int player, int card, event_t event)
     }
     else
     {
-      s.selected_count = 0;
+      s.selectable_count = 0;
       for (s.graveyard_index = 0;
            s.graveyard_index < 500 && global_graveyard_slots[s.target_player][s.graveyard_index] != -1;
            ++s.graveyard_index)
@@ -190,7 +191,7 @@ int card_drafna_s_restoration(int player, int card, event_t event)
         if ((global_cards_data[global_graveyard_slots[s.target_player][s.graveyard_index]].type & TYPE_ARTIFACT) != 0)
         {
           s.selectable[s.graveyard_index] = 1;
-          ++s.selected_count;
+          ++s.selectable_count;
         }
         else
         {
@@ -198,7 +199,7 @@ int card_drafna_s_restoration(int player, int card, event_t event)
         }
       }
 
-      if (s.selected_count != 0)
+      if (s.selectable_count != 0)
       {
         load_text("promptsX1.txt", "DRAFNAS_RESTORATION");
         s.prompt = g_text_lines;
@@ -210,7 +211,7 @@ int card_drafna_s_restoration(int player, int card, event_t event)
                                                              1,
                                                              (int)s.selected,
                                                              0,
-                                                             s.selected_count);
+                                                             s.selectable_count);
       }
     }
 

@@ -11,7 +11,6 @@ int coin_flip(int player, char *dialog_title, int show_dialog_if_animation_is_of
 // FUNCTION: SHANDALAR 0x00446d20
 int card_call_from_the_grave(int player, int card, event_t event)
 {
-  int attempt_count;
   int found_player;
   int graveyard_index;
   int hand_card;
@@ -49,11 +48,11 @@ int card_call_from_the_grave(int player, int card, event_t event)
         }
       }
 
-      attempt_count = 0;
+      test_index = 0;
       do
       {
-        ++attempt_count;
-        if (attempt_count > 999)
+        ++test_index;
+        if (test_index > 999)
         {
           graveyard_index = -1;
           break;
@@ -454,7 +453,7 @@ int card_rebirth(int player, int card, event_t event)
 {
   char prompt[600];
   int ante_slot;
-  int chosen[4];
+  int chosen[2];
   int dialog_result;
   int player_index;
   int top_card;
@@ -895,7 +894,7 @@ int card_volcanic_eruption(int player, int card, event_t event)
   int selecting_done;
   int invalid_targets;
   int damage_effect_card;
-  char prompt[52];
+  char prompt[300];
 
   if (event == EVENT_CAN_CAST)
   {
@@ -1676,7 +1675,6 @@ int card_fireball(int player, int card, event_t event)
     int num_targets;
   } s;
   int result;
-  int mana_available_minus_one;
   int mana_to_pay;
   int num_selected_targets;
   int invalid_targets;
@@ -1797,7 +1795,7 @@ int card_fireball(int player, int card, event_t event)
       }
       else if ((g_land_can_be_played & LCBP_CARD_BEING_COPIED) == 0)
       {
-        mana_available_minus_one = has_mana(player, COLOR_ANY, 1) - 1;
+        result = has_mana(player, COLOR_ANY, 1) - 1;
         illegal_abilities = get_protections_from(player, card);
         real_target_available(&s.possible_targets,
                               TARGET_SCAN_DIRECT,
@@ -1819,11 +1817,11 @@ int card_fireball(int player, int card, event_t event)
                               0,
                               0);
         s.possible_targets += 2;
-        mana_to_pay = mana_available_minus_one;
+        mana_to_pay = result;
         num_selected_targets = 1;
         if (choose_fireball_options(player,
                                     PLAYER_CARD_INSTANCE(player, card).internal_card_id,
-                                    mana_available_minus_one,
+                                    result,
                                     s.possible_targets,
                                     &mana_to_pay,
                                     &num_selected_targets,
@@ -2103,8 +2101,6 @@ int card_fireball(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0044bde2
 int card_detonate(int player, int card, event_t event)
 {
-  int converted_cost;
-  int internal_card_id;
   target_t target;
 
   if (event == EVENT_CAN_CAST)
@@ -2192,9 +2188,9 @@ int card_detonate(int player, int card, event_t event)
                                0,
                                0))
     {
-      internal_card_id = PLAYER_CARD_INSTANCE(target.player, target.card).internal_card_id;
-      converted_cost = global_cards_data[internal_card_id].cc[0] + global_cards_data[internal_card_id].cc[1];
-      if (converted_cost == PLAYER_CARD_INSTANCE(player, card).info_slot)
+      if (global_cards_data[PLAYER_CARD_INSTANCE(target.player, target.card).internal_card_id].cc[0] +
+              global_cards_data[PLAYER_CARD_INSTANCE(target.player, target.card).internal_card_id].cc[1] ==
+          PLAYER_CARD_INSTANCE(player, card).info_slot)
       {
         damage_player(target.player, PLAYER_CARD_INSTANCE(player, card).info_slot, player, card);
         kill_card(target.player, target.card, KILL_BURY);
@@ -2575,6 +2571,7 @@ int card_demonic_tutor(int player, int card, event_t event)
 {
   int found_card;
   unsigned int type_mask;
+  int selected_card;
 
   if (event == EVENT_CAN_CAST)
   {
@@ -2643,7 +2640,8 @@ int card_demonic_tutor(int player, int card, event_t event)
       {
         load_text("prompts.txt", "DEMONIC_TUTOR");
       }
-      found_card = show_deck(player, global_library[player], 500, g_text_lines[0], 1, gs_cancel_008a8c20);
+      selected_card = show_deck(player, global_library[player], 500, g_text_lines[0], 1, gs_cancel_008a8c20);
+      found_card = selected_card;
       if (found_card != -1 && global_library[player][found_card] != -1)
       {
         add_card_to_hand(player, global_library[player][found_card]);
@@ -3332,10 +3330,12 @@ int card_pyrotechnics(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0044f1ac
 int card_disintegrate(int player, int card, event_t event)
 {
-  int target_player;
-  int target_card;
-  int damage_dealt;
-  int legacy_card;
+  struct
+  {
+    int target_player;
+    int target_card;
+    int legacy_card;
+  } s;
 
   if (event == EVENT_CAN_CAST)
   {
@@ -3361,17 +3361,17 @@ int card_disintegrate(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_SPELL)
   {
-    target_player = PLAYER_CARD_INSTANCE(player, card).targets[0].player;
-    target_card = PLAYER_CARD_INSTANCE(player, card).targets[0].card;
-    damage_dealt = deal_damage_to_selected_target(player, card, EVENT_RESOLVE_SPELL, PLAYER_CARD_INSTANCE(player, card).info_slot);
-    if (damage_dealt != 0 && target_card != -1)
+    s.target_player = PLAYER_CARD_INSTANCE(player, card).targets[0].player;
+    s.target_card = PLAYER_CARD_INSTANCE(player, card).targets[0].card;
+    if (deal_damage_to_selected_target(player, card, event, PLAYER_CARD_INSTANCE(player, card).info_slot) != 0 && PLAYER_CARD_INSTANCE(player, card).targets[0].card != -1)
     {
-      legacy_card = create_legacy_effect(player, card, g_duel_generated_internal_card_id_17, target_player, target_card);
-      if (legacy_card != -1)
+      s.legacy_card = create_legacy_effect(player, card, g_duel_generated_internal_card_id_17,
+                                                  s.target_player, s.target_card);
+      if (s.legacy_card != -1)
       {
-        PLAYER_CARD_INSTANCE(player, legacy_card).info_slot = 0x200;
+        PLAYER_CARD_INSTANCE(player, s.legacy_card).info_slot = 0x200;
       }
-      PLAYER_CARD_INSTANCE(target_player, target_card).regen_status = 0x8000000;
+      PLAYER_CARD_INSTANCE(s.target_player, s.target_card).regen_status = 0x8000000;
     }
     PLAYER_CARD_INSTANCE(player, card).number_of_targets = 0;
     kill_card(player, card, KILL_BURY);
@@ -3384,8 +3384,8 @@ int card_disintegrate(int player, int card, event_t event)
 // FUNCTION: SHANDALAR 0x0044f4db
 int card_drain_life(int player, int card, event_t event)
 {
+  target_t target;
   int damage_legacy_card;
-  int damage_dealt;
 
   if (event == EVENT_CAN_CAST)
   {
@@ -3421,8 +3421,9 @@ int card_drain_life(int player, int card, event_t event)
 
   if (event == EVENT_RESOLVE_SPELL)
   {
-    damage_dealt = deal_damage_to_selected_target(player, card, EVENT_RESOLVE_SPELL, PLAYER_CARD_INSTANCE(player, card).info_slot);
-    if (damage_dealt == 0 || PLAYER_CARD_INSTANCE(player, card).info_slot < 1)
+    SET_TARGET(target, PLAYER_CARD_INSTANCE(player, card).targets[0]);
+    if (deal_damage_to_selected_target(player, card, event, PLAYER_CARD_INSTANCE(player, card).info_slot) == 0 ||
+        PLAYER_CARD_INSTANCE(player, card).info_slot < 1)
     {
       PLAYER_CARD_INSTANCE(player, card).info_slot = 0;
     }
