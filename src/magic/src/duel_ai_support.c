@@ -190,7 +190,7 @@ void TENTATIVE_reassess_all_cards(int view_player, int present_after_draw)
         if (PLAYER_CARD_INSTANCE(player, card).internal_card_id != -1)
         {
           if (((unsigned int)global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & 2) != 0 ||
-              (PLAYER_CARD_INSTANCE(player, card).token_status & 0x04000000) != 0)
+              (PLAYER_CARD_INSTANCE(player, card).token_status & STATUS_CANNOT_BE_DESTROYED) != 0)
           {
             C_get_abilities(player, card, 0x34, -1);
           }
@@ -255,7 +255,7 @@ int get_available_card_action(int player, int card)
   g_activation_scan_flags = 1;
   instance->state |= 0x800;
 
-  if (in_play != 0 && g_current_phase == 0x15 && player == g_current_player && (state & 0x8000) != 0 && (state & 4) == 0 && can_attack(player, card) != 0)
+  if (in_play != 0 && g_current_phase == 0x15 && player == g_current_player && (state & STATE_UNKNOWN8000) != 0 && (state & STATE_ATTACKING) == 0 && can_attack(player, card) != 0)
   {
     result = 2;
     goto finish_get_available_card_action;
@@ -321,14 +321,14 @@ int get_available_card_action(int player, int card)
   }
   else if (g_response_selection_in_progress == 0 && (g_current_phase == 0x15 || g_current_phase == 0x17))
   {
-    if (in_play != 0 && (state & 0x10) == 0 && ((type & TYPE_CREATURE) != 0 || (state & 0x3000000) != 0))
+    if (in_play != 0 && (state & STATE_TAPPED) == 0 && ((type & TYPE_CREATURE) != 0 || (state & (STATE_NONCREATURE_CAN_ATTACK | STATE_NONCREATURE_CAN_BLOCK)) != 0))
     {
-      if (player == g_current_player && can_attack(player, card) != 0 && (state & 0x10000) == 0)
+      if (player == g_current_player && can_attack(player, card) != 0 && (state & STATE_SUMMONSICK_NOATTACK) == 0)
       {
         result = 0x10;
         goto finish_get_available_card_action;
       }
-      if (player != g_current_player && g_attacking_creature_count != 0 && (state & 8) == 0)
+      if (player != g_current_player && g_attacking_creature_count != 0 && (state & STATE_BLOCKING) == 0)
       {
         result = 0x20;
         goto finish_get_available_card_action;
@@ -357,15 +357,15 @@ int get_available_card_action(int player, int card)
         goto finish_get_available_card_action;
       }
 
-      if ((state & 0x10) == 0 && (type & TYPE_CREATURE) != 0 && g_response_selection_in_progress == 0 && player == g_current_player && g_current_phase <= 0x1a && can_attack(player, card) != 0 && (((PLAYER_CARD_INSTANCE(player, card).state & 0x30000) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE) == 0))
+      if ((state & STATE_TAPPED) == 0 && (type & TYPE_CREATURE) != 0 && g_response_selection_in_progress == 0 && player == g_current_player && g_current_phase <= 0x1a && can_attack(player, card) != 0 && (((PLAYER_CARD_INSTANCE(player, card).state & STATE_SUMMONSICK_BOTH) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE) == 0))
       {
         g_attack_action_available = 1;
       }
 
-      if ((((extra_ability & 0x1000) != 0 && (state & 0x10) == 0 && (((PLAYER_CARD_INSTANCE(player, card).state & 0x30000) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE) == 0)) || ((extra_ability & 1) != 0 && (g_response_card_type_mask & 0x10) != 0) || ((extra_ability & 2) != 0 && (g_response_card_type_mask & 0x20) != 0)) && ((g_land_can_be_played & LCBP_DAMAGE_PREVENTION) == 0 || (extra_ability & 0x5004) != 0))
+      if ((((extra_ability & 0x1000) != 0 && (state & STATE_TAPPED) == 0 && (((PLAYER_CARD_INSTANCE(player, card).state & STATE_SUMMONSICK_BOTH) == 0) || (global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].type & TYPE_CREATURE) == 0)) || ((extra_ability & 1) != 0 && (g_response_card_type_mask & 0x10) != 0) || ((extra_ability & 2) != 0 && (g_response_card_type_mask & 0x20) != 0)) && ((g_land_can_be_played & LCBP_DAMAGE_PREVENTION) == 0 || (extra_ability & 0x5004) != 0))
       {
         g_activation_event_flags &= ~2;
-        if ((state & 0x20) == 0 && dispatch_event_to_single_card(player, card, EVENT_CAN_ACTIVATE, 1 - player, -1) != 0)
+        if ((state & STATE_INVISIBLE) == 0 && dispatch_event_to_single_card(player, card, EVENT_CAN_ACTIVATE, 1 - player, -1) != 0)
         {
           if ((g_activation_event_flags & 2) != 0)
           {
@@ -382,7 +382,7 @@ int get_available_card_action(int player, int card)
     }
     else
     {
-      if ((state & 0xa0) != 0)
+      if ((state & (STATE_SUMMONSICK | STATE_INVISIBLE)) != 0)
       {
         instance->state &= ~0x800;
         result = 0;

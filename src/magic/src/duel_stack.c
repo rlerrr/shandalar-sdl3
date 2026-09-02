@@ -897,7 +897,7 @@ int activate(int who_activates, int player, int card)
 
     begin_mana_payment_record();
 
-    was_tapped = instance->state & 0x10;
+    was_tapped = instance->state & STATE_TAPPED;
     dispatch_event_to_single_card(player, card, EVENT_ACTIVATE, 1 - player, -1);
 
     if ((g_duel_network_flags & 2) != 0 && g_other_player == who_activates && g_battlefield_ui_flags == 0 &&
@@ -937,7 +937,7 @@ int activate(int who_activates, int player, int card)
 
     if (result != 0)
     {
-      if (was_tapped == 0 && (instance->state & 0x10) != 0)
+      if (was_tapped == 0 && (instance->state & STATE_TAPPED) != 0)
       {
         dispatch_event(player, card, EVENT_TAP_CARD);
       }
@@ -1113,64 +1113,55 @@ int can_attack(int player, int card)
 
   saved_affected_card = g_affected_card;
   saved_affected_card_controller = g_affected_card_controller;
-  saved_spell_fizzled = g_spell_fizzled;
-  saved_event_result = g_event_result;
 
   internal_card_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
-  if (((global_cards_data[internal_card_id].subtype == 0) && ((PLAYER_CARD_INSTANCE(player, card).token_status & 0x800) == 0)) ||
-      (((global_cards_data[internal_card_id].type & TYPE_CREATURE) == 0) && ((PLAYER_CARD_INSTANCE(player, card).state & 0x01000000) == 0)) ||
-      ((PLAYER_CARD_INSTANCE(player, card).state & 0x810010) != 0) || ((PLAYER_CARD_INSTANCE(player, card).token_status & 0x8000) != 0))
+  if (((global_cards_data[internal_card_id].subtype == 0) && ((PLAYER_CARD_INSTANCE(player, card).token_status & STATUS_WALL_CAN_ATTACK) == 0)) ||
+      (((global_cards_data[internal_card_id].type & TYPE_CREATURE) == 0) && ((PLAYER_CARD_INSTANCE(player, card).state & STATE_NONCREATURE_CAN_ATTACK) == 0)) ||
+      ((PLAYER_CARD_INSTANCE(player, card).state & (STATE_OUBLIETTED | STATE_SUMMONSICK_NOATTACK | STATE_TAPPED)) != 0) || ((PLAYER_CARD_INSTANCE(player, card).token_status & STATUS_CANT_ATTACK) != 0))
   {
     result = 0;
-    g_event_result = saved_event_result;
-    g_spell_fizzled = saved_spell_fizzled;
-    g_affected_card_controller = saved_affected_card_controller;
-    g_affected_card = saved_affected_card;
   }
   else
   {
+    saved_spell_fizzled = g_spell_fizzled;
+    saved_event_result = g_event_result;
     g_event_result = 0;
     g_affected_card_controller = player;
     g_affected_card = card;
     global_cards_data[internal_card_id].code_pointer(player, card, 0x79);
-    if (g_event_result == 0)
+    result = g_event_result;
+    g_event_result = saved_event_result;
+    g_spell_fizzled = saved_spell_fizzled;
+    g_affected_card_controller = saved_affected_card_controller;
+    g_affected_card = saved_affected_card;
+
+    if (result != 0)
     {
-      g_event_result = saved_event_result;
-      g_spell_fizzled = saved_spell_fizzled;
-      g_affected_card_controller = saved_affected_card_controller;
-      g_affected_card = saved_affected_card;
+      return 0;
+    }
 
-      if ((player == g_other_player) && ((g_duel_network_flags & 2) == 0))
-      {
-        push_affected_card_stack();
-        g_event_result = 0;
-        g_affected_card_controller = player;
-        g_affected_card = card;
-        dispatch_three_arg_callback_to_cards_in_play(check_attached_aura_can_pay_cost, -1);
-        result = g_event_result;
-        pop_affected_card_stack();
-        if (result != 0)
-        {
-          return 0;
-        }
-      }
-
-      if ((((g_player_special_effect_flags[1 - player] & 1) != 0) || ((g_battlefield_extra_ability_flags & 0x04000000) != 0)) &&
-          ((result = dispatch_event(player, card, 0x79)) != 0))
+    if ((player == g_other_player) && ((g_duel_network_flags & 2) == 0))
+    {
+      push_affected_card_stack();
+      g_event_result = 0;
+      g_affected_card_controller = player;
+      g_affected_card = card;
+      dispatch_three_arg_callback_to_cards_in_play(check_attached_aura_can_pay_cost, -1);
+      result = g_event_result;
+      pop_affected_card_stack();
+      if (result != 0)
       {
         return 0;
       }
+    }
 
-      result = 1;
-    }
-    else
+    if ((((g_player_special_effect_flags[1 - player] & 1) != 0) || ((g_battlefield_extra_ability_flags & 0x04000000) != 0)) &&
+        ((result = dispatch_event(player, card, 0x79)) != 0))
     {
-      result = 0;
-      g_event_result = saved_event_result;
-      g_spell_fizzled = saved_spell_fizzled;
-      g_affected_card_controller = saved_affected_card_controller;
-      g_affected_card = saved_affected_card;
+      return 0;
     }
+
+    result = 1;
   }
 
   return result;
@@ -1202,17 +1193,17 @@ int can_block_attacker_with_abilities(int blocker_player,
   internal_card_id = BLOCKER_INSTANCE.internal_card_id;
 
   if ((((unsigned char)global_cards_data[internal_card_id].type & TYPE_CREATURE) == 0) &&
-      ((BLOCKER_INSTANCE.state & 0x02000000) == 0))
+      ((BLOCKER_INSTANCE.state & STATE_NONCREATURE_CAN_BLOCK) == 0))
   {
     return 0;
   }
 
-  if (internal_card_id == -1 || (BLOCKER_INSTANCE.state & 0x800018) != 0)
+  if (internal_card_id == -1 || (BLOCKER_INSTANCE.state & (STATE_OUBLIETTED | STATE_TAPPED | STATE_BLOCKING)) != 0)
   {
     return 0;
   }
 
-  if (((BLOCKER_INSTANCE.state & 4) != 0) && has_vigilance(blocker_player, blocker_card) == 0)
+  if (((BLOCKER_INSTANCE.state & STATE_ATTACKING) != 0) && has_vigilance(blocker_player, blocker_card) == 0)
   {
     return 0;
   }
@@ -1280,7 +1271,7 @@ void reassess_all_cards_and_mana(void)
     instance = global_card_instances[player];
     for (card = 0; card < g_active_cards_count[player]; ++card)
     {
-      if ((instance->state & 0x800002) == 2 && instance->internal_card_id != -1)
+      if ((instance->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) == STATE_IN_PLAY && instance->internal_card_id != -1)
       {
         instance->regen_status |= 0x0f000000;
         C_get_abilities(player, card, EVENT_CHANGE_TYPE, -1);
@@ -1335,7 +1326,7 @@ int C_get_abilities(int player, int card, event_t event, int new_attacking_card)
   switch (event)
   {
   case EVENT_POWER:
-    if ((instance->state & 0x800002) == 2)
+    if ((instance->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) == STATE_IN_PLAY)
     {
       result = (int)global_cards_data[g_affected_internal_card_id].power & 0xffffbfff;
     }
@@ -1356,7 +1347,7 @@ int C_get_abilities(int player, int card, event_t event, int new_attacking_card)
     break;
 
   case EVENT_TOUGHNESS:
-    if ((instance->state & 0x800002) == 2)
+    if ((instance->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) == STATE_IN_PLAY)
     {
       result = (int)global_cards_data[g_affected_internal_card_id].toughness & 0xffffbfff;
     }
@@ -1463,7 +1454,7 @@ int C_get_abilities(int player, int card, event_t event, int new_attacking_card)
     {
       g_event_result = 0;
     }
-    if ((instance->token_status & 0x4000) != 0)
+    if ((instance->token_status & STATUS_BERSERK) != 0)
     {
       g_event_result <<= 1;
     }
@@ -1471,7 +1462,7 @@ int C_get_abilities(int player, int card, event_t event, int new_attacking_card)
 
 post_dispatch:
   result = g_event_result;
-  if (is_in_play(player, card) && event == EVENT_TOUGHNESS && (global_cards_data[g_affected_internal_card_id].type & TYPE_CREATURE) != 0 && ((int)result <= 0 || (int)result <= (int)(short)instance->damage_on_card) && ((PLAYER_CARD_INSTANCE(player, card).token_status & 0x04000000) == 0) && g_trigger_condition == -1 && (g_land_can_be_played & (LCBP_DAMAGE_PREVENTION | LCBP_REGENERATION)) == 0)
+  if (is_in_play(player, card) && event == EVENT_TOUGHNESS && (global_cards_data[g_affected_internal_card_id].type & TYPE_CREATURE) != 0 && ((int)result <= 0 || (int)result <= (int)(short)instance->damage_on_card) && ((PLAYER_CARD_INSTANCE(player, card).token_status & STATUS_CANNOT_BE_DESTROYED) == 0) && g_trigger_condition == -1 && (g_land_can_be_played & (LCBP_DAMAGE_PREVENTION | LCBP_REGENERATION)) == 0)
   {
     kill_card(player, card, KILL_DESTROY);
     regenerate_or_graveyard_triggers();
@@ -1527,7 +1518,7 @@ post_dispatch:
         break;
 
       default:
-        if (global_cards_data[result].subtype == 0x0c && (instance->token_status & 2) != 0)
+        if (global_cards_data[result].subtype == 0x0c && (instance->token_status & STATUS_HACKED) != 0)
         {
           instance->mana_color = (unsigned char)get_card_color_after_hacks(player, card);
         }
@@ -1539,14 +1530,14 @@ post_dispatch:
       }
     }
 
-    if ((instance->token_status & 0x40) != 0 && (global_cards_data[instance->internal_card_id].type & TYPE_CREATURE) == 0)
+    if ((instance->token_status & STATUS_ANIMATED) != 0 && (global_cards_data[instance->internal_card_id].type & TYPE_CREATURE) == 0)
     {
       for (test_player = 0; test_player < 2; ++test_player)
       {
         test_instance = global_card_instances[test_player];
         for (cleanup_card = 0; cleanup_card < g_active_cards_count[test_player]; ++cleanup_card, ++test_instance)
         {
-          if (test_instance->internal_card_id == -1 || (test_instance->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) != 2)
+          if (test_instance->internal_card_id == -1 || (test_instance->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) != STATE_IN_PLAY)
           {
             continue;
           }
@@ -1561,7 +1552,7 @@ post_dispatch:
       }
     }
 
-    if ((instance->state & 2) != 0)
+    if ((instance->state & STATE_IN_PLAY) != 0)
     {
       g_battlefield_extra_ability_flags |= global_cards_data[instance->internal_card_id].extra_ability & 0x1ffc0000;
     }
@@ -1585,7 +1576,7 @@ int count_colored_cards_in_hand(int player)
     internal_card_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
     if (internal_card_id != -1)
     {
-      if ((PLAYER_CARD_INSTANCE(player, card).state & 2) == 0)
+      if ((PLAYER_CARD_INSTANCE(player, card).state & STATE_IN_PLAY) == 0)
       {
         if ((global_cards_data[internal_card_id].type & 1) != 0)
         {
@@ -1662,16 +1653,16 @@ void C_dispatch_event_raw(event_t event)
     {
       continue;
     }
-    if ((instance->state & 0x800000) != 0)
+    if ((instance->state & STATE_OUBLIETTED) != 0)
     {
       continue;
     }
-    if ((instance->state & 2) != 0 || (instance->state & 0x20) != 0)
+    if ((instance->state & STATE_IN_PLAY) != 0 || (instance->state & STATE_INVISIBLE) != 0)
     {
 
       g_opponent_starting_card_id_3 = player * 0x80 + card;
       (*global_cards_data[instance->internal_card_id].code_pointer)(player, card, event);
-      if (event == EVENT_DECLARE_ATTACKERS && player == g_current_player && (instance->state & 0x14) == 4 && !has_vigilance(player, card))
+      if (event == EVENT_DECLARE_ATTACKERS && player == g_current_player && (instance->state & (STATE_TAPPED | STATE_ATTACKING)) == STATE_ATTACKING && !has_vigilance(player, card))
       {
         instance->state |= 0x10;
         g_produced_mana_color = -1;
@@ -3591,7 +3582,7 @@ int process_response_actions(int reason_for_trigger_controller, const char *prom
 
     if (selected_card != 0xffffffffU &&
         (selected_player == player ||
-         (((PLAYER_CARD_INSTANCE(selected_player, (int)selected_card).state & 2) != 0 &&
+         (((PLAYER_CARD_INSTANCE(selected_player, (int)selected_card).state & STATE_IN_PLAY) != 0 &&
            dispatch_card_trigger_event(selected_player, (int)selected_card, 0x7d, player) != 0) ||
           g_current_action_event_code == 4)))
     {
@@ -4044,7 +4035,7 @@ void process_damage_prevention(int player)
     {
       if (PLAYER_CARD_INSTANCE(test_player, test_card).internal_card_id == g_damage_card_internal_card_id &&
           is_in_play(test_player, test_card) != 0 &&
-          (PLAYER_CARD_INSTANCE(test_player, test_card).state & 0x10) == 0)
+          (PLAYER_CARD_INSTANCE(test_player, test_card).state & STATE_TAPPED) == 0)
       {
         dispatch_event(test_player, test_card, 0x21);
       }
@@ -4087,7 +4078,7 @@ after_setup:
     {
       if (PLAYER_CARD_INSTANCE(test_player, test_card).internal_card_id == g_damage_card_internal_card_id &&
           is_in_play(test_player, test_card) != 0 &&
-          (PLAYER_CARD_INSTANCE(test_player, test_card).state & 0x10) == 0)
+          (PLAYER_CARD_INSTANCE(test_player, test_card).state & STATE_TAPPED) == 0)
       {
         dispatch_event(test_player, test_card, 0x6e);
       }
@@ -4103,7 +4094,7 @@ after_setup:
       if (PLAYER_CARD_INSTANCE(test_player, test_card).internal_card_id == g_damage_card_internal_card_id &&
           is_in_play(test_player, test_card) != 0)
       {
-        if ((PLAYER_CARD_INSTANCE(test_player, test_card).state & 0x10) != 0)
+        if ((PLAYER_CARD_INSTANCE(test_player, test_card).state & STATE_TAPPED) != 0)
         {
           kill_card(test_player, test_card, 1);
         }

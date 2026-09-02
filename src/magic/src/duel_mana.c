@@ -407,7 +407,7 @@ int charge_mana(int player, color_t color, int amount)
                 g_mana_charge[idx8] = 0;
               }
 
-              if (((global_card_instances[player] + selected_card)->state & 0x800002) == STATE_IN_PLAY)
+              if (((global_card_instances[player] + selected_card)->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) == STATE_IN_PLAY)
               {
                 if ((global_cards_data[current_internal_card_id].type & TYPE_LAND) != 0 ||
                     dispatch_event_to_single_card(player, selected_card, EVENT_CAN_ACTIVATE, 1 - player, -1) != 0)
@@ -1075,7 +1075,7 @@ int can_activate_mana_source(int player, int card, int activation_flags)
   csvid = global_cards_data[internal_card_id].id;
   result = 1;
 
-  if ((PLAYER_CARD_INSTANCE(player, card).state & 0x800002) == 2 && (global_cards_data[internal_card_id].extra_ability & 0x1000) != 0 && (global_cards_data[internal_card_id].extra_ability & 0x10000) == 0)
+  if ((PLAYER_CARD_INSTANCE(player, card).state & (STATE_OUBLIETTED | STATE_IN_PLAY)) == STATE_IN_PLAY && (global_cards_data[internal_card_id].extra_ability & 0x1000) != 0 && (global_cards_data[internal_card_id].extra_ability & 0x10000) == 0)
   {
     if ((activation_flags & 1) && (internal_card_id <= 4 || csvid == 0x366 || PLAYER_CARD_INSTANCE(player, card).mana_color == '@'))
     {
@@ -1085,7 +1085,7 @@ int can_activate_mana_source(int player, int card, int activation_flags)
     {
       result = 0;
     }
-    if ((activation_flags & 4) && (PLAYER_CARD_INSTANCE(player, card).state & 0x40000) != 0)
+    if ((activation_flags & 4) && (PLAYER_CARD_INSTANCE(player, card).state & STATE_NO_AUTO_TAPPING) != 0)
     {
       result = 0;
     }
@@ -1580,15 +1580,15 @@ void count_mana(void)
         continue;
       }
 
-      if ((global_cards_data[instance->internal_card_id].extra_ability & 0x1000) != 0 && (instance->state & 0x800012) == 2)
+      if ((global_cards_data[instance->internal_card_id].extra_ability & 0x1000) != 0 && (instance->state & (STATE_OUBLIETTED | STATE_TAPPED | STATE_IN_PLAY)) == STATE_IN_PLAY)
       {
         dispatch_event(player, current_card, EVENT_COUNT_MANA);
       }
-      if (global_cards_data[instance->internal_card_id].id == 0xee && (instance->state & 0x800012) == 2)
+      if (global_cards_data[instance->internal_card_id].id == 0xee && (instance->state & (STATE_OUBLIETTED | STATE_TAPPED | STATE_IN_PLAY)) == STATE_IN_PLAY)
       {
         dispatch_event_to_single_card(player, current_card, EVENT_COUNT_MANA, -1, -1);
       }
-      if (global_cards_data[instance->internal_card_id].id == 100 && (instance->state & 0x800002) == 2)
+      if (global_cards_data[instance->internal_card_id].id == 100 && (instance->state & (STATE_OUBLIETTED | STATE_IN_PLAY)) == STATE_IN_PLAY)
       {
         dispatch_event_to_single_card(player, current_card, EVENT_COUNT_MANA, -1, -1);
       }
@@ -1607,7 +1607,7 @@ void count_mana(void)
           continue;
         }
 
-        if (global_cards_data[instance->internal_card_id].code_pointer == card_fellwar_stone && (instance->state & 0x800012) == 2)
+        if (global_cards_data[instance->internal_card_id].code_pointer == card_fellwar_stone && (instance->state & (STATE_OUBLIETTED | STATE_TAPPED | STATE_IN_PLAY)) == STATE_IN_PLAY)
         {
           dispatch_event_to_single_card(player, current_card, EVENT_VARIABLE_MANA_SRC, -1, -1);
         }

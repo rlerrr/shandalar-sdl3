@@ -762,7 +762,7 @@ int choose_ai_main_phase_action(int player)
         }
         g_ai_search_force_pass = -1;
       }
-      g_ai_recorded_action = (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & 2) == 0) ? 0x1000 : 0x2000) |
+      g_ai_recorded_action = (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & STATE_IN_PLAY) == 0) ? 0x1000 : 0x2000) |
                              candidates[g_ai_recorded_choice] | (player != 0 ? 0x100 : 0);
       g_ai_recorded_action_type = 2;
       record_ai_action_selection();
@@ -798,7 +798,7 @@ int choose_ai_main_phase_action(int player)
           g_ai_recorded_choice = candidate_count - 1;
         }
       }
-      g_ai_recorded_action = (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & 2) == 0) ? 0x1000 : 0x2000) |
+      g_ai_recorded_action = (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & STATE_IN_PLAY) == 0) ? 0x1000 : 0x2000) |
                              candidates[g_ai_recorded_choice] | (player != 0 ? 0x100 : 0);
       g_ai_recorded_action_type = 2;
       record_ai_action_selection();
@@ -1261,7 +1261,7 @@ int ai_opinion_of_gamestate_continued(int player, int score)
     }
 
     if ((global_cards_data[internal_card_id].subtype == 0) &&
-        (global_card_instances[opponent_player][card].token_status & 0x800) == 0)
+        (global_card_instances[opponent_player][card].token_status & STATUS_WALL_CAN_ATTACK) == 0)
     {
       continue;
     }

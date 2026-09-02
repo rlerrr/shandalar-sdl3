@@ -652,7 +652,7 @@ int show_cardlist(int *graveyard,
                   int *card_counts,
                   int *available,
                   int count,
-                  void *window_title,
+                  char *window_title,
                   unsigned int require_selection,
                   char *prompt)
 {
@@ -678,7 +678,7 @@ int show_cardlist(int *graveyard,
   wndclass.lpszClassName = "ShowListCard";
   RegisterClassA(&wndclass);
 
-  dialog_context.window_title = (char *)window_title;
+  dialog_context.window_title = window_title;
   for (index = 0; count > index && graveyard[index] != -1; ++index)
   {
     dialog_context.displayed_csvids[index] = CardIDFromType(graveyard[index] & 0xfff);
