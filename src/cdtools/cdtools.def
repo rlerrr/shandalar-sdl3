@@ -1,9 +1,0 @@
-LIBRARY "cdtools.dll"
-
-EXPORTS
-CheckOriginalCD
-CheckDoPCD
-CheckSotaCD
-IsCDDrive
-Autoplay_ShutDown
-Autoplay_Restore

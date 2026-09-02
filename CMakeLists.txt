@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 project(shandalar_sdl3 LANGUAGES C CXX)
 
+if(WIN32 AND NOT EMSCRIPTEN)
+  enable_language(RC)
+endif()
+
 include(FetchContent)
 
 set(CMAKE_C_STANDARD 11)

@@ -48,6 +48,22 @@ add_executable(shandalar
   ../magic/src/shared_startup.c
   ../magic/src/carddata.c
 )
+if(WIN32 AND NOT EMSCRIPTEN)
+  set(shandalar_icon_resource "${CMAKE_CURRENT_BINARY_DIR}/shandalar_icon.rc")
+  file(GENERATE OUTPUT "${shandalar_icon_resource}"
+    CONTENT "1 ICON \"${CMAKE_CURRENT_SOURCE_DIR}/shandalar.ico\"\n"
+  )
+  set(shandalar_icon_object "${CMAKE_CURRENT_BINARY_DIR}/shandalar_icon.res")
+  add_custom_command(OUTPUT "${shandalar_icon_object}"
+    COMMAND "${CMAKE_RC_COMPILER}" /nologo /fo "${shandalar_icon_object}" "${shandalar_icon_resource}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shandalar.ico"
+    VERBATIM
+  )
+  add_custom_target(shandalar_icon DEPENDS "${shandalar_icon_object}")
+  add_dependencies(shandalar shandalar_icon)
+  set_source_files_properties("${shandalar_icon_object}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
+  target_sources(shandalar PRIVATE "${shandalar_icon_object}")
+endif()
 add_dependencies(shandalar shandalar_version_header_target)
 
 target_compile_definitions(shandalar PRIVATE

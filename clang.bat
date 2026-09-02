@@ -33,9 +33,15 @@ if /I "%APP%"=="deck" (
 
 cmake -S . -B "%BUILD_DIR%" -G Ninja ^
   -DCMAKE_BUILD_TYPE=MinSizeRel ^
-  -DCMAKE_C_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
-  -DCMAKE_CXX_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
+  -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" ^
+  -DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" ^
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="%CD%/out/bin/%BIN_DIR%" ^
+  -DCMAKE_C_COMPILER_TARGET=i686-pc-windows-msvc ^
+  -DCMAKE_CXX_COMPILER_TARGET=i686-pc-windows-msvc ^
+  -DCMAKE_EXE_LINKER_FLAGS=/machine:x86 ^
+  -DCMAKE_SHARED_LINKER_FLAGS=/machine:x86 ^
+  -DCMAKE_MODULE_LINKER_FLAGS=/machine:x86 ^
+  -DCMAKE_STATIC_LINKER_FLAGS=/machine:x86 ^
   -DSHANDALAR_ASSET_DIR="C:/Magic/Program" ^
   -DSHANDALAR_BUILD_FACEMAKER=%BUILD_FACEMAKER% ^
   -DSHANDALAR_BUILD_SHANDALAR=%BUILD_SHANDALAR% ^
