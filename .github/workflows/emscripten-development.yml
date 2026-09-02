@@ -3,8 +3,12 @@ name: Emscripten Development Build
 on:
   push:
     branches:
-      - main
+      - '**'
   workflow_dispatch:
+
+concurrency:
+  group: emscripten-development-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -47,6 +51,18 @@ jobs:
       - name: Build (${{ matrix.target }})
         run: cmake --build "${{ github.workspace }}/build-${{ matrix.target }}"
 
+      - name: Select R2 destination
+        id: destination
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            directory="development/${{ matrix.target }}"
+          else
+            directory="development/branches/${GITHUB_REF_NAME}/${{ matrix.target }}"
+          fi
+
+          echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
+
       - name: Upload to Cloudflare R2 (${{ matrix.target }})
         uses: ryand56/r2-upload-action@latest
         with:
@@ -55,11 +71,5 @@ jobs:
           r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           r2-bucket: shandalar-sdl3
           source-dir: ${{ github.workspace }}/out/${{ matrix.target }}
-          destination-dir: development/${{ matrix.target }}
+          destination-dir: ${{ steps.destination.outputs.directory }}
           output-file-url: false
-
-      - name: Upload artifacts (${{ matrix.target }})
-        uses: actions/upload-artifact@v4
-        with:
-          name: shandalar-${{ matrix.target }}-wasm
-          path: ${{ github.workspace }}/out/${{ matrix.target }}/
