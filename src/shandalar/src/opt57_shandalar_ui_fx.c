@@ -18,6 +18,88 @@ int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_sha
 extern int g_ui_fx_lcg_multipliers[0x14];
 
 
+TrueColorSprite *CaptureTrueColorSprite(FacemakerWindowBounds *src, int x, int y, int width, int height,
+                                        const unsigned char *palette_rgb)
+{
+  TrueColorSprite *sprite;
+  unsigned char *scanline;
+  int src_y;
+  int src_x;
+
+  if (!src || !palette_rgb || width <= 0 || height <= 0)
+    return NULL;
+  sprite = (TrueColorSprite *)calloc(1, sizeof(*sprite));
+  scanline = (unsigned char *)malloc((size_t)width);
+  if (!sprite || !scanline)
+  {
+    free(scanline);
+    free(sprite);
+    return NULL;
+  }
+  sprite->pixels = (COLORREF *)malloc((size_t)width * (size_t)height * sizeof(*sprite->pixels));
+  if (!sprite->pixels)
+  {
+    free(scanline);
+    free(sprite);
+    return NULL;
+  }
+  sprite->width = width;
+  sprite->height = height;
+  for (src_y = 0; src_y < height; src_y++)
+  {
+    ReadGraphicsScanline((unsigned int *)scanline, src->page_number, x, y + src_y, (unsigned int)width);
+    for (src_x = 0; src_x < width; src_x++)
+    {
+      unsigned int palette_index = scanline[src_x];
+      sprite->pixels[src_y * width + src_x] = palette_index == 0
+          ? (COLORREF)-1
+          : RGB(palette_rgb[palette_index * 3], palette_rgb[palette_index * 3 + 1],
+                palette_rgb[palette_index * 3 + 2]);
+    }
+  }
+  free(scanline);
+  return sprite;
+}
+
+void DrawTrueColorSpriteResampled(FacemakerWindowBounds *dst, int x, int y, int width, int height,
+                                  const TrueColorSprite *sprite)
+{
+  DIBSurface *page;
+  int draw_y;
+  int draw_x;
+
+  if (!dst || !sprite || width <= 0 || height <= 0)
+    return;
+  page = g_graphics_pages[dst->page_number];
+  if (!page)
+    return;
+  for (draw_y = 0; draw_y < height; draw_y++)
+  {
+    int target_y = y + draw_y;
+    int source_y = draw_y * sprite->height / height;
+    if (target_y < dst->clip_top || target_y < 0 || target_y > dst->max_y)
+      continue;
+    for (draw_x = 0; draw_x < width; draw_x++)
+    {
+      int target_x = x + draw_x;
+      int source_x = draw_x * sprite->width / width;
+      COLORREF color = sprite->pixels[source_y * sprite->width + source_x];
+      if (color != (COLORREF)-1 && target_x >= dst->clip_left && target_x >= 0 && target_x <= dst->max_x)
+        SetPixelV(page->hTempDC, target_x, target_y, color);
+    }
+  }
+}
+
+void FreeTrueColorSprite(TrueColorSprite *sprite)
+{
+  if (sprite)
+  {
+    free(sprite->pixels);
+    free(sprite);
+  }
+}
+
+
 // Time it takes for random blit rect effect to finish
 #define TILE_REVEAL_MS 1000
 

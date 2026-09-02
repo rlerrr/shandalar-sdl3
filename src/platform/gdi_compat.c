@@ -398,13 +398,18 @@ static unsigned char *pixel_at(HBITMAP bitmap, int x, int y)
   return bitmap->pixels + row * bitmap->pitch + x * (bitmap->bits_per_pixel / 8);
 }
 
+static int is_true_color_bitmap(HBITMAP bitmap)
+{
+  return bitmap && (bitmap->bits_per_pixel == 24 || bitmap->bits_per_pixel == 32);
+}
+
 static COLORREF read_pixel_color(HDC dc, int x, int y)
 {
   const PALETTEENTRY *entries;
   unsigned char *pixel = dc && dc->bitmap ? pixel_at(dc->bitmap, x, y) : NULL;
   if (!pixel)
     return UINT32_MAX;
-  if (dc->bitmap->bits_per_pixel == 24)
+  if (is_true_color_bitmap(dc->bitmap))
     return RGB(pixel[2], pixel[1], pixel[0]);
   entries = effective_bitmap_colors(dc);
   if (entries) {
@@ -432,7 +437,7 @@ static void write_pixel_color(HDC dc, int x, int y, COLORREF color, DWORD rop)
     return;
   if (!pixel)
     return;
-  if (dc->bitmap->bits_per_pixel == 24) {
+  if (is_true_color_bitmap(dc->bitmap)) {
     unsigned char bgr[3] = {
       (unsigned char)((color >> 16) & 0xff),
       (unsigned char)((color >> 8) & 0xff),
@@ -441,6 +446,8 @@ static void write_pixel_color(HDC dc, int x, int y, COLORREF color, DWORD rop)
     int i;
     for (i = 0; i < 3; ++i)
       apply_rop(&pixel[i], bgr[i], rop);
+    if (dc->bitmap->bits_per_pixel == 32)
+      pixel[3] = 0xff;
   } else {
     apply_rop(pixel, color_to_index(dc, color), rop);
   }
@@ -946,10 +953,13 @@ BOOL SetPixelV(HDC dc, int x, int y, COLORREF color)
   unsigned char *pixel = dc ? pixel_at(dc->bitmap, x, y) : NULL;
   if (!pixel)
     return FALSE;
-  if (dc->bitmap->bits_per_pixel == 24) {
+  if (is_true_color_bitmap(dc->bitmap)) {
+    color = resolve_color(dc, color);
     pixel[0] = (unsigned char)((color >> 16) & 0xff);
     pixel[1] = (unsigned char)((color >> 8) & 0xff);
     pixel[2] = (unsigned char)(color & 0xff);
+    if (dc->bitmap->bits_per_pixel == 32)
+      pixel[3] = 0xff;
   } else {
     *pixel = color_to_index(dc, color);
   }
@@ -1003,7 +1013,7 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
   top = map_y(dc, rect->top);
   right = map_x(dc, rect->right);
   bottom = map_y(dc, rect->bottom);
-  if (dc->bitmap->bits_per_pixel == 24) {
+  if (is_true_color_bitmap(dc->bitmap)) {
     COLORREF color = resolve_color(dc, paint->color);
     for (y = top; y < bottom; ++y)
       for (x = left; x < right; ++x) {
@@ -1012,6 +1022,8 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
           pixel[0] = (unsigned char)((color >> 16) & 0xff);
           pixel[1] = (unsigned char)((color >> 8) & 0xff);
           pixel[2] = (unsigned char)(color & 0xff);
+          if (dc->bitmap->bits_per_pixel == 32)
+            pixel[3] = 0xff;
         }
       }
   } else {
@@ -2019,16 +2031,48 @@ int SetDIBitsToDevice(HDC dc, int x, int y, DWORD width, DWORD height,
                       int src_x, int src_y, UINT start_scan, UINT scan_lines,
                       const void *bits, const BITMAPINFO *info, UINT usage)
 {
+  int source_bpp;
+  int source_width;
   int row;
   int src_pitch;
-  (void)src_x; (void)src_y; (void)start_scan; (void)scan_lines; (void)usage;
+  (void)src_x; (void)src_y; (void)start_scan; (void)scan_lines;
   if (!dc || !dc->bitmap || !bits || !info) return 0;
-  src_pitch = ((int)width + 3) & ~3;
+  source_bpp = info->bmiHeader.biBitCount;
+  source_width = abs(info->bmiHeader.biWidth);
+  if (source_width == 0)
+    source_width = (int)width;
+  src_pitch = (source_width * source_bpp / 8 + 3) & ~3;
   for (row = 0; row < (int)height; ++row) {
     int col;
     for (col = 0; col < (int)width; ++col) {
-      unsigned char *target = pixel_at(dc->bitmap, x + col, y + row);
-      if (target) *target = ((const unsigned char *)bits)[row * src_pitch + col];
+      const unsigned char *source = (const unsigned char *)bits + row * src_pitch;
+      if (source_bpp == 8 && dc->bitmap->bits_per_pixel == 8) {
+        unsigned char *target = pixel_at(dc->bitmap, x + col, y + row);
+        if (target)
+          *target = source[col];
+      } else {
+        COLORREF color;
+        if (source_bpp == 8) {
+          unsigned int palette_index = source[col];
+          if (usage == DIB_RGB_COLORS) {
+            const RGBQUAD *entry = &info->bmiColors[palette_index];
+            color = RGB(entry->rgbRed, entry->rgbGreen, entry->rgbBlue);
+          } else {
+            HPALETTE palette = effective_palette(dc);
+            unsigned int mapped_index = ((const WORD *)info->bmiColors)[palette_index];
+            if (palette) {
+              const PALETTEENTRY *entry = &palette->entries[mapped_index & 0xff];
+              color = RGB(entry->peRed, entry->peGreen, entry->peBlue);
+            } else {
+              color = RGB(mapped_index, mapped_index, mapped_index);
+            }
+          }
+        } else {
+          const unsigned char *pixel = source + col * (source_bpp / 8);
+          color = RGB(pixel[2], pixel[1], pixel[0]);
+        }
+        write_pixel_color(dc, x + col, y + row, color, SRCCOPY);
+      }
     }
   }
   return (int)height;
@@ -2199,9 +2243,9 @@ BOOL GetCharWidthA(HDC dc, UINT first, UINT last, int *widths)
 int GetDeviceCaps(HDC dc, int index)
 {
   if (index == RASTERCAPS)
-    return RC_PALETTE;
+    return dc && dc->bitmap && dc->bitmap->bits_per_pixel <= 8 ? RC_PALETTE : 0;
   if (index == BITSPIXEL)
-    return 8;
+    return dc && dc->bitmap ? dc->bitmap->bits_per_pixel : 32;
   if (index == PLANES)
     return 1;
   if (!dc || !dc->bitmap)
@@ -2234,7 +2278,9 @@ HDC shandalar_create_screen_dc(int width, int height)
   memset(&info, 0, sizeof(info));
   info.bmiHeader.biWidth = width;
   info.bmiHeader.biHeight = -height;
-  info.bmiHeader.biBitCount = 8;
+  /* Keep resource DIBs indexed, but compose windows in true color like a
+   * Win9x desktop running above 256-color mode. */
+  info.bmiHeader.biBitCount = 32;
   bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &bits, NULL, 0);
   SelectObject(dc, bitmap);
   dc->is_screen_dc = 1;
@@ -2301,7 +2347,7 @@ BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
       unsigned int r = (pixel >> 16) & 0xff;
       unsigned int g = (pixel >> 8) & 0xff;
       unsigned int b = pixel & 0xff;
-      if (dc->bitmap->bits_per_pixel == 24) {
+      if (is_true_color_bitmap(dc->bitmap)) {
         write_pixel_color(dc, x, y, RGB(r, g, b), SRCCOPY);
       } else {
         unsigned int key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
@@ -2342,7 +2388,7 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
   bitmap = dc->bitmap;
   height = bitmap->height;
   width = bitmap->width;
-  if (bitmap->bits_per_pixel == 24) {
+  if (is_true_color_bitmap(bitmap)) {
     unsigned char *base = bitmap->pixels;
     int src_pitch = bitmap->pitch, top_down = bitmap->top_down;
     for (y = 0; y < height; ++y) {
@@ -2350,7 +2396,7 @@ BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)
       unsigned char *src = base + row * src_pitch;
       uint32_t *dst = (uint32_t *)((unsigned char *)pixels + y * pitch_bytes);
       for (x = 0; x < width; ++x) {
-        unsigned char *p = src + x * 3;
+        unsigned char *p = src + x * (bitmap->bits_per_pixel / 8);
         dst[x] = 0xff000000u | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0];
       }
     }

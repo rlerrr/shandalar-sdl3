@@ -38,103 +38,21 @@ void WriteGraphicsScanline(unsigned int *scanline_data, int page_number, int dst
 
 typedef ptrdiff_t INT_PTR;
 
-static int FindNearestVisiblePaletteEntry(int target_r, int target_g, int target_b, unsigned char *palette_bytes)
+static void BuildAdventureListConfirmButtonSprites(TrueColorSprite **button_sprites)
 {
-  int palette_index;
-  int best_index;
-  int best_distance;
-  int dr;
-  int dg;
-  int db;
-  int distance;
-
-  best_index = 1;
-  best_distance = 0x7fffffff;
-  for (palette_index = 1; palette_index < 0x100; palette_index = palette_index + 1)
-  {
-    dr = target_r - (int)palette_bytes[palette_index * 3];
-    dg = target_g - (int)palette_bytes[palette_index * 3 + 1];
-    db = target_b - (int)palette_bytes[palette_index * 3 + 2];
-    distance = dr * dr + dg * dg + db * db;
-    if (distance < best_distance)
-    {
-      best_distance = distance;
-      best_index = palette_index;
-    }
-  }
-
-  return best_index;
-}
-
-static int ApplyVisibleSpritePaletteMapToPalette(FacemakerWindowBounds *page, int src_x, int src_y, unsigned int width, int height,
-                                                 char *palette_source_path, unsigned char *target_palette_bytes)
-{
-  unsigned int scanline_buffer[0x200];
+  int i;
   RpBitsPalettePacket source_palette;
-  unsigned char remap_table[0x100];
-  unsigned char *palette_cursor;
-  int y;
-  int x;
-  int red;
-  int green;
-  int blue;
+  RpBitsPalettePacket saved_palette;
 
-  LoadPcxResource(-1, 0, 0, palette_source_path, &source_palette);
-
-  remap_table[0] = 0;
-  palette_cursor = source_palette.entry_data + 3;
-  for (x = 1; x < 0x100; x = x + 1)
-  {
-    red = (int)palette_cursor[0];
-    green = (int)palette_cursor[1];
-    blue = (int)palette_cursor[2];
-    remap_table[x] = (unsigned char)FindNearestVisiblePaletteEntry(red, green, blue, target_palette_bytes);
-    palette_cursor = palette_cursor + 3;
-  }
-
-  for (y = src_y; y < src_y + height; y = y + 1)
-  {
-    ReadGraphicsScanline(scanline_buffer, page->page_number, src_x, y, width);
-    for (x = 0; x < (int)width; x = x + 1)
-    {
-      ((unsigned char *)scanline_buffer)[x] = remap_table[((unsigned char *)scanline_buffer)[x]];
-    }
-    WriteGraphicsScanline(scanline_buffer, page->page_number, src_x, y, width);
-  }
-
-  return 0;
-}
-
-static void CopyPaletteLogToRpBitsPalette(RpBitsPalettePacket *palette_packet, PaletteLog *palette_log)
-{
-  int i;
-
-  palette_packet->signature = (unsigned short)('M' | ('1' << 8));
-  palette_packet->block_size = 0x300;
-  palette_packet->first_index = 0;
-  palette_packet->last_index = 0xff;
-  for (i = 0; i < 0x100; i = i + 1)
-  {
-    palette_packet->entry_data[i * 3] = palette_log->palPalEntry[i].peRed;
-    palette_packet->entry_data[i * 3 + 1] = palette_log->palPalEntry[i].peGreen;
-    palette_packet->entry_data[i * 3 + 2] = palette_log->palPalEntry[i].peBlue;
-  }
-}
-
-static void BuildAdventureListConfirmButtonSprites(EncodedImage **button_sprites, PaletteLog *screen_palette)
-{
-  int i;
-  RpBitsPalettePacket target_palette;
-
-  CopyPaletteLogToRpBitsPalette(&target_palette, screen_palette);
+  saved_palette = g_palette_data_words;
   LoadPcxResource(1, 0, 0, "smBuybttn.pic", (void *)0);
-  ApplyVisibleSpritePaletteMapToPalette(g_page1_window_bounds, 0, 0, 0x10e, 0x24, "buycards.pic", target_palette.entry_data);
-  BeginSpriteEncodeSession();
+  LoadPcxResource(-1, 0, 0, "buycards.pic", &source_palette);
   for (i = 0; i < 3; i = i + 1)
   {
-    button_sprites[i] = EncodeSpriteFromPage(1, i * 0x5a + 1, 1, 0x59, 0x23);
+    button_sprites[i] = CaptureTrueColorSprite(g_page1_window_bounds, i * 0x5a + 1, 1, 0x59, 0x23,
+                                               source_palette.entry_data);
   }
-  FinalizeSpriteEncodeSession();
+  RpBits_ApplyPalette(&saved_palette);
 }
 
 static void DrawAdventureListConfirmButtonText(char *text, int center_x, int center_y, int color, int visual_state)
@@ -166,7 +84,7 @@ int show_deck(int player, int *cards, int count, char *title, int require_select
   char *accept_keys;
   int sprite_copy_index;
   EncodedImage *sprite_load_buffer[13];
-  EncodedImage *confirm_button_sprites[3];
+  TrueColorSprite *confirm_button_sprites[3];
   EncodedImage *unused_sprite_row_3[3];
   EncodedImage *unused_sprite_row_2[3];
   EncodedImage *unused_sprite_2;
@@ -198,7 +116,6 @@ int show_deck(int player, int *cards, int count, char *title, int require_select
   int button_h;
   int accept_state;
   int cancel_state;
-  PaletteLog *screen_palette;
 
   if ((player == g_other_player) &&
       ((g_duel_network_flags & 2) != 0) &&
@@ -240,7 +157,7 @@ int show_deck(int player, int *cards, int count, char *title, int require_select
 
   if (g_duel_active == 0)
   {
-    screen_palette = ReadPalette("todpal.tr", (char *)0);
+    ReadPalette("todpal.tr", (char *)0);
     ClearGraphicsPageWithPaletteColor(0, 0);
     SelectPalette(global_main_hdc, g_realized_palette_handle, FALSE);
 
@@ -369,7 +286,7 @@ int show_deck(int player, int *cards, int count, char *title, int require_select
 
     if (require_selection != 0)
     {
-      BuildAdventureListConfirmButtonSprites(confirm_button_sprites, screen_palette);
+      BuildAdventureListConfirmButtonSprites(confirm_button_sprites);
       modal_x = ScaleUiCoordinateFrom320(0xdc) / 2;
       modal_y = ScaleUiCoordinateFrom320(0x34) / 2;
       modal_w = ScaleUiCoordinateFrom320(0xc5) / 2;
@@ -415,10 +332,10 @@ int show_deck(int player, int *cards, int count, char *title, int require_select
                            ? ((g_mouse_button_mask_snapshot & 1U) ? 2 : 1)
                            : 0;
 
-        DrawEncodedImageResampled(g_page0_window_bounds, accept_x, button_y, button_w, button_h,
-                                  confirm_button_sprites[accept_state]);
-        DrawEncodedImageResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
-                                  confirm_button_sprites[cancel_state]);
+        DrawTrueColorSpriteResampled(g_page0_window_bounds, accept_x, button_y, button_w, button_h,
+                                     confirm_button_sprites[accept_state]);
+        DrawTrueColorSpriteResampled(g_page0_window_bounds, cancel_x, button_y, button_w, button_h,
+                                     confirm_button_sprites[cancel_state]);
 
         DrawAdventureListConfirmButtonText("Yes", accept_x + button_w / 2, button_y + button_h / 2,
                                            (accept_state == 0) ? 0x1b : 0x1a, accept_state);
@@ -458,7 +375,8 @@ int show_deck(int player, int *cards, int count, char *title, int require_select
         DelayUiTicks(1);
       } while (1);
 
-      FreeSpriteBlob(confirm_button_sprites[0]);
+      for (i = 0; i < 3; i++)
+        FreeTrueColorSprite(confirm_button_sprites[i]);
 
       if (accept_key == 0)
       {

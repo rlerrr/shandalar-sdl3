@@ -1243,7 +1243,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
   global_screen_width = 0x400;
   global_screen_height = 0x300;
   PTR_s_advinter800_pic_00589de8 = "advinter1024.pic";
-  CreateGraphicsPage(0, global_screen_width, global_screen_height, 8);
+  CreateGraphicsPage(0, global_screen_width, global_screen_height, -1);
   show_shell_on_exit = 1;
   g_page0_window_bounds->max_x = global_screen_width - 1;
   g_page0_window_bounds->max_y = global_screen_height - 1;

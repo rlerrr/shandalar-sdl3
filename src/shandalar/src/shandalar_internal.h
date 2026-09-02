@@ -41,6 +41,13 @@ typedef struct
   char padding[7];
 } AnimatedNoiseGridPlane;
 
+typedef struct
+{
+  int width;
+  int height;
+  COLORREF *pixels;
+} TrueColorSprite;
+
 int HandleMainMenuButtonControlEvent(AdvMenuControl *control_ptr, int event_type);
 int HandlePortraitMainMenuControlEvent(AdvMenuControl *control_ptr, int event_type);
 int HandleWorldMagicChoiceControlEvent(AdvMenuControl *control_ptr, int event_type);
@@ -290,6 +297,11 @@ unsigned int ReadGraphicsPixel(int page_number, int x, int y);
 void BlitGraphicsRect(FacemakerWindowBounds *dst, unsigned int dst_x, int dst_y, unsigned int width, DWORD height,
                       FacemakerWindowBounds *src, int src_x, int src_y);
 void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int width, int height, EncodedImage *encoded_image);
+TrueColorSprite *CaptureTrueColorSprite(FacemakerWindowBounds *src, int x, int y, int width, int height,
+                                        const unsigned char *palette_rgb);
+void DrawTrueColorSpriteResampled(FacemakerWindowBounds *dst, int x, int y, int width, int height,
+                                  const TrueColorSprite *sprite);
+void FreeTrueColorSprite(TrueColorSprite *sprite);
 void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int src_w, int src_h,
                              FacemakerWindowBounds *src, int src_x, int src_y, int copy_w, int copy_h);
 int IgnoreFontConfigLoadResult(int ignored_result);

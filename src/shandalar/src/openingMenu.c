@@ -21,8 +21,8 @@ extern char *gs_loadsave_0077d1b0[3];
 extern HWND g_main_window_hwnd;
 extern char g_text_lines[249][300];
 
-static EncodedImage *g_name_entry_done_button_sprites[3];
-static EncodedImage *g_loadsave_cancel_button_sprites[3];
+static TrueColorSprite *g_name_entry_done_button_sprites[3];
+static TrueColorSprite *g_loadsave_cancel_button_sprites[3];
 
 int GetFontStyleSize(int font_id);
 void ShandalarLoadPcxIntoPageNoPalette(char *path);
@@ -61,79 +61,13 @@ int HandleColorMenuControlEvent(AdvMenuControl *control, int event_type);
 int HandleColorMenuControlActivate(AdvMenuControl *control);
 int shandalar_run_facemaker_flow(void);
 
-static int FindNearestVisiblePaletteEntry(int target_r, int target_g, int target_b, unsigned char *palette_bytes)
-{
-  int palette_index;
-  int best_index;
-  int best_distance;
-  int dr;
-  int dg;
-  int db;
-  int distance;
-
-  best_index = 1;
-  best_distance = 0x7fffffff;
-  for (palette_index = 1; palette_index < 0x100; palette_index = palette_index + 1)
-  {
-    dr = target_r - (int)palette_bytes[palette_index * 3];
-    dg = target_g - (int)palette_bytes[palette_index * 3 + 1];
-    db = target_b - (int)palette_bytes[palette_index * 3 + 2];
-    distance = dr * dr + dg * dg + db * db;
-    if (distance < best_distance)
-    {
-      best_distance = distance;
-      best_index = palette_index;
-    }
-  }
-  return best_index;
-}
-
-static int ApplyVisibleSpritePaletteMap(FacemakerWindowBounds *page, int src_x, int src_y, unsigned int width, int height, char *palette_source_path,
-                                        char *target_palette_path)
-{
-  unsigned int scanline_buffer[0x200];
-  RpBitsPalettePacket source_palette;
-  RpBitsPalettePacket target_palette;
-  unsigned char remap_table[0x100];
-  unsigned char *palette_cursor;
-  int y;
-  int x;
-  int red;
-  int green;
-  int blue;
-
-  LoadPcxResource(-1, 0, 0, palette_source_path, &source_palette);
-  LoadPcxResource(-1, 0, 0, target_palette_path, &target_palette);
-
-  remap_table[0] = 0;
-  palette_cursor = source_palette.entry_data + 3;
-  for (x = 1; x < 0x100; x = x + 1)
-  {
-    red = (int)palette_cursor[0];
-    green = (int)palette_cursor[1];
-    blue = (int)palette_cursor[2];
-    remap_table[x] = (unsigned char)FindNearestVisiblePaletteEntry(red, green, blue, target_palette.entry_data);
-    palette_cursor = palette_cursor + 3;
-  }
-
-  for (y = src_y; y < src_y + height; y = y + 1)
-  {
-    ReadGraphicsScanline(scanline_buffer, page->page_number, src_x, y, width);
-    for (x = 0; x < (int)width; x = x + 1)
-    {
-      ((unsigned char *)scanline_buffer)[x] = remap_table[((unsigned char *)scanline_buffer)[x]];
-    }
-    WriteGraphicsScanline(scanline_buffer, page->page_number, src_x, y, width);
-  }
-
-  return 0;
-}
-
 static void ResetNameEntryDoneButtonSprites(void)
 {
   if (g_name_entry_done_button_sprites[0] != 0)
   {
-    FreeSpriteBlob((void *)g_name_entry_done_button_sprites[0]);
+    int i;
+    for (i = 0; i < 3; i++)
+      FreeTrueColorSprite(g_name_entry_done_button_sprites[i]);
   }
   g_name_entry_done_button_sprites[0] = 0;
   g_name_entry_done_button_sprites[1] = 0;
@@ -144,6 +78,8 @@ static void BuildLoadSaveCancelButtonSprites(void)
 {
   EncodedImage *source_sprites[13];
   EncodedImage *source_sprite;
+  RpBitsPalettePacket source_palette;
+  RpBitsPalettePacket target_palette;
   int source_sprite_indices[3] = {3, 4, 4};
   int i;
 
@@ -153,16 +89,17 @@ static void BuildLoadSaveCancelButtonSprites(void)
   }
 
   ReadSpriteEntryPointers(&source_sprites[0], "BuyButtons.spr");
-  BeginSpriteEncodeSession();
+  LoadPcxResource(-1, 0, 0, "buycards.pic", &source_palette);
   for (i = 0; i < 3; i = i + 1)
   {
     source_sprite = source_sprites[source_sprite_indices[i]];
     FillGraphicsRect(g_page1_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, 0);
     DrawEncodedImageResampled(g_page1_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, source_sprite);
-    ApplyVisibleSpritePaletteMap(g_page1_window_bounds, 0, 0, (unsigned int)source_sprite->width, (int)source_sprite->height, "buycards.pic", "menopt.pic");
-    g_loadsave_cancel_button_sprites[i] = EncodeSpriteFromPage(1, 0, 0, (int)source_sprite->width, (int)source_sprite->height);
+    g_loadsave_cancel_button_sprites[i] = CaptureTrueColorSprite(
+        g_page1_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height,
+        source_palette.entry_data);
   }
-  FinalizeSpriteEncodeSession();
+  LoadPcxResource(-1, 0, 0, "menopt.pic", &target_palette);
   FreeSpriteBlob((void *)source_sprites[0]);
 }
 
@@ -175,6 +112,8 @@ static void BuildNameEntryDoneButtonSprites(void)
   int source_sprite_indices[3] = {3, 4, 4};
   EncodedImage *source_sprites[13];
   EncodedImage *source_sprite;
+  RpBitsPalettePacket source_palette;
+  RpBitsPalettePacket target_palette;
 
   if (g_name_entry_done_button_sprites[0] != 0)
   {
@@ -182,23 +121,23 @@ static void BuildNameEntryDoneButtonSprites(void)
   }
 
   ReadSpriteEntryPointers(&source_sprites[0], "BuyButtons.spr");
-  BeginSpriteEncodeSession();
+  LoadPcxResource(-1, 0, 0, "buycards.pic", &source_palette);
   for (i = 0; i < 3; i = i + 1)
   {
     source_sprite = source_sprites[source_sprite_indices[i]];
     FillGraphicsRect(g_page2_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, 0);
     DrawEncodedImageResampled(g_page2_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height, source_sprite);
-    ApplyVisibleSpritePaletteMap(g_page2_window_bounds, 0, 0, (unsigned int)source_sprite->width, (int)source_sprite->height, "buycards.pic",
-                                 "namepick.pic");
-    g_name_entry_done_button_sprites[i] = EncodeSpriteFromPage(2, 0, 0, (int)source_sprite->width, (int)source_sprite->height);
+    g_name_entry_done_button_sprites[i] = CaptureTrueColorSprite(
+        g_page2_window_bounds, 0, 0, (int)source_sprite->width, (int)source_sprite->height,
+        source_palette.entry_data);
   }
-  FinalizeSpriteEncodeSession();
+  LoadPcxResource(-1, 0, 0, "namepick.pic", &target_palette);
   FreeSpriteBlob((void *)source_sprites[0]);
 }
 
 static void GetNameEntryDoneButtonRect(int *out_x, int *out_y, int *out_w, int *out_h)
 {
-  EncodedImage *sprite;
+  TrueColorSprite *sprite;
 
   BuildNameEntryDoneButtonSprites();
   sprite = g_name_entry_done_button_sprites[0];
@@ -233,7 +172,7 @@ static void DrawNameEntryDoneButton(void)
 
   GetNameEntryDoneButtonRect(&x, &y, &w, &h);
   state = GetNameEntryDoneButtonState();
-  DrawEncodedImageResampled(g_page0_window_bounds, x, y, w, h, g_name_entry_done_button_sprites[state]);
+  DrawTrueColorSpriteResampled(g_page0_window_bounds, x, y, w, h, g_name_entry_done_button_sprites[state]);
 }
 
 static int IsNameEntryDoneButtonPressed(void)
@@ -1503,8 +1442,8 @@ int RenderLoadSaveCancelButton(AdvMenuControl *control, int mode)
     return 0;
   }
 
-  DrawEncodedImageResampled(g_page0_window_bounds, control->x, control->y, control->width, control->height,
-                            g_loadsave_cancel_button_sprites[mode]);
+  DrawTrueColorSpriteResampled(g_page0_window_bounds, control->x, control->y, control->width, control->height,
+                               g_loadsave_cancel_button_sprites[mode]);
   if ((mode == 2) && (control->on_activate != (AdvMenuActivateCallback)0))
   {
     control->on_activate(control);
@@ -1522,8 +1461,8 @@ static int UpdateLoadSaveEditDoneButton(void)
   mouse_inside = (g_mouse_x >= control->x && g_mouse_x <= control->x + control->width &&
                   g_mouse_y >= control->y && g_mouse_y <= control->y + control->height);
   visual_state = mouse_inside ? ((g_mouse_button_down_mask & 1) != 0 ? 2 : 1) : 0;
-  DrawEncodedImageResampled(g_page0_window_bounds, control->x, control->y, control->width, control->height,
-                            g_loadsave_cancel_button_sprites[visual_state]);
+  DrawTrueColorSpriteResampled(g_page0_window_bounds, control->x, control->y, control->width, control->height,
+                               g_loadsave_cancel_button_sprites[visual_state]);
 
   return (g_mouse_button_mask_snapshot & 1) != 0 &&
          (g_mouse_button_down_mask & 1) == 0 &&
@@ -2049,7 +1988,8 @@ restart_menu_loop:
   FreeSpriteBlob(g_loadsave_frame_sprites[0]);
   if (g_loadsave_cancel_button_sprites[0] != 0)
   {
-    FreeSpriteBlob((void *)g_loadsave_cancel_button_sprites[0]);
+    for (slot_index = 0; slot_index < 3; slot_index++)
+      FreeTrueColorSprite(g_loadsave_cancel_button_sprites[slot_index]);
     g_loadsave_cancel_button_sprites[0] = 0;
     g_loadsave_cancel_button_sprites[1] = 0;
     g_loadsave_cancel_button_sprites[2] = 0;
