@@ -24,6 +24,11 @@
 extern HWND g_main_window_hwnd;
 
 
+// The original StretchBlt calls were slow enough to pace this animation on
+// contemporary hardware.  Keep the seven zoom steps visible on modern CPUs.
+#define VISIT_BACKDROP_ZOOM_FRAME_MS 16
+
+
 extern int g_card_count;
 extern int g_current_quest_giver_town_index;
 extern int g_duel_selection_pending;
@@ -422,6 +427,7 @@ void LoadVisitBackdropAndCopyToPage0(char *pcx_path)
 // FUNCTION: SHANDALAR 0x004ed525
 void AnimateVisitBackdropZoomIn(char *pcx_path)
 {
+  DWORD frame_start;
   int scale_h;
   int scale_w;
   int unused_local;
@@ -440,11 +446,16 @@ void AnimateVisitBackdropZoomIn(char *pcx_path)
 
   for (scale_step = 2; scale_step <= 8; scale_step = scale_step + 1)
   {
+    frame_start = GetTickCount();
     scale_w = copy_w * scale_step / 8;
     scale_h = copy_h * scale_step / 8;
     unused_local = ((copy_h / 2) * (scale_step - 2) + (8 - scale_step) * (global_screen_height / 3)) / 6;
     StretchBlitGraphicsRect(g_page1_window_bounds, 0, dst_y, 0x200, 0x118, g_page0_window_bounds,
                             global_screen_width / 2 - scale_w / 2, center_y - scale_h / 2, scale_w, scale_h);
+    do
+    {
+      shandalar_host_pump();
+    } while ((DWORD)(GetTickCount() - frame_start) < VISIT_BACKDROP_ZOOM_FRAME_MS);
   }
 
   scale_w = copy_w;
