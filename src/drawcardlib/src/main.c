@@ -1748,20 +1748,23 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved)
 // FUNCTION: DRAWCARDLIB 0x1000be22
 int read_cfg(HINSTANCE hinst)
 {
+#ifndef SHANDALAR_STATIC_LIB
   char *lastSlash;
+#endif
   void *recordBuf;
   char cards_dat_filename[264];
-  size_t global_available_slots;
+  size_t global_available_slots = 0;
   size_t record_size;
   int slotIndex;
   FILE *cards_dat;
-  int record_table[76000];
+  int *record_table;
   int result;
 
   result = 1;
   g_drawCardLibInstance = hinst;
   InitializeCriticalSection(&global_critical_section_for_catalog);
 
+#ifndef SHANDALAR_STATIC_LIB
 #ifdef _DEBUG
   // Allow debugging directly from output directory
   if (getcwd(global_base_directory, sizeof(global_base_directory)) == NULL)
@@ -1773,32 +1776,54 @@ int read_cfg(HINSTANCE hinst)
   lastSlash = strrchr(global_base_directory, '\\');
   *lastSlash = '\0';
 #endif
+#endif
 
   strcpy(global_cardart_directory, global_base_directory);
+#ifdef SHANDALAR_STATIC_LIB
+  strcat(global_cardart_directory, "\\CardArt");
+#else
   strcat(global_cardart_directory, "\\CARDART");
+#endif
   global_dither_kernel_id = 3;
   global_color_depth = 0x10;
-  InitCardArtGdiResources();
+  if (!InitCardArtGdiResources())
+  {
+    result = 0;
+  }
   strcpy(cards_dat_filename, global_base_directory);
   strcat(cards_dat_filename, "\\CARDS.DAT");
   cards_dat = fopen(cards_dat_filename, "rb");
   if (cards_dat != (FILE *)0x0)
   {
-    fread(&global_available_slots, 4, 1, cards_dat);
-    fread(&record_size, 4, 1, cards_dat);
-    fread(record_table, 0x98, global_available_slots, cards_dat);
-    recordBuf = malloc(record_size);
-    if (recordBuf != (void *)0x0)
+    if (fread(&global_available_slots, 4, 1, cards_dat) == 1 &&
+        fread(&record_size, 4, 1, cards_dat) == 1)
     {
-      fread(recordBuf, 1, record_size, cards_dat);
-      for (slotIndex = 0; (int)global_available_slots > slotIndex;
-           slotIndex = slotIndex + 1)
+      record_table = (int *)malloc(global_available_slots * 0x98);
+      if (record_table != NULL &&
+          fread(record_table, 0x98, global_available_slots, cards_dat) == global_available_slots)
       {
-        record_table[slotIndex * 0x26 + 1] = record_table[slotIndex * 0x26 + 1] + (int)recordBuf;
-        strncpy(g_cardNames + slotIndex * 100, (char *)record_table[slotIndex * 0x26 + 1], 100);
-        g_cardNameSlotTerminators[slotIndex * 100] = 0;
+        recordBuf = malloc(record_size);
+        if (recordBuf != (void *)0x0 && fread(recordBuf, 1, record_size, cards_dat) == record_size)
+        {
+          for (slotIndex = 0; (int)global_available_slots > slotIndex;
+               slotIndex = slotIndex + 1)
+          {
+            record_table[slotIndex * 0x26 + 1] = record_table[slotIndex * 0x26 + 1] + (int)recordBuf;
+            strncpy(g_cardNames + slotIndex * 100, (char *)record_table[slotIndex * 0x26 + 1], 100);
+            g_cardNameSlotTerminators[slotIndex * 100] = 0;
+          }
+        }
+        else
+        {
+          result = 0;
+        }
+        free(recordBuf);
       }
-      free(recordBuf);
+      else
+      {
+        result = 0;
+      }
+      free(record_table);
     }
     else
     {
@@ -1827,14 +1852,9 @@ int DrawCardLib_InitializeFromRoot(const char *asset_root)
     return 0;
   strncpy(global_base_directory, asset_root, sizeof(global_base_directory) - 1);
   global_base_directory[sizeof(global_base_directory) - 1] = '\0';
-  strcpy(global_cardart_directory, global_base_directory);
-  strcat(global_cardart_directory, "\\CardArt");
-  global_dither_kernel_id = 3;
-  global_color_depth = 0x10;
-  InitializeCriticalSection(&global_critical_section_for_catalog);
-  if (!InitCardArtGdiResources())
-    return 0;
-  if (!prepare_fonts_and_imgs()) {
+
+  if (!read_cfg(NULL) || !prepare_fonts_and_imgs()) {
+    DestroyAllResources();
     DrawCardLib_Shutdown();
     return 0;
   }
