@@ -5,6 +5,7 @@
 #define SHANDALAR_CHEAT_ENABLE_DEBUG_MENU "EnableDebugMenu"
 #define SHANDALAR_CHEAT_DISABLE_SIEGES "DisableSieges"
 #define SHANDALAR_CHEAT_DISABLE_MONSTER_SPAWNS "DisableMonsterSpawns"
+#define SHANDALAR_CHEAT_UNLIMITED_FOOD "UnlimitedFood"
 
 int shandalar_cheat_enabled(const char *option_name);
 

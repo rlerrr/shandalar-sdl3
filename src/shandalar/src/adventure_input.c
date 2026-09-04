@@ -629,7 +629,7 @@ void UpdateAdventureWorldInputAndMovement(void)
 
     if (((g_monster_timer & 0x1fU) == 0) && (g_world_move_dir_index != 0))
     {
-      if (g_food != 0)
+      if (g_food != 0 && !shandalar_cheat_enabled(SHANDALAR_CHEAT_UNLIMITED_FOOD))
       {
         g_food = g_food - 1;
       }
