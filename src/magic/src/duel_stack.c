@@ -16,6 +16,39 @@
 #include "global_strings.h"
 #include "shared_startup.h"
 
+static const char *engine_loop_card_name(int internal_card_id)
+{
+  if (internal_card_id >= 0 && internal_card_id < g_card_count + 16)
+  {
+    return global_cards_data[internal_card_id].name[0] != '\0'
+               ? global_cards_data[internal_card_id].name
+               : "<unnamed>";
+  }
+
+  return "<none>";
+}
+
+#define ASSERT_REASONABLE_ENGINE_LOOP(loop_name_, iteration_)                                      \
+  do                                                                                              \
+  {                                                                                               \
+    ++(iteration_);                                                                               \
+    if ((iteration_) > 1024)                                                                      \
+    {                                                                                             \
+      assert(0, __FILE__, __LINE__,                                                               \
+             "%s exceeded 1024 iterations: phase=%d event=%d trigger=%d ai_mode=%d "              \
+             "ai_decision=%d stack=%d fizzled=%d actions=%d cursor=%d "                           \
+             "selected_iid=%d selected_card=\"%s\" affected_player=%d affected_slot=%d "         \
+             "affected_iid=%d affected_card=\"%s\"\n",                                          \
+             (loop_name_), g_current_phase, g_current_action_event_code, g_trigger_condition,     \
+             g_duel_ai_mode_state, g_ai_decision_code, g_stack_size, g_spell_fizzled,             \
+             g_recorded_action_count, g_recorded_action_cursor,                                   \
+             g_selected_response_internal_card_id,                                                \
+             engine_loop_card_name(g_selected_response_internal_card_id),                         \
+             g_affected_card_controller, g_affected_card, g_affected_internal_card_id,             \
+             engine_loop_card_name(g_affected_internal_card_id));                                 \
+    }                                                                                             \
+  } while (0)
+
 // FUNCTION: MAGIC 0x0043e18b
 // FUNCTION: SHANDALAR 0x00409a0b
 int draw_card_for_player(int player)
@@ -2119,6 +2152,7 @@ void reset_trigger_dispatch_state(void)
 int allow_response(int response_player, int phase, char *prompt, int event_code)
 {
   int saved_allow_response_flag = g_phase_stop_suppressed;
+  int response_loop_iterations = 0;
 
   if (g_stack_size == 0)
   {
@@ -2133,6 +2167,7 @@ int allow_response(int response_player, int phase, char *prompt, int event_code)
 
     do
     {
+      ASSERT_REASONABLE_ENGINE_LOOP("allow_response", response_loop_iterations);
       g_response_action_taken = 0;
       result = allow_response_once(response_player, phase, prompt, event_code);
     } while (g_response_action_taken != 0 && g_stack_size <= 0);
@@ -2171,6 +2206,9 @@ int allow_response_once(int response_player, int phase, char *prompt, int event_
   char prompt_copy[128];           /* ebp-0x88 */
   int saved_trigger_condition;     /* ebp-0x8 */
   int saved_DAT_00561390;          /* ebp-0x4 */
+  int active_response_iterations = 0;
+  int opposing_response_iterations = 0;
+  int response_window_iterations = 0;
 
   saved_trigger_condition = g_trigger_condition;
   saved_DAT_007aadec = g_current_action_event_code;
@@ -2233,9 +2271,11 @@ int allow_response_once(int response_player, int phase, char *prompt, int event_
 
   while (1)
   {
+    ASSERT_REASONABLE_ENGINE_LOOP("allow_response_once/window", response_window_iterations);
   restart_response_window:
     do
     {
+      ASSERT_REASONABLE_ENGINE_LOOP("allow_response_once/active", active_response_iterations);
       g_ai_decision_parameter = can_stop_for_phase(1);
 
       if ((g_duel_network_flags & 2) != 0)
@@ -2297,6 +2337,7 @@ int allow_response_once(int response_player, int phase, char *prompt, int event_
 
     while (1)
     {
+      ASSERT_REASONABLE_ENGINE_LOOP("allow_response_once/opposing", opposing_response_iterations);
       saved_DAT_00777aa8_in_loop = g_ai_decision_parameter;
       saved_phase_stop_suppressed = g_phase_stop_suppressed;
 
@@ -2507,6 +2548,7 @@ int dispatch_trigger(int player, trigger_t trig, const char *prompt, int TENTATI
   unsigned int saved_ui;   // ebp-0xc
   int saved_current_turn;  // ebp-0x8
   int saved_current_phase; // ebp-0x4
+  int trigger_loop_iterations = 0;
 
   ++g_nested_trigger_depth;
 
@@ -2523,6 +2565,7 @@ int dispatch_trigger(int player, trigger_t trig, const char *prompt, int TENTATI
 
   do
   {
+    ASSERT_REASONABLE_ENGINE_LOOP("dispatch_trigger", trigger_loop_iterations);
     if ((g_duel_network_flags & 2) != 0)
     {
       g_response_processing_flags = 1;
