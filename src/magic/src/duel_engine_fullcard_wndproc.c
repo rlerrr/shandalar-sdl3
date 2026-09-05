@@ -110,7 +110,8 @@ int register_MAGICGAME_FullCardClass(LPCSTR class_name)
   {
     result = 0;
   }
-  g_magicgame_full_card_menu = CreatePopupMenu();
+  if (g_magicgame_full_card_menu == (HMENU)0)
+    g_magicgame_full_card_menu = CreatePopupMenu();
   load_text_with_tab_escapes(global_ui_strings_filename, "MENU_FULLCARD");
   strcpy(g_full_card_menu_expand_text, g_text_lines[0]);
   strcpy(g_full_card_menu_help_text, g_text_lines[1]);

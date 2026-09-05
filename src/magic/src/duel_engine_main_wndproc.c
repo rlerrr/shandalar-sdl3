@@ -2313,7 +2313,8 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
 
 // FUNCTION: MAGIC 0x00506240
 // FUNCTION: SHANDALAR 0x00411e30
-int pick_internal_card_from_list_dialog(char *prompt, int initial_card_id, int filter)
+int pick_internal_card_from_list_dialog_for_owner(HWND owner, char *prompt,
+                                                  int initial_card_id, int filter)
 {
   int dialog_result;
   int card_index;
@@ -2330,7 +2331,7 @@ int pick_internal_card_from_list_dialog(char *prompt, int initial_card_id, int f
 
   dialog_result = DialogBoxParamA(g_app_instance,
                                   (LPCSTR)0xe0,
-                                  g_duel_window_hwnd,
+                                  owner,
                                   dlgproc_pick_card_from_list,
                                   (LPARAM)&g_pick_card_dialog_context);
   if (dialog_result == -1)
@@ -2347,6 +2348,12 @@ int pick_internal_card_from_list_dialog(char *prompt, int initial_card_id, int f
   }
 
   return -1;
+}
+
+int pick_internal_card_from_list_dialog(char *prompt, int initial_card_id, int filter)
+{
+  return pick_internal_card_from_list_dialog_for_owner(
+      g_duel_window_hwnd, prompt, initial_card_id, filter);
 }
 
 // FUNCTION: MAGIC 0x004649ef

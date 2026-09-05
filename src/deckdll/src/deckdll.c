@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include "platform/legacy_io.h"
+#include "platform/cheat_options.h"
 
 #include "deckdll.h"
 #include "full_deck.h"
@@ -433,6 +434,8 @@ static Void_fn_int_int SetCardInDeck;
 static Int_fn_int SellPrice;
 static void (*g_host_begin_deckbuilder)(void);
 static void (*g_host_end_deckbuilder)(void);
+static int (*g_debug_card_picker)(HWND owner);
+static int (*g_debug_card_sort_key)(int internal_card_id);
 
 bool check_filters(csvid_t csvid);
 int InitLicenseSecretsFromRegistry(void);
@@ -486,6 +489,13 @@ void deck_set_host_pump_hooks(void (*begin)(void), void (*end)(void))
 {
   g_host_begin_deckbuilder = begin;
   g_host_end_deckbuilder = end;
+}
+
+void deck_set_debug_card_picker(int (*pick_card)(HWND owner),
+                                int (*card_sort_key)(int internal_card_id))
+{
+  g_debug_card_picker = pick_card;
+  g_debug_card_sort_key = card_sort_key;
 }
 #endif
 
@@ -1073,14 +1083,22 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
     if (!CardIDFromType || !CardInDeck || !SetCardInDeck || !SellPrice || !deck || !Gold || !Scards || !global_external_current_deck)
     {
       char missing[512] = "Deck Builder WinMain: Couldn't find External Functions:";
-      if (!CardIDFromType) strcat(missing, " CardIDFromType");
-      if (!CardInDeck) strcat(missing, " CardInDeck");
-      if (!SetCardInDeck) strcat(missing, " SetCardInDeck");
-      if (!SellPrice) strcat(missing, " SellPrice");
-      if (!deck) strcat(missing, " deck");
-      if (!Gold) strcat(missing, " Gold");
-      if (!Scards) strcat(missing, " Scards");
-      if (!global_external_current_deck) strcat(missing, " _currentDeck");
+      if (!CardIDFromType)
+        strcat(missing, " CardIDFromType");
+      if (!CardInDeck)
+        strcat(missing, " CardInDeck");
+      if (!SetCardInDeck)
+        strcat(missing, " SetCardInDeck");
+      if (!SellPrice)
+        strcat(missing, " SellPrice");
+      if (!deck)
+        strcat(missing, " deck");
+      if (!Gold)
+        strcat(missing, " Gold");
+      if (!Scards)
+        strcat(missing, " Scards");
+      if (!global_external_current_deck)
+        strcat(missing, " _currentDeck");
       fatal_err(missing, 0);
       return 0;
     }
@@ -1092,12 +1110,18 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
       if (!CardIDFromType || !CardTypeFromID || !CardInDeck || !SetCardInDeck || !Gold || !global_external_deckname)
       {
         char missing[512] = "Deck Builder WinMain: Couldn't find External Functions:";
-        if (!CardIDFromType) strcat(missing, " CardIDFromType");
-        if (!CardTypeFromID) strcat(missing, " CardTypeFromID");
-        if (!CardInDeck) strcat(missing, " CardInDeck");
-        if (!SetCardInDeck) strcat(missing, " SetCardInDeck");
-        if (!Gold) strcat(missing, " Gold");
-        if (!global_external_deckname) strcat(missing, " szDeckName");
+        if (!CardIDFromType)
+          strcat(missing, " CardIDFromType");
+        if (!CardTypeFromID)
+          strcat(missing, " CardTypeFromID");
+        if (!CardInDeck)
+          strcat(missing, " CardInDeck");
+        if (!SetCardInDeck)
+          strcat(missing, " SetCardInDeck");
+        if (!Gold)
+          strcat(missing, " Gold");
+        if (!global_external_deckname)
+          strcat(missing, " szDeckName");
         fatal_err(missing, 0);
         return 0;
       }
@@ -1160,7 +1184,8 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   ReadDeckbuilderCsv("DeckBuilder.csv", global_origrarities);
 
 #ifdef SHANDALAR_SDL_WIN32_COMPAT
-  if ((global_db_flags_1 & DBFLAGS_SHANDALAR) && g_host_begin_deckbuilder) {
+  if ((global_db_flags_1 & DBFLAGS_SHANDALAR) && g_host_begin_deckbuilder)
+  {
     g_host_begin_deckbuilder();
     host_pump_active = 1;
   }
@@ -2693,7 +2718,7 @@ wndproc_TitleClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   PAINTSTRUCT paint;
   RECT rect2; // ebp - 0x20
   RECT hint_rect;
-  RECT rect;  // ebp - 0x10
+  RECT rect; // ebp - 0x10
   int saved_dc;
   POINT drag_source_point;
   char hint_text[64];
@@ -2956,7 +2981,8 @@ LRESULT CALLBACK wndproc_FullCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   {
     static DWORD last_click = 0;
     DWORD now = GetTickCount();
-    if (now - last_click <= GetDoubleClickTime()) {
+    if (now - last_click <= GetDoubleClickTime())
+    {
 #ifdef SHANDALAR_SDL_WIN32_COMPAT
       if (g_deck_full_card_press_window != (HWND)0)
         KillTimer(g_deck_full_card_press_window, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
@@ -5044,6 +5070,76 @@ int ask_about_saving_deck(void)
   return rval;
 }
 
+static void add_debug_card_to_deck(HWND owner)
+{
+  int internal_card_id;
+  int csvid;
+  int sort_key;
+  int insert_at;
+  int i;
+
+  if (!g_debug_card_picker || !g_debug_card_sort_key ||
+      !shandalar_cheat_enabled(SHANDALAR_CHEAT_ENABLE_DEBUG_MENU))
+    return;
+
+  if (global_deck_num_entries >= 500)
+  {
+    MessageBoxA(owner, "Your collection is full.", "Add card", MB_ICONINFORMATION);
+    return;
+  }
+
+  internal_card_id = g_debug_card_picker(owner);
+  if (internal_card_id < 0)
+    return;
+
+  csvid = CardIDFromType(internal_card_id);
+  if (internal_card_id > 0xfff || csvid < 0 || csvid >= global_available_slots)
+  {
+    MessageBoxA(owner, "That card cannot be added to the adventure deck.",
+                "Add card", MB_ICONWARNING);
+    return;
+  }
+
+  if (global_edited_deck_num_entries >=
+      (int)(sizeof(global_edited_deck.entries) / sizeof(global_edited_deck.entries[0])))
+  {
+    for (i = 0; i < global_edited_deck_num_entries; ++i)
+      if (global_edited_deck.entries[i].DeckEntry_csvid == csvid)
+        break;
+    if (i == global_edited_deck_num_entries)
+    {
+      MessageBoxA(owner, "The deck has too many different cards.",
+                  "Add card", MB_ICONINFORMATION);
+      return;
+    }
+  }
+
+  /* Shandalar keeps physical collection entries in descending card-group
+   * order.  Preserve that invariant so later rewards can still use
+   * AddCardToDeckSorted safely. */
+  sort_key = g_debug_card_sort_key(internal_card_id);
+  insert_at = 0;
+  while (insert_at < global_deck_num_entries &&
+         g_debug_card_sort_key(global_deck[insert_at].GDE_iid) >= sort_key)
+    ++insert_at;
+
+  memmove(&global_deck[insert_at + 1], &global_deck[insert_at],
+          (global_deck_num_entries - insert_at) * sizeof(global_deck[0]));
+  global_deck[insert_at].GDE_csvid = csvid;
+  global_deck[insert_at].GDE_iid = internal_card_id;
+  global_deck[insert_at].GDE_Available = 0;
+  global_deck[insert_at].GDE_DecksBits = 1 << global_current_deck;
+  ++global_deck_num_entries;
+
+  insert_cards_into_deck(csvid, 1, &global_edited_deck);
+  global_deck_was_edited = true;
+  count_packs();
+  SendMessageA(global_decksurface_hwnd, WM_USER + 1, 0, 0);
+  filter_cards_in_lists(global_listbox_hwnd, global_horzlist_hwnd);
+  refresh_numofcards_text();
+  SetFocus(global_horzlist_hwnd);
+}
+
 // FUNCTION: DECKDLL 0x10008abf
 static void
 TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int singleclick)
@@ -6175,6 +6271,11 @@ wndproc_MainClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     case RES_MENU_CONSOLIDATE:
       SendMessage(global_decksurface_hwnd, msg, wparam, lparam);
+      break;
+
+    case RES_MAINMENU_DEBUG_ADD_CARD:
+      if (global_db_flags_1 & DBFLAGS_SHANDALAR)
+        add_debug_card_to_deck(hwnd);
       break;
 
     case RES_MAINMENU_EFFECTS:

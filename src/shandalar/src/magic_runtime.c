@@ -35,6 +35,9 @@ extern void shandalar_host_begin_deckbuilder(void);
 extern void shandalar_host_end_deckbuilder(void);
 extern void deck_register_dialog_resources(void);
 extern void duel_register_dialog_resources(void);
+extern int register_MAGICGAME_FullCardClass(LPCSTR class_name);
+extern int pick_internal_card_from_list_dialog_for_owner(
+    HWND owner, char *prompt, int initial_card_id, int filter);
 extern char global_base_directory[0x105];
 extern int g_selected_wizard_color;
 extern int g_name_entry_cursor;
@@ -51,6 +54,25 @@ int is_card_available_in_expansion(unsigned int card_id, int expansion);
 unsigned int HasExpansion(unsigned char expansion_mask);
 int deckdll_create_fonts(void);
 void deckdll_destroy_create_fonts_resources(void);
+color_t single_color_test_bit_to_color_t(color_test_t color_mask);
+
+static int shandalar_pick_debug_deck_card(HWND owner)
+{
+  register_MAGICGAME_FullCardClass(CLASS_MAGICGAME_FULL_CARD);
+  return pick_internal_card_from_list_dialog_for_owner(
+      owner, "Add a card to your deck", -1, -1);
+}
+
+static int shandalar_deck_card_sort_key(int internal_card_id)
+{
+  if (internal_card_id < 0 || internal_card_id >= g_card_count)
+    return -1;
+
+  return single_color_test_bit_to_color_t(
+             (color_test_t)global_cards_data[internal_card_id].color) * 0x20 +
+         (unsigned int)global_cards_data[internal_card_id].type * 0x100 +
+         (unsigned char)global_cards_data[internal_card_id].name[0];
+}
 
 #ifdef __EMSCRIPTEN__
 void __cdecl _assert(void *expression, void *filename, unsigned line)
@@ -278,6 +300,8 @@ int shandalar_runtime_init(const char *asset_root)
   duel_register_dialog_resources();
   deck_set_host_pump_hooks(shandalar_host_begin_deckbuilder,
                            shandalar_host_end_deckbuilder);
+  deck_set_debug_card_picker(shandalar_pick_debug_deck_card,
+                             shandalar_deck_card_sort_key);
   if (!g_deckbuilder_attached) {
     if (!DllMain((HINSTANCE)1, DLL_PROCESS_ATTACH, NULL))
       return 0;

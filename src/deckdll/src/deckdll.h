@@ -314,6 +314,8 @@ extern "C" {
 #ifdef SHANDALAR_SDL_WIN32_COMPAT
   void deck_register_dialog_resources(void);
   void deck_set_host_pump_hooks(void (*begin)(void), void (*end)(void));
+  void deck_set_debug_card_picker(int (*pick_card)(HWND owner),
+                                  int (*card_sort_key)(int internal_card_id));
 #endif
   WPARAM deckbuilder_main(HWND parent_hwnd, int db_flags_1, int db_flags_2);
   void delete_and_close_object(HANDLE obj);

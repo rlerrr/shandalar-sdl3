@@ -1,6 +1,7 @@
 #include "deckdll.h"
 #include "full_deck.h"
 #include "mystdbool.h"
+#include "platform/cheat_options.h"
 #include <stdlib.h>
 
 extern HINSTANCE global_hinstance;
@@ -754,6 +755,11 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
     }
 
+    case RES_MAINMENU_DEBUG_ADD_CARD:
+      SendMessageA(global_main_hwnd, WM_COMMAND,
+                   RES_MAINMENU_DEBUG_ADD_CARD, 0);
+      break;
+
     case RES_MENU_REFRESH:
     {
       GetClientRect(hwnd, &refresh_rect);
@@ -974,7 +980,12 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       {
         AppendMenu(global_decksurface_popup, MF_ENABLED, RES_MENU_COLORINTODECK, text_lines[0]);
         AppendMenu(global_decksurface_popup, MF_ENABLED, RES_MENU_COLOROUTOFDECK, text_lines[1]);
-
+        if (shandalar_cheat_enabled(SHANDALAR_CHEAT_ENABLE_DEBUG_MENU))
+        {
+          AppendMenu(global_decksurface_popup, MF_SEPARATOR, 0, NULL);
+          AppendMenuA(global_decksurface_popup, MF_ENABLED,
+                      RES_MAINMENU_DEBUG_ADD_CARD, "Add card...");
+        }
         AppendMenu(global_decksurface_popup, MF_SEPARATOR, 0, NULL);
       }
       AppendMenu(global_decksurface_popup, MF_ENABLED, RES_MENU_CONSOLIDATE, text_lines[2]);
