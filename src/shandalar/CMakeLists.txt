@@ -104,6 +104,7 @@ if(EMSCRIPTEN)
     "-sALLOW_MEMORY_GROWTH=1"
     "-sFORCE_FILESYSTEM=1"
     "-sMAXIMUM_MEMORY=1GB"
+    "-sSTACK_SIZE=1MB"
     "-sASYNCIFY=1"
     # Experimentally, duel UI suspension needs this much Asyncify stack.
     "-sASYNCIFY_STACK_SIZE=262144"
