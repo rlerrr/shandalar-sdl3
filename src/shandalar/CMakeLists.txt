@@ -105,10 +105,8 @@ if(EMSCRIPTEN)
     "-sFORCE_FILESYSTEM=1"
     "-sMAXIMUM_MEMORY=1GB"
     "-sASYNCIFY=1"
-    # Duel input can yield from deeply nested engine/UI call paths.  Give the
-    # Asyncify unwind buffer substantially more headroom than its 4 KiB
-    # default; 64 KiB is inexpensive here and matches the configured C stack.
-    "-sASYNCIFY_STACK_SIZE=65536"
+    # Experimentally, duel UI suspension needs this much Asyncify stack.
+    "-sASYNCIFY_STACK_SIZE=262144"
     "-sEXIT_RUNTIME=1"
     "-sFETCH=1"
     "-lidbfs.js"
