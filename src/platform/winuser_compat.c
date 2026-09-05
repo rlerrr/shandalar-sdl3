@@ -801,7 +801,11 @@ HWND GetDlgItem(HWND parent, int id)
   if (!valid_window(parent))
     return NULL;
   for (child = parent->first_child; child; child = child->next_sibling)
-    if (child->control_id == id)
+    /* Owned popup windows share the owner's bookkeeping list in this
+     * compatibility layer, but they are not child controls on Win32 and must
+     * not participate in dialog-item lookup.  This matters for ID 0 controls:
+     * the combat window owns two ID 0 popups in addition to its scrollbar. */
+    if ((child->style & WS_CHILD) == WS_CHILD && child->control_id == id)
       return child;
   return NULL;
 }

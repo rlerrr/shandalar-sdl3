@@ -315,6 +315,17 @@ int main(void)
   CHECK(shandalar_window_content_revision(child) == content_revision + 1);
   CHECK(GetParent(child) == parent);
   CHECK(GetDlgItem(parent, 42) == child);
+  {
+    HWND zero_id_child = CreateWindowExA(0, "CompatTest", "zero id child",
+                                         WS_CHILD | WS_VISIBLE, 0, 0, 10, 10,
+                                         parent, (HMENU)0, NULL, NULL);
+    HWND zero_id_popup = CreateWindowExA(0, "CompatTest", "zero id popup",
+                                         WS_POPUP | WS_VISIBLE, 0, 0, 10, 10,
+                                         parent, (HMENU)0, NULL, NULL);
+    CHECK(zero_id_child != NULL);
+    CHECK(zero_id_popup != NULL);
+    CHECK(GetDlgItem(parent, 0) == zero_id_child);
+  }
   CHECK(GetDlgCtrlID(child) == 42);
   CHECK(GetWindowTextA(child, text, sizeof(text)) == 5);
   CHECK(strcmp(text, "child") == 0);
