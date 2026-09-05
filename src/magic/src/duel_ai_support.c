@@ -59,6 +59,20 @@ int TENTATIVE_set_timestamps(int player, int card)
       return slot;
     }
   }
+  assert(0, __FILE__, __LINE__,
+         "Timestamp table exhausted: player=%d card=%d iid=%d card_name=\"%s\" "
+         "active_counts=%d,%d phase=%d ai_mode=%d stack=%d\n",
+         player, card,
+         (player >= 0 && player < 2 && card >= 0 && card < 151)
+             ? PLAYER_CARD_INSTANCE(player, card).internal_card_id
+             : -1,
+         (player >= 0 && player < 2 && card >= 0 && card < 151 &&
+          PLAYER_CARD_INSTANCE(player, card).internal_card_id >= 0 &&
+          PLAYER_CARD_INSTANCE(player, card).internal_card_id < g_card_count)
+             ? global_cards_data[PLAYER_CARD_INSTANCE(player, card).internal_card_id].name
+             : "<invalid>",
+         g_active_cards_count[0], g_active_cards_count[1], g_current_phase,
+         g_duel_ai_mode_state, g_stack_size);
   return -1;
 }
 

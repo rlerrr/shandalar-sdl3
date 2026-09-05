@@ -1017,6 +1017,15 @@ int add_card_to_hand(int player, int internal_card_id)
     }
   }
 
+  assert(0, __FILE__, __LINE__,
+         "Card-instance pool exhausted: player=%d iid=%d card_name=\"%s\" "
+         "active_counts=%d,%d phase=%d ai_mode=%d stack=%d\n",
+         player, internal_card_id,
+         (internal_card_id >= 0 && internal_card_id < g_card_count)
+             ? global_cards_data[internal_card_id].name
+             : "<invalid>",
+         g_active_cards_count[0], g_active_cards_count[1], g_current_phase,
+         g_duel_ai_mode_state, g_stack_size);
   show_duel_system_error("AddCard error: No more room in cd to add a card");
   return -1;
 }

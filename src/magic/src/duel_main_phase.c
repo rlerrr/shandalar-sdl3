@@ -28,6 +28,7 @@ int allow_response(int response_player, int phase, char *prompt, int event_code)
 int dispatch_trigger(int player, trigger_t trig, const char *prompt, int TENTATIVE_allow_response);
 int dispatch_trigger_twice_once_with_each_player_as_reason(int reason_for_trig, trigger_t trig, const char *prompt, int a4);
 void start_ai_decision_search(int decision_code, int time_scale);
+int get_ai_search_elapsed_time(void);
 void __stdcall reset_ai_search_trial_state(void);
 void resolve_mana_burn(void);
 int check_duel_finished(void);
@@ -420,6 +421,7 @@ int main_phase(unsigned int player, int phase_mode, int *phase_value)
   int skip_phase;
   int saved_response_state;
   int main_phase_loop_iterations = 0;
+  DWORD main_phase_loop_started_at = GetTickCount();
 
   other_player = 1 - player;
   if (TRACE_ENABLED)
@@ -488,14 +490,20 @@ restart_main_phase_action_loop:
   do
   {
     ++main_phase_loop_iterations;
-    if (main_phase_loop_iterations > 1024)
+    if (main_phase_loop_iterations > 100000000 ||
+        (g_duel_ai_mode_state == 1 &&
+         (DWORD)(GetTickCount() - main_phase_loop_started_at) > 10000))
     {
       assert(0, __FILE__, __LINE__,
-             "main_phase exceeded 1024 iterations: player=%u phase=%d mode=%d ai_mode=%d "
+             "main_phase runaway: iterations=%d wall_ms=%lu ai_elapsed=%d "
+             "player=%u phase=%d mode=%d ai_mode=%d "
              "ai_decision=%d stack=%d fizzled=%d actions=%d cursor=%d "
              "selected_slot=%d selected_iid=%d selected_card=\"%s\" "
              "affected_player=%d affected_slot=%d affected_iid=%d affected_card=\"%s\"\n",
-             player, g_current_phase, phase_mode, g_duel_ai_mode_state, g_ai_decision_code,
+             main_phase_loop_iterations,
+             (unsigned long)(DWORD)(GetTickCount() - main_phase_loop_started_at),
+             get_ai_search_elapsed_time(), player, g_current_phase, phase_mode,
+             g_duel_ai_mode_state, g_ai_decision_code,
              g_stack_size, g_spell_fizzled, g_recorded_action_count, g_recorded_action_cursor,
              main_phase_selected_card, main_phase_selected_internal_card_id,
              main_phase_loop_card_name(main_phase_selected_internal_card_id),
