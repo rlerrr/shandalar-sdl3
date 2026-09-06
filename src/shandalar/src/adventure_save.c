@@ -159,8 +159,9 @@ int LoadGameFromPath(char *save_file_path)
   page4_bounds.unk_1c = 4;
   page4_bounds.font_slot = 0;
   page4_bounds_ptr = &page4_bounds;
-  image_width = 0x89;
-  image_height = 0xa9;
+
+  image_width = 0x8a;
+  image_height = 0xaa;
   if (g_facemaker_page4_dib == 0)
   {
     page4_dib = (DIBSurface *)CreateGraphicsPage(4, image_width * 2, image_height, 8);

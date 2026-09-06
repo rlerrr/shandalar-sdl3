@@ -156,7 +156,8 @@ static int restore_shandalar_opening_graphics(void)
 
   global_screen_width = 0x400;
   global_screen_height = 0x300;
-  if (!InitializeGraphicsSystem(global_screen_width, global_screen_height, 8))
+
+  if (!InitializeGraphicsSystem(global_screen_width, global_screen_height, -1))
     return 0;
 
   for (page_number = 1; page_number < 3; ++page_number) {
