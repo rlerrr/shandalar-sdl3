@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <windows.h>
+#include <SDL3/SDL_timer.h>
 
 #include "cardartlib/src/assert.h"
 #include "cardartlib/src/palette.h"
@@ -1435,21 +1437,10 @@ void show_card_preview_if_human(unsigned int internal_card_id, int unk1, char *p
 // FUNCTION: SHANDALAR 0x00559dcd
 int get_duel_thread_time_ms(void)
 {
-  unsigned int elapsed_time;
-  FILETIME scratch_time;
-  FILETIME user_time;
-
-  if (g_is_win9x != 0)
-  {
-    DeviceIoControl(g_mpstime_vxd_handle, 2, NULL, 0, &elapsed_time, 4, NULL, NULL);
-  }
-  else
-  {
-    GetThreadTimes(GetCurrentThread(), &scratch_time, &scratch_time, &scratch_time, &user_time);
-    elapsed_time = user_time.dwLowDateTime / 10000;
-  }
-
-  return elapsed_time;
+  /* AI searches need a monotonic wall clock.  The legacy implementation used
+   * only FILETIME::dwLowDateTime, which wrapped before conversion every
+   * 2^32 / 10000 ms (about 7 minutes) and could disable the search timeout. */
+  return (int)(uint32_t)SDL_GetTicks();
 }
 
 // FUNCTION: MAGIC 0x004a7cba

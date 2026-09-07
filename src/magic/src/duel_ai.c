@@ -1,5 +1,6 @@
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1643,10 +1644,14 @@ void restore_ai_search_state(void)
 // FUNCTION: SHANDALAR 0x00559e52
 int get_ai_search_elapsed_time(void)
 {
-  unsigned int current_time;
+  uint32_t current_time;
+  uint32_t start_time;
+  uint32_t elapsed_time;
 
-  current_time = get_duel_thread_time_ms();
-  return (int)((current_time - g_ai_trace_enabled) * 100) / 0x151d;
+  current_time = (uint32_t)get_duel_thread_time_ms();
+  start_time = (uint32_t)g_ai_trace_enabled;
+  elapsed_time = current_time - start_time;
+  return (int)(((uint64_t)elapsed_time * 100u) / 0x151d);
 }
 
 // FUNCTION: MAGIC 0x0050e79b
