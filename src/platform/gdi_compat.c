@@ -87,6 +87,16 @@ typedef struct PaintObject {
   int width;
 } PaintObject;
 
+static PaintObject g_stock_white_brush = {{OBJECT_BRUSH}, RGB(255, 255, 255), 0, 0, 1};
+static PaintObject g_stock_light_gray_brush = {{OBJECT_BRUSH}, RGB(192, 192, 192), 0, 0, 1};
+static PaintObject g_stock_gray_brush = {{OBJECT_BRUSH}, RGB(128, 128, 128), 0, 0, 1};
+static PaintObject g_stock_dark_gray_brush = {{OBJECT_BRUSH}, RGB(64, 64, 64), 0, 0, 1};
+static PaintObject g_stock_black_brush = {{OBJECT_BRUSH}, RGB(0, 0, 0), 0, 0, 1};
+static PaintObject g_stock_null_brush = {{OBJECT_BRUSH}, RGB(0, 0, 0), 1, 0, 1};
+static PaintObject g_stock_white_pen = {{OBJECT_PEN}, RGB(255, 255, 255), 0, 0, 1};
+static PaintObject g_stock_black_pen = {{OBJECT_PEN}, RGB(0, 0, 0), 0, 0, 1};
+static PaintObject g_stock_null_pen = {{OBJECT_PEN}, RGB(0, 0, 0), 1, 0, 1};
+
 typedef struct CompatRegion {
   ObjectHeader header;
   RECT rect;
@@ -462,6 +472,8 @@ HDC CreateCompatibleDC(HDC unused)
     dc->background_mode = OPAQUE;
     dc->font = (HFONT)GetStockObject(SYSTEM_FONT);
     reference_font(dc->font);
+    dc->pen = (HPEN)GetStockObject(BLACK_PEN);
+    dc->brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
     dc->window_ext_x = dc->viewport_ext_x = 1;
     dc->window_ext_y = dc->viewport_ext_y = 1;
   }
@@ -672,6 +684,16 @@ BOOL DeleteObject(HGDIOBJ object)
   if (!header)
     return FALSE;
   if (object == (HGDIOBJ)g_default_gui_font)
+    return TRUE;
+  if (object == (HGDIOBJ)&g_stock_white_brush ||
+      object == (HGDIOBJ)&g_stock_light_gray_brush ||
+      object == (HGDIOBJ)&g_stock_gray_brush ||
+      object == (HGDIOBJ)&g_stock_dark_gray_brush ||
+      object == (HGDIOBJ)&g_stock_black_brush ||
+      object == (HGDIOBJ)&g_stock_null_brush ||
+      object == (HGDIOBJ)&g_stock_white_pen ||
+      object == (HGDIOBJ)&g_stock_black_pen ||
+      object == (HGDIOBJ)&g_stock_null_pen)
     return TRUE;
   if (header->kind == OBJECT_BITMAP) {
     HBITMAP bitmap = (HBITMAP)object;
@@ -1532,10 +1554,6 @@ UINT SetTextAlign(HDC dc, UINT align)
 
 HGDIOBJ GetStockObject(int object)
 {
-  COLORREF color = object == WHITE_BRUSH ? RGB(255,255,255) :
-                   object == LTGRAY_BRUSH ? RGB(192,192,192) :
-                   object == GRAY_BRUSH ? RGB(128,128,128) :
-                   object == DKGRAY_BRUSH ? RGB(64,64,64) : RGB(0,0,0);
   if (object == DEFAULT_GUI_FONT || object == SYSTEM_FONT) {
     if (!g_default_gui_font) {
       LOGFONTA description;
@@ -1548,13 +1566,18 @@ HGDIOBJ GetStockObject(int object)
     }
     return g_default_gui_font;
   }
-  if (object == NULL_BRUSH)
-    return create_paint(OBJECT_BRUSH, color, 1);
-  if (object == BLACK_PEN)
-    return CreatePen(0, 1, color);
-  if (object == NULL_PEN)
-    return create_paint(OBJECT_PEN, color, 1);
-  return CreateSolidBrush(color);
+  switch (object) {
+  case WHITE_BRUSH: return &g_stock_white_brush;
+  case LTGRAY_BRUSH: return &g_stock_light_gray_brush;
+  case GRAY_BRUSH: return &g_stock_gray_brush;
+  case DKGRAY_BRUSH: return &g_stock_dark_gray_brush;
+  case BLACK_BRUSH: return &g_stock_black_brush;
+  case NULL_BRUSH: return &g_stock_null_brush;
+  case WHITE_PEN: return &g_stock_white_pen;
+  case BLACK_PEN: return &g_stock_black_pen;
+  case NULL_PEN: return &g_stock_null_pen;
+  default: return NULL;
+  }
 }
 
 HPALETTE CreatePalette(const LOGPALETTE *palette)

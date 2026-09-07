@@ -171,6 +171,7 @@ typedef struct MEASUREITEMSTRUCT {
 #define BLACK_BRUSH 4
 #define NULL_BRUSH 5
 #define HOLLOW_BRUSH NULL_BRUSH
+#define WHITE_PEN 6
 #define NULL_PEN 8
 #define PS_SOLID 0
 #define PS_INSIDEFRAME 6

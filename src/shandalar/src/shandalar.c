@@ -194,7 +194,7 @@ int g_mouse_button_mask_snapshot;
 DialogBoxSpriteBank g_dialog_box_sprite_bank;
 // GLOBAL: SHANDALAR 0x0058e050
 // GLOBAL: SHANDALAR 0x0058c5ec
-int g_dungeon_card_effect_by_color[4] = {0, 8, 867, 939};
+int g_dungeon_card_effect_by_color[6] = {0, 8, 867, 939, 178, 51};
 // GLOBAL: SHANDALAR 0x0058c5fc
 int g_dungeon_card_effect_by_monster_flags[9] = {178, 51, 159, 287, 63, 114, 229, 5, -1};
 // GLOBAL: SHANDALAR 0x0058c620

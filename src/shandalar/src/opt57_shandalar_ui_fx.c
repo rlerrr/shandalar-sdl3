@@ -553,7 +553,7 @@ void BlitRectByStaggeredRandomTileOrder(HDC dst_hdc, int x, int y, int w, int h,
     do
     {
       *state = (state[-5] * 5 + 1) % (int)modulus;
-      rng_step = rng_list_index % 0x14;
+      rng_step = ((rng_list_index % 0x14) + 0x14) % 0x14;
       rng_list_index = rng_list_index + 1;
       state[1] = g_ui_fx_lcg_multipliers[rng_step] * 4 + 1;
       state[2] = 1;

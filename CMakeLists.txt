@@ -16,6 +16,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+if(EMSCRIPTEN)
+  # Emscripten's libc strlcpy reads past the terminator in word-sized
+  # chunks, which ASan catches on short strings. Use SDL's bounded-copy
+  # fallback instead, including when reconfiguring an existing build.
+  set(LIBC_HAS_STRLCPY OFF)
+  # Instrument dependencies too: ASan must be enabled when compiling every
+  # library as well as when linking the final WebAssembly application.
+  # Unoptimized ASan instrumentation can exceed browser limits on Wasm
+  # locals in SDL's macro-heavy software rendering functions.
+  add_compile_options("$<$<CONFIG:Debug>:-O1;-g;-fsanitize=address;-fsanitize-recover=address;-mllvm;-asan-instrument-reads=false>")
+  # ASan's shadow memory and instrumented globals must fit at link time;
+  # runtime memory growth cannot satisfy wasm-ld's initial-memory minimum.
+  add_link_options("$<IF:$<CONFIG:Debug>,-g,--profiling-funcs>"
+                   "$<$<CONFIG:Debug>:-O1;-fsanitize=address;-asan-instrument-reads=false;-sASSERTIONS=1;-sINITIAL_MEMORY=256MB>")
+endif()
+
 option(SHANDALAR_BUILD_FACEMAKER "Build the SDL3 Facemaker application" ON)
 option(SHANDALAR_BUILD_SHANDALAR "Build the SDL3 Shandalar application" OFF)
 option(SHANDALAR_BUILD_DECK "Build the SDL3 Deck Builder application" OFF)
@@ -120,11 +136,6 @@ if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_SHANDALAR)
     GIT_SHALLOW TRUE
   )
   FetchContent_MakeAvailable(imgui)
-endif()
-
-if(EMSCRIPTEN)
-  add_compile_options("$<$<CONFIG:Debug>:-g>")
-  add_link_options("$<IF:$<CONFIG:Debug>,-g,--profiling-funcs>")
 endif()
 
 if(MSVC)

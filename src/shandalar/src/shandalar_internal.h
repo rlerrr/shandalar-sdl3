@@ -131,7 +131,7 @@ extern int g_mouse_y_snapshot;
 extern int g_mouse_button_mask_snapshot;
 extern DialogBoxSpriteBank g_dialog_box_sprite_bank;
 extern HANDLE g_statwin_dll_module;
-extern int g_dungeon_card_effect_by_color[4];
+extern int g_dungeon_card_effect_by_color[6];
 extern int g_dungeon_card_effect_by_monster_flags[9];
 extern int g_mana_castle_card_effect_by_difficulty[5][4];
 extern int g_statwin_exports_by_ordinal[3];

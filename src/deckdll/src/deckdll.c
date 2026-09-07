@@ -575,22 +575,32 @@ read_manalink_ini(void)
   HKEY key;      /* ebp - 0x6c */
   BYTE buf[100]; /* ebp - 0x68 */
   DWORD buflen;  /* ebp - 0x4 */
+  int parsed_value;
 
   if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\MicroProse\\Magic: The Gathering\\DeckBuilderOptions", 0, KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
   {
     buflen = 10;
     if (RegQueryValueEx(key, "Consolidate", NULL, NULL, buf, &buflen) == ERROR_SUCCESS)
-      sscanf((char *)buf, "%d", (int *)&global_cfg.consolidate_from_registry);
+    {
+      if (sscanf((char *)buf, "%d", &parsed_value) == 1)
+        global_cfg.consolidate_from_registry = (signed char)parsed_value;
+    }
     else
       global_cfg.consolidate_from_registry = 1;
 
     if (RegQueryValueEx(key, "Music", NULL, NULL, buf, &buflen) == ERROR_SUCCESS)
-      sscanf((char *)buf, "%d", (int *)((char *)&global_cfg.consolidate_from_registry + 1));
+    {
+      if (sscanf((char *)buf, "%d", &parsed_value) == 1)
+        global_cfg.music = (signed char)parsed_value;
+    }
     else
       global_cfg.music = 1;
 
     if (RegQueryValueEx(key, "Effects", NULL, NULL, buf, &buflen) == ERROR_SUCCESS)
-      sscanf((char *)buf, "%d", (int *)((char *)&global_cfg.consolidate_from_registry + 2));
+    {
+      if (sscanf((char *)buf, "%d", &parsed_value) == 1)
+        global_cfg.effects = (signed char)parsed_value;
+    }
     else
       global_cfg.effects = 1;
 
@@ -626,7 +636,10 @@ read_manalink_ini(void)
   {
     buflen = 100;
     if (RegQueryValueEx(key, "ExpandTextOnBigCard", NULL, NULL, buf, &buflen) == ERROR_SUCCESS)
-      sscanf((char *)buf, "%d", &global_cfg.expand_text);
+    {
+      if (sscanf((char *)buf, "%d", &parsed_value) == 1)
+        global_cfg.expand_text = (signed char)parsed_value;
+    }
     else
       global_cfg.expand_text = 0;
     RegCloseKey(key);

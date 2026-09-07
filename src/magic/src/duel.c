@@ -153,7 +153,7 @@ void copy_autosave_to_save_file(LPCSTR save_path)
     strcat(autosave_path, g_duel_save_extension + 1);
     CopyFileA(autosave_path, save_path, 0);
   }
-  else
+  else if (g_duel_run_mode >= 1 && g_duel_run_mode <= 3)
   {
     sprintf(autosave_path, "%s\\AUTOSAVE.%s", global_savegame_path,
             g_duel_run_save_extensions[g_duel_run_mode]);
@@ -787,7 +787,7 @@ void TENTATIVE_savegame(int autosave_slot)
       g_current_phase = saved_phase;
     }
   }
-  else
+  else if (g_duel_run_mode >= 1 && g_duel_run_mode <= 3)
   {
     saved_phase = g_current_phase;
     g_current_phase = autosave_slot;

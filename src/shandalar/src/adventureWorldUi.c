@@ -1932,7 +1932,7 @@ void QueueWorldSpriteForDraw(FacemakerWindowBounds *window, int draw_x, int draw
   {
     current_index = g_world_draw_head_index;
     previous_index = -1;
-    while ((g_world_draw_depth_sort_keys[current_index] < depth_y) && (current_index != -1))
+    while ((current_index != -1) && (g_world_draw_depth_sort_keys[current_index] < depth_y))
     {
       previous_index = current_index;
       current_index = g_world_draw_next_index[current_index];

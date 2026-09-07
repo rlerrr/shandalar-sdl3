@@ -474,6 +474,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
           item_text += strlen(item_text) + 1;
         }
       }
+      EndPaint(hwnd, &paint);
       if (count != 0)
       {
         GetClientRect(hwnd, &rect);
@@ -483,7 +484,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
                      rect.bottom - rect.top,
                      SWP_NOZORDER | SWP_NOMOVE);
       }
-      EndPaint(hwnd, &paint);
     }
     return 0;
 
