@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "cardartlib/src/assert.h"
 #include "defs.h"
 #include "magic/src/game_support.h"
 #include "magic/src/global_duel_ui_ids.h"
@@ -103,18 +102,6 @@ int main_phase_selected_bandmate_card;
 // GLOBAL: MAGIC 0x00637910
 // GLOBAL: SHANDALAR 0x005a5fe0
 int main_phase_selected_card;
-
-static const char *main_phase_loop_card_name(int internal_card_id)
-{
-  if (internal_card_id >= 0 && internal_card_id < g_card_count + 16)
-  {
-    return global_cards_data[internal_card_id].name[0] != '\0'
-               ? global_cards_data[internal_card_id].name
-               : "<unnamed>";
-  }
-
-  return "<none>";
-}
 
 // GLOBAL: MAGIC 0x0093f4ac
 // GLOBAL: SHANDALAR 0x0097f1a8
@@ -419,7 +406,6 @@ int main_phase(unsigned int player, int phase_mode, int *phase_value)
   int retry_phase_prompt;
   int skip_phase;
   int saved_response_state;
-  int main_phase_loop_iterations = 0;
 
   other_player = 1 - player;
   if (TRACE_ENABLED)
@@ -487,22 +473,6 @@ restart_main_phase_action_loop:
   main_phase_resume_mode = 6;
   do
   {
-    ++main_phase_loop_iterations;
-    if (main_phase_loop_iterations > 100000000)
-    {
-      assert(0, __FILE__, __LINE__,
-             "main_phase runaway: iterations=%d player=%u phase=%d mode=%d ai_mode=%d "
-             "ai_decision=%d stack=%d fizzled=%d actions=%d cursor=%d "
-             "selected_slot=%d selected_iid=%d selected_card=\"%s\" "
-             "affected_player=%d affected_slot=%d affected_iid=%d affected_card=\"%s\"\n",
-             main_phase_loop_iterations, player, g_current_phase, phase_mode,
-             g_duel_ai_mode_state, g_ai_decision_code,
-             g_stack_size, g_spell_fizzled, g_recorded_action_count, g_recorded_action_cursor,
-             main_phase_selected_card, main_phase_selected_internal_card_id,
-             main_phase_loop_card_name(main_phase_selected_internal_card_id),
-             g_affected_card_controller, g_affected_card, g_affected_internal_card_id,
-             main_phase_loop_card_name(g_affected_internal_card_id));
-    }
     g_recorded_action_cursor = 0;
     if ((((player == g_other_player) && ((g_duel_network_flags & 2) == 0)) && (g_duel_ai_mode_state != 1)) &&
         ((g_duel_state_00925d30 & 2U) != 0))
