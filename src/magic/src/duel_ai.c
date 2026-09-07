@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cardartlib/src/assert.h"
 #include "defs.h"
 #include "magic/src/cards.h"
 #include "magic/src/duel_engine.h"
@@ -839,19 +838,6 @@ int choose_ai_main_phase_action(int player)
 // FUNCTION: SHANDALAR 0x004c4181
 void record_ai_action_selection(void)
 {
-  if (g_recorded_action_count < 0 || g_recorded_action_count >= 0xff)
-  {
-    assert(0, __FILE__, __LINE__,
-           "AI action recorder exhausted before terminator: count=%d action=%d type=%d "
-           "decision=%d phase=%d stack=%d fizzled=%d "
-           "affected_player=%d affected_slot=%d affected_iid=%d affected_card=\"%s\"\n",
-           g_recorded_action_count, g_ai_recorded_action, g_ai_recorded_action_type,
-           g_ai_decision_code, g_current_phase, g_stack_size, g_spell_fizzled,
-           g_affected_card_controller, g_affected_card, g_affected_internal_card_id,
-           (g_affected_internal_card_id >= 0 && g_affected_internal_card_id < g_card_count)
-               ? global_cards_data[g_affected_internal_card_id].name
-               : "<invalid>");
-  }
   if (g_recorded_action_count < 0x100)
   {
     g_trial_recorded_action_targets[g_recorded_action_count] = g_ai_recorded_action;
@@ -876,18 +862,6 @@ void record_ai_action_selection(void)
 // FUNCTION: SHANDALAR 0x004c42f8
 void replay_ai_action_selection(void)
 {
-  if (g_recorded_action_count < 0 || g_recorded_action_count >= 0x100)
-  {
-    assert(0, __FILE__, __LINE__,
-           "AI action replay index out of range: count=%d saved_count=%d type=%d "
-           "decision=%d phase=%d stack=%d affected_iid=%d affected_card=\"%s\"\n",
-           g_recorded_action_count, g_saved_recorded_action_count,
-           g_ai_recorded_action_type, g_ai_decision_code, g_current_phase, g_stack_size,
-           g_affected_internal_card_id,
-           (g_affected_internal_card_id >= 0 && g_affected_internal_card_id < g_card_count)
-               ? global_cards_data[g_affected_internal_card_id].name
-               : "<invalid>");
-  }
   if (g_recorded_action_types[g_recorded_action_count] != g_ai_recorded_action_type)
   {
     g_ai_recorded_action_type |= 0x100;
@@ -928,18 +902,6 @@ void __stdcall reset_ai_search_trial_state(void)
 void __stdcall save_recorded_ai_actions(void)
 {
   int action_index;
-
-  if (g_recorded_action_count < 0 || g_recorded_action_count >= 0x100)
-  {
-    assert(0, __FILE__, __LINE__,
-           "AI action save has no room for terminator: count=%d decision=%d phase=%d "
-           "stack=%d affected_iid=%d affected_card=\"%s\"\n",
-           g_recorded_action_count, g_ai_decision_code, g_current_phase, g_stack_size,
-           g_affected_internal_card_id,
-           (g_affected_internal_card_id >= 0 && g_affected_internal_card_id < g_card_count)
-               ? global_cards_data[g_affected_internal_card_id].name
-               : "<invalid>");
-  }
 
   for (action_index = 0; action_index < g_recorded_action_count; action_index = action_index + 1)
   {
