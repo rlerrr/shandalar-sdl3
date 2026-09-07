@@ -14,7 +14,7 @@
 typedef struct OctNode OctNode;
 
 // SIZE 0x30
-typedef struct OctNode
+struct OctNode
 {
   unsigned int flags;       /* +0 : low byte == 1 => leaf */
   unsigned int palette_idx; /* +4 */
@@ -22,8 +22,6 @@ typedef struct OctNode
   byte *list;               /* +0x28 */
   int list_count;           /* +0x2C */
 };
-STATIC_ASSERT(sizeof(OctNode) == 0x30, OctNode_wrong_size);
-
 STATIC_ASSERT(sizeof(PaletteLog) == 0x404, PaletteLog_wrong_size);
 
 /* Forward declarations for globals referenced before their definitions. */
@@ -530,10 +528,10 @@ void InitBitmapInfo24bppTopDown(BITMAPINFO *bmi, int width, int height)
 // FUNCTION: SHANDALAR 0x0042df50
 void *OctreeNode_Create(void)
 {
-  void *_Dst;
+  OctNode *_Dst;
 
-  _Dst = malloc(0x30);
-  memset(_Dst, 0, 0x30);
+  _Dst = malloc(sizeof(*_Dst));
+  memset(_Dst, 0, sizeof(*_Dst));
   return _Dst;
 }
 
@@ -649,13 +647,13 @@ bool InitDiffSquaredLookupTable(void)
 // FUNCTION: DECKDLL 0x10009cb4
 // FUNCTION: MAGIC 0x004b9f24
 // FUNCTION: SHANDALAR 0x0042e254
-void OctreeNode_CollectLeafIndices(OctNode *node, int out_base, int *out_index)
+void OctreeNode_CollectLeafIndices(OctNode *node, byte *out_base, int *out_index)
 {
   int i;
 
   if (node->flags != 0)
   {
-    *(char *)(*out_index + out_base) = (char)node->palette_idx;
+    out_base[*out_index] = (byte)node->palette_idx;
     *out_index = *out_index + 1;
   }
   else
@@ -677,7 +675,7 @@ void OctreeNode_CollectLeafIndices(OctNode *node, int out_base, int *out_index)
 // FUNCTION: SHANDALAR 0x0042e2d3
 int OctreeNode_FinalizeSubtree(OctNode *node)
 {
-  size_t list_count;
+  int list_count;
   int i;
   int leaf_total;
   undefined1 leaf_list[1024];
@@ -706,8 +704,8 @@ int OctreeNode_FinalizeSubtree(OctNode *node)
   if (list_count != 0)
   {
     list_count = 0;
-    OctreeNode_CollectLeafIndices(node, (int)leaf_list, (int *)&list_count);
-    node->list = malloc(list_count);
+    OctreeNode_CollectLeafIndices(node, leaf_list, &list_count);
+    node->list = malloc((size_t)list_count);
     node->list_count = list_count;
     memcpy(node->list, leaf_list, list_count);
   }
@@ -1021,21 +1019,21 @@ end:;
 // FUNCTION: DRAWCARDLIB 0x10001aab
 // FUNCTION: DECKDLL 0x1000a46f
 // FUNCTION: MAGIC 0x004ba6e0
-int Octree_FlattenLeafValues(int *node, int *out_values)
+int Octree_FlattenLeafValues(OctNode *node, int *out_values)
 {
   int i;
   int result = 0;
-  if (*node != 0)
+  if (node->flags != 0)
   {
-    *out_values = node[1];
+    *out_values = (int)node->palette_idx;
     return 1;
   }
 
   for (i = 0; i < 8; i++)
   {
-    if (node[i + 2] != 0)
+    if (node->children[i] != 0)
     {
-      int count = Octree_FlattenLeafValues((int *)node[i + 2], out_values);
+      int count = Octree_FlattenLeafValues(node->children[i], out_values);
       result = result + count;
       out_values = out_values + count;
     }
@@ -1049,6 +1047,7 @@ int Octree_FlattenLeafValues(int *node, int *out_values)
 // FUNCTION: SHANDALAR 0x0042eaa5
 undefined4 QuantizeBgr24ToNearestPaletteColorInPlace(uint *bgr24, int height, int width, int row_padding)
 {
+  byte *row;
   uint cur_color; /* [ebp-0x14] */
   uint arg_color; /* [ebp-0x10] */
   int y;          /* [ebp-0x0c] */
@@ -1056,15 +1055,16 @@ undefined4 QuantizeBgr24ToNearestPaletteColorInPlace(uint *bgr24, int height, in
   int width3;     /* [ebp-0x04] */
 
   width3 = width * 3;
-  for (y = 0; height > y; y += 1, *(int *)&bgr24 += row_padding + width3)
+  row = (byte *)bgr24;
+  for (y = 0; height > y; y += 1, row += row_padding + width3)
   {
     byte_off = 0;
-    cur_color = *bgr24;
+    cur_color = *(uint *)row;
     for (; byte_off < width3; byte_off = byte_off + 3)
     {
       arg_color = cur_color;
-      cur_color = *(uint *)(byte_off + 3 + (int)bgr24);
-      *(undefined4 *)(byte_off + (int)bgr24) = Octree_FindNearestColor(arg_color);
+      cur_color = *(uint *)(row + byte_off + 3);
+      *(undefined4 *)(row + byte_off) = Octree_FindNearestColor(arg_color);
     }
   }
   return 0;
@@ -1075,6 +1075,7 @@ undefined4 QuantizeBgr24ToNearestPaletteColorInPlace(uint *bgr24, int height, in
 // FUNCTION: DRAWCARDLIB 0x10001bd9
 undefined4 QuantizeBgr24ToPaletteIndicesInPlace(uint *bgr24, int height, int width, int row_padding)
 {
+  byte *input_row;
   uint cur_color;    /* [ebp-0x1c] */
   uint masked_color; /* [ebp-0x18] */
   int y;             /* [ebp-0x14] */
@@ -1084,19 +1085,20 @@ undefined4 QuantizeBgr24ToPaletteIndicesInPlace(uint *bgr24, int height, int wid
   int out_idx;       /* [ebp-0x04] */
 
   width3 = width * 3;
-  out_ptr = (char *)bgr24;
+  input_row = (byte *)bgr24;
+  out_ptr = (char *)input_row;
 
   for (y = 0; height > y;
-       y = y + 1, *(int *)&bgr24 += row_padding + width3,
-      *(int *)&out_ptr += row_padding + width)
+       y = y + 1, input_row += row_padding + width3,
+      out_ptr += row_padding + width)
   {
     out_idx = 0;
     byte_off = out_idx;
-    cur_color = *bgr24;
+    cur_color = *(uint *)input_row;
     for (; byte_off < width3; byte_off = byte_off + 3, out_idx = out_idx + 1)
     {
       masked_color = cur_color & 0xffffff;
-      cur_color = *(uint *)(byte_off + 3 + (int)bgr24);
+      cur_color = *(uint *)(input_row + byte_off + 3);
 
       out_ptr[out_idx] = (char)Octree_FindNearestPaletteIndex(masked_color);
 

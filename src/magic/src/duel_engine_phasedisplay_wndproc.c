@@ -908,7 +908,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_PhaseDisplayClass(HWND hwnd, UINT msg, WPARAM
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

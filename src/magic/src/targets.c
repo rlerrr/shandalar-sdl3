@@ -9,11 +9,11 @@
 
 int GetNextManaSymbol(char **text);
 
-extern int g_spell_minimized_hwnd;
+extern HWND g_spell_minimized_hwnd;
 
 // GLOBAL: MAGIC 0x007a7d74
 // GLOBAL: SHANDALAR 0x007beb00
-int g_duel_tooltip_window;
+HWND g_duel_tooltip_window;
 
 // GLOBAL: MAGIC 0x007aa928
 // GLOBAL: SHANDALAR 0x007beb20
@@ -25,11 +25,11 @@ int g_response_prompt_enabled;
 
 // GLOBAL: MAGIC 0x008a8d78
 // GLOBAL: SHANDALAR 0x008bcf78
-int g_duel_player_battlefield_window;
+HWND g_duel_player_battlefield_window;
 
 // GLOBAL: MAGIC 0x008a8dec
 // GLOBAL: SHANDALAR 0x008bcfec
-int g_duel_opponent_battlefield_window;
+HWND g_duel_opponent_battlefield_window;
 
 // GLOBAL: MAGIC 0x0093d840
 // GLOBAL: SHANDALAR 0x00951960
@@ -149,8 +149,8 @@ void set_duel_tooltip_text(char *text)
 
   if (*tooltip_text == '\0')
   {
-    ShowWindow((HWND)g_duel_tooltip_window, 0);
-    SetWindowTextA((HWND)g_duel_tooltip_window, tooltip_text);
+    ShowWindow(g_duel_tooltip_window, 0);
+    SetWindowTextA(g_duel_tooltip_window, tooltip_text);
   }
   else
   {
@@ -167,7 +167,7 @@ void set_duel_tooltip_text(char *text)
         tooltip_height = 0xc;
       }
 
-      tooltip_width = get_tooltip_text_width((HWND)g_duel_tooltip_window, tooltip_text);
+      tooltip_width = get_tooltip_text_width(g_duel_tooltip_window, tooltip_text);
       tooltip_width += tooltip_height * 2;
       GetCursorPos(&cursor_pos);
       cursor_pos.y += GetSystemMetrics(0xe);
@@ -193,16 +193,16 @@ void set_duel_tooltip_text(char *text)
         tooltip_height = 0x12;
       }
 
-      tooltip_width = get_tooltip_text_width((HWND)g_duel_tooltip_window, tooltip_text);
+      tooltip_width = get_tooltip_text_width(g_duel_tooltip_window, tooltip_text);
       tooltip_width += tooltip_height * 2;
       tooltip_x = (screen_width - (screen_width * 0x14) / 100) - tooltip_width;
       tooltip_y = (screen_height - tooltip_height) / 2;
     }
 
-    SetWindowPos((HWND)g_duel_tooltip_window, (HWND)0, tooltip_x, tooltip_y, tooltip_width, tooltip_height, 4);
-    SetWindowTextA((HWND)g_duel_tooltip_window, tooltip_text);
-    ShowWindow((HWND)g_duel_tooltip_window, 5);
-    BringWindowToTop((HWND)g_duel_tooltip_window);
+    SetWindowPos(g_duel_tooltip_window, (HWND)0, tooltip_x, tooltip_y, tooltip_width, tooltip_height, 4);
+    SetWindowTextA(g_duel_tooltip_window, tooltip_text);
+    ShowWindow(g_duel_tooltip_window, 5);
+    BringWindowToTop(g_duel_tooltip_window);
   }
 }
 
@@ -253,13 +253,13 @@ int run_target_selection_modal(int who_chooses,
       g_saved_stop_phase = -1;
     }
 
-    if (IsWindowVisible((HWND)g_duel_opponent_battlefield_window))
+    if (IsWindowVisible(g_duel_opponent_battlefield_window))
     {
-      InvalidateRect((HWND)g_duel_opponent_battlefield_window, NULL, 1);
+      InvalidateRect(g_duel_opponent_battlefield_window, NULL, 1);
     }
     else
     {
-      InvalidateRect((HWND)g_duel_player_battlefield_window, NULL, 1);
+      InvalidateRect(g_duel_player_battlefield_window, NULL, 1);
     }
   }
   LeaveCriticalSection(&g_duel_render_lock);
@@ -401,13 +401,13 @@ int run_target_selection_modal(int who_chooses,
       g_saved_stop_phase_player = g_saved_stop_phase = -1;
     }
 
-    if (IsWindowVisible((HWND)g_duel_opponent_battlefield_window))
+    if (IsWindowVisible(g_duel_opponent_battlefield_window))
     {
-      InvalidateRect((HWND)g_duel_opponent_battlefield_window, NULL, 1);
+      InvalidateRect(g_duel_opponent_battlefield_window, NULL, 1);
     }
     else
     {
-      InvalidateRect((HWND)g_duel_player_battlefield_window, NULL, 1);
+      InvalidateRect(g_duel_player_battlefield_window, NULL, 1);
     }
     LeaveCriticalSection(&g_duel_render_lock);
     return result;
@@ -757,7 +757,7 @@ int show_spell_window_for_target_selection(void)
 {
   int visible;
 
-  visible = IsWindowVisible((HWND)g_spell_minimized_hwnd);
+  visible = IsWindowVisible(g_spell_minimized_hwnd);
   if (!visible && IsWindowVisible((HWND)g_duel_phase_display_window_hwnd))
   {
     SendMessageA((HWND)g_duel_phase_display_window_hwnd, 0x111, 0x65, 0);
@@ -772,7 +772,7 @@ int restore_spell_window_after_target_selection(void)
 {
   int hidden;
 
-  hidden = !IsWindowVisible((HWND)g_spell_minimized_hwnd);
+  hidden = !IsWindowVisible(g_spell_minimized_hwnd);
   if (!hidden && !IsWindowVisible((HWND)g_duel_phase_display_window_hwnd))
   {
     SendMessageA((HWND)g_duel_phase_display_window_hwnd, 0x111, 0x66, 0);

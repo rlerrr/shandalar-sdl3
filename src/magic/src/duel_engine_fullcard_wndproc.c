@@ -203,12 +203,12 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
   unsigned int displayed_power;
   int color;
   unsigned int counters;
-  HWND previous_window_card_id;
+  int previous_window_card_id;
   int card;
   unsigned int cached_counters;
   int player;
   LONG cached_color;
-  HWND window_card_id;
+  int window_card_id;
 
   switch (msg)
   {
@@ -217,8 +217,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
 
   case 0x433:
   case 0x434:
-    previous_window_card_id = (HWND)wparam;
-    previous_window_card_id = (HWND)GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
+    previous_window_card_id = (int)(intptr_t)wparam;
+    previous_window_card_id = GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
     if (previous_window_card_id == previous_window_card_id)
     {
       InvalidateRect(hwnd, (RECT *)0, 0);
@@ -226,15 +226,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     return 0;
 
   case 0x432:
-    window_card_id = (HWND)GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
+    window_card_id = GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
     player = GetWindowLongA(hwnd, g_full_card_player_window_long_offset);
     card = GetWindowLongA(hwnd, g_full_card_card_window_long_offset);
     cached_counters = GetWindowLongA(hwnd, g_full_card_counters_window_long_offset);
-    if (window_card_id == (HWND)g_damage_display_internal_card_id)
+    if (window_card_id == g_damage_display_internal_card_id)
     {
       counters = get_displayed_card_special_counters(player, card);
     }
-    else if (window_card_id == (HWND)g_effect_display_internal_card_id)
+    else if (window_card_id == g_effect_display_internal_card_id)
     {
       get_displayed_card_counter_power_toughness(player, card, (int *)&displayed_power, &displayed_toughness);
       counters = MAKELONG(displayed_power, displayed_toughness);
@@ -268,7 +268,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
       {
         InvalidateRect(hwnd, (RECT *)0, 0);
       }
-      if ((HWND)get_displayed_card_id(player, card) != window_card_id)
+      if (get_displayed_card_id(player, card) != window_card_id)
       {
         InvalidateRect(hwnd, (RECT *)0, 0);
       }
@@ -276,13 +276,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     return 0;
 
   case 0x401:
-    window_card_id = (HWND)wparam;
+    window_card_id = (int)(intptr_t)wparam;
     update_card = (int *)lparam;
-    if ((window_card_id == (HWND)g_damage_display_internal_card_id ||
-         (HWND)g_hunting_display_internal_card_id == window_card_id ||
-         (HWND)g_multiblock_display_internal_card_id == window_card_id ||
-         window_card_id == (HWND)g_effect_display_internal_card_id ||
-         window_card_id == (HWND)g_legacy_display_internal_card_id) &&
+    if ((window_card_id == g_damage_display_internal_card_id ||
+         g_hunting_display_internal_card_id == window_card_id ||
+         g_multiblock_display_internal_card_id == window_card_id ||
+         window_card_id == g_effect_display_internal_card_id ||
+         window_card_id == g_legacy_display_internal_card_id) &&
         (update_card == (int *)0 || update_card[0] == -1 || update_card[1] == -1))
     {
       return 0;
@@ -304,7 +304,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     }
 
     changed = 0;
-    if ((HWND)GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset) != window_card_id)
+    if (GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset) != window_card_id)
     {
       changed = 1;
     }
@@ -316,7 +316,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
 
     if (changed != 0)
     {
-      SetWindowLongA(hwnd, g_full_card_card_id_window_long_offset, (LONG)window_card_id);
+      SetWindowLongA(hwnd, g_full_card_card_id_window_long_offset, window_card_id);
       SetWindowLongA(hwnd, g_full_card_player_window_long_offset, player);
       SetWindowLongA(hwnd, g_full_card_card_window_long_offset, card);
       InvalidateRect(hwnd, (RECT *)0, 0);
@@ -387,8 +387,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     return 0;
 
   case WM_CREATE:
-    window_card_id = (HWND)-1;
-    SetWindowLongA(hwnd, g_full_card_card_id_window_long_offset, (LONG)window_card_id);
+    window_card_id = -1;
+    SetWindowLongA(hwnd, g_full_card_card_id_window_long_offset, window_card_id);
     player = -1;
     card = -1;
     SetWindowLongA(hwnd, g_full_card_player_window_long_offset, player);
@@ -540,14 +540,14 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     return 0;
 
   case WM_PAINT:
-    window_card_id = (HWND)GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
+    window_card_id = GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
     player = GetWindowLongA(hwnd, g_full_card_player_window_long_offset);
     card = GetWindowLongA(hwnd, g_full_card_card_window_long_offset);
     cached_counters = GetWindowLongA(hwnd, g_full_card_counters_window_long_offset);
     cached_color = GetWindowLongA(hwnd, g_full_card_color_window_long_offset);
-    if ((window_card_id == (HWND)-1 ||
-         window_card_id == (HWND)g_card_back_display_internal_card_id ||
-         global_available_slots - 1 < (int)window_card_id) &&
+    if ((window_card_id == -1 ||
+         window_card_id == g_card_back_display_internal_card_id ||
+         global_available_slots - 1 < window_card_id) &&
         g_duel_interface_options.layout == 2 &&
         g_duel_card_preview_window_hwnd == hwnd)
     {
@@ -555,11 +555,11 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
       return DefWindowProcA(hwnd, msg, wparam, lparam);
     }
 
-    if (window_card_id == (HWND)g_damage_display_internal_card_id)
+    if (window_card_id == g_damage_display_internal_card_id)
     {
       paint_counters = get_displayed_card_special_counters(player, card);
     }
-    else if (window_card_id == (HWND)g_effect_display_internal_card_id)
+    else if (window_card_id == g_effect_display_internal_card_id)
     {
       get_displayed_card_counter_power_toughness(player, card, (int *)&paint_power, &paint_toughness);
       paint_counters = MAKELONG(paint_power, paint_toughness);
@@ -599,25 +599,25 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
         Sleep(200);
       }
 
-      if (global_available_slots - 1 < (int)window_card_id)
+      if (global_available_slots - 1 < window_card_id)
       {
         FillRect(g_shared_offscreen_dc, &client_rect, GetStockObject(4));
         DrawCardBack(g_shared_offscreen_dc, &client_rect);
         BitBlt(paint_dc, 0, 0, client_rect.right, client_rect.bottom,
                g_shared_offscreen_dc, 0, 0, SRCCOPY);
       }
-      else if ((int)window_card_id < 0 || window_card_id == (HWND)g_card_back_display_internal_card_id)
+      else if (window_card_id < 0 || window_card_id == g_card_back_display_internal_card_id)
       {
         FillRect(g_shared_offscreen_dc, &client_rect, GetStockObject(4));
         DrawCardBack(g_shared_offscreen_dc, &client_rect);
         BitBlt(paint_dc, 0, 0, client_rect.right, client_rect.bottom,
                g_shared_offscreen_dc, 0, 0, SRCCOPY);
       }
-      else if (window_card_id == (HWND)g_damage_display_internal_card_id ||
-               (HWND)g_hunting_display_internal_card_id == window_card_id ||
-               (HWND)g_multiblock_display_internal_card_id == window_card_id ||
-               window_card_id == (HWND)g_effect_display_internal_card_id ||
-               window_card_id == (HWND)g_legacy_display_internal_card_id)
+      else if (window_card_id == g_damage_display_internal_card_id ||
+               g_hunting_display_internal_card_id == window_card_id ||
+               g_multiblock_display_internal_card_id == window_card_id ||
+               window_card_id == g_effect_display_internal_card_id ||
+               window_card_id == g_legacy_display_internal_card_id)
       {
         FillRect(g_shared_offscreen_dc, &client_rect, GetStockObject(4));
         if (get_displayed_card_id(player, card) != -1)
@@ -631,7 +631,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
         BitBlt(paint_dc, 0, 0, client_rect.right, client_rect.bottom,
                g_shared_offscreen_dc, 0, 0, SRCCOPY);
       }
-      else if (window_card_id == (HWND)g_activation_display_internal_card_id)
+      else if (window_card_id == g_activation_display_internal_card_id)
       {
         FillRect(g_shared_offscreen_dc, &client_rect, GetStockObject(4));
         if (get_displayed_card_id(player, card) != -1)
@@ -652,17 +652,17 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
         {
           draw_result = draw_displayed_full_card(g_shared_offscreen_dc,
                                                  &client_rect,
-                                                 global_raw_cards_storage + (int)window_card_id,
+                                                 global_raw_cards_storage + window_card_id,
                                                  player,
                                                  card,
                                                  0,
                                                  g_duel_interface_options.expand_text_box_on_big_card);
         }
-        else if (window_card_id != (HWND)-1)
+        else if (window_card_id != -1)
         {
           draw_result = DrawFullCard(g_shared_offscreen_dc,
                                      &client_rect,
-                                     global_raw_cards_storage + (int)window_card_id,
+                                     global_raw_cards_storage + window_card_id,
                                      0,
                                      0,
                                      g_duel_interface_options.expand_text_box_on_big_card,
@@ -681,17 +681,17 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
           {
             draw_displayed_full_card(g_shared_offscreen_dc,
                                      &client_rect,
-                                     global_raw_cards_storage + (int)window_card_id,
+                                     global_raw_cards_storage + window_card_id,
                                      player,
                                      card,
                                      2,
                                      g_duel_interface_options.expand_text_box_on_big_card);
           }
-          else if (window_card_id != (HWND)-1)
+          else if (window_card_id != -1)
           {
             DrawFullCard(g_shared_offscreen_dc,
                          &client_rect,
-                         global_raw_cards_storage + (int)window_card_id,
+                         global_raw_cards_storage + window_card_id,
                          0,
                          2,
                          g_duel_interface_options.expand_text_box_on_big_card,
@@ -796,7 +796,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

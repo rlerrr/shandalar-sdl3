@@ -146,15 +146,15 @@ NETWORK_EXTERN xpool_network_packet_t g_xpool_network_packet;
 NETWORK_EXTERN target_selection_network_packet_t g_target_selection_network_packet;
 
 int select_multiple_cards_from_card_list(int player,
-                 int *graveyard,
-                 int unused,
-                 void *available,
-                 int count,
-                 int prompt_lines,
-                 int num_prompt_lines,
-                 int selected_indices,
-                 int highlighted_choices,
-                 int max_choices);
+                                         int *graveyard,
+                                         int unused,
+                                         void *available,
+                                         int count,
+                                         char **prompt_lines,
+                                         int num_prompt_lines,
+                                         int *selected_indices,
+                                         int highlighted_choices,
+                                         int max_choices);
 
 void send_battlefield_status_packet(int player);
 void receive_battlefield_status_packet(int player);

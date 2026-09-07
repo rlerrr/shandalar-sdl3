@@ -297,7 +297,7 @@ static int count_attack_phase_hidden_descendants(HWND hwnd, HWND parent_card_hwn
   int card_index;
   int group_index;
 
-  groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+  groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
   group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
   result = 0;
   for (group_index = 0; group_count > group_index; group_index++)
@@ -362,7 +362,7 @@ int find_attack_phase_card_window(HWND hwnd, int *player_and_card, int *unused1,
   }
   else
   {
-    groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+    groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
     group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
     found = 0;
     for (group_index = 0; group_index < group_count; group_index++)
@@ -446,7 +446,7 @@ void layout_attack_phase_window(HWND hwnd)
   int count_group_index;
   int visible_blocker_descendants;
   msvc_bitmap_t bitmap;
-  LONG groups_long;
+  attack_window_group_t *groups;
   int scrollbar_height;
   LONG group_count;
   int current_phase;
@@ -460,7 +460,7 @@ void layout_attack_phase_window(HWND hwnd)
   int attacker_spacing;
   int scroll_pos;
 
-  groups_long = GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+  groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
   group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
   scrollbar_hwnd = GetDlgItem(hwnd, 0);
   scroll_pos = SendMessageA(scrollbar_hwnd, SBM_GETPOS, 0, 0);
@@ -504,31 +504,30 @@ void layout_attack_phase_window(HWND hwnd)
     scrollbar_height = GetSystemMetrics(SM_CYHSCROLL) * 2;
   }
 
-#define ATTACK_GROUPS ((attack_window_group_t *)groups_long)
   visible_attacker_descendants = 0;
   visible_blocker_descendants = 0;
   for (count_group_index = 0; count_group_index < group_count; count_group_index++)
   {
     for (count_card_index = 0;
-         count_card_index < ATTACK_GROUPS[count_group_index].attacker_count;
+         count_card_index < groups[count_group_index].attacker_count;
          count_card_index++)
     {
-      if (get_card_window_hidden_flag(ATTACK_GROUPS[count_group_index].attackers[count_card_index]) == 0)
+      if (get_card_window_hidden_flag(groups[count_group_index].attackers[count_card_index]) == 0)
       {
         hidden_count = count_attack_phase_hidden_descendants(hwnd,
-                                                             ATTACK_GROUPS[count_group_index].attackers[count_card_index]);
+                                                             groups[count_group_index].attackers[count_card_index]);
         if (hidden_count > visible_attacker_descendants)
           visible_attacker_descendants = hidden_count;
       }
     }
     for (count_card_index = 0;
-         count_card_index < ATTACK_GROUPS[count_group_index].blocker_count;
+         count_card_index < groups[count_group_index].blocker_count;
          count_card_index++)
     {
-      if (get_card_window_hidden_flag(ATTACK_GROUPS[count_group_index].blockers[count_card_index]) == 0)
+      if (get_card_window_hidden_flag(groups[count_group_index].blockers[count_card_index]) == 0)
       {
         hidden_count = count_attack_phase_hidden_descendants(hwnd,
-                                                             ATTACK_GROUPS[count_group_index].blockers[count_card_index]);
+                                                             groups[count_group_index].blockers[count_card_index]);
         if (hidden_count > visible_blocker_descendants)
           visible_blocker_descendants = hidden_count;
       }
@@ -584,13 +583,13 @@ void layout_attack_phase_window(HWND hwnd)
     attacker_x = blocker_x;
     visible_card_count = 0;
     for (layout_card_index = 0;
-         layout_card_index < ATTACK_GROUPS[layout_group_index].attacker_count;
+         layout_card_index < groups[layout_group_index].attacker_count;
          layout_card_index++)
     {
-      if (get_card_window_hidden_flag(ATTACK_GROUPS[layout_group_index].attackers[layout_card_index]) == 0)
+      if (get_card_window_hidden_flag(groups[layout_group_index].attackers[layout_card_index]) == 0)
       {
         attacker_x = attacker_spacing * visible_card_count + card_x;
-        MoveWindow(ATTACK_GROUPS[layout_group_index].attackers[layout_card_index], attacker_x, attacker_y,
+        MoveWindow(groups[layout_group_index].attackers[layout_card_index], attacker_x, attacker_y,
                    g_showlist_smallcard_width, g_showlist_smallcard_height, 1);
         visible_card_count++;
         if (content_rect.right < attacker_x + g_showlist_smallcard_width)
@@ -599,13 +598,13 @@ void layout_attack_phase_window(HWND hwnd)
     }
     visible_card_count = 0;
     for (layout_card_index = 0;
-         layout_card_index < ATTACK_GROUPS[layout_group_index].blocker_count;
+         layout_card_index < groups[layout_group_index].blocker_count;
          layout_card_index++)
     {
-      if (get_card_window_hidden_flag(ATTACK_GROUPS[layout_group_index].blockers[layout_card_index]) == 0)
+      if (get_card_window_hidden_flag(groups[layout_group_index].blockers[layout_card_index]) == 0)
       {
         blocker_x = blocker_spacing * visible_card_count + card_x;
-        MoveWindow(ATTACK_GROUPS[layout_group_index].blockers[layout_card_index], blocker_x, blocker_y,
+        MoveWindow(groups[layout_group_index].blockers[layout_card_index], blocker_x, blocker_y,
                    g_showlist_smallcard_width, g_showlist_smallcard_height, 1);
         visible_card_count++;
         if (content_rect.right < blocker_x + g_showlist_smallcard_width)
@@ -615,7 +614,6 @@ void layout_attack_phase_window(HWND hwnd)
     card_x = (blocker_x <= attacker_x ? attacker_x : blocker_x) +
              g_showlist_smallcard_width + g_attack_phase_display_width;
   }
-#undef ATTACK_GROUPS
 
   scratch_padding3 = g_showlist_smallcard_width / 3;
   content_rect.left -= ATTACK_WINDOW_TITLE_HEIGHT;
@@ -1087,7 +1085,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackPhaseDisplayClass(HWND hwnd, UINT msg, 
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

@@ -276,9 +276,9 @@ int select_from_graveyard_with_dialog(int player,
                                       int *graveyard,
                                       void *available,
                                       int count,
-                                      int prompt,
+                                       char **prompt,
                                       int a6,
-                                      int selected,
+                                       int *selected,
                                       int a8,
                                       int a9)
 {

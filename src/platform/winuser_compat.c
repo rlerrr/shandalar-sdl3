@@ -13,6 +13,12 @@ typedef struct RegisteredClass {
   ATOM atom;
 } RegisteredClass;
 
+typedef struct WindowPtrSlot {
+  struct WindowPtrSlot *next;
+  int index;
+  LONG_PTR value;
+} WindowPtrSlot;
+
 struct ShandalarWindow {
   uint32_t magic;
   int alive;
@@ -29,7 +35,7 @@ struct ShandalarWindow {
   HMENU menu;
   DWORD style;
   DWORD ex_style;
-  LONG user_data;
+  LONG_PTR user_data;
   int control_id;
   int x;
   int y;
@@ -45,6 +51,7 @@ struct ShandalarWindow {
   char *text;
   unsigned char *extra;
   size_t extra_size;
+  WindowPtrSlot *pointer_slots;
   HDC backing_dc;
 };
 
@@ -383,6 +390,7 @@ HWND CreateWindowExA(DWORD ex_style, LPCSTR class_name, LPCSTR window_name,
 
 BOOL DestroyWindow(HWND window)
 {
+  WindowPtrSlot *slot;
   if (!valid_window(window) || window == &g_desktop || window->destroying)
     return FALSE;
   window->destroying = 1;
@@ -406,6 +414,10 @@ BOOL DestroyWindow(HWND window)
   free(window->extra);
   window->extra = NULL;
   window->extra_size = 0;
+  while ((slot = window->pointer_slots) != NULL) {
+    window->pointer_slots = slot->next;
+    free(slot);
+  }
   free(window->text);
   window->text = NULL;
   window->alive = 0;
@@ -719,6 +731,65 @@ LONG SetWindowLongA(HWND window, int index, LONG value)
   return old;
 }
 
+LONG_PTR GetWindowLongPtrA(HWND window, int index)
+{
+  WindowPtrSlot *slot;
+  if (!valid_window(window))
+    return 0;
+  switch (index) {
+  case GWL_WNDPROC: return (LONG_PTR)window->wndproc;
+  case GWL_HINSTANCE: return (LONG_PTR)window->instance;
+  case GWL_HWNDPARENT: return (LONG_PTR)GetParent(window);
+  case GWL_ID: return window->control_id;
+  case GWL_STYLE: return (LONG_PTR)window->style;
+  case GWL_EXSTYLE: return (LONG_PTR)window->ex_style;
+  case GWL_USERDATA: return (LONG)window->user_data;
+  default:
+    for (slot = window->pointer_slots; slot; slot = slot->next)
+      if (slot->index == index)
+        return slot->value;
+    return 0;
+  }
+}
+
+LONG_PTR SetWindowLongPtrA(HWND window, int index, LONG_PTR value)
+{
+  LONG_PTR old;
+  WindowPtrSlot *slot;
+  if (!valid_window(window))
+    return 0;
+  old = GetWindowLongPtrA(window, index);
+  switch (index) {
+  case GWL_WNDPROC: window->wndproc = (WNDPROC)value; break;
+  case GWL_HINSTANCE: window->instance = (HINSTANCE)value; break;
+  case GWL_HWNDPARENT: SetParent(window, (HWND)value); break;
+  case GWL_ID: window->control_id = (int)value; break;
+  case GWL_STYLE:
+    window->style = (DWORD)value;
+    window->render_caption = should_render_caption(window, (DWORD)value);
+    break;
+  case GWL_EXSTYLE: window->ex_style = (DWORD)value; break;
+  case GWL_USERDATA: window->user_data = value; break;
+  default:
+    if (index < 0 || (size_t)index + sizeof(LONG) > window->extra_size)
+      return 0;
+    for (slot = window->pointer_slots; slot; slot = slot->next)
+      if (slot->index == index) {
+        slot->value = value;
+        return old;
+      }
+    slot = (WindowPtrSlot *)calloc(1, sizeof(*slot));
+    if (slot) {
+      slot->index = index;
+      slot->value = value;
+      slot->next = window->pointer_slots;
+      window->pointer_slots = slot;
+    }
+    break;
+  }
+  return old;
+}
+
 DWORD GetClassLongA(HWND window, int index)
 {
   if (!valid_window(window) || !window->window_class)
@@ -736,6 +807,26 @@ DWORD SetClassLongA(HWND window, int index, LONG value)
   old = GetClassLongA(window, index);
   if (index == GCL_HBRBACKGROUND)
     window->window_class->value.hbrBackground = (HBRUSH)(uintptr_t)(DWORD)value;
+  return old;
+}
+
+ULONG_PTR GetClassLongPtrA(HWND window, int index)
+{
+  if (!valid_window(window) || !window->window_class)
+    return 0;
+  if (index == GCL_HBRBACKGROUND)
+    return (ULONG_PTR)window->window_class->value.hbrBackground;
+  return 0;
+}
+
+ULONG_PTR SetClassLongPtrA(HWND window, int index, LONG_PTR value)
+{
+  ULONG_PTR old;
+  if (!valid_window(window) || !window->window_class)
+    return 0;
+  old = GetClassLongPtrA(window, index);
+  if (index == GCL_HBRBACKGROUND)
+    window->window_class->value.hbrBackground = (HBRUSH)value;
   return old;
 }
 

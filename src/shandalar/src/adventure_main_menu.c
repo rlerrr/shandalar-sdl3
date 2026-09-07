@@ -304,7 +304,7 @@ int HandleMainMenuButtonControlEvent(AdvMenuControl *control, int event_type)
   }
   if (event_type != 2)
   {
-    DrawEncodedImageResampled(g_menu_control_draw_target_page, control->x, control->y, control->width, control->height, (EncodedImage *)control->mode_data[event_type]);
+    DrawEncodedImageResampled(g_menu_control_draw_target_page, control->x, control->y, control->width, control->height, control->mode_data[event_type]);
   }
   else
   {
@@ -313,7 +313,7 @@ int HandleMainMenuButtonControlEvent(AdvMenuControl *control, int event_type)
     BlitGraphicsRect(g_page5_window_bounds, (unsigned int)control->x, control->y, (unsigned int)control->width, (DWORD)control->height, g_page1_window_bounds,
                      control->x, control->y);
     DrawEncodedImageResampled(g_page1_window_bounds, control->x + preview_panel_y_offset, control->y + preview_panel_y_offset, control->width - avatar_sprite_index, control->height - avatar_sprite_index,
-                              (EncodedImage *)control->mode_data[event_type]);
+                              control->mode_data[event_type]);
     BlitGraphicsRect(g_page1_window_bounds, (unsigned int)control->x, control->y, (unsigned int)control->width, (DWORD)control->height, g_page0_window_bounds,
                      control->x, control->y);
   }
@@ -447,12 +447,12 @@ int HandleWorldMagicChoiceControlEvent(AdvMenuControl *control_ptr, int event_ty
       if (event_type != 2)
       {
         DrawEncodedImageUiScaled(g_page0_window_bounds, g_world_magic_icon_rects[world_magic_slot_index].x, g_world_magic_icon_rects[world_magic_slot_index].y,
-                                 (EncodedImage *)g_world_magic_choice_controls[control_ptr->selection_value - 0x31].mode_data[event_type],
+                                 g_world_magic_choice_controls[control_ptr->selection_value - 0x31].mode_data[event_type],
                                  g_world_magic_icon_rects[world_magic_slot_index].width, g_world_magic_icon_rects[world_magic_slot_index].height);
       }
       else
       {
-        selected_state_sprite = (EncodedImage *)g_world_magic_choice_controls[control_ptr->selection_value - 0x31].mode_data[event_type];
+        selected_state_sprite = g_world_magic_choice_controls[control_ptr->selection_value - 0x31].mode_data[event_type];
         icon_x_scaled = (unsigned int)ScaleUiCoordinate(g_world_magic_icon_rects[world_magic_slot_index].x);
         icon_y_scaled = ScaleUiCoordinate(g_world_magic_icon_rects[world_magic_slot_index].y);
         icon_width_scaled = (unsigned int)ScaleUiCoordinate(g_world_magic_icon_rects[world_magic_slot_index].width);
@@ -533,19 +533,19 @@ int InitializeMainMenuAndWorldMagicChoiceControls(void)
 
   for (i = 0; i < 4; i = i + 1)
   {
-    g_main_menu_controls[i].mode_data[0] = (int)g_main_menu_button_sprites_normal[i];
-    g_main_menu_controls[i].mode_data[1] = (int)g_main_menu_button_sprites_highlight[i];
-    g_main_menu_controls[i].mode_data[2] = (int)g_main_menu_button_sprites_highlight[i];
-    g_main_menu_controls[i].mode_data[3] = (int)g_main_menu_button_sprites_normal[i];
+    g_main_menu_controls[i].mode_data[0] = g_main_menu_button_sprites_normal[i];
+    g_main_menu_controls[i].mode_data[1] = g_main_menu_button_sprites_highlight[i];
+    g_main_menu_controls[i].mode_data[2] = g_main_menu_button_sprites_highlight[i];
+    g_main_menu_controls[i].mode_data[3] = g_main_menu_button_sprites_normal[i];
   }
 
   for (i = 0; i < 5; i = i + 1)
   {
     sprite_index = i * 2 + 2;
-    g_world_magic_choice_controls[i].mode_data[0] = (int)g_world_magic_choice_button_sprite_bank.named.normal[sprite_index];
-    g_world_magic_choice_controls[i].mode_data[1] = (int)g_world_magic_choice_button_sprite_bank.named.highlight[sprite_index];
-    g_world_magic_choice_controls[i].mode_data[2] = (int)g_world_magic_choice_button_sprite_bank.named.highlight[sprite_index];
-    g_world_magic_choice_controls[i].mode_data[3] = (int)g_world_magic_choice_button_sprite_bank.named.pressed[sprite_index];
+    g_world_magic_choice_controls[i].mode_data[0] = g_world_magic_choice_button_sprite_bank.named.normal[sprite_index];
+    g_world_magic_choice_controls[i].mode_data[1] = g_world_magic_choice_button_sprite_bank.named.highlight[sprite_index];
+    g_world_magic_choice_controls[i].mode_data[2] = g_world_magic_choice_button_sprite_bank.named.highlight[sprite_index];
+    g_world_magic_choice_controls[i].mode_data[3] = g_world_magic_choice_button_sprite_bank.named.pressed[sprite_index];
   }
 
   if (global_screen_width != 0x280)

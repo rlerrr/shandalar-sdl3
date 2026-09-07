@@ -138,7 +138,7 @@ int card_drafna_s_restoration(int player, int card, event_t event)
 {
   struct
   {
-    char (*prompt)[300];
+    char *prompt;
     int selected_count;
     int selectable[500];
     target_t target;
@@ -208,14 +208,14 @@ int card_drafna_s_restoration(int player, int card, event_t event)
       if (s.graveyard_index > 0 && s.selectable_count > 0)
       {
         load_text("promptsX1.txt", "DRAFNAS_RESTORATION");
-        s.prompt = g_text_lines + 1;
+        s.prompt = g_text_lines[1];
         s.selected_count = select_from_graveyard_with_dialog(player,
                                                              global_graveyard_slots[s.target_player],
                                                              s.selectable,
                                                              500,
-                                                             (int)&s.prompt,
+                                                             &s.prompt,
                                                              1,
-                                                             (int)s.selected,
+                                                             s.selected,
                                                              0,
                                                              s.selectable_count);
       }
@@ -351,7 +351,7 @@ int card_resurrection(int player, int card, event_t event)
     int selectable[500];
     int hand_card;
     int graveyard_index;
-    char (*prompt)[300];
+    char *prompt;
   } s;
 
   if (event == EVENT_CAN_CAST)
@@ -382,14 +382,14 @@ int card_resurrection(int player, int card, event_t event)
         }
       }
       load_text("promptsX1.txt", "RESURRECTION");
-      s.prompt = g_text_lines;
+      s.prompt = g_text_lines[0];
       s.can_select = select_from_graveyard_with_dialog(player,
                                                        global_graveyard_slots[player],
                                                        s.selectable,
                                                        500,
-                                                       (int)&s.prompt,
+                                                        &s.prompt,
                                                        1,
-                                                       (int)&s.graveyard_index,
+                                                        &s.graveyard_index,
                                                        0,
                                                        1);
     }
@@ -474,7 +474,7 @@ int card_transmute_artifact(int player, int card, event_t event)
   struct
   {
     int selected_value;
-    char (*prompt)[300];
+    char *prompt;
     int selection_result;
     int selectable[500];
     target_t target;
@@ -545,14 +545,14 @@ int card_transmute_artifact(int player, int card, event_t event)
         if (g_duel_ai_mode_state != 1 && g_duel_network_state == 0)
         {
           load_text("promptsX1.txt", "TRANSMUTE_ARTIFACT");
-          s.prompt = &g_text_lines[1];
+          s.prompt = g_text_lines[1];
           s.selection_result = select_from_graveyard_with_dialog(player,
                                                                  global_library[player],
                                                                  s.selectable,
                                                                  500,
-                                                                 (int)&s.prompt,
+                                                                 &s.prompt,
                                                                  1,
-                                                                 (int)&s.library_index,
+                                                                 &s.library_index,
                                                                  1,
                                                                  1);
         }

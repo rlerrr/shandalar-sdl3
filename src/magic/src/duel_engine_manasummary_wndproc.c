@@ -282,7 +282,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
     break;
 
   case 0x432:
-    cached_mana_pool = (mana_summary_values_t *)GetWindowLongA(hwnd, 0);
+    cached_mana_pool = (mana_summary_values_t *)GetWindowLongPtrA(hwnd, 0);
     get_displayed_mana_pool(&updated_mana_pool, (unsigned int)(g_duel_active_popup_window != hwnd));
     if (cached_mana_pool->colorless != updated_mana_pool.colorless ||
         cached_mana_pool->black != updated_mana_pool.black ||
@@ -332,7 +332,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
     cached_mana_pool->blue = cached_mana_pool->red;
     cached_mana_pool->black = cached_mana_pool->blue;
     cached_mana_pool->colorless = cached_mana_pool->black;
-    SetWindowLongA(hwnd, 0, (LONG)cached_mana_pool);
+    SetWindowLongPtrA(hwnd, 0, (LONG_PTR)cached_mana_pool);
     if (cached_mana_pool == (mana_summary_values_t *)0)
     {
       return -1;
@@ -340,7 +340,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
     return 0;
 
   case WM_DESTROY:
-    cached_mana_pool = (mana_summary_values_t *)GetWindowLongA(hwnd, 0);
+    cached_mana_pool = (mana_summary_values_t *)GetWindowLongPtrA(hwnd, 0);
     free(cached_mana_pool);
     return 0;
 
@@ -383,7 +383,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
     return 0;
 
   case WM_PAINT:
-    cached_mana_pool = (mana_summary_values_t *)GetWindowLongA(hwnd, 0);
+    cached_mana_pool = (mana_summary_values_t *)GetWindowLongPtrA(hwnd, 0);
     get_displayed_mana_pool(&paint_mana_pool, (unsigned int)(g_duel_active_popup_window != hwnd));
     if (cached_mana_pool->colorless != paint_mana_pool.colorless ||
         cached_mana_pool->black != paint_mana_pool.black ||
@@ -579,7 +579,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ManaSummaryClass(HWND hwnd, UINT msg, WPARAM 
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

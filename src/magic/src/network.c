@@ -44,9 +44,9 @@ int select_multiple_cards_from_card_list(int player,
                                          int unused,
                                          void *available,
                                          int count,
-                                         int prompt_lines,
+                                         char **prompt_lines,
                                          int num_prompt_lines,
-                                         int selected_indices,
+                                         int *selected_indices,
                                          int highlighted_choices,
                                          int max_choices)
 {
@@ -57,7 +57,6 @@ int select_multiple_cards_from_card_list(int player,
   int index;
   unsigned int require_selection;
   int graveyard_copy[500];
-  int unused_slot;
   int packet_card;
   int stop_selection;
 
@@ -72,7 +71,7 @@ int select_multiple_cards_from_card_list(int player,
     return 0;
   }
 
-  memcpy(graveyard_copy, graveyard, count << 2);
+  memcpy(graveyard_copy, graveyard, (size_t)count * sizeof(*graveyard_copy));
   if (available == NULL)
   {
     for (index = 0; count > index; ++index)
@@ -82,7 +81,7 @@ int select_multiple_cards_from_card_list(int player,
   }
   else
   {
-    memcpy(available_cards, available, count << 2);
+    memcpy(available_cards, available, (size_t)count * sizeof(*available_cards));
   }
 
   if (g_other_player == player && (g_duel_network_flags & 2) != 0)
@@ -99,22 +98,20 @@ int select_multiple_cards_from_card_list(int player,
   {
     if (num_prompt_lines > selected_count)
     {
-      strcpy(prompt, ((char **)prompt_lines)[selected_count]);
+      strcpy(prompt, prompt_lines[selected_count]);
     }
     else
     {
-      strcpy(prompt, ((char **)prompt_lines)[num_prompt_lines - 1]);
+      strcpy(prompt, prompt_lines[num_prompt_lines - 1]);
     }
 
     if (selected_count >= highlighted_choices)
     {
       require_selection = 0;
-      unused_slot = (int)gs_done_008b40e0;
     }
     else
     {
       require_selection = 1;
-      unused_slot = 0;
     }
 
     selection = show_cardlist(graveyard_copy,
@@ -130,7 +127,7 @@ int select_multiple_cards_from_card_list(int player,
     }
     else
     {
-      ((int *)selected_indices)[selected_count] = selection;
+      selected_indices[selected_count] = selection;
       ++selected_count;
       graveyard_copy[selection] = g_draw_card_placeholder_internal_card_id;
       available_cards[selection] = 0;
@@ -149,7 +146,7 @@ int select_multiple_cards_from_card_list(int player,
         packet_card = GetCardFromCLPacket(index);
         if (packet_card != -1)
         {
-          ((int *)selected_indices)[index] = packet_card;
+          selected_indices[index] = packet_card;
           ++index;
         }
       }
@@ -159,7 +156,7 @@ int select_multiple_cards_from_card_list(int player,
     {
       for (index = 0; index < selected_count; ++index)
       {
-        AddCardToCLPacket(((int *)selected_indices)[index]);
+        AddCardToCLPacket(selected_indices[index]);
       }
       AddCardToCLPacket(-1);
       TENTATIVE_send_network_result(player, 0x16);
@@ -182,7 +179,9 @@ void AddCardToCLPacket(int card_in_packet)
     {
       ++g_card_list_packet_capacity_blocks;
 
-      g_card_list_packet_cards = realloc(g_card_list_packet_cards, ((int)g_card_list_packet_capacity_blocks * 0x10) * 2);
+      g_card_list_packet_cards = realloc(g_card_list_packet_cards,
+                                         (size_t)g_card_list_packet_capacity_blocks * 0x10 *
+                                             sizeof(*g_card_list_packet_cards));
       if (g_card_list_packet_cards == NULL)
       {
         MessageBoxA((HWND)0,
@@ -194,7 +193,7 @@ void AddCardToCLPacket(int card_in_packet)
   }
 
   write_ptr = (unsigned short *)g_card_list_packet_cards;
-  write_ptr = (unsigned short *)((char *)write_ptr + ((int)g_card_list_packet_card_count * 2));
+  write_ptr += g_card_list_packet_card_count;
   *write_ptr = (unsigned short)card_in_packet;
   ++g_card_list_packet_card_count;
 #endif
@@ -216,7 +215,7 @@ int GetCardFromCLPacket(int packet_index)
     if ((int)g_card_list_packet_card_count > 0x10)
     {
       free(g_card_list_packet_cards);
-      g_card_list_packet_cards = malloc(0x20);
+      g_card_list_packet_cards = malloc(0x10 * sizeof(*g_card_list_packet_cards));
       if (g_card_list_packet_cards == NULL)
       {
         MessageBoxA((HWND)0, "Memory allocation error in GetCardFromCLPacket!", "Packet Error", 0x10);
@@ -227,6 +226,9 @@ int GetCardFromCLPacket(int packet_index)
   }
 
   return packet_card;
+#else
+  (void)packet_index;
+  return -1;
 #endif
 }
 
@@ -246,7 +248,8 @@ int send_card_list_packet(int player, char packet_type)
 
   (void)player;
 
-  packet_size = g_card_list_packet_card_count * 2 + 6;
+  packet_size = (size_t)g_card_list_packet_card_count * sizeof(*g_card_list_packet_cards) +
+                3 * sizeof(short);
   g_card_list_packet_type = packet_type;
   g_card_list_packet_number = (short)g_next_outgoing_card_list_packet_number;
   ++g_next_outgoing_card_list_packet_number;
@@ -278,7 +281,7 @@ int send_card_list_packet(int player, char packet_type)
   if (0x10 < g_card_list_packet_card_count)
   {
     free(g_card_list_packet_cards);
-    g_card_list_packet_cards = malloc(0x20);
+    g_card_list_packet_cards = malloc(0x10 * sizeof(*g_card_list_packet_cards));
   }
 
   g_card_list_packet_type = '\0';
@@ -325,7 +328,9 @@ int read_card_list_packet(int player, int packet_type, unsigned char *packet)
 
   if ((int)g_card_list_packet_card_count > 0x10)
   {
-    g_card_list_packet_cards = (short *)realloc(g_card_list_packet_cards, (int)g_card_list_packet_card_count * 2);
+    g_card_list_packet_cards = realloc(g_card_list_packet_cards,
+                                       (size_t)g_card_list_packet_card_count *
+                                           sizeof(*g_card_list_packet_cards));
     if (g_card_list_packet_cards == NULL)
     {
       MessageBoxA((HWND)0, gs_memory_allocation_error_in_ReadCLPacket_0057d490, gs_packet_error_0057d480, 0x10);

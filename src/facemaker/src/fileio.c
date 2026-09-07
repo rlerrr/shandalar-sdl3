@@ -79,7 +79,7 @@ int g_rpbits_output_bytes;
 
 // GLOBAL: FACEMAKER 0x0041aa1c
 // GLOBAL: SHANDALAR 0x0073b894
-int g_rpbits_dict_table;
+unsigned char *g_rpbits_dict_table;
 
 // GLOBAL: FACEMAKER 0x0041aa20
 // GLOBAL: SHANDALAR 0x0073b898
@@ -148,7 +148,7 @@ int EncodeRpBitsImage(int file_handle, EncodeRpBitsImage_Callback read_scanline,
   unsigned char *cursor_ptr;
 
   g_rpbits_output_fd = file_handle;
-  g_rpbits_dict_table = (int)malloc(0xbfd0);
+  g_rpbits_dict_table = (unsigned char *)calloc(0xffb * 3, sizeof(int));
   g_rpbits_max_symbol_len = -1;
   g_rpbits_header.payload_size = 0;
   g_rpbits_bit_count = 0;
@@ -273,7 +273,7 @@ int EncodeRpBitsImage(int file_handle, EncodeRpBitsImage_Callback read_scanline,
         }
         _lseek(g_rpbits_output_fd, seek_offset, 0);
         _write(g_rpbits_output_fd, &g_rpbits_header, 8);
-        free((void *)g_rpbits_dict_table);
+        free(g_rpbits_dict_table);
         return 0;
       }
 

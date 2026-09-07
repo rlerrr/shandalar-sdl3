@@ -8,7 +8,7 @@
 
 BOOL DrawMaskedBitmapToRect(HDC dc, RECT *rect, HANDLE bitmap, int width, int height, int src_x, int src_y, int mask_x, int mask_y);
 int draw_masked_bitmap_left_half_to_rect(HDC dc, RECT *rect, HANDLE bitmap);
-int handle_button_palette_message(int hwnd, int msg, void *wparam, int lparam);
+int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 void checked_DeleteDC_DeleteObject(HDC dc, HGDIOBJ obj);
 
 #define SCROLLBAR_OFFSCREEN_DC_PTR (&g_scrollbar_offscreen_dc)
@@ -186,7 +186,7 @@ void get_scrollbar_thumb_rect(HWND hwnd, LPRECT rect)
   if (hwnd != (HWND)0 && rect != (LPRECT)0)
   {
     position = GetWindowLongA(hwnd, g_scrollbar_thumb_position_window_long_offset);
-    thumb_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
+    thumb_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
     frame_count = GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_frame_count_window_long_offset);
     GetClientRect(hwnd, &client_rect);
     if (thumb_bitmap != (HANDLE)0 && frame_count != 0)
@@ -328,19 +328,19 @@ LRESULT CALLBACK wndproc_MAGICGAME_ScrollbarClass(HWND hwnd, UINT msg, WPARAM wp
     return scroll_position;
 
   case 0x464:
-    track_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_track_bitmap_window_long_offset);
+    track_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_track_bitmap_window_long_offset);
     if (track_bitmap != (HANDLE)wparam)
     {
       track_bitmap = (HANDLE)wparam;
       track_bitmap_layout = lparam;
-      SetWindowLongA(hwnd, g_scrollbar_track_bitmap_window_long_offset, (LONG)track_bitmap);
+      SetWindowLongPtrA(hwnd, g_scrollbar_track_bitmap_window_long_offset, (LONG_PTR)track_bitmap);
       SetWindowLongA(hwnd, g_scrollbar_track_bitmap_layout_window_long_offset, track_bitmap_layout);
       InvalidateRect(hwnd, (RECT *)0, 1);
     }
     return 0;
 
   case 0x465:
-    track_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_track_bitmap_window_long_offset);
+    track_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_track_bitmap_window_long_offset);
     if (wparam != 0)
     {
       *(HANDLE *)wparam = track_bitmap;
@@ -348,20 +348,20 @@ LRESULT CALLBACK wndproc_MAGICGAME_ScrollbarClass(HWND hwnd, UINT msg, WPARAM wp
     return (LRESULT)track_bitmap;
 
   case 0x466:
-    thumb_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
+    thumb_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
     thumb_frame_count = GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_frame_count_window_long_offset);
     if ((HANDLE)wparam != thumb_bitmap)
     {
       thumb_bitmap = (HANDLE)wparam;
       thumb_frame_count = lparam;
-      SetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset, (LONG)thumb_bitmap);
+      SetWindowLongPtrA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset, (LONG_PTR)thumb_bitmap);
       SetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_frame_count_window_long_offset, thumb_frame_count);
       InvalidateRect(hwnd, (RECT *)0, 1);
     }
     return 0;
 
   case 0x467:
-    thumb_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
+    thumb_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
     thumb_frame_count = GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_frame_count_window_long_offset);
     if (wparam != 0)
     {
@@ -394,11 +394,11 @@ LRESULT CALLBACK wndproc_MAGICGAME_ScrollbarClass(HWND hwnd, UINT msg, WPARAM wp
     SetWindowLongA(hwnd, g_scrollbar_direction_window_long_offset, direction);
     track_bitmap = (HANDLE)0;
     track_bitmap_layout = 0;
-    SetWindowLongA(hwnd, g_scrollbar_track_bitmap_window_long_offset, (LONG)track_bitmap);
+    SetWindowLongPtrA(hwnd, g_scrollbar_track_bitmap_window_long_offset, (LONG_PTR)track_bitmap);
     SetWindowLongA(hwnd, g_scrollbar_track_bitmap_layout_window_long_offset, track_bitmap_layout);
     thumb_bitmap = (HANDLE)0;
     thumb_frame_count = 0;
-    SetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset, (LONG)thumb_bitmap);
+    SetWindowLongPtrA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset, (LONG_PTR)thumb_bitmap);
     SetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_frame_count_window_long_offset, thumb_frame_count);
     thumb_position = 0;
     SetWindowLongA(hwnd, g_scrollbar_thumb_position_window_long_offset, thumb_position);
@@ -556,9 +556,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_ScrollbarClass(HWND hwnd, UINT msg, WPARAM wp
     scroll_position = GetWindowLongA(hwnd, g_scrollbar_position_window_long_offset);
     thumb_position = GetWindowLongA(hwnd, g_scrollbar_thumb_position_window_long_offset);
     direction = GetWindowLongA(hwnd, g_scrollbar_direction_window_long_offset);
-    track_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_track_bitmap_window_long_offset);
+    track_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_track_bitmap_window_long_offset);
     track_bitmap_layout = GetWindowLongA(hwnd, g_scrollbar_track_bitmap_layout_window_long_offset);
-    thumb_bitmap = (HANDLE)GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
+    thumb_bitmap = (HANDLE)GetWindowLongPtrA(hwnd, g_scrollbar_thumb_bitmap_window_long_offset);
     thumb_frame_count = GetWindowLongA(hwnd, g_scrollbar_thumb_bitmap_frame_count_window_long_offset);
     thumb_visible = GetWindowLongA(hwnd, g_scrollbar_thumb_visible_window_long_offset);
     min_position = GetWindowLongA(hwnd, g_scrollbar_min_position_window_long_offset);
@@ -681,7 +681,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ScrollbarClass(HWND hwnd, UINT msg, WPARAM wp
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (void *)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

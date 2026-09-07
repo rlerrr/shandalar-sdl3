@@ -43,7 +43,7 @@ void delete_and_close_object(HANDLE obj);
 void change_buttonclass_wndproc(HWND hwnd);
 void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item, HBRUSH brush,
                                      HPEN pen1, HPEN pen2, COLORREF color, int draw_focus);
-int handle_button_palette_message(int hwnd, unsigned int msg, int wparam, int lparam);
+int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 
 INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void setup_fireball_dialog_resources(HBITMAP *background, COLORREF *label_text_color,
@@ -419,7 +419,7 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_DUEL_BUTTON_FOCUS:
     focus_gained = (HWND)wparam;

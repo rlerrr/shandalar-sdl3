@@ -49,10 +49,10 @@ int g_showlist_card_width;
 int g_showlist_card_spacing_x;
 // GLOBAL: MAGIC 0x00638b68
 // GLOBAL: SHANDALAR 0x006502b0
-int g_showlist_card_height;
+HPEN g_showlist_card_height;
 // GLOBAL: MAGIC 0x00638b70
 // GLOBAL: SHANDALAR 0x006502b8
-int g_showlist_card_spacing_y;
+HPEN g_showlist_card_spacing_y;
 // GLOBAL: MAGIC 0x00638b80
 int g_showlist_cards_per_row;
 // GLOBAL: MAGIC 0x00638ba4
@@ -60,19 +60,19 @@ int g_showlist_cards_per_row;
 show_card_list_dialog_context_t *g_show_card_list_dialog_context;
 // GLOBAL: MAGIC 0x00638bf4
 // GLOBAL: SHANDALAR 0x0065033c
-int g_showlist_scroll_position;
+HBRUSH g_showlist_scroll_position;
 // GLOBAL: MAGIC 0x00638c08
 // GLOBAL: SHANDALAR 0x00650350
-int g_show_card_list_last_preview_hwnd;
+HWND g_show_card_list_last_preview_hwnd;
 // GLOBAL: MAGIC 0x00638c40
 // GLOBAL: SHANDALAR 0x00650388
-int g_showlist_selected_index;
+HBRUSH g_showlist_selected_index;
 // GLOBAL: MAGIC 0x00638c44
 // GLOBAL: SHANDALAR 0x0065038c
-int g_showlist_hovered_index;
+HPEN g_showlist_hovered_index;
 // GLOBAL: MAGIC 0x00638c6c
 // GLOBAL: SHANDALAR 0x006503b4
-int g_showlist_visible_row_count;
+COLORREF g_showlist_visible_row_count;
 // GLOBAL: MAGIC 0x00638c84
 // GLOBAL: SHANDALAR 0x006503cc
 int g_showlist_scroll_max;
@@ -83,7 +83,7 @@ extern CRITICAL_SECTION g_card_render_lock;
 extern HDC g_shared_offscreen_dc;
 extern HINSTANCE g_app_instance;
 
-void draw_card_list_count(int dc, int *rect, int value);
+void draw_card_list_count(HDC dc, RECT *rect, int value);
 
 // TODO: cleanup this bucket of shit
 #define SHOWLIST_CARD_BACK_CSVID g_card_back_display_internal_card_id
@@ -91,29 +91,30 @@ void draw_card_list_count(int dc, int *rect, int value);
 
 // FUNCTION: MAGIC 0x0049fd0c
 // FUNCTION: SHANDALAR 0x0053b6af
-void create_card_list_gdi_objects(int *brush1, int *pen1, int *pen2, int *pen3, int *brush2, int *text_color)
+void create_card_list_gdi_objects(HBRUSH *brush1, HPEN *pen1, HPEN *pen2, HPEN *pen3,
+                                  HBRUSH *brush2, COLORREF *text_color)
 {
-  *brush1 = (int)CreateSolidBrush(0x10000c7);
-  *pen1 = (int)CreatePen(0, 0, 0x1000086);
-  *pen2 = (int)CreatePen(0, 0, 0x100001d);
-  *pen3 = (int)CreatePen(0, 0, 0x10000c9);
-  *brush2 = (int)CreateSolidBrush(0x100000f);
+  *brush1 = CreateSolidBrush(0x10000c7);
+  *pen1 = CreatePen(0, 0, 0x1000086);
+  *pen2 = CreatePen(0, 0, 0x100001d);
+  *pen3 = CreatePen(0, 0, 0x10000c9);
+  *brush2 = CreateSolidBrush(0x100000f);
   *text_color = 0x1000090;
 
   if (*brush1 == 0)
-    *brush1 = (int)GetStockObject(2);
+    *brush1 = (HBRUSH)GetStockObject(2);
 
   if (*pen1 == 0)
-    *pen1 = (int)GetStockObject(6);
+    *pen1 = (HPEN)GetStockObject(6);
 
   if (*pen2 == 0)
-    *pen2 = (int)GetStockObject(6);
+    *pen2 = (HPEN)GetStockObject(6);
 
   if (*pen3 == 0)
-    *pen3 = (int)GetStockObject(7);
+    *pen3 = (HPEN)GetStockObject(7);
 
   if (*brush2 == 0)
-    *brush2 = (int)GetStockObject(2);
+    *brush2 = (HBRUSH)GetStockObject(2);
 }
 
 // FUNCTION: MAGIC 0x0049fdf9
@@ -238,8 +239,8 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
     GetClientRect(hwnd, &rect);
     for (button_index = 0; button_index < g_show_card_list_dialog_context->item_count; ++button_index)
     {
-      card_window = CreateWindowExA(0, "ShowListCard", "List Card", 0x50000000, button_x, button_y, g_showlist_cards_per_row, g_showlist_scroll_max, hwnd, (HMENU)(button_index + 10),
-                                    g_app_instance, (LPVOID)g_show_card_list_dialog_context->displayed_csvids[button_index]);
+      card_window = CreateWindowExA(0, "ShowListCard", "List Card", 0x50000000, button_x, button_y, g_showlist_cards_per_row, g_showlist_scroll_max, hwnd, (HMENU)(intptr_t)(button_index + 10),
+                                    g_app_instance, (LPVOID)(intptr_t)g_show_card_list_dialog_context->displayed_csvids[button_index]);
       if (g_show_card_list_dialog_context->show_card_counts != 0)
       {
         SendMessageA(card_window, 0x414, 1, g_show_card_list_dialog_context->card_counts[button_index]);
@@ -259,11 +260,9 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
     destroy_result = GetWindowLongA(hwnd, 8);
     if (destroy_result == 0)
     {
-      delete_card_list_gdi_objects((HGDIOBJ)g_showlist_selected_index,
-                                   (HGDIOBJ)g_showlist_card_height,
-                                   (HGDIOBJ)g_showlist_hovered_index,
-                                   (HGDIOBJ)g_showlist_card_spacing_y,
-                                   (HGDIOBJ)g_showlist_scroll_position);
+      delete_card_list_gdi_objects(g_showlist_selected_index, g_showlist_card_height,
+                                   g_showlist_hovered_index, g_showlist_card_spacing_y,
+                                   g_showlist_scroll_position);
       EndDialog(hwnd, -1);
     }
     return 1;
@@ -276,11 +275,9 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
     {
       if (command_has_selection == 0)
       {
-        delete_card_list_gdi_objects((HGDIOBJ)g_showlist_selected_index,
-                                     (HGDIOBJ)g_showlist_card_height,
-                                     (HGDIOBJ)g_showlist_hovered_index,
-                                     (HGDIOBJ)g_showlist_card_spacing_y,
-                                     (HGDIOBJ)g_showlist_scroll_position);
+        delete_card_list_gdi_objects(g_showlist_selected_index, g_showlist_card_height,
+                                     g_showlist_hovered_index, g_showlist_card_spacing_y,
+                                     g_showlist_scroll_position);
         EndDialog(hwnd, -1);
       }
     }
@@ -292,11 +289,9 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
       }
       else
       {
-        delete_card_list_gdi_objects((HGDIOBJ)g_showlist_selected_index,
-                                     (HGDIOBJ)g_showlist_card_height,
-                                     (HGDIOBJ)g_showlist_hovered_index,
-                                     (HGDIOBJ)g_showlist_card_spacing_y,
-                                     (HGDIOBJ)g_showlist_scroll_position);
+        delete_card_list_gdi_objects(g_showlist_selected_index, g_showlist_card_height,
+                                     g_showlist_hovered_index, g_showlist_card_spacing_y,
+                                     g_showlist_scroll_position);
         EndDialog(hwnd, selection_index);
       }
     }
@@ -371,13 +366,13 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam_dc, (int)lparam_data);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam_dc, (LPARAM)lparam_data);
 
   case WM_ERASEBKGND:
     erase_dc = (HDC)wparam_dc;
     ApplyCardArtPaletteToDc(erase_dc);
     GetClientRect(hwnd, &erase_rect);
-    FillRect(erase_dc, &erase_rect, (HBRUSH)g_showlist_selected_index);
+    FillRect(erase_dc, &erase_rect, g_showlist_selected_index);
     return 1;
 
   case WM_NCPAINT:
@@ -411,31 +406,31 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
       GetWindowTextA(hwnd, title_text, 100);
       right_border_width = client_rect.left - window_rect.left;
       bottom_border_height = window_rect.bottom - client_rect.bottom;
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       frame_width = 0;
       MoveToEx(dc, 0, frame_width, 0);
       LineTo(dc, window_rect.right - 1, frame_width);
-      SelectObject(dc, (HGDIOBJ)g_showlist_card_height);
+      SelectObject(dc, g_showlist_card_height);
       for (row = 1, frame_width = 1; row <= bottom_border_height - 2; ++row, ++frame_width)
       {
         MoveToEx(dc, 1, frame_width, 0);
         LineTo(dc, (window_rect.right - right_border_width) + 1, frame_width);
       }
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       frame_width = bottom_border_height - 1;
       MoveToEx(dc, right_border_width - 1, frame_width, 0);
       LineTo(dc, window_rect.right - right_border_width, frame_width);
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       other_frame_width = 0;
       MoveToEx(dc, other_frame_width, 0, 0);
       LineTo(dc, other_frame_width, window_rect.bottom - 1);
-      SelectObject(dc, (HGDIOBJ)g_showlist_card_height);
+      SelectObject(dc, g_showlist_card_height);
       for (row = 1, other_frame_width = 1; row <= right_border_width - 2; ++row, ++other_frame_width)
       {
         MoveToEx(dc, other_frame_width, 1, 0);
         LineTo(dc, other_frame_width, window_rect.bottom - 1);
       }
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       other_frame_width = client_rect.left - 1;
       MoveToEx(dc, other_frame_width, bottom_border_height - 1, 0);
       LineTo(dc, other_frame_width, client_rect.bottom + 1);
@@ -443,13 +438,13 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
       other_frame_width = window_rect.right - 1;
       MoveToEx(dc, other_frame_width, 0, 0);
       LineTo(dc, other_frame_width, window_rect.bottom);
-      SelectObject(dc, (HGDIOBJ)g_showlist_card_spacing_y);
+      SelectObject(dc, g_showlist_card_spacing_y);
       for (row = 1, other_frame_width = window_rect.right - 2; row <= right_border_width - 2; ++row, --other_frame_width)
       {
         MoveToEx(dc, other_frame_width, 1, 0);
         LineTo(dc, other_frame_width, window_rect.bottom - 1);
       }
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       other_frame_width = window_rect.right - right_border_width;
       MoveToEx(dc, other_frame_width, bottom_border_height - 1, 0);
       LineTo(dc, other_frame_width, client_rect.bottom + 1);
@@ -457,7 +452,7 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
       frame_width = window_rect.bottom - 1;
       MoveToEx(dc, 0, frame_width, 0);
       LineTo(dc, window_rect.right, frame_width);
-      SelectObject(dc, (HGDIOBJ)g_showlist_card_spacing_y);
+      SelectObject(dc, g_showlist_card_spacing_y);
 
       frame_width = window_rect.bottom - 2;
       row = 1;
@@ -466,16 +461,16 @@ INT_PTR CALLBACK dlgfunc_show_deck(HWND hwnd, UINT msg, WPARAM wparam_dc, LPARAM
         MoveToEx(dc, 1, frame_width, 0);
         LineTo(dc, window_rect.right - 1, frame_width);
       }
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       frame_width = window_rect.bottom - bottom_border_height;
       MoveToEx(dc, right_border_width - 1, frame_width, 0);
       LineTo(dc, window_rect.right - 2, frame_width);
-      SelectObject(dc, (HGDIOBJ)g_showlist_hovered_index);
+      SelectObject(dc, g_showlist_hovered_index);
       frame_width = client_rect.top - 1;
       MoveToEx(dc, client_rect.left, frame_width, 0);
       LineTo(dc, window_rect.right - right_border_width, frame_width);
       SetRect(&title_rect, client_rect.left, bottom_border_height, window_rect.right - right_border_width, client_rect.top - 1);
-      FillRect(dc, &title_rect, (HBRUSH)g_showlist_scroll_position);
+      FillRect(dc, &title_rect, g_showlist_scroll_position);
       SetTextColor(dc, g_showlist_visible_row_count);
       SetBkMode(dc, 1);
       title_rect.left += 5;
@@ -559,7 +554,7 @@ LRESULT CALLBACK wndproc_ShowListCard(HWND card_window, UINT message, WPARAM wpa
     return 0;
 
   case WM_CREATE:
-    csvid = *(LONG *)lparam_data;
+    csvid = (LONG)(intptr_t)((CREATESTRUCTA *)lparam_data)->lpCreateParams;
     SetWindowLongA(card_window, g_showlist_card_csvid_window_long_offset, csvid);
     show_count_flag = 0;
     count = 0;
@@ -586,10 +581,10 @@ LRESULT CALLBACK wndproc_ShowListCard(HWND card_window, UINT message, WPARAM wpa
     if ((message == WM_MOUSEMOVE && SHOWLIST_MOUSE_MODE != 2) || (message == WM_RBUTTONDOWN && SHOWLIST_MOUSE_MODE == 2))
     {
       csvid = GetWindowLongA(card_window, g_showlist_card_csvid_window_long_offset);
-      if (g_show_card_list_last_preview_hwnd != (int)card_window)
+      if (g_show_card_list_last_preview_hwnd != card_window)
       {
         SendMessageA(g_duel_card_preview_window_hwnd, 0x401, csvid, 0);
-        g_show_card_list_last_preview_hwnd = (int)card_window;
+        g_show_card_list_last_preview_hwnd = card_window;
       }
     }
     return 0;
@@ -613,7 +608,7 @@ LRESULT CALLBACK wndproc_ShowListCard(HWND card_window, UINT message, WPARAM wpa
 
     if (show_count_flag != 0)
     {
-      draw_card_list_count((int)g_shared_offscreen_dc, (int *)&client_rect, count);
+      draw_card_list_count(g_shared_offscreen_dc, &client_rect, count);
     }
 
     paint_dc = BeginPaint(card_window, &ps);
@@ -637,7 +632,7 @@ LRESULT CALLBACK wndproc_ShowListCard(HWND card_window, UINT message, WPARAM wpa
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)card_window, message, (int)wparam_window, (int)lparam_data);
+    return handle_button_palette_message(card_window, message, (HWND)wparam_window, lparam_data);
 
   default:
     return DefWindowProcA(card_window, message, wparam_window, lparam_data);
@@ -733,7 +728,7 @@ int show_cardlist(int *graveyard,
 
 // FUNCTION: MAGIC 0x0055b9f0
 // FUNCTION: SHANDALAR 0x00571d0e
-void draw_card_list_count(int dc, int *rect, int value)
+void draw_card_list_count(HDC dc, RECT *rect, int value)
 {
   char text[12];
   int text_y;
@@ -743,21 +738,21 @@ void draw_card_list_count(int dc, int *rect, int value)
   if (dc == 0 || rect == NULL)
     return;
 
-  saved_dc = SaveDC((HDC)dc);
-  SetMapMode((HDC)dc, 8);
-  SetWindowExtEx((HDC)dc, 100, 0x8c, NULL);
-  SetViewportExtEx((HDC)dc, rect[2] - rect[0], rect[3] - rect[1], NULL);
-  SetWindowOrgEx((HDC)dc, 0, 0, NULL);
-  SetViewportOrgEx((HDC)dc, rect[0], rect[1], NULL);
+  saved_dc = SaveDC(dc);
+  SetMapMode(dc, 8);
+  SetWindowExtEx(dc, 100, 0x8c, NULL);
+  SetViewportExtEx(dc, rect->right - rect->left, rect->bottom - rect->top, NULL);
+  SetWindowOrgEx(dc, 0, 0, NULL);
+  SetViewportOrgEx(dc, rect->left, rect->top, NULL);
   sprintf(text, "%d", value);
-  SelectObject((HDC)dc, (HGDIOBJ)global_smallcard_pt_font);
-  SetTextAlign((HDC)dc, 10);
-  SetBkMode((HDC)dc, 1);
+  SelectObject(dc, global_smallcard_pt_font);
+  SetTextAlign(dc, 10);
+  SetBkMode(dc, 1);
   text_x = 100;
   text_y = 0x8c;
-  SetTextColor((HDC)dc, global_palette_col_c9);
-  TextOutA((HDC)dc, text_x - 1, text_y - 1, text, strlen(text));
-  SetTextColor((HDC)dc, global_palette_col_9e_b);
-  TextOutA((HDC)dc, text_x - 3, text_y - 3, text, strlen(text));
-  RestoreDC((HDC)dc, saved_dc);
+  SetTextColor(dc, global_palette_col_c9);
+  TextOutA(dc, text_x - 1, text_y - 1, text, (int)strlen(text));
+  SetTextColor(dc, global_palette_col_9e_b);
+  TextOutA(dc, text_x - 3, text_y - 3, text, (int)strlen(text));
+  RestoreDC(dc, saved_dc);
 }

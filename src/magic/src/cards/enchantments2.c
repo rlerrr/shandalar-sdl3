@@ -599,9 +599,9 @@ int card_land_tax(int player, int card, event_t event)
                                                            global_library[player],
                                                            s.available,
                                                            500,
-                                                           (int)s.prompt_lines,
+                                                           s.prompt_lines,
                                                            3,
-                                                           (int)s.selected,
+                                                           s.selected,
                                                            0,
                                                            3);
       for (s.current_card = 0; s.current_card < s.selected_count; ++s.current_card)

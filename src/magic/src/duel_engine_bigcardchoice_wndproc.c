@@ -9,7 +9,7 @@
 #include "magic/src/shared_startup.h"
 
 HBITMAP load_pic(char *filename);
-LRESULT handle_button_palette_message(int hwnd, unsigned int msg, int wparam, int lparam);
+int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 
 extern int g_big_card_choice_timeout_ms;
 
@@ -144,14 +144,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_CREATE:
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG)(font = 0));
+    font = 0;
+    SetWindowLongPtrA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG_PTR)font);
     items = (char *)malloc(0x3e8);
     count = 0;
     selected = -1;
     SetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET, count);
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG)items);
+    SetWindowLongPtrA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG_PTR)items);
     SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, selected);
-    mode = (int)((CREATESTRUCTA *)lparam)->lpCreateParams;
+    mode = (int)(intptr_t)((CREATESTRUCTA *)lparam)->lpCreateParams;
     SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, mode);
     u18.create_name = (char *)((CREATESTRUCTA *)lparam)->lpszName;
     if (u18.create_name != NULL)
@@ -161,7 +162,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_DESTROY:
-    items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+    items = (char *)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
     if (items != NULL)
     {
       free(items);
@@ -205,7 +206,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 4;
 
   case WM_GETFONT:
-    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
     return (LRESULT)font;
 
   case WM_KEYDOWN:
@@ -295,7 +296,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
   case WM_MOUSEMOVE:
   case WM_LBUTTONUP:
     count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
     selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
     mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
     if (msg == WM_LBUTTONDOWN)
@@ -382,9 +383,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_PAINT:
-    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
     count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
-    items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+    items = (char *)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
     selected = GetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET);
     mode = GetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET);
     GetWindowTextA(hwnd, text, sizeof(text));
@@ -488,11 +489,11 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     return 0;
 
   case WM_SETFONT:
-    font = (HFONT)GetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET);
     if ((HFONT)wparam != font)
     {
       font = (HFONT)wparam;
-      SetWindowLongA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG)font);
+      SetWindowLongPtrA(hwnd, BIGCARD_CHOICE_FONT_WINDOW_LONG_OFFSET, (LONG_PTR)font);
       InvalidateRect(hwnd, (RECT *)0, 1);
     }
     return 0;
@@ -534,7 +535,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
     }
 
     text_result = DefWindowProcA(hwnd, msg, wparam, (LPARAM)g_big_card_choice_window_text_buffer);
-    items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+    items = (char *)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
     count = 0;
     selected = -1;
     if (*source != '\0')
@@ -592,14 +593,14 @@ LRESULT CALLBACK wndproc_MAGICGAME_BigCardChoiceClass(HWND hwnd, UINT msg, WPARA
       SetWindowLongA(hwnd, BIGCARD_CHOICE_MODE_WINDOW_LONG_OFFSET, mode);
     }
     SetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET, count);
-    SetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG)items);
+    SetWindowLongPtrA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET, (LONG_PTR)items);
     SetWindowLongA(hwnd, BIGCARD_CHOICE_SELECTED_WINDOW_LONG_OFFSET, selected);
     return text_result;
 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -620,7 +621,7 @@ int big_card_choice_item_is_enabled(HWND hwnd, int item)
   {
     return 0;
   }
-  items = (char *)GetWindowLongA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
+  items = (char *)GetWindowLongPtrA(hwnd, BIGCARD_CHOICE_ITEMS_WINDOW_LONG_OFFSET);
   count = GetWindowLongA(hwnd, BIGCARD_CHOICE_COUNT_WINDOW_LONG_OFFSET);
   if (count - 1 < item)
   {

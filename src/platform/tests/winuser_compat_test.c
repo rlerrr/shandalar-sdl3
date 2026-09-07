@@ -75,8 +75,8 @@ static LRESULT CALLBACK test_wndproc(HWND window, UINT message, WPARAM wparam, L
   case WM_MENUSELECT:
     if (HIWORD(wparam) == 0xffff && lparam == 0) {
       ++menu_closures;
-      while (GetMenuItemCount((HMENU)GetWindowLongA(window, 8)) > 0)
-        CHECK(DeleteMenu((HMENU)GetWindowLongA(window, 8), 0, MF_BYPOSITION));
+      while (GetMenuItemCount((HMENU)GetWindowLongPtrA(window, 8)) > 0)
+        CHECK(DeleteMenu((HMENU)GetWindowLongPtrA(window, 8), 0, MF_BYPOSITION));
     }
     return 0;
   case WM_USER + 1:
@@ -133,6 +133,11 @@ int main(void)
   parent = CreateWindowExA(0, "CompatTest", "parent", WS_VISIBLE, 10, 20, 320, 200,
                            NULL, NULL, NULL, NULL);
   CHECK(parent);
+  CHECK(SetWindowLongPtrA(parent, 8, (LONG_PTR)((void *)(uintptr_t)UINT64_C(0x1234567887654321))) == 0);
+  CHECK((void *)GetWindowLongPtrA(parent, 8) ==
+        (void *)(uintptr_t)UINT64_C(0x1234567887654321));
+  CHECK(SetWindowLongPtrA(parent, 8, (LONG_PTR)NULL) ==
+        (LONG_PTR)UINT64_C(0x1234567887654321));
   CHECK(!IsWindow(HWND_TOPMOST));
   CHECK(!IsWindow(HWND_NOTOPMOST));
   CHECK(!shandalar_win32_accepts_double_click(parent));
@@ -196,7 +201,8 @@ int main(void)
   CHECK(GetWindow(parent, GW_CHILD) == popup);
   popup_menu = CreatePopupMenu();
   CHECK(popup_menu);
-  CHECK(SetWindowLongA(parent, 8, (LONG)popup_menu) == 0);
+  CHECK(SetWindowLongPtrA(parent, 8, (LONG_PTR)popup_menu) == 0);
+  CHECK((HMENU)GetWindowLongPtrA(parent, 8) == popup_menu);
   CHECK(TrackPopupMenu(popup_menu, TPM_RIGHTBUTTON, 1, 2, 0, parent, NULL));
   CHECK(menu_initializations == 1);
   CHECK(shandalar_win32_menu_item_count(

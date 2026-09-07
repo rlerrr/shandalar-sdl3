@@ -235,7 +235,7 @@ int RenderBasicImageMenuControl(AdvMenuControl *control, int mode)
     return 0;
   }
   DrawEncodedImageResampled(g_menu_control_draw_target_page, control->x, control->y, control->width, control->height,
-                            (EncodedImage *)control->mode_data[mode]);
+                            control->mode_data[mode]);
   if ((mode == 2) && (control->on_activate != 0))
   {
     control->on_activate(control);
@@ -369,8 +369,8 @@ int RenderStatsWorldMagicControl(AdvMenuControl *control, int mode)
     return 0;
   }
 
-  sprite = (EncodedImage *)control->mode_data[mode];
-  highlight_sprite = (EncodedImage *)control->mode_data[1];
+  sprite = control->mode_data[mode];
+  highlight_sprite = control->mode_data[1];
   x = control->x;
   y = control->y;
   width = control->width;
@@ -468,75 +468,6 @@ static int RenderStatsColorHotspot(AdvMenuControl *control, int mode)
   return 1;
 }
 
-static __inline void InitializeStatsFixedMenuControls(void)
-{
-  int i;
-
-  memset(g_stats_menu_controls, 0, sizeof(g_stats_menu_controls));
-  g_stats_menu_controls[0].base_x = 0x193;
-  g_stats_menu_controls[0].base_y = 7;
-  g_stats_menu_controls[0].base_width = 0x54;
-  g_stats_menu_controls[0].base_height = 0x17;
-  g_stats_menu_controls[0].x = 0x193;
-  g_stats_menu_controls[0].y = 7;
-  g_stats_menu_controls[0].width = 0x54;
-  g_stats_menu_controls[0].height = 0x17;
-  g_stats_menu_controls[0].enabled = 1;
-  g_stats_menu_controls[0].on_render = (AdvMenuRenderCallback)RenderStatsTabButtonControl;
-  g_stats_menu_controls[0].on_activate = (AdvMenuActivateCallback)ActivateStatsMenuControl;
-  g_stats_menu_controls[0].selection_value = 1;
-
-  g_stats_menu_controls[1] = g_stats_menu_controls[0];
-  g_stats_menu_controls[1].base_x = 0x1ec;
-  g_stats_menu_controls[1].x = 0x1ec;
-  g_stats_menu_controls[1].base_width = 0x48;
-  g_stats_menu_controls[1].width = 0x48;
-  g_stats_menu_controls[1].selection_value = 2;
-
-  g_stats_menu_controls[2] = g_stats_menu_controls[0];
-  g_stats_menu_controls[2].base_x = 0x23c;
-  g_stats_menu_controls[2].x = 0x23c;
-  g_stats_menu_controls[2].base_width = 0x31;
-  g_stats_menu_controls[2].width = 0x31;
-  g_stats_menu_controls[2].selection_value = 3;
-
-  g_stats_menu_controls[3].base_x = 0xe3;
-  g_stats_menu_controls[3].base_y = 0x2b;
-  g_stats_menu_controls[3].base_width = 0xe;
-  g_stats_menu_controls[3].base_height = 0x96;
-  g_stats_menu_controls[3].x = 0xe3;
-  g_stats_menu_controls[3].y = 0x2b;
-  g_stats_menu_controls[3].width = 0xe;
-  g_stats_menu_controls[3].height = 0x96;
-  g_stats_menu_controls[3].enabled = 1;
-  g_stats_menu_controls[3].on_render = (AdvMenuRenderCallback)RenderStatsScrollbarHotspot;
-  g_stats_menu_controls[3].on_activate = (AdvMenuActivateCallback)DragStatsCreatureScrollbar;
-  g_stats_menu_controls[3].selection_value = 4;
-  g_stats_menu_controls[3].mode_data[3] = 0x12;
-
-  g_stats_menu_controls[4] = g_stats_menu_controls[3];
-  g_stats_menu_controls[4].base_height = 0x12;
-  g_stats_menu_controls[4].height = 0x12;
-  g_stats_menu_controls[4].on_render = (AdvMenuRenderCallback)RenderStatsCreatureScrollbar;
-  g_stats_menu_controls[4].selection_value = 5;
-
-  for (i = 0; i < 5; i = i + 1)
-  {
-    g_stats_menu_controls[i + 5].base_x = i * 0x39 + 0x14d;
-    g_stats_menu_controls[i + 5].base_y = 0x154;
-    g_stats_menu_controls[i + 5].base_width = 0x30;
-    g_stats_menu_controls[i + 5].base_height = 0x30;
-    g_stats_menu_controls[i + 5].x = i * 0x39 + 0x14d;
-    g_stats_menu_controls[i + 5].y = 0x154;
-    g_stats_menu_controls[i + 5].width = 0x30;
-    g_stats_menu_controls[i + 5].height = 0x30;
-    g_stats_menu_controls[i + 5].enabled = 1;
-    g_stats_menu_controls[i + 5].on_render = (AdvMenuRenderCallback)RenderStatsColorHotspot;
-    g_stats_menu_controls[i + 5].selection_value = i + 10;
-    g_stats_menu_controls[i + 5].state = g_world_magic_town_flags[i] ? 0 : 3;
-  }
-}
-
 static __inline void InitializeStatsWorldMagicControls(void)
 {
   int i;
@@ -587,8 +518,8 @@ static __inline void InitializeStatsWorldMagicControls(void)
     g_stats_menu_controls[i + 10].base_height = g_stats_menu_controls[i + 10].height;
     g_stats_menu_controls[i + 10].width = g_stats_menu_controls[i + 10].base_height;
     g_stats_menu_controls[i + 10].base_width = g_stats_menu_controls[i + 10].width;
-    g_stats_menu_controls[i + 10].mode_data[0] = (int)g_world_magic_choice_button_sprite_bank.named.normal[i];
-    g_stats_menu_controls[i + 10].mode_data[2] = (int)g_world_magic_choice_button_sprite_bank.named.highlight[i];
+    g_stats_menu_controls[i + 10].mode_data[0] = g_world_magic_choice_button_sprite_bank.named.normal[i];
+    g_stats_menu_controls[i + 10].mode_data[2] = g_world_magic_choice_button_sprite_bank.named.highlight[i];
     g_stats_menu_controls[i + 10].mode_data[1] = g_stats_menu_controls[i + 10].mode_data[2];
   }
 }

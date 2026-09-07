@@ -24,7 +24,7 @@
 
 extern HINSTANCE g_app_instance;
 extern int g_manalink_is_host;
-extern int g_show_card_list_last_preview_hwnd;
+extern HWND g_show_card_list_last_preview_hwnd;
 extern HPALETTE global_cart_art_hpalette;
 extern card_ptr_t global_raw_cards_storage[2000];
 extern HANDLE global_mutex_GameInit;
@@ -398,7 +398,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wp
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_dc = (HDC)wparam;
@@ -514,7 +514,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
     g_redraw_ante_waiting_for_both_network_choices = 0;
     BringWindowToTop(g_duel_full_card_window_hwnd);
     context = (DuelRedrawAnteDialogContext *)lparam;
-    SetWindowLongA(hwnd, DWL_USER, (LONG)context);
+    SetWindowLongPtrA(hwnd, DWL_USER, (LONG_PTR)context);
     ShowWindow(GetDlgItem(hwnd, 0x448), SW_HIDE);
     ShowWindow(GetDlgItem(hwnd, 0x449), SW_HIDE);
     g_show_card_list_last_preview_hwnd = 0;
@@ -695,7 +695,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
     {
     case IDOK:
     case IDCANCEL:
-      context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       if ((g_duel_network_flags & 2) != 0)
       {
         if (context->redraw_result != 0 || context->ante_result != 0)
@@ -726,7 +726,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
       break;
 
     case 0x444:
-      context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       context->mulligan_accepted = 1;
       EnableWindow(GetDlgItem(hwnd, 0x444), 0);
       ShowWindow(GetDlgItem(hwnd, IDOK), SW_HIDE);
@@ -759,7 +759,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
       }
       break;
     case 0x402:
-      context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       ante_info = context->ante_result;
       context->opponent_mulligan_accepted = lparam;
       g_redraw_ante_opponent_choice_received = 1;
@@ -801,7 +801,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
       break;
 
     case 0x401:
-      context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       context->opponent_mulligan_accepted = lparam;
       if (context->opponent_mulligan_accepted != 0)
       {
@@ -876,7 +876,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_dc = (HDC)wparam;
@@ -900,7 +900,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
   case WM_RBUTTONDOWN:
     mouse_point.x = (unsigned int)lparam & 0xffff;
     mouse_point.y = (unsigned short)(((unsigned int)lparam >> 0x10) & 0xffff);
-    context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+    context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
     if ((msg == WM_MOUSEMOVE && g_duel_interface_options.layout != 2) ||
         (msg == WM_RBUTTONDOWN && g_duel_interface_options.layout == 2))
     {
@@ -925,7 +925,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
     UpdateWindow(GetDlgItem(hwnd, 0x442));
     UpdateWindow(GetDlgItem(hwnd, 0x447));
     UpdateWindow(GetDlgItem(hwnd, 0x446));
-    context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+    context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
     paint_dc = BeginPaint(hwnd, &paint);
     if (paint_dc != (HDC)0)
     {
@@ -947,7 +947,7 @@ INT_PTR CALLBACK dlgproc_duel_redraw_ante(HWND hwnd, UINT msg, WPARAM wparam, LP
     return 1;
 
   case WM_TIMER:
-    context = (DuelRedrawAnteDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+    context = (DuelRedrawAnteDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
     command_id = wparam;
     if (command_id == 1)
     {
@@ -1218,7 +1218,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   {
   case WM_INITDIALOG:
     context = (DuelCoinFlipDialogContext *)lparam;
-    SetWindowLongA(hwnd, DWL_USER, (LONG)context);
+    SetWindowLongPtrA(hwnd, DWL_USER, (LONG_PTR)context);
     load_coin_flip_dialog_assets(&g_coin_flip_dialog_background,
                                  &g_coin_flip_dialog_text_color,
                                  &g_coin_flip_dialog_button_normal_bitmap,
@@ -1335,7 +1335,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     {
     case 0x4c5:
     case 0x4c6:
-      context = (DuelCoinFlipDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelCoinFlipDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       if (command_id == 0x4c5)
       {
         context->play_draw_choice = 1;
@@ -1347,7 +1347,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPAR
       EndDialog(hwnd, 1);
       break;
     case 0x401:
-      context = (DuelCoinFlipDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelCoinFlipDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       context->play_draw_choice = lparam;
       load_text(global_ui_strings_filename, "DIALOG_PLAYORDRAW");
       if (context->play_draw_choice != 0)
@@ -1411,7 +1411,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     hdc = (HDC)wparam;
@@ -1459,7 +1459,7 @@ INT_PTR CALLBACK dlgproc_duel_coin_flip(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   case WM_RBUTTONDOWN:
     if (g_duel_network_flags & 2)
     {
-      context = (DuelCoinFlipDialogContext *)GetWindowLongA(hwnd, DWL_USER);
+      context = (DuelCoinFlipDialogContext *)GetWindowLongPtrA(hwnd, DWL_USER);
       if (context->play_draw_choice == -1)
       {
         return 0;

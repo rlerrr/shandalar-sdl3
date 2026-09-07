@@ -205,7 +205,7 @@ undefined4 PcxReadHeaderAndPalette(void *paletteOut)
     fseek(gPcxInFile, 0x10, 2);
     for (paletteIndex = 0; paletteIndex < 0x10; paletteIndex = paletteIndex + 1)
     {
-      fread((void *)(paletteIndex * 4 + (int)paletteOut), 1, 3, gPcxInFile);
+      fread((byte *)paletteOut + paletteIndex * 4, 1, 3, gPcxInFile);
     }
     fseek(gPcxInFile, 0x80, 0);
   }

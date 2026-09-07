@@ -2001,10 +2001,10 @@ loop:
   /* Fill sprite pointers (the render callback expects these). */
   for (slot_i = 0; slot_i < 4; slot_i = slot_i + 1)
   {
-    g_town_main_menu_controls[slot_i].mode_data[0] = (int)g_main_menu_button_sprites_normal[slot_i];
-    g_town_main_menu_controls[slot_i].mode_data[1] = (int)g_main_menu_button_sprites_highlight[slot_i];
-    g_town_main_menu_controls[slot_i].mode_data[2] = (int)g_main_menu_button_sprites_highlight[slot_i];
-    g_town_main_menu_controls[slot_i].mode_data[3] = (int)g_main_menu_button_sprites_normal[slot_i];
+    g_town_main_menu_controls[slot_i].mode_data[0] = g_main_menu_button_sprites_normal[slot_i];
+    g_town_main_menu_controls[slot_i].mode_data[1] = g_main_menu_button_sprites_highlight[slot_i];
+    g_town_main_menu_controls[slot_i].mode_data[2] = g_main_menu_button_sprites_highlight[slot_i];
+    g_town_main_menu_controls[slot_i].mode_data[3] = g_main_menu_button_sprites_normal[slot_i];
   }
 
   if (g_town_icon_menu_controls[0].x == g_town_icon_menu_controls[0].base_x)

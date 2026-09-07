@@ -1753,11 +1753,11 @@ int read_cfg(HINSTANCE hinst)
 #endif
   void *recordBuf;
   char cards_dat_filename[264];
-  size_t global_available_slots = 0;
-  size_t record_size;
+  uint32_t global_available_slots = 0;
+  uint32_t record_size;
   int slotIndex;
   FILE *cards_dat;
-  int *record_table;
+  uint32_t *record_table;
   int result;
 
   result = 1;
@@ -1798,9 +1798,11 @@ int read_cfg(HINSTANCE hinst)
     if (fread(&global_available_slots, 4, 1, cards_dat) == 1 &&
         fread(&record_size, 4, 1, cards_dat) == 1)
     {
-      record_table = (int *)malloc(global_available_slots * 0x98);
+      record_table = (uint32_t *)malloc((size_t)global_available_slots * 0x26 *
+                                        sizeof(*record_table));
       if (record_table != NULL &&
-          fread(record_table, 0x98, global_available_slots, cards_dat) == global_available_slots)
+          fread(record_table, 0x26 * sizeof(*record_table), global_available_slots,
+                cards_dat) == global_available_slots)
       {
         recordBuf = malloc(record_size);
         if (recordBuf != (void *)0x0 && fread(recordBuf, 1, record_size, cards_dat) == record_size)
@@ -1808,8 +1810,9 @@ int read_cfg(HINSTANCE hinst)
           for (slotIndex = 0; (int)global_available_slots > slotIndex;
                slotIndex = slotIndex + 1)
           {
-            record_table[slotIndex * 0x26 + 1] = record_table[slotIndex * 0x26 + 1] + (int)recordBuf;
-            strncpy(g_cardNames + slotIndex * 100, (char *)record_table[slotIndex * 0x26 + 1], 100);
+            const uint32_t name_offset = record_table[slotIndex * 0x26 + 1];
+            strncpy(g_cardNames + slotIndex * 100,
+                    (char *)recordBuf + name_offset, 100);
             g_cardNameSlotTerminators[slotIndex * 100] = 0;
           }
         }

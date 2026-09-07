@@ -34,7 +34,7 @@ extern int g_life[2];
 extern HINSTANCE g_app_instance;
 extern HWND g_duel_opponent_battlefield_window;
 extern HWND g_duel_player_battlefield_window;
-extern int g_duel_tooltip_window;
+extern HWND g_duel_tooltip_window;
 extern int g_showlist_smallcard_width;
 extern int g_showlist_smallcard_height;
 extern int global_available_slots;
@@ -44,7 +44,7 @@ void checked_DeleteDC_DeleteObject(HDC dc, HGDIOBJ obj);
 void set_duel_prompt_context(HWND hwnd, char *prompt, unsigned int mode);
 int prompt_for_life_total(int player, char *prompt, int initial_life_total);
 int get_battlefield_card_stagger_offset(HWND hwnd);
-LONG get_card_window_hidden_flag(HWND hwnd);
+LONG_PTR get_card_window_hidden_flag(HWND hwnd);
 void reset_battlefield_layout_positions(HWND hwnd);
 void get_next_battlefield_card_position(HWND parent, int *rect, int value, int *x, int *y, int flag);
 void set_duel_tooltip_text(char *text);
@@ -660,7 +660,7 @@ int find_battlefield_card_window(HWND hwnd, int *player_and_card, int *unused, H
   }
   else
   {
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_duel_window_userdata_player_offset);
     card_count = GetWindowLongA(hwnd, g_duel_window_userdata_card_offset);
     found = 0;
     index = 0;
@@ -695,9 +695,9 @@ int find_battlefield_card_window(HWND hwnd, int *player_and_card, int *unused, H
 
 // FUNCTION: MAGIC 0x004d25fe
 // FUNCTION: SHANDALAR 0x00578bda
-LONG get_card_window_hidden_flag(HWND hwnd)
+LONG_PTR get_card_window_hidden_flag(HWND hwnd)
 {
-  return GetWindowLongA(hwnd, 8);
+  return GetWindowLongPtrA(hwnd, 8);
 }
 
 // FUNCTION: MAGIC 0x004d153b
@@ -871,8 +871,8 @@ void resize_battlefield_child_card_windows(HWND hwnd)
 
   GetClientRect(hwnd, &rect);
   card_count = GetWindowLongA(hwnd, g_duel_window_userdata_card_offset);
-  card_windows = (HWND *)GetWindowLongA(hwnd, g_duel_window_userdata_player_offset);
-  snapshot_window = (HWND)GetWindowLongA(hwnd, g_duel_window_userdata_snapshot_offset);
+  card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_duel_window_userdata_player_offset);
+  snapshot_window = (HWND)GetWindowLongPtrA(hwnd, g_duel_window_userdata_snapshot_offset);
 
   for (index = 0; index < card_count; index++)
   {
@@ -963,7 +963,7 @@ void layout_duel_child_windows(HWND hwnd, int layout)
 
   if (layout == 1)
   {
-    GetWindowTextA((HWND)g_duel_tooltip_window, tooltip_text1, 100);
+    GetWindowTextA(g_duel_tooltip_window, tooltip_text1, 100);
     set_duel_tooltip_text(tooltip_text1);
     GetClientRect(hwnd, &rect);
     client_width = rect.right;
@@ -1076,7 +1076,7 @@ void layout_duel_child_windows(HWND hwnd, int layout)
   }
   else if (layout == 2)
   {
-    GetWindowTextA((HWND)g_duel_tooltip_window, tooltip_text2, 100);
+    GetWindowTextA(g_duel_tooltip_window, tooltip_text2, 100);
     set_duel_tooltip_text(tooltip_text2);
     GetClientRect(hwnd, &rect);
     client_width = rect.right;
@@ -1388,7 +1388,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
   {
   case WM_INITDIALOG:
     dialog_params = (post_duel_draws_dialog_params_t *)lparam;
-    SetWindowLongA(hwnd, DWL_USER, (LONG)dialog_params);
+    SetWindowLongPtrA(hwnd, DWL_USER, (LONG_PTR)dialog_params);
     setup_post_duel_draws_dialog_resources(&g_post_duel_draws_background_bitmap,
                                            &g_post_duel_draws_text_color,
                                            &g_post_duel_draws_button_text_color,
@@ -1520,7 +1520,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_dc = (HDC)wparam;
@@ -1537,7 +1537,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     return TRUE;
 
   case WM_CHAR:
-    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongPtrA(hwnd, DWL_USER);
     if (dialog_params->show_continue_button == 0)
     {
       if ((wparam == 0xd) || (wparam == 0x20) || (wparam == 0x1b))
@@ -1560,7 +1560,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     }
     else
     {
-      dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+      dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongPtrA(hwnd, DWL_USER);
       if (dialog_params->show_continue_button == 0)
       {
         cleanup_post_duel_draws_dialog_resources(g_post_duel_draws_background_bitmap,
@@ -1576,7 +1576,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_RBUTTONDOWN:
     mouse_point.x = lparam & 0xffff;
     mouse_point.y = (unsigned short)(((unsigned int)lparam >> 16) & 0xffff);
-    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongPtrA(hwnd, DWL_USER);
     if (((msg == WM_MOUSEMOVE) && (g_duel_interface_options.layout != 2)) ||
         ((msg == WM_RBUTTONDOWN) && (g_duel_interface_options.layout == 2)))
     {
@@ -1598,7 +1598,7 @@ INT_PTR CALLBACK post_duel_draws_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
     return FALSE;
 
   case WM_PAINT:
-    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongA(hwnd, DWL_USER);
+    dialog_params = (post_duel_draws_dialog_params_t *)GetWindowLongPtrA(hwnd, DWL_USER);
     UpdateWindow(GetDlgItem(hwnd, 0x4e4));
     get_current_duel_selection(&selected_player, (int *)0);
     if (selected_player == 0)
@@ -1757,7 +1757,7 @@ INT_PTR CALLBACK still_thinking_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam, 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     dc = (HDC)wparam;
@@ -2304,7 +2304,7 @@ static INT_PTR CALLBACK dlgproc_pick_card_from_list(HWND hwnd, UINT msg, WPARAM 
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, (int)lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return 0;
@@ -2790,7 +2790,7 @@ void dispatch_duel_engine_message(MSG *message);
 // FUNCTION: SHANDALAR 0x005410d1
 LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  int minmaxinfo;
+  MINMAXINFO *minmaxinfo;
   char pad_0004[0x108];
   int command_player;
   int command_selected_card;
@@ -2808,12 +2808,12 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
 
   int slot_index;
   BOOL visible;
-  int screen_height;
+  HBITMAP face_bitmap;
   int screen_width;
   int has_replay_prompt;
   char replay_prompt[100];
   int should_quit;
-  HWND duel_result;
+  int duel_result;
   target_selection_result_t *posted_action_result;
   int selected_card;
   int selected_player;
@@ -2929,27 +2929,27 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     return action_result_ok;
 
   case 0x401:
-    duel_result = (HWND)wparam;
+    duel_result = (int)wparam;
     should_quit = 1;
     if ((g_duel_mode_flags & 1) != 0)
     {
       if (g_duel_interface_options.see_next_draws_at_end_of_duel != 0)
       {
-        show_post_duel_draws((int)duel_result);
+        show_post_duel_draws(duel_result);
       }
     }
     else if ((g_duel_mode_flags & 2) != 0)
     {
       has_replay_prompt = 1;
-      if (duel_result == (HWND)1)
+      if (duel_result == 1)
       {
         strcpy(replay_prompt, "Congratulations!");
       }
-      else if (duel_result == (HWND)0)
+      else if (duel_result == 0)
       {
         strcpy(replay_prompt, "Too bad");
       }
-      else if (duel_result == (HWND)-1)
+      else if (duel_result == -1)
       {
         strcpy(replay_prompt, "Oh well...");
       }
@@ -2969,8 +2969,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     }
     if (should_quit != 0)
     {
-      g_duel_exit_code = (int)duel_result;
-      PostQuitMessage((int)duel_result);
+      g_duel_exit_code = duel_result;
+      PostQuitMessage(duel_result);
     }
     return 0;
 
@@ -3063,26 +3063,26 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
       if (g_duel_creature_type != -1)
       {
         sprintf(backdrop_path, "%s\\%03d.pic", global_faces_path, g_duel_creature_type);
-        screen_height = (int)load_pic(backdrop_path);
+        face_bitmap = load_pic(backdrop_path);
       }
       else
       {
-        screen_height = 0;
+        face_bitmap = (HBITMAP)0;
       }
-      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)screen_height, 0);
+      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)face_bitmap, 0);
 #ifdef SHANDALAR
-      screen_height = (int)g_facemaker_page4_bitmap;
+      face_bitmap = g_facemaker_page4_bitmap;
 #else
-      screen_height = (int)g_duel_player_face_pic;
+      face_bitmap = g_duel_player_face_pic;
 #endif
-      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)screen_height, 1);
+      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)face_bitmap, 1);
     }
     else
     {
-      screen_height = (int)load_pic((char *)g_duel_state_block_008ce570);
-      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)screen_height, 0);
-      screen_height = (int)load_pic((char *)g_duel_state_block_008b3fc0);
-      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)screen_height, 0);
+      face_bitmap = load_pic((char *)g_duel_state_block_008ce570);
+      SendMessageA(g_duel_opponent_face_window_hwnd, 0x439, (WPARAM)face_bitmap, 0);
+      face_bitmap = load_pic((char *)g_duel_state_block_008b3fc0);
+      SendMessageA(g_duel_player_face_window_hwnd, 0x439, (WPARAM)face_bitmap, 0);
     }
     if ((g_duel_mode_flags & 0x10) != 0)
     {
@@ -3513,9 +3513,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_GETMINMAXINFO:
-    minmaxinfo = (int)lparam;
-    ((int *)minmaxinfo)[6] = 0x32;
-    ((int *)minmaxinfo)[7] = 0x32;
+    minmaxinfo = (MINMAXINFO *)lparam;
+    minmaxinfo->ptMinTrackSize.x = 0x32;
+    minmaxinfo->ptMinTrackSize.y = 0x32;
     return 0;
 
   case WM_SIZE:
@@ -3546,7 +3546,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_MainClass(HWND hwnd, UINT msg, WPARAM wparam,
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_TIMER:
     if ((int)wparam == g_duel_timer_id)

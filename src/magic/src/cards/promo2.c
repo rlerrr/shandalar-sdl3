@@ -264,7 +264,7 @@ int card_natural_selection(int player, int card, event_t event)
 {
   struct
   {
-    char (*prompt)[300];
+    char *prompt;
     int count;
     int choice_count;
     target_t target;
@@ -337,9 +337,9 @@ int card_natural_selection(int player, int card, event_t event)
     {
       if (s.count > 0)
       {
-        s.prompt = &g_text_lines[1];
+        s.prompt = g_text_lines[1];
         s.choice_count = select_from_graveyard_with_dialog(
-            player, s.top_three, s.available, s.count, (int)&s.prompt, 1, (int)s.selected, 0, s.count);
+            player, s.top_three, s.available, s.count, &s.prompt, 1, s.selected, 0, s.count);
       }
     }
     else if (internal_rand(2) != 0)

@@ -43,7 +43,7 @@ unsigned int get_displayed_card_mana_source_flag(int player, int card);
 int get_displayed_player_card_counts(int *player_card_counts);
 void get_displayed_card_attachment(int *player_and_card, int player, int card);
 void get_current_duel_selection(int *selected_player, int *selected_card);
-LONG get_card_window_hidden_flag(HWND hwnd);
+LONG_PTR get_card_window_hidden_flag(HWND hwnd);
 void post_card_action_selection(HWND hwnd);
 int draw_masked_bitmap_left_half_to_rect(HDC dc, RECT *rect, HANDLE bitmap);
 BOOL DrawMaskedBitmapToRect(HDC dc, RECT *rect, HANDLE bitmap, int width, int height,
@@ -114,7 +114,7 @@ extern card_ptr_t global_raw_cards_storage[2000];
 extern BITMAPINFO g_duel_backbuffer_bmi;
 extern int g_duel_modal_action_active;
 extern target_selection_request_t g_duel_action_request_copy;
-extern int g_duel_tooltip_window;
+extern HWND g_duel_tooltip_window;
 
 // GLOBAL: MAGIC 0x0055e0fc
 // GLOBAL: SHANDALAR 0x0057f19c
@@ -3094,7 +3094,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     }
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
-    snapshot = (card_instance_t *)GetWindowLongA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
+    snapshot = (card_instance_t *)GetWindowLongPtrA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
     copy_displayed_card_snapshot(&msg_432_snapshot, player, card);
     if (player != -1 && card == -1)
     {
@@ -3160,7 +3160,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x402:
-    hidden_parent = (HWND)GetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
+    hidden_parent = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
     if (hidden_parent != (HWND)wparam)
     {
       if (wparam == 0)
@@ -3168,17 +3168,17 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         BringWindowToTop(hwnd);
       }
       hidden_parent = (HWND)wparam;
-      SetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET, (LONG)hidden_parent);
+      SetWindowLongPtrA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET, (LONG_PTR)hidden_parent);
     }
     return 0;
 
   case 0x403:
-    return (LRESULT)(hidden_parent = (HWND)GetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET));
+    return (LRESULT)(hidden_parent = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET));
 
   case 0x404:
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
-    snapshot = (card_instance_t *)GetWindowLongA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
+    snapshot = (card_instance_t *)GetWindowLongPtrA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
     if (player != -1 && card == -1)
     {
       msg_404_compare_result = 0;
@@ -3193,7 +3193,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_COMMAND:
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
-    hidden_parent = (HWND)GetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
+    hidden_parent = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
     command_player_and_card[0] = player;
     command_player_and_card[1] = card;
     if (GetParent(hwnd) == g_duel_attack_phase_window_hwnd)
@@ -3322,7 +3322,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
       {
         memcpy(&command_band_action_request_copy, &g_duel_action_request_copy,
                sizeof(command_band_action_request_copy));
-        GetWindowTextA((HWND)g_duel_tooltip_window, command_band_tooltip_text, 100);
+        GetWindowTextA(g_duel_tooltip_window, command_band_tooltip_text, 100);
         command_band_saved_modal_active = g_duel_modal_action_active;
         command_band_select_ok =
             C_real_select_target(0, 0, 1, 0x200, 2, 0, 0, 0, 0, 0,
@@ -3445,7 +3445,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     case 0x6b:
       memcpy(&command_defend_action_request_copy, &g_duel_action_request_copy,
              sizeof(command_defend_action_request_copy));
-      GetWindowTextA((HWND)g_duel_tooltip_window, command_defend_tooltip_text, 100);
+      GetWindowTextA(g_duel_tooltip_window, command_defend_tooltip_text, 100);
       command_defend_saved_modal_active = g_duel_modal_action_active;
       command_defend_select_ok =
           C_real_select_target(0, 1, 0, 0x200, 2, 0, 0, 0, 0, 0,
@@ -3602,10 +3602,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     card = ((int *)((CREATESTRUCTA *)lparam)->lpCreateParams)[1];
     SetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET, player);
     SetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET, card);
-    SetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET, 0);
+    SetWindowLongPtrA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET, (LONG_PTR)NULL);
     snapshot = (card_instance_t *)malloc(sizeof(card_instance_t));
-    SetWindowLongA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET, (LONG)snapshot);
-    SetWindowLongA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET, 0);
+    SetWindowLongPtrA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET, (LONG_PTR)snapshot);
+    SetWindowLongPtrA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET, (LONG_PTR)NULL);
     if (snapshot == NULL)
     {
       return -1;
@@ -3614,7 +3614,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_DESTROY:
-    snapshot = (card_instance_t *)GetWindowLongA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
+    snapshot = (card_instance_t *)GetWindowLongPtrA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
     free(snapshot);
     return 0;
 
@@ -3625,7 +3625,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     long_press_previewed = 0;
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
-    hidden_parent = (HWND)GetWindowLongA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
+    hidden_parent = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_HIDDEN_PARENT_WINDOW_LONG_OFFSET);
     test_point.x = (short)((unsigned int)lparam & 0xffff);
     test_point.y = (short)(((unsigned int)lparam >> 16) & 0xffff);
     ClientToScreen(hwnd, &test_point);
@@ -3838,8 +3838,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
                    paint_rect.bottom,
                    g_shared_offscreen_dc, 0, 0, SRCCOPY);
           }
-          snapshot = (card_instance_t *)GetWindowLongA(hwnd,
-                                                       CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
+          snapshot = (card_instance_t *)GetWindowLongPtrA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
           copy_displayed_card_snapshot(snapshot, player, card);
           if (g_duel_dialog_refresh_state != 0)
           {
@@ -3861,7 +3860,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         GetParent(hwnd) != g_duel_life_window_hwnd)
     {
       previous_z_order = GetWindow(hwnd, GW_HWNDPREV);
-      SetWindowLongA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET, (LONG)previous_z_order);
+      SetWindowLongPtrA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET, (LONG_PTR)previous_z_order);
       BringWindowToTop(hwnd);
     }
     if (g_duel_interface_options.layout == 2)
@@ -3895,7 +3894,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     if (GetParent(hwnd) != g_duel_full_card_window_hwnd &&
         GetParent(hwnd) != g_duel_life_window_hwnd)
     {
-      previous_z_order = (HWND)GetWindowLongA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET);
+      previous_z_order = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET);
       SetWindowPos(hwnd, previous_z_order, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
     return 0;
@@ -3996,7 +3995,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
       if (GetParent(hwnd) != g_duel_full_card_window_hwnd &&
           GetParent(hwnd) != g_duel_life_window_hwnd)
       {
-        previous_z_order = (HWND)GetWindowLongA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET);
+        previous_z_order = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET);
         SetWindowPos(hwnd, previous_z_order, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
       }
     }
@@ -4017,7 +4016,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

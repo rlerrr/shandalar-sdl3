@@ -11,15 +11,23 @@ extern HPALETTE global_cart_art_hpalette;
 // GLOBAL: MAGIC 0x007775b0
 static WNDPROC global_wndproc_std_ButtonClass;
 
+typedef struct PaletteMessageArgs
+{
+  HWND hwnd;
+  UINT msg;
+  HWND wparam;
+  LPARAM lparam;
+} PaletteMessageArgs;
+
 // FUNCTION: DECKDLL 0x10025d1b
 // FUNCTION: MAGIC 0x00496489
 static BOOL CALLBACK enum_child_palette_message_proc(HWND child_hwnd, LPARAM lparam)
 {
-  int *args;
+  PaletteMessageArgs *args;
 
-  args = (int *)lparam;
-  if (GetParent(child_hwnd) == (HWND)*args)
-    SendMessageA(child_hwnd, args[1], args[2], args[3]);
+  args = (PaletteMessageArgs *)lparam;
+  if (GetParent(child_hwnd) == args->hwnd)
+    SendMessageA(child_hwnd, args->msg, (WPARAM)args->wparam, args->lparam);
   return TRUE;
 }
 
@@ -29,16 +37,7 @@ static BOOL CALLBACK enum_child_palette_message_proc(HWND child_hwnd, LPARAM lpa
 int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam_hwnd, LPARAM lparam)
 {
   HDC hdc2; // ebp - 0x38
-  struct
-  {
-    HWND hwnd;     // ebp - 0x34
-    UINT msg;      // ebp - 0x30
-    HWND wparam;   // ebp - 0x2c
-    LPARAM lparam; // ebp - 0x28
-    int pad1;
-    int pad2;
-    int pad3;
-  } args;
+  PaletteMessageArgs args;
 
   DWORD tid_dst;     // ebp - 0x18
   HDC hdc;           // ebp - 0x14
@@ -157,7 +156,8 @@ LRESULT CALLBACK wndproc_ButtonClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM 
 BOOL CALLBACK enumfunc_change_buttonclass_wndproc(HWND hwnd, LPARAM lparam)
 {
   if (is_buttonclass(hwnd))
-    global_wndproc_std_ButtonClass = (WNDPROC)SetWindowLong(hwnd, GWL_WNDPROC, (LONG)wndproc_ButtonClass);
+    global_wndproc_std_ButtonClass =
+        (WNDPROC)SetWindowLongPtrA(hwnd, GWL_WNDPROC, (LONG_PTR)wndproc_ButtonClass);
   return TRUE;
 }
 

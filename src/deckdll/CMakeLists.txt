@@ -1,4 +1,3 @@
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   add_library(deck_legacy_ui STATIC
     src/buttonclass.c
     src/card_db.c
@@ -51,4 +50,3 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   target_link_libraries(deck_imgui_interaction PUBLIC
     legacy_win32_imgui_bridge
   )
-endif()

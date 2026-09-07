@@ -26,8 +26,6 @@ typedef struct
   HWND target_windows[20];
   int target_count;
 } spell_chain_window_entry_t;
-STATIC_ASSERT(sizeof(spell_chain_window_entry_t) == 0x58, spell_chain_window_entry_t_wrong_size);
-
 extern char global_base_directory[];
 extern HINSTANCE g_app_instance;
 extern HWND g_duel_opponent_battlefield_window;
@@ -39,7 +37,7 @@ int load_text_with_tab_escapes(char *filename, char *section_name);
 HBITMAP load_pic(char *filename);
 void ApplyCardArtPaletteToDc(HDC dc);
 BOOL TileBitmapIntoRect(HDC dc, RECT *rect, HBITMAP bitmap);
-int handle_button_palette_message(int hwnd, unsigned int msg, int wparam, int lparam);
+int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 int card_window_matches_card_id(HWND hwnd, card_id_t card_id);
 int card_window_matches_player_and_card(HWND hwnd, int *player_and_card);
 void layout_phase_display_window(HWND hwnd, LPRECT rect);
@@ -65,7 +63,7 @@ int g_spell_chain_scrollbar_direction = 3;
 
 // GLOBAL: MAGIC 0x00637e58
 // GLOBAL: SHANDALAR 0x005b7ba8
-int g_spell_minimized_hwnd;
+HWND g_spell_minimized_hwnd;
 
 // GLOBAL: MAGIC 0x00637e60
 // GLOBAL: SHANDALAR 0x005b7bb0
@@ -270,7 +268,7 @@ int find_spell_chain_entry(HWND hwnd, spell_chain_display_entry_t entry, int sta
     return -1;
   }
 
-  windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+  windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   result = -1;
   for (i = start_index; i < window_count && result == -1; ++i)
@@ -301,7 +299,7 @@ void remove_spell_chain_entry(HWND hwnd, int entry_index)
     return;
   }
 
-  windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+  windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   DestroyWindow(windows[entry_index].spell_window);
   for (target_index = 0; target_index < windows[entry_index].target_count; ++target_index)
@@ -359,7 +357,7 @@ int add_spell_chain_entry(HWND hwnd, spell_chain_display_entry_t display_entry, 
     return 0;
   }
 
-  windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+  windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   if (window_count == 100)
   {
@@ -438,7 +436,7 @@ void destroy_spell_chain_target_windows(HWND hwnd, int entry_index)
     return;
   }
 
-  windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+  windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   for (target_index = 0; target_index < windows[entry_index].target_count; ++target_index)
   {
@@ -466,7 +464,7 @@ int update_spell_chain_entry_targets(HWND hwnd, spell_chain_display_entry_t disp
     return 0;
   }
 
-  windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+  windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   result = 1;
   new_entry.spell_window = windows[entry_index].spell_window;
@@ -656,8 +654,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
   int sync_changed;
   spell_chain_display_entry_t display_entries[32];
   int sync_count;
-  int changed;
-  int existing_index;
+  BOOL changed;
+  int *existing_player_and_card;
   int j;
   LPARAM message_lparam;
   HWND child_hwnd;
@@ -678,7 +676,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
 
   case 0x433:
   case 0x434:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
     card_id = wparam;
     for (i = 0; i < window_count; ++i)
@@ -698,7 +696,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
     return 0;
 
   case 0x432:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
     for (scroll_step = 0; scroll_step < window_count; ++scroll_step)
     {
@@ -711,7 +709,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
     return 0;
 
   case 0x435:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
     for (max_scroll_pos = 0; !(window_count <= max_scroll_pos); ++max_scroll_pos)
     {
@@ -724,18 +722,18 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
     return 0;
 
   case 0x436:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
-    existing_index = wparam;
-    changed = lparam;
-    if (existing_index == 0)
+    existing_player_and_card = (int *)wparam;
+    changed = (BOOL)lparam;
+    if (existing_player_and_card == NULL)
     {
       return 0;
     }
     child_hwnd = 0;
     for (message_lparam = 0; message_lparam < window_count && child_hwnd == 0; ++message_lparam)
     {
-      if (card_window_matches_player_and_card(windows[message_lparam].spell_window, (int *)existing_index) != 0)
+      if (card_window_matches_player_and_card(windows[message_lparam].spell_window, existing_player_and_card) != 0)
       {
         child_hwnd = (HWND)1;
         if (changed != 0)
@@ -749,7 +747,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
       }
       for (j = 0; j < windows[message_lparam].target_count; ++j)
       {
-        if (card_window_matches_player_and_card((&windows[message_lparam])->target_windows[j], (int *)existing_index) != 0)
+        if (card_window_matches_player_and_card((&windows[message_lparam])->target_windows[j], existing_player_and_card) != 0)
         {
           child_hwnd = (HWND)1;
           if (changed != 0)
@@ -766,7 +764,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
     return 0;
 
   case 0x412:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
     sync_count = copy_spell_chain_display_entries(display_entries);
     sync_changed = 0;
@@ -809,10 +807,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
     return 0;
 
   case 0x40c:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
     ShowWindow(hwnd, SW_HIDE);
-    ShowWindow((HWND)g_spell_minimized_hwnd, SW_HIDE);
+    ShowWindow(g_spell_minimized_hwnd, SW_HIDE);
     for (clear_entry_index = 0; !(window_count <= clear_entry_index); ++clear_entry_index)
     {
       DestroyWindow(windows[clear_entry_index].spell_window);
@@ -830,7 +828,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
 
   case WM_CLOSE:
     ShowWindow(hwnd, SW_HIDE);
-    ShowWindow((HWND)g_spell_minimized_hwnd, SW_HIDE);
+    ShowWindow(g_spell_minimized_hwnd, SW_HIDE);
     return 0;
 
   case WM_COMMAND:
@@ -852,14 +850,14 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
         minimized_height = minimized_width * 2;
       }
       minimized_y = (face_rect.bottom - face_rect.top) / 2 - minimized_height / 2;
-      MoveWindow((HWND)g_spell_minimized_hwnd, minimized_x, minimized_y, minimized_width, minimized_height, TRUE);
-      ShowWindow((HWND)g_spell_minimized_hwnd, SW_SHOW);
-      BringWindowToTop((HWND)g_spell_minimized_hwnd);
+      MoveWindow(g_spell_minimized_hwnd, minimized_x, minimized_y, minimized_width, minimized_height, TRUE);
+      ShowWindow(g_spell_minimized_hwnd, SW_SHOW);
+      BringWindowToTop(g_spell_minimized_hwnd);
       SendMessageA(g_duel_prompt_context_hwnd, 0x403, 0, 0);
       break;
 
     case 0x66:
-      ShowWindow((HWND)g_spell_minimized_hwnd, SW_HIDE);
+      ShowWindow(g_spell_minimized_hwnd, SW_HIDE);
       ShowWindow(hwnd, SW_SHOW);
       SendMessageA(g_duel_prompt_context_hwnd, 0x403, 0, 0);
       restack_duel_child_windows();
@@ -877,8 +875,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
   case WM_CREATE:
     window_count = 0;
     SetWindowLongA(hwnd, g_spell_chain_count_long_offset, window_count);
-    windows = (spell_chain_window_entry_t *)malloc(0x2260);
-    SetWindowLongA(hwnd, g_spell_chain_windows_long_offset, (LONG)windows);
+    windows = (spell_chain_window_entry_t *)malloc(100 * sizeof(*windows));
+    SetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset, (LONG_PTR)windows);
     create_scrollbar_hwnd = CreateWindowExA(0, "MAGICGAME_ScrollbarClass", "", WS_CHILD | WS_VISIBLE,
                                             0, 0, 0, 0, hwnd, (HMENU)0, g_app_instance, NULL);
     if (create_scrollbar_hwnd != (HWND)0)
@@ -886,9 +884,9 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
       SendMessageA(create_scrollbar_hwnd, 0x464, (WPARAM)g_spell_chain_scrollbar_thumb_bitmap, 0);
       SendMessageA(create_scrollbar_hwnd, 0x466, (WPARAM)g_spell_chain_scrollbar_track_bitmap, g_spell_chain_scrollbar_direction);
     }
-    g_spell_minimized_hwnd = (int)CreateWindowExA(0, "SpellMinimized", "", WS_POPUP,
+    g_spell_minimized_hwnd = CreateWindowExA(0, "SpellMinimized", "", WS_POPUP,
                                                   0, 0, 0, 0, hwnd, (HMENU)0, g_app_instance, NULL);
-    if (windows == NULL || create_scrollbar_hwnd == (HWND)0 || (HWND)g_spell_minimized_hwnd == (HWND)0)
+    if (windows == NULL || create_scrollbar_hwnd == (HWND)0 || g_spell_minimized_hwnd == (HWND)0)
     {
       if (windows != NULL)
       {
@@ -899,7 +897,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
     return 0;
 
   case WM_DESTROY:
-    windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+    windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
     free(windows);
     return 0;
 
@@ -1091,7 +1089,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_SpellChainClass(HWND hwnd, UINT msg, WPARAM w
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1132,16 +1130,16 @@ void layout_phase_display_window(HWND hwnd, LPRECT rect)
   HWND scrollbar_hwnd;
   LRESULT scroll_pos;
 
-  windows = (spell_chain_window_entry_t *)GetWindowLongA(hwnd, g_spell_chain_windows_long_offset);
+  windows = (spell_chain_window_entry_t *)GetWindowLongPtrA(hwnd, g_spell_chain_windows_long_offset);
   window_count = GetWindowLongA(hwnd, g_spell_chain_count_long_offset);
   scrollbar_hwnd = GetDlgItem(hwnd, 0);
   scroll_pos = SendMessageA(scrollbar_hwnd, 0xe1, 0, 0);
   if (window_count == 0)
   {
-    if (IsWindowVisible(hwnd) != 0 || IsWindowVisible((HWND)g_spell_minimized_hwnd) != 0)
+    if (IsWindowVisible(hwnd) != 0 || IsWindowVisible(g_spell_minimized_hwnd) != 0)
     {
       ShowWindow(hwnd, SW_HIDE);
-      ShowWindow((HWND)g_spell_minimized_hwnd, SW_HIDE);
+      ShowWindow(g_spell_minimized_hwnd, SW_HIDE);
       UpdateWindow(g_duel_help_owner_hwnd);
     }
     if (rect != (LPRECT)0)
@@ -1270,7 +1268,7 @@ void layout_phase_display_window(HWND hwnd, LPRECT rect)
     }
     SendMessageA(scrollbar_hwnd, 0xe0, 0, 0);
     SendMessageA(scrollbar_hwnd, WM_HSCROLL, MAKELONG(SB_THUMBPOSITION, scroll_pos), (LPARAM)scrollbar_hwnd);
-    if (IsWindowVisible(hwnd) == 0 && IsWindowVisible((HWND)g_spell_minimized_hwnd) == 0)
+    if (IsWindowVisible(hwnd) == 0 && IsWindowVisible(g_spell_minimized_hwnd) == 0)
     {
       ShowWindow(hwnd, SW_SHOW);
       restack_duel_child_windows();

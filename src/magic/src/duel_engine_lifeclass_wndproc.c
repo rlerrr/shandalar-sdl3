@@ -393,18 +393,18 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x439:
-    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_life_window_bitmap_window_long_offset);
     if (background_bitmap != (HBITMAP)0)
     {
       DeleteObject(background_bitmap);
     }
     background_bitmap = (HBITMAP)wparam;
-    SetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset, (LONG)background_bitmap);
+    SetWindowLongPtrA(hwnd, g_life_window_bitmap_window_long_offset, (LONG_PTR)background_bitmap);
     InvalidateRect(hwnd, (RECT *)0, 1);
     return 0;
 
   case 0x438:
-    return (LRESULT)(background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset));
+    return (LRESULT)(background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_life_window_bitmap_window_long_offset));
 
   case WM_COMMAND:
     switch ((unsigned int)wparam & 0xffff)
@@ -446,11 +446,11 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
     cached_lich_state = 0;
     SetWindowLongA(hwnd, g_life_window_lich_window_long_offset, cached_lich_state);
     background_bitmap = (HBITMAP)0;
-    SetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset, (LONG)background_bitmap);
+    SetWindowLongPtrA(hwnd, g_life_window_bitmap_window_long_offset, (LONG_PTR)background_bitmap);
     return 0;
 
   case WM_DESTROY:
-    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_life_window_bitmap_window_long_offset);
     if (background_bitmap != (HBITMAP)0)
     {
       delete_and_close_object(background_bitmap);
@@ -516,7 +516,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
     EnterCriticalSection(&g_card_render_lock);
     dc = g_shared_offscreen_dc;
     saved_dc = SaveDC(g_shared_offscreen_dc);
-    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_life_window_bitmap_window_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_life_window_bitmap_window_long_offset);
     DrawBitmapToRect(dc, &client_rect, background_bitmap);
 
     if (lich_state != 0)
@@ -640,7 +640,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LifeClass(HWND hwnd, UINT msg, WPARAM wparam,
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
   }

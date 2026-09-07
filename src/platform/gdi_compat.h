@@ -1,6 +1,95 @@
 #ifndef SHANDALAR_GDI_COMPAT_H
 #define SHANDALAR_GDI_COMPAT_H
 
+/*
+ * 32-bit stdcall name decoration used to keep these compatibility functions
+ * distinct from the real Win32 imports used by SDL.  The x64 ABI does not
+ * decorate those names, so namespace the shim at preprocessing time.
+ */
+#if defined(_WIN64)
+#define BeginPaint ShandalarBeginPaint
+#define BitBlt ShandalarBitBlt
+#define ClientToScreen ShandalarClientToScreen
+#define CheckMenuItem ShandalarCheckMenuItem
+#define CloseHandle ShandalarCloseHandle
+#define CreateBitmap ShandalarCreateBitmap
+#define CreateCompatibleBitmap ShandalarCreateCompatibleBitmap
+#define CreateCompatibleDC ShandalarCreateCompatibleDC
+#define CreateDIBSection ShandalarCreateDIBSection
+#define CreateFileA ShandalarCreateFileA
+#define CreatePopupMenu ShandalarCreatePopupMenu
+#define CreateRectRgn ShandalarCreateRectRgn
+#define CreateSolidBrush ShandalarCreateSolidBrush
+#define CreateWindowExA ShandalarCreateWindowExA
+#define DeleteCriticalSection ShandalarDeleteCriticalSection
+#define DeleteDC ShandalarDeleteDC
+#define DeleteMenu ShandalarDeleteMenu
+#define DeleteObject ShandalarDeleteObject
+#define DestroyIcon ShandalarDestroyIcon
+#define DestroyMenu ShandalarDestroyMenu
+#define DestroyWindow ShandalarDestroyWindow
+#define DeviceIoControl ShandalarDeviceIoControl
+#define DuplicateHandle ShandalarDuplicateHandle
+#define EnableMenuItem ShandalarEnableMenuItem
+#define EnableWindow ShandalarEnableWindow
+#define EndDialog ShandalarEndDialog
+#define EndPaint ShandalarEndPaint
+#define EnterCriticalSection ShandalarEnterCriticalSection
+#define FillRect ShandalarFillRect
+#define GetClientRect ShandalarGetClientRect
+#define GetCurrentProcess ShandalarGetCurrentProcess
+#define GetCurrentThread ShandalarGetCurrentThread
+#define GetCursorPos ShandalarGetCursorPos
+#define GetDeviceCaps ShandalarGetDeviceCaps
+#define GetDesktopWindow ShandalarGetDesktopWindow
+#define GetDlgItem ShandalarGetDlgItem
+#define GetDoubleClickTime ShandalarGetDoubleClickTime
+#define GetFocus ShandalarGetFocus
+#define GetKeyState ShandalarGetKeyState
+#define GetMessageA ShandalarGetMessageA
+#define GetMessageTime ShandalarGetMessageTime
+#define GetProcAddress ShandalarGetProcAddress
+#define GetSystemMetrics ShandalarGetSystemMetrics
+#define GetTextExtentPoint32A ShandalarGetTextExtentPoint32A
+#define GetTickCount ShandalarGetTickCount
+#define GetWindowRect ShandalarGetWindowRect
+#define GetWindowLongPtrA ShandalarGetWindowLongPtrA
+#define GetWindowThreadProcessId ShandalarGetWindowThreadProcessId
+#define GlobalAlloc ShandalarGlobalAlloc
+#define GlobalFree ShandalarGlobalFree
+#define GlobalLock ShandalarGlobalLock
+#define GlobalUnlock ShandalarGlobalUnlock
+#define IsIconic ShandalarIsIconic
+#define KillTimer ShandalarKillTimer
+#define LeaveCriticalSection ShandalarLeaveCriticalSection
+#define MessageBoxA ShandalarMessageBoxA
+#define PtInRect ShandalarPtInRect
+#define ReadFile ShandalarReadFile
+#define RegCloseKey ShandalarRegCloseKey
+#define ReleaseCapture ShandalarReleaseCapture
+#define ReleaseDC ShandalarReleaseDC
+#define SelectObject ShandalarSelectObject
+#define ScreenToClient ShandalarScreenToClient
+#define SetActiveWindow ShandalarSetActiveWindow
+#define SetCapture ShandalarSetCapture
+#define SetCursor ShandalarSetCursor
+#define SetCursorPos ShandalarSetCursorPos
+#define SetFocus ShandalarSetFocus
+#define SetForegroundWindow ShandalarSetForegroundWindow
+#define SetParent ShandalarSetParent
+#define SetPixel ShandalarSetPixel
+#define SetTimer ShandalarSetTimer
+#define SetWindowPos ShandalarSetWindowPos
+#define SetWindowLongPtrA ShandalarSetWindowLongPtrA
+#define ShowWindow ShandalarShowWindow
+#define Sleep ShandalarSleep
+#define TrackPopupMenu ShandalarTrackPopupMenu
+#define TranslateMessage ShandalarTranslateMessage
+#define UnregisterClassA ShandalarUnregisterClassA
+#define timeBeginPeriod ShandalarTimeBeginPeriod
+#define timeEndPeriod ShandalarTimeEndPeriod
+#endif
+
 #include <SDL3/SDL.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -24,6 +113,7 @@ typedef uint16_t WORD;
 typedef int16_t SHORT;
 typedef uint32_t DWORD;
 typedef int32_t LONG;
+typedef intptr_t LONG_PTR;
 typedef uint32_t UINT;
 typedef int BOOL;
 typedef uintptr_t WPARAM;

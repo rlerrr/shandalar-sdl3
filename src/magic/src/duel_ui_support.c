@@ -694,7 +694,7 @@ INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wpar
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_hdc = (HDC)wparam;
@@ -793,9 +793,9 @@ void restack_duel_child_windows(void)
   int changed;     // ebp-0x24
   HWND windows[8]; // ebp-0x20
 
-  extern int g_duel_tooltip_window;
+  extern HWND g_duel_tooltip_window;
 
-  windows[7] = (HWND)g_duel_tooltip_window;
+  windows[7] = g_duel_tooltip_window;
   windows[6] = g_duel_prompt_context_hwnd;
   windows[5] = (HWND)g_duel_phase_display_window_hwnd;
   windows[4] = (HWND)g_duel_attack_phase_window_hwnd;
@@ -1015,7 +1015,9 @@ INT_PTR CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wpara
     }
     SendMessageA(hwnd, 0x401, IDOK, 0);
     SetDlgItemInt(hwnd, 0x44c, context->initial_life_total, 0);
-    g_life_total_edit_wndproc = (WNDPROC)SetWindowLongA(GetDlgItem(hwnd, 0x44c), GWL_WNDPROC, (LONG)life_total_edit_wndproc);
+    g_life_total_edit_wndproc =
+        (WNDPROC)SetWindowLongPtrA(GetDlgItem(hwnd, 0x44c), GWL_WNDPROC,
+                                   (LONG_PTR)life_total_edit_wndproc);
     SetFocus(GetDlgItem(hwnd, 0x44c));
     SendDlgItemMessageA(hwnd, 0x44c, EM_SETSEL, 0, -1);
     change_buttonclass_wndproc(hwnd);
@@ -1109,7 +1111,7 @@ INT_PTR CALLBACK dlgproc_prompt_for_life_total(HWND hwnd, UINT msg, WPARAM wpara
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_hdc = (HDC)wparam;
@@ -1274,7 +1276,7 @@ INT_PTR CALLBACK dlgproc_mana_burn(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lp
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     dc = (HDC)wparam;

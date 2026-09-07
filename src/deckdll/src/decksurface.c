@@ -2,6 +2,7 @@
 #include "full_deck.h"
 #include "mystdbool.h"
 #include "platform/cheat_options.h"
+#include <stdint.h>
 #include <stdlib.h>
 
 extern HINSTANCE global_hinstance;
@@ -383,7 +384,7 @@ static int add_smallcard_window(HWND hwnd_parent, csvid_t csvid, int num)
                         0, 0, global_smallcard_width, global_smallcard_height,
                         hwnd_parent,
                         (HMENU)1,
-                        global_hinstance, (LPVOID)csvid);
+                        global_hinstance, (LPVOID)(intptr_t)csvid);
   if (hwnd)
   {
     BringWindowToTop(hwnd);
@@ -714,7 +715,7 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
                                  x, y, global_smallcard_width, global_smallcard_height,
                                  hwnd,
                                  (HMENU)1,
-                                 global_hinstance, (LPVOID)csvid);
+                                 global_hinstance, (LPVOID)(intptr_t)csvid);
       if (hwnd_card)
       {
         BringWindowToTop(hwnd_card);
@@ -1135,8 +1136,8 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
   POINT drop_pt;
   LRESULT drop_ok;
   HWND card_hwnd;
-  HMENU group_id;
-  HDC csvid_arg;
+  int group_id;
+  csvid_t csvid_arg;
   int copy_idx;
   int entry_idx;
   LRESULT rebuild_ok;
@@ -1155,7 +1156,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x0, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_Amount, 0);
         else
@@ -1167,7 +1168,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x1, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_Amount, 0);
         else
@@ -1179,7 +1180,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x2, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_Amount, 0);
         else
@@ -1191,7 +1192,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x3, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_Amount, 0);
         else
@@ -1203,7 +1204,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x5, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_Amount, 0);
         else
@@ -1215,7 +1216,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x4, global_hinstance,
-                                            (LPVOID)global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           SendMessageA(created_card_hwnd, 0x401, global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_Amount, 0);
         else
@@ -1233,7 +1234,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                                     WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                                     0, 0, global_smallcard_width, global_smallcard_height,
                                                     hwnd, (HMENU)0x0, global_hinstance,
-                                                    (LPVOID)global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_csvid)) == NULL))
+                                                    (LPVOID)(intptr_t)global_edited_deck.sideboard[0].entries[entry_idx].DeckEntry_csvid)) == NULL))
             rebuild_ok = 0;
           else
             rebuild_ok = 1;
@@ -1248,7 +1249,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                                     WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                                     0, 0, global_smallcard_width, global_smallcard_height,
                                                     hwnd, (HMENU)0x1, global_hinstance,
-                                                    (LPVOID)global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_csvid)) == NULL))
+                                                    (LPVOID)(intptr_t)global_edited_deck.sideboard[1].entries[entry_idx].DeckEntry_csvid)) == NULL))
             rebuild_ok = 0;
           else
             rebuild_ok = 1;
@@ -1263,7 +1264,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                                     WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                                     0, 0, global_smallcard_width, global_smallcard_height,
                                                     hwnd, (HMENU)0x2, global_hinstance,
-                                                    (LPVOID)global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_csvid)) == NULL))
+                                                    (LPVOID)(intptr_t)global_edited_deck.sideboard[2].entries[entry_idx].DeckEntry_csvid)) == NULL))
             rebuild_ok = 0;
           else
             rebuild_ok = 1;
@@ -1278,7 +1279,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                                     WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                                     0, 0, global_smallcard_width, global_smallcard_height,
                                                     hwnd, (HMENU)0x3, global_hinstance,
-                                                    (LPVOID)global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_csvid)) == NULL))
+                                                    (LPVOID)(intptr_t)global_edited_deck.sideboard[3].entries[entry_idx].DeckEntry_csvid)) == NULL))
             rebuild_ok = 0;
           else
             rebuild_ok = 1;
@@ -1293,7 +1294,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                                     WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                                     0, 0, global_smallcard_width, global_smallcard_height,
                                                     hwnd, (HMENU)0x5, global_hinstance,
-                                                    (LPVOID)global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_csvid)) == NULL))
+                                                    (LPVOID)(intptr_t)global_edited_deck.sideboard[5].entries[entry_idx].DeckEntry_csvid)) == NULL))
             rebuild_ok = 0;
           else
             rebuild_ok = 1;
@@ -1308,7 +1309,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
                                                     WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                                     0, 0, global_smallcard_width, global_smallcard_height,
                                                     hwnd, (HMENU)0x4, global_hinstance,
-                                                    (LPVOID)global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_csvid)) == NULL))
+                                                    (LPVOID)(intptr_t)global_edited_deck.sideboard[4].entries[entry_idx].DeckEntry_csvid)) == NULL))
             rebuild_ok = 0;
           else
             rebuild_ok = 1;
@@ -1320,13 +1321,13 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
 
   case 0x4c8:
     drop_ok = 1;
-    csvid_arg = (HDC)wparam;
+    csvid_arg = (csvid_t)wparam;
     drop_pt.x = (int)((unsigned)lparam & 0xFFFF);
     drop_pt.y = (int)((unsigned)lparam >> 16);
-    group_id = (HMENU)pick_group_id_from_point(&sideboard_group_rects[0], 6, &drop_pt);
-    if ((global_cfg_consolidate != 0) && ((card_hwnd = find_wanted_window_in_group(hwnd, (int)group_id, (int)csvid_arg)) != NULL))
+    group_id = pick_group_id_from_point(&sideboard_group_rects[0], 6, &drop_pt);
+    if ((global_cfg_consolidate != 0) && ((card_hwnd = find_wanted_window_in_group(hwnd, group_id, csvid_arg)) != NULL))
     {
-      add_or_increment_sideboard_bucket_entry((int)group_id, (int)csvid_arg, 1, &global_edited_deck);
+      add_or_increment_sideboard_bucket_entry(group_id, csvid_arg, 1, &global_edited_deck);
       current_amount = SendMessageA(card_hwnd, 0x402, 0, 0);
       SendMessageA(card_hwnd, 0x401, current_amount + 1, 0);
     }
@@ -1335,8 +1336,8 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
       card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031338, s_Empty_10031334,
                                   WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                   drop_pt.x, drop_pt.y, global_smallcard_width,
-                                  global_smallcard_height, hwnd, group_id, global_hinstance,
-                                  (LPVOID)csvid_arg);
+                                  global_smallcard_height, hwnd, (HMENU)(intptr_t)group_id, global_hinstance,
+                                  (LPVOID)(intptr_t)csvid_arg);
       if (card_hwnd == NULL)
       {
         drop_ok = 0;
@@ -1344,7 +1345,7 @@ LRESULT CALLBACK wndproc_SideboardSurfaceClass(HWND hwnd, UINT msg, WPARAM wpara
       else
       {
         BringWindowToTop(card_hwnd);
-        add_or_increment_sideboard_bucket_entry((int)group_id, (int)csvid_arg, 1, &global_edited_deck);
+        add_or_increment_sideboard_bucket_entry(group_id, csvid_arg, 1, &global_edited_deck);
         SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
       }
     }
@@ -1570,8 +1571,8 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
   POINT drop_pt;
   LRESULT drop_ok;
   HWND card_hwnd;
-  HMENU group_id;
-  HDC csvid_arg;
+  int group_id;
+  csvid_t csvid_arg;
   int entry_idx;
   int rebuild_ok;
   HWND created_card_hwnd;
@@ -1589,7 +1590,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x6, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[0].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[0].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1604,7 +1605,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x0, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[1].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[1].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1619,7 +1620,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x1, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[2].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[2].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1634,7 +1635,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x2, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[3].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[3].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1649,7 +1650,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x3, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[4].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[4].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1664,7 +1665,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x5, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[6].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[6].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1679,7 +1680,7 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
                                             WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                             0, 0, global_smallcard_width, global_smallcard_height,
                                             hwnd, (HMENU)0x4, global_hinstance,
-                                            (LPVOID)global_edited_deck.trade[5].entries[entry_idx].DeckEntry_csvid);
+                                            (LPVOID)(intptr_t)global_edited_deck.trade[5].entries[entry_idx].DeckEntry_csvid);
         if (created_card_hwnd != NULL)
           rebuild_ok = 1;
         else
@@ -1692,19 +1693,19 @@ LRESULT CALLBACK wndproc_TradeSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, L
 
   case 0x4c8:
     drop_ok = 1;
-    csvid_arg = (HDC)wparam;
+    csvid_arg = (csvid_t)wparam;
     drop_pt.x = (int)((unsigned)lparam & 0xFFFF);
     drop_pt.y = (int)((unsigned)lparam >> 16) & 0xFFFF;
-    group_id = (HMENU)pick_group_id_from_point(&trade_group_rects[0], 7, &drop_pt);
+    group_id = pick_group_id_from_point(&trade_group_rects[0], 7, &drop_pt);
     card_hwnd = CreateWindowExA(0, s_MAGICDECK_CardClass_10031500, s_Empty_100314fc,
                                 WS_CHILDWINDOW | WS_VISIBLE | WS_CLIPSIBLINGS,
                                 drop_pt.x, drop_pt.y, global_smallcard_width,
-                                global_smallcard_height, hwnd, group_id, global_hinstance,
-                                (LPVOID)csvid_arg);
+                                global_smallcard_height, hwnd, (HMENU)(intptr_t)group_id, global_hinstance,
+                                (LPVOID)(intptr_t)csvid_arg);
     if (card_hwnd != NULL)
     {
       BringWindowToTop(card_hwnd);
-      append_trade_bucket_entry((int)group_id, (int)csvid_arg, 1, &global_edited_deck);
+      append_trade_bucket_entry(group_id, csvid_arg, 1, &global_edited_deck);
       SendMessageA(hwnd, WM_COMMAND, RES_MENU_REFRESH, 0);
     }
     else

@@ -52,9 +52,9 @@ int find_battlefield_card_window(HWND hwnd, int *player_and_card, int *unused, H
 int card_window_matches_player_and_card(HWND hwnd, int *player_and_card);
 int card_window_matches_card_id(HWND hwnd, card_id_t card_id);
 card_id_t get_card_window_displayed_card_id(HWND hwnd);
-LONG get_card_window_hidden_flag(HWND hwnd);
+LONG_PTR get_card_window_hidden_flag(HWND hwnd);
 void layout_attack_phase_window(HWND hwnd);
-int handle_button_palette_message(int hwnd, int msg, void *wparam, int lparam);
+int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 void restack_duel_child_windows(void);
 
 extern char global_base_directory[];
@@ -62,7 +62,7 @@ extern char global_duelart_path[];
 extern char global_ui_strings_filename[];
 extern int g_showlist_smallcard_width;
 extern int g_showlist_smallcard_height;
-extern int g_duel_opponent_battlefield_window;
+extern HWND g_duel_opponent_battlefield_window;
 extern int g_duel_selected_card_window;
 extern int g_duel_window_userdata_card_offset;
 extern int g_duel_window_userdata_player_offset;
@@ -405,7 +405,7 @@ void propagate_attack_window_selection(HWND parent_hwnd, HWND source_hwnd)
   HWND *windows;
 
   window_count = GetWindowLongA(parent_hwnd, g_duel_window_userdata_card_offset);
-  windows = (HWND *)GetWindowLongA(parent_hwnd, g_duel_window_userdata_player_offset);
+  windows = (HWND *)GetWindowLongPtrA(parent_hwnd, g_duel_window_userdata_player_offset);
   SendMessageA(source_hwnd, 0x401, (WPARAM)player_and_card, 0);
   if (find_attack_phase_card_window(g_duel_attack_phase_window_hwnd,
                                     player_and_card, (int *)0,
@@ -581,7 +581,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
   if (msg == 0x464)
   {
     case464_group_card = (int)wparam;
-    groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+    groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
     group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
     case464_scrollbar_hwnd = GetDlgItem(hwnd, 0);
     case464_found = 0;
@@ -645,7 +645,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
 
     case 0x433:
     case 0x434:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case433_wparam = wparam;
       for (case433_i = 0; case433_i < group_count; case433_i++)
@@ -670,7 +670,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 0;
 
     case 0x432:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       for (case432_i = 0; case432_i < group_count; case432_i++)
       {
@@ -686,7 +686,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 0;
 
     case 0x435:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       for (case435_i = 0; case435_i < group_count; case435_i++)
       {
@@ -702,7 +702,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 0;
 
     case 0x436:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case436_wparam = wparam;
       case436_lparam = lparam;
@@ -749,7 +749,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 0;
 
     case 0x411:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case411_found = 0;
       for (case411_i = 0; case411_i < group_count; case411_i++)
@@ -763,7 +763,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
 
     case 0x400:
     case 0x401:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case400_wparam = wparam;
       if (case400_wparam == 0)
@@ -862,7 +862,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 1;
 
     case 0x406:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case406_wparam = wparam;
       case406_lparam = lparam;
@@ -935,7 +935,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 1;
 
     case 0x410:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case410_wparam = wparam;
       if (case410_wparam == 0)
@@ -980,7 +980,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
 
     case 0x402:
     case 0x403:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case402_wparam = wparam;
       if (case402_wparam != 0)
@@ -1040,7 +1040,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return case402_found;
 
     case 0x40c:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       ShowWindow(hwnd, SW_HIDE);
       ShowWindow(g_attack_ui_tooltip_window, SW_HIDE);
@@ -1064,7 +1064,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
 
     case 0x40e:
     case 0x40f:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case40e_wparam = wparam;
       if (case40e_wparam == 0)
@@ -1127,7 +1127,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       }
 
     case 0x405:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case405_wparam = wparam;
       if (case405_wparam == 0 || GetParent((HWND)case405_wparam) != hwnd)
@@ -1169,7 +1169,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       }
 
     case 0x404:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       group_count = GetWindowLongA(hwnd, g_attackclass_count_window_long_offset);
       case404_wparam = wparam;
       case404_lparam = lparam;
@@ -1332,7 +1332,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       case 0x65:
         ShowWindow(hwnd, SW_HIDE);
         UpdateWindow(g_duel_help_owner_hwnd);
-        GetWindowRect((HWND)g_duel_opponent_battlefield_window, &minimize_rect);
+        GetWindowRect(g_duel_opponent_battlefield_window, &minimize_rect);
         minimize_left = minimize_rect.left;
         minimize_width = minimize_rect.right - minimize_rect.left;
         if (g_attack_minimized_background_bitmap != (HBITMAP)0)
@@ -1374,7 +1374,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       group_count = 0;
       SetWindowLongA(hwnd, g_attackclass_count_window_long_offset, group_count);
       groups = (attack_window_group_t *)malloc(sizeof(attack_window_group_t) * ATTACK_MAX_GROUPS);
-      SetWindowLongA(hwnd, g_attackclass_data_window_long_offset, (LONG)groups);
+      SetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset, (LONG_PTR)groups);
       create_scrollbar_hwnd = CreateWindowExA(0, CLASS_MAGICGAME_SCROLLBAR, g_attack_ui_short_text_1,
                                               WS_CHILD | WS_VISIBLE, 0, 0, 0, 0,
                                               hwnd, (HMENU)0, g_app_instance, (LPVOID)0);
@@ -1401,7 +1401,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       return 0;
 
     case WM_DESTROY:
-      groups = (attack_window_group_t *)GetWindowLongA(hwnd, g_attackclass_data_window_long_offset);
+      groups = (attack_window_group_t *)GetWindowLongPtrA(hwnd, g_attackclass_data_window_long_offset);
       free(groups);
       return 0;
 
@@ -1710,7 +1710,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
     case WM_QUERYNEWPALETTE:
     case WM_PALETTEISCHANGING:
     case WM_PALETTECHANGED:
-      return handle_button_palette_message((int)hwnd, msg, (void *)wparam, lparam);
+      return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
     default:
       return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1971,7 +1971,7 @@ LRESULT CALLBACK wndproc_AttackSwordShield(HWND hwnd, UINT msg, WPARAM wparam, L
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (void *)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -2059,7 +2059,7 @@ LRESULT CALLBACK wndproc_AttackMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPA
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (void *)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

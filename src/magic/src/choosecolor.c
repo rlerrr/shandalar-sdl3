@@ -65,7 +65,7 @@ HBITMAP load_pic(char *filename);
 void delete_and_close_object(HANDLE obj);
 void change_buttonclass_wndproc(HWND hwnd);
 void draw_owner_draw_button_centered(DRAWITEMSTRUCT *draw_item, HBRUSH brush, HPEN pen1, HPEN pen2, COLORREF color, int draw_focus);
-int handle_button_palette_message(int hwnd, unsigned int msg, int wparam, int lparam);
+int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 int draw_masked_bitmap_left_half_to_rect(HDC dc, RECT *rect, HANDLE bitmap);
 card_id_t get_displayed_card_id(int player, int card);
 unsigned int draw_displayed_full_card(HDC dc, RECT *rect, card_ptr_t *raw_card, int player, int card,
@@ -574,7 +574,7 @@ INT_PTR WINAPI dlgproc_choose_color(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_hdc = (HDC)wparam;
@@ -1065,7 +1065,7 @@ INT_PTR WINAPI dlgproc_magical_hack(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_CHOOSE_COLOR_BUTTON_FOCUS:
     focus_gained = (HWND)wparam;

@@ -277,11 +277,11 @@ HWND create_expanded_graveyard_window(HWND hwnd, int show_graveyard)
 
   if (show_graveyard != 0)
   {
-    SetClassLongA(expanded_window, GCL_HBRBACKGROUND, (LONG)GetStockObject(BLACK_BRUSH));
+    SetClassLongPtrA(expanded_window, GCL_HBRBACKGROUND, (LONG_PTR)GetStockObject(BLACK_BRUSH));
   }
   else
   {
-    SetClassLongA(expanded_window, GCL_HBRBACKGROUND, (LONG)GetStockObject(WHITE_BRUSH));
+    SetClassLongPtrA(expanded_window, GCL_HBRBACKGROUND, (LONG_PTR)GetStockObject(WHITE_BRUSH));
   }
 
   all_cards_created = 1;
@@ -564,7 +564,7 @@ INT_PTR CALLBACK dlgproc_ViewAntes(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lp
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_dc = (HDC)wparam;
@@ -710,7 +710,7 @@ LRESULT CALLBACK wndproc_GraveyardCards(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -792,21 +792,21 @@ LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wp
     return 0;
 
   case 0x439:
-    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_graveyard_bitmap_window_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_graveyard_bitmap_window_long_offset);
     if (background_bitmap != (HBITMAP)0)
     {
       DeleteObject(background_bitmap);
     }
     background_bitmap = (HBITMAP)wparam;
-    SetWindowLongA(hwnd, g_graveyard_bitmap_window_long_offset, (LONG)wparam);
+    SetWindowLongPtrA(hwnd, g_graveyard_bitmap_window_long_offset, (LONG_PTR)((HBITMAP)wparam));
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 
   case 0x438:
-    return GetWindowLongA(hwnd, g_graveyard_bitmap_window_long_offset);
+    return (LRESULT)(HBITMAP)GetWindowLongPtrA(hwnd, g_graveyard_bitmap_window_long_offset);
 
   case 0x400:
-    captured_window = (HWND)GetWindowLongA(hwnd, g_graveyard_expanded_window_long_offset);
+    captured_window = (HWND)GetWindowLongPtrA(hwnd, g_graveyard_expanded_window_long_offset);
     expanded_window = (HWND)wparam;
     expand_mode = lparam;
     if (wparam != 0)
@@ -815,7 +815,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wp
       {
         captured_window = create_expanded_graveyard_window(hwnd, lparam);
       }
-      SetWindowLongA(hwnd, g_graveyard_expanded_window_long_offset, (LONG)captured_window);
+      SetWindowLongPtrA(hwnd, g_graveyard_expanded_window_long_offset, (LONG_PTR)captured_window);
       if (captured_window != (HWND)0)
       {
         SetCapture(captured_window);
@@ -826,7 +826,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wp
       ReleaseCapture();
       destroy_expanded_graveyard_window(captured_window);
       captured_window = (HWND)0;
-      SetWindowLongA(hwnd, g_graveyard_expanded_window_long_offset, 0);
+      SetWindowLongPtrA(hwnd, g_graveyard_expanded_window_long_offset, (LONG_PTR)NULL);
     }
     return 0;
 
@@ -855,13 +855,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wp
     previous_card_id = -1;
     SetWindowLongA(hwnd, g_graveyard_card_window_long_offset, -1);
     captured_window = (HWND)0;
-    SetWindowLongA(hwnd, g_graveyard_expanded_window_long_offset, 0);
+    SetWindowLongPtrA(hwnd, g_graveyard_expanded_window_long_offset, (LONG_PTR)NULL);
     background_bitmap = (HBITMAP)0;
-    SetWindowLongA(hwnd, g_graveyard_bitmap_window_long_offset, 0);
+    SetWindowLongPtrA(hwnd, g_graveyard_bitmap_window_long_offset, (LONG_PTR)NULL);
     return 0;
 
   case WM_DESTROY:
-    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_graveyard_bitmap_window_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_graveyard_bitmap_window_long_offset);
     if (background_bitmap != (HBITMAP)0)
     {
       delete_and_close_object(background_bitmap);
@@ -877,7 +877,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wp
 
   case WM_PAINT:
     previous_card_id = GetWindowLongA(hwnd, g_graveyard_card_window_long_offset);
-    background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_graveyard_bitmap_window_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_graveyard_bitmap_window_long_offset);
     card_id = get_cached_top_graveyard_card_id(hwnd != g_duel_player_graveyard_window_hwnd);
     if (card_id != previous_card_id)
     {
@@ -980,7 +980,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_GraveyardClass(HWND hwnd, UINT msg, WPARAM wp
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

@@ -190,7 +190,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
 
   case 0x432:
     previous_count = GetWindowLongA(hwnd, g_library_window_long_offset);
-    cached_count = get_cached_library_count(1 <= (unsigned int)((int)hwnd - (int)g_duel_main_window_hwnd));
+    cached_count = get_cached_library_count(hwnd != g_duel_main_window_hwnd);
     if (previous_count != cached_count)
     {
       InvalidateRect(hwnd, NULL, TRUE);
@@ -198,7 +198,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
     return 0;
 
   case 0x400:
-    shuffle_count = get_cached_library_count(1 <= (unsigned int)((int)hwnd - (int)g_duel_main_window_hwnd));
+    shuffle_count = get_cached_library_count(hwnd != g_duel_main_window_hwnd);
     GetClientRect(hwnd, &shuffle_rect);
     shuffle_card_width_delta = (((shuffle_rect.right * 0x28) / 100) *
                                 (shuffle_count < 0x4b ? shuffle_count : 0x4b)) /
@@ -281,7 +281,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
 
   case WM_PAINT:
     previous_count = GetWindowLongA(hwnd, g_library_window_long_offset);
-    library_count = get_cached_library_count(1 <= (unsigned int)((int)hwnd - (int)g_duel_main_window_hwnd));
+    library_count = get_cached_library_count(hwnd != g_duel_main_window_hwnd);
     if (previous_count != library_count)
     {
       InvalidateRect(hwnd, NULL, FALSE);
@@ -385,7 +385,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
   case WM_QUERYNEWPALETTE:
   case WM_PALETTECHANGED:
   case WM_PALETTEISCHANGING:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

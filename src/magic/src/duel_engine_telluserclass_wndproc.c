@@ -284,7 +284,7 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
 
   case WM_CREATE:
     font = g_tell_user_font;
-    SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)font);
+    SetWindowLongPtrA(hwnd, g_duel_ui_initialized, (LONG_PTR)font);
     g_duel_client_window = CreateWindowExA(0, "BUTTON", g_telluser_short_text_1, 0x4080000b,
                                            0, 0, 0, 0, hwnd, (HMENU)1, g_app_instance, (LPVOID)0);
     g_duel_main_window = CreateWindowExA(0, "BUTTON", g_telluser_short_text_2, 0x4080000b,
@@ -332,7 +332,7 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_GETFONT:
-    font = (HFONT)GetWindowLongA(hwnd, g_duel_ui_initialized);
+    font = (HFONT)GetWindowLongPtrA(hwnd, g_duel_ui_initialized);
     return (LRESULT)font;
 
   case WM_LBUTTONDOWN:
@@ -340,7 +340,7 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_PAINT:
-    font = (HFONT)GetWindowLongA(hwnd, g_duel_ui_initialized);
+    font = (HFONT)GetWindowLongPtrA(hwnd, g_duel_ui_initialized);
     paint_dc = BeginPaint(hwnd, &paint);
     if (paint_dc != (HDC)0)
     {
@@ -420,14 +420,14 @@ LRESULT CALLBACK wndproc_MAGIC_TellUserClass(HWND hwnd, UINT msg, WPARAM wparam,
     {
       font = g_tell_user_font;
     }
-    SetWindowLongA(hwnd, g_duel_ui_initialized, (LONG)font);
+    SetWindowLongPtrA(hwnd, g_duel_ui_initialized, (LONG_PTR)font);
     InvalidateRect(hwnd, (RECT *)0, 1);
     return 0;
 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

@@ -486,7 +486,7 @@ void BlitRectByStaggeredRandomTileOrder(HDC dst_hdc, int x, int y, int w, int h,
   int iVar1;
   int block_count_x;
   int total_block_count;
-  void *state_storage;
+  int *state_storage;
   DWORD tick;
   int iVar3;
   int dst_block_x;
@@ -537,11 +537,11 @@ void BlitRectByStaggeredRandomTileOrder(HDC dst_hdc, int x, int y, int w, int h,
     modulus = modulus * 2;
   }
 
-  state_storage = malloc(((active_strip_count + iVar3) * 4 + 0x14) * 5);
+  state_storage = malloc((size_t)(active_strip_count + iVar3 + 5) * 5 * sizeof(*state_storage));
   tick = GetTickCount();
   rng_list_index = -active_strip_count + 2;
-  *(int *)((int)state_storage + current_strip_index * 0x14 + active_strip_count * 0x14) = (int)tick % (int)modulus;
-  piStack_2c = (int *)((int)state_storage + current_strip_index * 0x14 + active_strip_count * 0x14);
+  piStack_2c = state_storage + (current_strip_index + active_strip_count) * 5;
+  piStack_2c[0] = (int)tick % (int)modulus;
   piStack_2c[1] = 5;
   piStack_2c[2] = 1;
   piStack_2c[3] = modulus;
@@ -549,7 +549,7 @@ void BlitRectByStaggeredRandomTileOrder(HDC dst_hdc, int x, int y, int w, int h,
 
   if (rng_list_index < iVar3)
   {
-    state = (int *)((int)state_storage + rng_list_index * 0x14 + active_strip_count * 0x14);
+    state = state_storage + (rng_list_index + active_strip_count) * 5;
     do
     {
       *state = (state[-5] * 5 + 1) % (int)modulus;

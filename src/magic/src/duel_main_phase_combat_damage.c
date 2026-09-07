@@ -21,8 +21,8 @@ int process_killed_card(int player, int card);
 int is_combat_damage_ability_in_step(int damage_step, int abilities);
 int adjust_two_headed_giant_damage(int player, int card, int amount);
 void clear_combat_damage_assignment_matrix(void);
-void assign_attacker_combat_damage(int player, int index, int has_trample, int damage_ids, int damage_step, int mode, int *best_low, int *best_high);
-void assign_blocker_combat_damage(int player, int index, int multiple_attackers, int damage_ids, int damage_step, int mode, int *best_low, int *best_high);
+void assign_attacker_combat_damage(int player, int index, int has_trample, int *damage_ids, int damage_step, int mode, int *best_low, int *best_high);
+void assign_blocker_combat_damage(int player, int index, int multiple_attackers, int *damage_ids, int damage_step, int mode, int *best_low, int *best_high);
 void highlight_combat_damage_attacker(int player, int card, int highlight);
 void highlight_combat_damage_blocker(int player, int card, int highlight);
 int has_damage_card_targeting(int player, int card);
@@ -180,7 +180,7 @@ void clear_combat_damage_assignment_matrix(void)
 
 // FUNCTION: MAGIC 0x005160c1
 // FUNCTION: SHANDALAR 0x00424c71
-void assign_attacker_combat_damage(int player, int attacker_index, int has_trample, int damage_ids, int damage_step, int mode, int *best_low, int *best_high)
+void assign_attacker_combat_damage(int player, int attacker_index, int has_trample, int *damage_ids, int damage_step, int mode, int *best_low, int *best_high)
 {
   union
   {
@@ -286,7 +286,7 @@ void assign_attacker_combat_damage(int player, int attacker_index, int has_tramp
         {
           damage_card = damage_creature(defending_player, ai_blocker_cards[assignment_index], damage_to_assign,
                                         player, combat_damage_attacker_cards[attacker_index]);
-          *(int *)(damage_ids + assignment_index * 4) = damage_card;
+          damage_ids[assignment_index] = damage_card;
           if (damage_card != -1)
           {
             PLAYER_CARD_INSTANCE(player, damage_card).token_status |= COMBAT_DAMAGE_FLAG_COMBAT;
@@ -363,7 +363,7 @@ void assign_attacker_combat_damage(int player, int attacker_index, int has_tramp
 
 // FUNCTION: MAGIC 0x00516736
 // FUNCTION: SHANDALAR 0x004252e8
-void assign_blocker_combat_damage(int player, int blocker_index, int multiple_attackers, int damage_ids, int damage_step, int mode, int *best_low, int *best_high)
+void assign_blocker_combat_damage(int player, int blocker_index, int multiple_attackers, int *damage_ids, int damage_step, int mode, int *best_low, int *best_high)
 {
   union
   {
@@ -454,7 +454,7 @@ void assign_blocker_combat_damage(int player, int blocker_index, int multiple_at
           {
             damage_card = damage_creature(player, combat_damage_attacker_cards[attacker_index], damage_to_assign,
                                           defending_player, ai_blocker_cards[blocker_index]);
-            *(int *)(damage_ids + attacker_index * 4) = damage_card;
+            damage_ids[attacker_index] = damage_card;
             if (damage_card != -1)
             {
               PLAYER_CARD_INSTANCE(defending_player, damage_card).token_status |= COMBAT_DAMAGE_FLAG_COMBAT;
@@ -733,9 +733,9 @@ void resolve_combat_damage(int player)
           {
             attacker_damage_ids[loop_index] = -1;
           }
-          assign_attacker_combat_damage(player, 0, blocker_has_trample, (int)attacker_damage_ids, damage_step, 0,
+          assign_attacker_combat_damage(player, 0, blocker_has_trample, attacker_damage_ids, damage_step, 0,
                                         attacker_score_bounds, attacker_score_bounds + 1);
-          assign_attacker_combat_damage(player, 0, blocker_has_trample, (int)attacker_damage_ids, damage_step, 1,
+          assign_attacker_combat_damage(player, 0, blocker_has_trample, attacker_damage_ids, damage_step, 1,
                                         attacker_score_bounds, attacker_score_bounds + 1);
         }
         else
@@ -977,8 +977,8 @@ void resolve_combat_damage(int player)
           {
             blocker_damage_ids[loop_index] = -1;
           }
-          assign_blocker_combat_damage(player, 0, multiple_attackers, (int)blocker_damage_ids, damage_step, 0, blocker_score, blocker_score + 1);
-          assign_blocker_combat_damage(player, 0, multiple_attackers, (int)blocker_damage_ids, damage_step, 1, blocker_score, blocker_score + 1);
+          assign_blocker_combat_damage(player, 0, multiple_attackers, blocker_damage_ids, damage_step, 0, blocker_score, blocker_score + 1);
+          assign_blocker_combat_damage(player, 0, multiple_attackers, blocker_damage_ids, damage_step, 1, blocker_score, blocker_score + 1);
         }
         else
         {

@@ -2385,7 +2385,7 @@ dlgproc_LoadDeck(HWND hdlg, UINT msg, WPARAM wparam, LPARAM lparam)
       ApplyCardArtPaletteToDc(hdc_copy);
       lparam_copy = lparam;
       SetBkMode(hdc_copy, TRANSPARENT);
-      return (INT_PTR)(pad_500 = (int)GetStockObject(HOLLOW_BRUSH));
+      return (INT_PTR)GetStockObject(HOLLOW_BRUSH);
 
     case WM_ERASEBKGND:
       pad = (HDC)wparam;
@@ -2616,7 +2616,7 @@ wndproc_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   switch (msg)
   {
   case 0x400:
-    font = (HFONT)GetWindowLongA(hwnd, cuecard_font_offset);
+    font = (HFONT)GetWindowLongPtrA(hwnd, cuecard_font_offset);
 
     x = (UINT)wparam & 0xFFFF;
     y = ((UINT)wparam >> 16) & 0xFFFF;
@@ -2650,13 +2650,13 @@ wndproc_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     font = CreateFontA(12, 0, 0, 0, 400, 0, 0, 0, 0, 4, 0, 0, 0, "Arial");
     if (font == 0)
       return -1;
-    SetWindowLongA(hwnd, cuecard_font_offset, (LONG)font);
+    SetWindowLongPtrA(hwnd, cuecard_font_offset, (LONG_PTR)font);
     return 0;
 
   case WM_DESTROY:
 
 #ifdef MODERN_FIXES
-    font = (HFONT)GetWindowLong(hwnd, cuecard_font_offset);
+    font = (HFONT)GetWindowLongPtrA(hwnd, cuecard_font_offset);
 #else
     font = (HFONT)GetWindowWord(hwnd, cuecard_font_offset);
 #endif
@@ -2673,7 +2673,7 @@ wndproc_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_PAINT:
 
 #ifdef MODERN_FIXES
-    font = (HFONT)GetWindowLong(hwnd, cuecard_font_offset);
+    font = (HFONT)GetWindowLongPtrA(hwnd, cuecard_font_offset);
 #else
     font = (HFONT)GetWindowWord(hwnd, cuecard_font_offset);
 #endif
@@ -4059,7 +4059,7 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
   int i;            /* ebp - 0x28 */
   int xoff;         /* ebp - 0x24 */
   RECT r;           /* ebp - 0x20 */
-  HANDLE itemdata;  /* ebp - 0x10 */
+  csvid_t itemdata; /* ebp - 0x10 */
   HWND card_hwnd;   /* ebp - 0xc */
   HWND target_hwnd; /* ebp - 0x8 */
   int yoff;         /* ebp - 0x4 */
@@ -4068,10 +4068,10 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
   yoff = 0;
 
   wParam = SendMessageA(hwnd, 0x188, 0, 0);
-  itemdata = (HANDLE)SendMessageA(hwnd, 0x199, wParam, 0);
+  itemdata = (csvid_t)SendMessageA(hwnd, 0x199, wParam, 0);
 
-  if ((((itemdata == (HANDLE)0x38e) || (itemdata == (HANDLE)0x37a)) || (itemdata == (HANDLE)0x375)) ||
-      (itemdata == (HANDLE)0x384) || (itemdata == (HANDLE)0x37b))
+  if ((((itemdata == 0x38e) || (itemdata == 0x37a)) || (itemdata == 0x375)) ||
+      (itemdata == 0x384) || (itemdata == 0x37b))
   {
     return 0;
   }
@@ -4086,7 +4086,7 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
   {
     card_hwnd = CreateWindowExA(0, "MAGICDECK_CardClass", "Card", 0x54000000,
                                 r.left, r.top, global_smallcard_width, global_smallcard_height,
-                                global_main_hwnd, (HMENU)1, global_hinstance, (LPVOID)itemdata);
+                                global_main_hwnd, (HMENU)1, global_hinstance, (LPVOID)(intptr_t)itemdata);
     if (card_hwnd == (HWND)0)
       return 0;
 
@@ -4123,7 +4123,7 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
 
   if (target_hwnd == global_decksurface_hwnd)
   {
-    amt = ask_movexcards((int)itemdata, shifted);
+    amt = ask_movexcards(itemdata, shifted);
     set_smallcard_dimensions();
     if (global_cfg.effects != 0)
       play_sound(2, 400, 0, 0);
@@ -4138,7 +4138,7 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
       if (SendMessageA(target_hwnd, 0x4c8, (WPARAM)itemdata,
                        MAKELONG(global_main_mouse_pt.x, global_main_mouse_pt.y)) == 0)
         MessageBeep(0);
-      change_global_deck_card_availability((int)itemdata, 2);
+      change_global_deck_card_availability(itemdata, 2);
     }
 
     count_packs();
@@ -4159,12 +4159,12 @@ static bool handle_card_list_click_or_drag(HWND hwnd, int singleclick, int shift
   }
   else if (target_hwnd == global_title_hwnd)
   {
-    if (!sell_card_from_available_pool((csvid_t)itemdata))
+    if (!sell_card_from_available_pool(itemdata))
       MessageBeep(0);
   }
   else if ((target_hwnd == global_unknown_10125a3c) || (target_hwnd == global_unknown_10144b04))
   {
-    amt = ask_movexcards((int)itemdata, shifted);
+    amt = ask_movexcards(itemdata, shifted);
     if (global_cfg.effects != 0)
       play_sound(2, 400, 0, 0);
 
@@ -4312,7 +4312,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 
     wanted_card = (unsigned int)wparam;
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     wLeft = GetWindowWord(hwnd, HORZLIST_LEFTPIC_INDEX);
     wPics = GetWindowWord(hwnd, HORZLIST_PICSINLINE_INDEX);
 
@@ -4333,7 +4333,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   case LB_SETCURSEL:
   {
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     wPics = GetWindowWord(hwnd, HORZLIST_PICSINLINE_INDEX);
     wOldSel = GetWindowWord(hwnd, HORZLIST_CURRSEL_INDEX);
     wLeft = GetWindowWord(hwnd, HORZLIST_LEFTPIC_INDEX);
@@ -4393,7 +4393,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   case LB_ADDSTRING:
   {
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
     wPics = GetWindowWord(hwnd, HORZLIST_PICSINLINE_INDEX);
 
@@ -4404,7 +4404,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 
       horz_list_addr[wLast] = (int)lparam;
       SetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX, ++wLast);
-      SetWindowLongA(hwnd, HORZLIST_ADDR_INDEX, (LONG)horz_list_addr);
+      SetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX, (LONG_PTR)horz_list_addr);
 
       SetScrollRange(hwnd, SB_HORZ, 0, wLast - wPics + 1, 0);
       horzlist_prep_rectangle(hwnd, item_idx, &r4);
@@ -4419,7 +4419,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   case LB_INSERTSTRING:
   {
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     wPics = GetWindowWord(hwnd, HORZLIST_PICSINLINE_INDEX);
 
     insert_index = (int)wparam;
@@ -4449,7 +4449,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
       horz_list_addr[insert_index] = (int)lparam;
 
       SetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX, ++wLast);
-      SetWindowLongA(hwnd, HORZLIST_ADDR_INDEX, (LONG)horz_list_addr);
+      SetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX, (LONG_PTR)horz_list_addr);
       SetScrollRange(hwnd, SB_HORZ, 0, wLast - wPics + 1, 0);
 
       horzlist_prep_rectangle(hwnd, insert_index, &r5);
@@ -4465,7 +4465,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   case LB_GETITEMDATA:
   {
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     getInx = wparam;
     if (getInx >= 0 && getInx < wLast)
       return horz_list_addr[getInx];
@@ -4476,7 +4476,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   case LB_RESETCONTENT:
   {
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
 
     oldidx = 0;
     for (; wLast > oldidx; oldidx++)
@@ -4496,7 +4496,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     wNewSel[0] = (WORD)-1;
     wLeft = 0;
 
-    SetWindowLongA(hwnd, HORZLIST_ADDR_INDEX, (LONG)horz_list_addr);
+    SetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX, (LONG_PTR)horz_list_addr);
     SetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX, wLast);
     SetWindowWord(hwnd, HORZLIST_CURRSEL_INDEX, wNewSel[0]);
     SetWindowWord(hwnd, HORZLIST_LEFTPIC_INDEX, wLeft);
@@ -4531,7 +4531,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     // if ((int)(unsigned int)wparam >= last_pic_index)
     //   return -1;
 
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     wNewSel[0] = (int)(short)GetWindowWord(hwnd, HORZLIST_CURRSEL_INDEX);
     wLeft = (int)(short)GetWindowWord(hwnd, HORZLIST_LEFTPIC_INDEX);
     last_pic_index = (int)wparam;
@@ -4672,7 +4672,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
       wPics = 0;
 
     SetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX, wLast);
-    SetWindowLongA(hwnd, HORZLIST_ADDR_INDEX, (LONG)horz_list_addr);
+    SetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX, (LONG_PTR)horz_list_addr);
     SetWindowWord(hwnd, HORZLIST_CURRSEL_INDEX, wNewSel[0]);
     SetWindowWord(hwnd, HORZLIST_LEFTPIC_INDEX, wLeft);
 
@@ -4704,7 +4704,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 
   case WM_DESTROY:
   {
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     free(horz_list_addr);
 
     DestroyMenu(global_horzlist_popup);
@@ -4914,7 +4914,7 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   case WM_PAINT:
   {
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(hwnd, HORZLIST_ADDR_INDEX);
     wNewSel[0] = GetWindowWord(hwnd, HORZLIST_CURRSEL_INDEX);
     wLeft = GetWindowWord(hwnd, HORZLIST_LEFTPIC_INDEX);
     wWidth = GetWindowWord(hwnd, HORZLIST_WIDTHPLUSSPACE_INDEX);
@@ -5186,7 +5186,7 @@ TENTATIVE_move_from_owned_cards(HWND hwnd, POINT point, int shift2_unshift1, int
     MapWindowPoints(NULL, parent, &pt, 1);
 
     new_hwnd = CreateWindowExA(0, "MAGICDECK_CardClass", "", 0x54000000, pt.x, pt.y, global_smallcard_width,
-                               global_smallcard_height, parent, (HMENU)1, global_hinstance, (LPVOID)csvid);
+                                global_smallcard_height, parent, (HMENU)1, global_hinstance, (LPVOID)(intptr_t)csvid);
     SendMessageA(new_hwnd, 0x401, amt32 - 1, 0);
     /* Keep the remainder of a split stack in the original card's order.
      * Creating it at the top made deck refresh lay it out at the bottom,
@@ -6966,7 +6966,7 @@ wndproc_MainClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
                 MAKELONG(rect_cardlistfilter.top, rect_cardlistfilter.bottom));
 
     wLast = GetWindowWord(global_horzlist_hwnd, HORZLIST_LASTPIC_INDEX);
-    horz_list_addr = (int *)GetWindowLongA(global_horzlist_hwnd, HORZLIST_ADDR_INDEX);
+    horz_list_addr = (int *)GetWindowLongPtrA(global_horzlist_hwnd, HORZLIST_ADDR_INDEX);
     wLeft = GetWindowWord(global_horzlist_hwnd, HORZLIST_LEFTPIC_INDEX);
     wPicsInline = GetWindowWord(global_horzlist_hwnd, HORZLIST_PICSINLINE_INDEX);
 

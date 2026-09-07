@@ -121,6 +121,14 @@ typedef struct tagWINDOWPOS {
   UINT flags;
 } WINDOWPOS;
 
+typedef struct tagMINMAXINFO {
+  POINT ptReserved;
+  POINT ptMaxSize;
+  POINT ptMaxPosition;
+  POINT ptMinTrackSize;
+  POINT ptMaxTrackSize;
+} MINMAXINFO;
+
 #define CS_VREDRAW 0x0001
 #define CS_HREDRAW 0x0002
 #define CS_DBLCLKS 0x0008
@@ -519,8 +527,12 @@ int TranslateAcceleratorA(HWND window, HACCEL accelerator, MSG *message);
 
 LONG GetWindowLongA(HWND window, int index);
 LONG SetWindowLongA(HWND window, int index, LONG value);
+LONG_PTR GetWindowLongPtrA(HWND window, int index);
+LONG_PTR SetWindowLongPtrA(HWND window, int index, LONG_PTR value);
 DWORD GetClassLongA(HWND window, int index);
 DWORD SetClassLongA(HWND window, int index, LONG value);
+ULONG_PTR GetClassLongPtrA(HWND window, int index);
+ULONG_PTR SetClassLongPtrA(HWND window, int index, LONG_PTR value);
 WORD GetWindowWord(HWND window, int index);
 WORD SetWindowWord(HWND window, int index, WORD value);
 HWND GetParent(HWND window);
@@ -722,6 +734,8 @@ void shandalar_window_content_changed(HWND window);
 #define SetCurrentDirectory SetCurrentDirectoryA
 #define GetWindowLong GetWindowLongA
 #define SetWindowLong SetWindowLongA
+#define GetWindowLongPtr GetWindowLongPtrA
+#define SetWindowLongPtr SetWindowLongPtrA
 #define SetWindowText SetWindowTextA
 #define GetWindowText GetWindowTextA
 #define GetWindowTextLength GetWindowTextLengthA

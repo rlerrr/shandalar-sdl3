@@ -67,7 +67,7 @@ void copy_opponent_name_prefix(char *name);
 int generic_clockwork_creature(int player, int card, int event, int amount);
 int charge_mana_w_global_cost_mod(int player, int card, int color, int amount);
 int FUN_0042d790(int player, int card, event_t event, int color);
-int handle_button_palette_message(int window, unsigned int message, int other_window, int data);
+int handle_button_palette_message(HWND window, UINT message, HWND other_window, LPARAM data);
 int helper_destroy_basiclandtype(int source_player,
                                  int source_card,
                                  int test_player,
@@ -204,15 +204,16 @@ int show_cardlist(int *graveyard,
                   char *window_title,
                   unsigned int require_selection,
                   char *prompt);
-void create_card_list_gdi_objects(int *brush1, int *pen1, int *pen2, int *pen3, int *brush2, int *text_color);
+void create_card_list_gdi_objects(HBRUSH *brush1, HPEN *pen1, HPEN *pen2, HPEN *pen3,
+                                  HBRUSH *brush2, COLORREF *text_color);
 void delete_card_list_gdi_objects(HGDIOBJ brush1, HGDIOBJ pen1, HGDIOBJ pen2, HGDIOBJ pen3, HGDIOBJ brush2);
 int select_from_graveyard_with_dialog(int player,
                                       int *graveyard,
                                       void *available,
                                       int count,
-                                      int prompt,
+                                       char **prompt,
                                       int a6,
-                                      int selected,
+                                       int *selected,
                                       int a8,
                                       int a9);
 int dispatch_event_to_single_card(int player,

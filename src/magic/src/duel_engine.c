@@ -34,9 +34,9 @@ void shandalar_host_end_duel(void);
 #endif
 
 extern int g_duel_modal_action_active;
-extern int g_duel_tooltip_window;
-extern int g_duel_opponent_battlefield_window;
-extern int g_duel_player_battlefield_window;
+extern HWND g_duel_tooltip_window;
+extern HWND g_duel_opponent_battlefield_window;
+extern HWND g_duel_player_battlefield_window;
 extern HMENU g_library_popup_menu;
 extern HMENU g_library_submenu;
 extern char g_library_menu_count_text[];
@@ -361,7 +361,7 @@ int handle_duel_hover_help_message(MSG *message, UINT timer_elapsed)
       g_duel_directive_hover_timer_id = 0;
     }
     if (g_duel_interface_options.directive_tracks_mouse != 0 &&
-        IsWindowVisible((HWND)g_duel_tooltip_window) != 0)
+        IsWindowVisible(g_duel_tooltip_window) != 0)
     {
       g_duel_directive_hover_timer_id = SetTimer((HWND)0, 0, timer_elapsed, (TIMERPROC)0);
     }
@@ -375,7 +375,7 @@ int handle_duel_hover_help_message(MSG *message, UINT timer_elapsed)
       GetCursorPos(&point);
       point.x += GetSystemMetrics(0xd);
       point.y += GetSystemMetrics(0xe);
-      GetWindowRect((HWND)g_duel_tooltip_window, &rect);
+      GetWindowRect(g_duel_tooltip_window, &rect);
       overrun = (rect.right - rect.left) + point.x - GetSystemMetrics(SM_CXSCREEN);
       if (overrun > 0)
       {
@@ -386,7 +386,7 @@ int handle_duel_hover_help_message(MSG *message, UINT timer_elapsed)
       {
         point.y -= overrun;
       }
-      SetWindowPos((HWND)g_duel_tooltip_window, (HWND)0, point.x, point.y, 0, 0,
+      SetWindowPos(g_duel_tooltip_window, (HWND)0, point.x, point.y, 0, 0,
                    SWP_NOSIZE | SWP_NOZORDER);
       return 1;
     }
@@ -1111,14 +1111,14 @@ LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam,
 
   case WM_CREATE:
     font = g_magicgame_chat_font;
-    SetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG)font);
+    SetWindowLongPtrA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG_PTR)font);
     GetWindowRect(hwnd, &create_rect);
     width = create_rect.right - create_rect.left;
     SetWindowLongA(hwnd, CHAT_WIDTH_WINDOW_LONG_OFFSET, width);
     return 0;
 
   case WM_GETFONT:
-    font = (HFONT)GetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongPtrA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
     return (LRESULT)font;
 
   case WM_LBUTTONDOWN:
@@ -1126,7 +1126,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_PAINT:
-    font = (HFONT)GetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
+    font = (HFONT)GetWindowLongPtrA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET);
     dc = BeginPaint(hwnd, &paint);
     if (dc != (HDC)0)
     {
@@ -1151,7 +1151,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam,
     {
       font = g_magicgame_chat_font;
     }
-    SetWindowLongA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG)font);
+    SetWindowLongPtrA(hwnd, CHAT_FONT_WINDOW_LONG_OFFSET, (LONG_PTR)font);
     InvalidateRect(hwnd, (RECT *)0, 1);
     GetWindowTextA(hwnd, large_text, 500);
     SetWindowTextA(hwnd, large_text);
@@ -1172,7 +1172,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_ChatClass(HWND hwnd, UINT msg, WPARAM wparam,
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1200,7 +1200,7 @@ LRESULT CALLBACK wndproc_ShuffleCard(HWND hwnd, UINT msg, WPARAM wparam, LPARAM 
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1252,7 +1252,7 @@ LRESULT CALLBACK wndproc_ExpandedGraveyard(HWND hwnd, UINT msg, WPARAM wparam, L
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1340,7 +1340,7 @@ LRESULT CALLBACK wndproc_SpellMinimized(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1369,13 +1369,13 @@ LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM 
 
   case WM_CREATE:
     icon = LoadIconA(g_app_instance, ((CREATESTRUCTA *)lparam)->lpszName);
-    SetWindowLongA(hwnd, g_icon_button_icon_long_offset, (LONG)icon);
+    SetWindowLongPtrA(hwnd, g_icon_button_icon_long_offset, (LONG_PTR)icon);
     pressed = 0;
     SetWindowLongA(hwnd, g_icon_button_pressed_long_offset, pressed);
     return 0;
 
   case WM_DESTROY:
-    icon = (HICON)GetWindowLongA(hwnd, g_icon_button_icon_long_offset);
+    icon = (HICON)GetWindowLongPtrA(hwnd, g_icon_button_icon_long_offset);
     if (icon != (HICON)0)
     {
       DestroyIcon(icon);
@@ -1439,7 +1439,7 @@ LRESULT CALLBACK wndproc_MAGICTHEME_IconButtonClass(HWND hwnd, UINT msg, WPARAM 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1586,7 +1586,7 @@ LRESULT CALLBACK wndproc_MAGIC_PaletteClass(HWND hwnd, UINT msg, WPARAM wparam, 
 // FUNCTION: SHANDALAR 0x004cc15a
 LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  unsigned int font_param;
+  HGDIOBJ font_param;
   char paint_text[100];
   HDC paint_dc;
   PAINTSTRUCT paint_struct;
@@ -1608,7 +1608,7 @@ LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, 
   switch (msg)
   {
   case 0x400:
-    font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
+    font = (HGDIOBJ)GetWindowLongPtrA(hwnd, g_duel_cue_card_font_window_long_offset);
     x = wparam & 0xffff;
     y = (unsigned short)((wparam >> 16) & 0xffff);
     text = (LPCSTR)lparam;
@@ -1654,14 +1654,14 @@ LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, 
 
   case WM_CREATE:
     font = (HGDIOBJ)g_duel_cue_card_font;
-    SetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset, (LONG)font);
+    SetWindowLongPtrA(hwnd, g_duel_cue_card_font_window_long_offset, (LONG_PTR)font);
     return 0;
 
   case WM_ERASEBKGND:
     return 1;
 
   case WM_GETFONT:
-    font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
+    font = (HGDIOBJ)GetWindowLongPtrA(hwnd, g_duel_cue_card_font_window_long_offset);
     return (LRESULT)font;
 
   case WM_KEYDOWN:
@@ -1670,7 +1670,7 @@ LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, 
     return 0;
 
   case WM_PAINT:
-    font = (HGDIOBJ)GetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset);
+    font = (HGDIOBJ)GetWindowLongPtrA(hwnd, g_duel_cue_card_font_window_long_offset);
     paint_dc = BeginPaint(hwnd, &paint_struct);
     if (paint_dc != (HDC)0)
     {
@@ -1690,19 +1690,19 @@ LRESULT CALLBACK wndproc_MAGIC_CueCardClass(HWND hwnd, UINT msg, WPARAM wparam, 
     return 0;
 
   case WM_SETFONT:
-    font_param = wparam;
-    if (font_param == 0)
+    font_param = (HGDIOBJ)wparam;
+    if (font_param == (HGDIOBJ)0)
     {
-      font_param = (unsigned int)g_duel_cue_card_font;
+      font_param = (HGDIOBJ)g_duel_cue_card_font;
     }
-    SetWindowLongA(hwnd, g_duel_cue_card_font_window_long_offset, font_param);
+    SetWindowLongPtrA(hwnd, g_duel_cue_card_font_window_long_offset, (LONG_PTR)font_param);
     InvalidateRect(hwnd, (RECT *)0, 1);
     return 0;
 
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -1758,7 +1758,7 @@ LRESULT CALLBACK wndproc_MAGIC_PlayerDirectiveClass(HWND hwnd, UINT msg, WPARAM 
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
   }
@@ -1780,13 +1780,13 @@ int create_duel_child_windows(HWND parent_window)
   g_duel_cue_card_window_hwnd =
       CreateWindowExA(0, CLASS_MAGIC_CUE_CARD, "", 0x80000000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_tooltip_window =
-      (int)CreateWindowExA(0, CLASS_MAGIC_PLAYER_DIRECTIVE, "", 0x80000000, 0, 0, 100, 30, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGIC_PLAYER_DIRECTIVE, "", 0x80000000, 0, 0, 100, 30, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_prompt_context_hwnd =
       CreateWindowExA(0, CLASS_MAGIC_TELL_USER, "", 0x80000001, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_opponent_battlefield_window =
-      (int)CreateWindowExA(0, CLASS_MAGICGAME_PHASE_DISPLAY, "Phase Display", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x77, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_PHASE_DISPLAY, "Phase Display", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x77, g_app_instance, (LPVOID)0);
   g_duel_player_battlefield_window =
-      (int)CreateWindowExA(0, CLASS_MAGICGAME_ATTACK_PHASE_DISPLAY, "Attack Phase Display", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x78, g_app_instance, (LPVOID)0);
+      CreateWindowExA(0, CLASS_MAGICGAME_ATTACK_PHASE_DISPLAY, "Attack Phase Display", visible_style, 0, 0, 0, 0, parent_window, (HMENU)0x78, g_app_instance, (LPVOID)0);
   g_duel_card_preview_window_hwnd =
       CreateWindowExA(0, CLASS_MAGICGAME_FULL_CARD, "Full-size card", 0x90000000, 0, 0, 0, 0, parent_window, (HMENU)0, g_app_instance, (LPVOID)0);
   g_duel_life_status_window_2_hwnd =

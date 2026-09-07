@@ -81,10 +81,4 @@ typedef struct EncodedImage
   unsigned char spans[1]; // 0x10
 } EncodedImage;
 
-#if defined(SHANDALAR) || defined(SHANDALAR_FONTSLOT_LAYOUT)
-typedef char FontSlot_size_must_be_0x2ac[(sizeof(FontSlot) == 0x2ac) ? 1 : -1];
-#else
-typedef char FontSlot_size_must_be_0x2a4[(sizeof(FontSlot) == 0x2a4) ? 1 : -1];
-#endif
-
 #endif

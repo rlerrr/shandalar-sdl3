@@ -206,7 +206,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
   {
 
   case 0x439:
-    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    face_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_face_picture_window_long_offset);
     owns_face_bitmap = GetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset);
     if (face_bitmap != (HBITMAP)0 && owns_face_bitmap == 0)
     {
@@ -215,13 +215,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
 
     face_bitmap = (HBITMAP)wparam;
     owns_face_bitmap = lparam;
-    SetWindowLongA(hwnd, g_face_picture_window_long_offset, (LONG)face_bitmap);
+    SetWindowLongPtrA(hwnd, g_face_picture_window_long_offset, (LONG_PTR)face_bitmap);
     SetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset, owns_face_bitmap);
     InvalidateRect(hwnd, (RECT *)0, 0);
     return 0;
 
   case 0x438:
-    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    face_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_face_picture_window_long_offset);
     return (LRESULT)face_bitmap;
 
   case WM_COMMAND:
@@ -248,13 +248,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
 
   case WM_CREATE:
     face_bitmap = (HBITMAP)0;
-    SetWindowLongA(hwnd, g_face_picture_window_long_offset, (LONG)face_bitmap);
+    SetWindowLongPtrA(hwnd, g_face_picture_window_long_offset, (LONG_PTR)face_bitmap);
     owns_face_bitmap = 0;
     SetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset, owns_face_bitmap);
     return 0;
 
   case WM_DESTROY:
-    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    face_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_face_picture_window_long_offset);
     owns_face_bitmap = GetWindowLongA(hwnd, g_face_picture_ownership_window_long_offset);
     if (face_bitmap != (HBITMAP)0 && owns_face_bitmap == 0)
     {
@@ -273,7 +273,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_PAINT:
-    face_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_face_picture_window_long_offset);
+    face_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_face_picture_window_long_offset);
     paint_dc = BeginPaint(hwnd, &paint);
     if (paint_dc != (HDC)0)
     {
@@ -340,7 +340,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_FaceClass(HWND hwnd, UINT msg, WPARAM wparam,
   case 0x30f:
   case 0x310:
   case 0x311:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -372,7 +372,7 @@ void draw_duel_face_window(HDC dc, RECT *rect, int player)
     face_window = g_duel_opponent_face_window_hwnd;
   }
 
-  face_bitmap = (HBITMAP)GetWindowLongA(face_window, g_face_picture_window_long_offset);
+  face_bitmap = (HBITMAP)GetWindowLongPtrA(face_window, g_face_picture_window_long_offset);
   if (player == 0)
   {
     background_bitmap = g_face_background_pics[g_last_duel_player_primary_color];

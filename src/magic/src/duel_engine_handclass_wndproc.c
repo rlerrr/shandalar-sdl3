@@ -234,12 +234,12 @@ void resize_duel_hand_window(HWND hwnd)
 
   max_visible_cards = 8;
   card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
-  card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+  card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
   art_width = GetWindowLongA(hwnd, g_hand_art_width_long_offset);
   art_title_height = GetWindowLongA(hwnd, g_hand_art_title_height_long_offset);
   art_side_width = GetWindowLongA(hwnd, g_hand_art_side_width_long_offset);
   art_bottom_height = GetWindowLongA(hwnd, g_hand_art_bottom_height_long_offset);
-  background_bitmap = (HBITMAP)GetWindowLongA(hwnd, g_hand_background_bitmap_long_offset);
+  background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset);
   selected_index = GetWindowLongA(hwnd, g_hand_selected_index_long_offset);
   calculate_hand_art_offsets(g_showlist_smallcard_width, g_showlist_smallcard_height,
                              art_width, art_title_height, art_side_width, art_bottom_height,
@@ -392,13 +392,13 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
   LONG art_side_width;         // ebp - 0x10
   HWND *card_windows;          // ebp - 0xc
   int selected_index;          // ebp - 0x8
-  HWND background_bitmap;      // ebp - 0x4
+  HBITMAP background_bitmap;   // ebp - 0x4
 
   switch (msg)
   {
   case 0x433:
   case 0x434:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     card_id = (int)wparam;
     for (card_id_index = 0; card_id_index < card_count; card_id_index++)
@@ -411,7 +411,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x432:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     for (refresh_index = 0; refresh_index < card_count; refresh_index++)
     {
@@ -420,7 +420,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x435:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     for (invalidate_all_index = 0; invalidate_all_index < card_count; invalidate_all_index++)
     {
@@ -429,7 +429,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x436:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     invalidate_player_card = (int *)wparam;
     invalidate_rect = (RECT *)lparam;
@@ -460,12 +460,12 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
   case 0x439:
     new_bitmap = (HBITMAP)wparam;
     bitmap_rect = (RECT *)lparam;
-    background_bitmap = (HWND)GetWindowLongA(hwnd, g_hand_background_bitmap_long_offset);
-    if (background_bitmap != (HWND)0)
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset);
+    if (background_bitmap != (HBITMAP)0)
     {
       DeleteObject(background_bitmap);
     }
-    background_bitmap = (HWND)new_bitmap;
+    background_bitmap = new_bitmap;
     art_width = bitmap_rect->left;
     art_title_height = bitmap_rect->top;
     art_side_width = bitmap_rect->right;
@@ -474,16 +474,16 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     SetWindowLongA(hwnd, g_hand_art_title_height_long_offset, art_title_height);
     SetWindowLongA(hwnd, g_hand_art_side_width_long_offset, art_side_width);
     SetWindowLongA(hwnd, g_hand_art_bottom_height_long_offset, art_bottom_height);
-    SetWindowLongA(hwnd, g_hand_background_bitmap_long_offset, (LONG)background_bitmap);
+    SetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset, (LONG_PTR)background_bitmap);
     resize_duel_hand_window(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 
   case 0x438:
-    return (LRESULT)(background_bitmap = (HWND)GetWindowLongA(hwnd, g_hand_background_bitmap_long_offset));
+    return (LRESULT)(background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset));
 
   case 0x400:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     selected_hwnd = (HWND)wparam;
     if (selected_hwnd == 0)
@@ -502,7 +502,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x40a:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     selected_index = GetWindowLongA(hwnd, g_hand_selected_index_long_offset);
     if (card_count >= 0x32)
@@ -550,7 +550,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return card_count;
 
   case 0x40b:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     selected_index = GetWindowLongA(hwnd, g_hand_selected_index_long_offset);
     remove_player_card = (int *)wparam;
@@ -604,7 +604,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return remove_found;
 
   case 0x40c:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     for (clear_index = 0; clear_index < card_count; clear_index++)
     {
@@ -619,7 +619,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case 0x40d:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     bring_player_card = (int *)wparam;
     bring_found = 0;
@@ -642,7 +642,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
 
   case 0x40e:
   case 0x40f:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
     find_player_card = (int *)wparam;
     find_found = 0;
@@ -693,8 +693,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_CREATE:
     card_count = 0;
     SetWindowLongA(hwnd, g_hand_card_count_long_offset, card_count);
-    card_windows = malloc(200);
-    SetWindowLongA(hwnd, g_hand_card_windows_long_offset, (LONG)card_windows);
+    card_windows = malloc(50 * sizeof(*card_windows));
+    SetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset, (LONG_PTR)card_windows);
     art_width = 0;
     art_title_height = 0;
     art_side_width = 0;
@@ -703,8 +703,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     SetWindowLongA(hwnd, g_hand_art_title_height_long_offset, art_title_height);
     SetWindowLongA(hwnd, g_hand_art_side_width_long_offset, art_side_width);
     SetWindowLongA(hwnd, g_hand_art_bottom_height_long_offset, art_bottom_height);
-    background_bitmap = (HWND)0;
-    SetWindowLongA(hwnd, g_hand_background_bitmap_long_offset, (LONG)background_bitmap);
+    background_bitmap = (HBITMAP)0;
+    SetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset, (LONG_PTR)background_bitmap);
     selected_index = -1;
     SetWindowLongA(hwnd, g_hand_selected_index_long_offset, selected_index);
     if (card_windows == NULL)
@@ -715,10 +715,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_DESTROY:
-    card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
     free(card_windows);
-    background_bitmap = (HWND)GetWindowLongA(hwnd, g_hand_background_bitmap_long_offset);
-    if (background_bitmap != (HWND)0)
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset);
+    if (background_bitmap != (HBITMAP)0)
     {
       delete_and_close_object(background_bitmap);
     }
@@ -737,7 +737,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     {
       click_x = (unsigned int)lparam & 0xffff;
       click_y = HIWORD(lparam);
-      card_windows = (HWND *)GetWindowLongA(hwnd, g_hand_card_windows_long_offset);
+    card_windows = (HWND *)GetWindowLongPtrA(hwnd, g_hand_card_windows_long_offset);
       card_count = GetWindowLongA(hwnd, g_hand_card_count_long_offset);
       selected_index = GetWindowLongA(hwnd, g_hand_selected_index_long_offset);
       art_width = GetWindowLongA(hwnd, g_hand_art_width_long_offset);
@@ -787,7 +787,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     art_title_height = GetWindowLongA(hwnd, g_hand_art_title_height_long_offset);
     art_side_width = GetWindowLongA(hwnd, g_hand_art_side_width_long_offset);
     art_bottom_height = GetWindowLongA(hwnd, g_hand_art_bottom_height_long_offset);
-    background_bitmap = (HWND)GetWindowLongA(hwnd, g_hand_background_bitmap_long_offset);
+    background_bitmap = (HBITMAP)GetWindowLongPtrA(hwnd, g_hand_background_bitmap_long_offset);
     calculate_hand_art_offsets(g_showlist_smallcard_width, g_showlist_smallcard_height,
                                art_width, art_title_height, art_side_width,
                                art_bottom_height, &title_height, &bottom_margin,
@@ -802,7 +802,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
     FillRect(g_shared_offscreen_dc, &client_rect, GetStockObject(4));
     draw_hand_window_frame(g_shared_offscreen_dc, (int *)&client_rect, (int *)&inner_rect,
                            edge_width, art_width, art_title_height,
-                           art_side_width, art_bottom_height, (HBITMAP)background_bitmap);
+                           art_side_width, art_bottom_height, background_bitmap);
     SetMapMode(g_shared_offscreen_dc, MM_ANISOTROPIC);
     SetWindowExtEx(g_shared_offscreen_dc, client_rect.right - client_rect.left, 0x14, NULL);
     SetViewportExtEx(g_shared_offscreen_dc, client_rect.right - client_rect.left,
@@ -860,7 +860,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_HandClass(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_QUERYNEWPALETTE:
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);

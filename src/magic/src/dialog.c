@@ -1524,7 +1524,7 @@ INT_PTR CALLBACK big_card_choice_dialog_proc(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_PALETTEISCHANGING:
   case WM_PALETTECHANGED:
   case WM_QUERYNEWPALETTE:
-    return handle_button_palette_message((int)hwnd, msg, (int)wparam, (int)lparam);
+    return handle_button_palette_message(hwnd, msg, (HWND)wparam, lparam);
 
   case WM_ERASEBKGND:
     erase_dc = (HDC)wparam;

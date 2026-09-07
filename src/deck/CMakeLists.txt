@@ -1,4 +1,3 @@
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   add_executable(deck
     src/legacy_sdl_main.c
   )
@@ -74,6 +73,3 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
       endforeach()
     endif()
   endif()
-else()
-  message(FATAL_ERROR "The deck target now uses the legacy deck builder and requires a 32-bit build.")
-endif()
