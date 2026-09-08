@@ -114,6 +114,132 @@ static const char *const_db_artist_names[] = {
     "Unknown",
 };
 
+/* CARDS.DAT always contains the original 32-bit, 0x98-byte record layout.
+ * Pointer-like fields in this structure are offsets into the text block that
+ * follows the records (artist is an index into const_db_artist_names). */
+typedef struct card_disk_record_t
+{
+  int32_t id;
+  uint32_t full_name_offset;
+  uint32_t name_offset;
+  uint32_t expansion;
+  uint32_t color;
+  uint32_t card_type;
+  uint32_t subtype;
+  uint32_t type_text_offset;
+  uint32_t db_card_type_2;
+  uint32_t rarity;
+  casting_cost_t req;
+  uint8_t unused0x31;
+  uint16_t unused0x32;
+  uint32_t flags;
+  uint32_t unused0x38;
+  uint32_t unused0x3c;
+  uint32_t artist_index;
+  int32_t num_pics;
+  uint32_t mana_cost_text_offset;
+  uint32_t ai_modifiers1;
+  uint32_t ai_modifiers2;
+  uint16_t ai_inc_power_toughness;
+  uint16_t ai_power_toughness;
+  int16_t ai_base_value;
+  int16_t ai_dependencies;
+  int32_t sleight_color;
+  int16_t ai_against_color;
+  int16_t ai_for_color;
+  int16_t ai_counts_as_color;
+  int16_t ai_against_land;
+  int16_t ai_for_land;
+  int16_t ai_counts_as_land;
+  int32_t ai_abilities;
+  int32_t expansion_rarity;
+  uint32_t rules_text_offset;
+  uint32_t flavor_text_offset;
+  int32_t power;
+  int32_t toughness;
+  int16_t types[2];
+  char abilities[10];
+  int8_t mana_source_colors;
+  int8_t inflatable;
+  uint8_t hack_colors;
+  uint8_t currently_zero_for_all_cards;
+  uint8_t enchant_type;
+  uint8_t hack_mode;
+} card_disk_record_t;
+
+STATIC_ASSERT(sizeof(card_disk_record_t) == 0x98, card_disk_record_must_match_cards_dat);
+
+static char *resolve_card_text(uint32_t offset, size_t text_size)
+{
+  char *text;
+  if (offset >= text_size)
+    return NULL;
+  text = global_base_txt + offset;
+  return memchr(text, '\0', text_size - offset) != NULL ? text : NULL;
+}
+
+static int convert_card_disk_record(card_ptr_t *dst, const card_disk_record_t *src,
+                                    size_t text_size)
+{
+  memset(dst, 0, sizeof(*dst));
+  dst->id = (card_id_t)src->id;
+  dst->full_name = resolve_card_text(src->full_name_offset, text_size);
+  dst->name = resolve_card_text(src->name_offset, text_size);
+  dst->type_text = resolve_card_text(src->type_text_offset, text_size);
+  dst->rules_text = resolve_card_text(src->rules_text_offset, text_size);
+  dst->flavor_text = resolve_card_text(src->flavor_text_offset, text_size);
+  if (!dst->full_name || !dst->name || !dst->type_text || !dst->rules_text ||
+      !dst->flavor_text ||
+      src->artist_index >= sizeof(const_db_artist_names) / sizeof(const_db_artist_names[0]))
+    return 0;
+
+  dst->expansion = src->expansion;
+  dst->color = src->color;
+  dst->card_type = src->card_type;
+  dst->subtype = src->subtype;
+  dst->db_card_type_2 = src->db_card_type_2;
+  dst->rarity = src->rarity;
+  dst->req = src->req;
+  dst->unused0x31 = src->unused0x31;
+  dst->unused0x32 = src->unused0x32;
+  dst->flags = (CardPtrFlags)src->flags;
+  dst->unused0x38 = src->unused0x38;
+  dst->unused0x3c = src->unused0x3c;
+  dst->artist = const_db_artist_names[src->artist_index];
+  dst->num_pics = src->num_pics;
+  dst->mana_cost_text = src->mana_cost_text_offset
+                            ? resolve_card_text(src->mana_cost_text_offset, text_size)
+                            : NULL;
+  if (src->mana_cost_text_offset && !dst->mana_cost_text)
+    return 0;
+  dst->ai_modifiers1 = src->ai_modifiers1;
+  dst->ai_modifiers2 = src->ai_modifiers2;
+  dst->ai_inc_power_toughness = src->ai_inc_power_toughness;
+  dst->ai_power_toughness = src->ai_power_toughness;
+  dst->ai_base_value = src->ai_base_value;
+  dst->ai_dependencies = src->ai_dependencies;
+  dst->sleight_color = src->sleight_color;
+  dst->ai_against_color = src->ai_against_color;
+  dst->ai_for_color = src->ai_for_color;
+  dst->ai_counts_as_color = src->ai_counts_as_color;
+  dst->ai_against_land = src->ai_against_land;
+  dst->ai_for_land = src->ai_for_land;
+  dst->ai_counts_as_land = src->ai_counts_as_land;
+  dst->ai_abilities = src->ai_abilities;
+  dst->expansion_rarity = src->expansion_rarity;
+  dst->power = src->power;
+  dst->toughness = src->toughness;
+  memcpy(dst->types, src->types, sizeof(dst->types));
+  memcpy(dst->abilities, src->abilities, sizeof(dst->abilities));
+  dst->mana_source_colors = src->mana_source_colors;
+  dst->inflatable = src->inflatable;
+  dst->hack_colors = src->hack_colors;
+  dst->currently_zero_for_all_cards = src->currently_zero_for_all_cards;
+  dst->enchant_type = src->enchant_type;
+  dst->hack_mode = src->hack_mode;
+  return 1;
+}
+
 // GLOBAL: DECKDLL 0x101427b4
 // GLOBAL: MAGIC 0x008b40d0
 // GLOBAL: SHANDALAR 0x008c8250
@@ -155,8 +281,8 @@ int read_db_guts(char *cards_dat_filename)
   char *rules_in;             /* ebp - 0x24 */
   int req_idx;                /* ebp - 0x20 */
   int exp_idx;                /* ebp - 0x1c */
-  card_ptr_t *cp;
-  size_t record_size;
+  uint32_t text_size;
+  card_disk_record_t *disk_records;
   int card_idx; /* ebp - 0x10 */
   FILE *cards_dat;
 
@@ -164,27 +290,48 @@ int read_db_guts(char *cards_dat_filename)
   if (cards_dat == NULL)
     return 0;
 
-  fread(&global_available_slots, 4, 1, cards_dat);
-  fread(&record_size, 4, 1, cards_dat);
-
-  global_base_txt = (char *)malloc(record_size);
-  if (global_base_txt == NULL)
+  if (fread(&global_available_slots, sizeof(uint32_t), 1, cards_dat) != 1 ||
+      fread(&text_size, sizeof(text_size), 1, cards_dat) != 1 ||
+      global_available_slots < 0 || global_available_slots > 2000 || text_size == 0)
   {
     fclose(cards_dat);
     return 0;
   }
 
-  fread(global_raw_cards_storage, 0x98, global_available_slots, cards_dat);
-  fread(global_base_txt, 1, record_size, cards_dat);
+  disk_records = malloc((size_t)global_available_slots * sizeof(*disk_records));
+  global_base_txt = malloc((size_t)text_size + 1);
+  if (disk_records == NULL || global_base_txt == NULL)
+  {
+    free(disk_records);
+    free(global_base_txt);
+    global_base_txt = NULL;
+    fclose(cards_dat);
+    return 0;
+  }
+
+  if (fread(disk_records, sizeof(*disk_records), (size_t)global_available_slots, cards_dat) !=
+          (size_t)global_available_slots ||
+      fread(global_base_txt, 1, text_size, cards_dat) != text_size)
+  {
+    free(disk_records);
+    free(global_base_txt);
+    global_base_txt = NULL;
+    fclose(cards_dat);
+    return 0;
+  }
   fclose(cards_dat);
+  global_base_txt[text_size] = '\0';
 
   for (card_idx = 0; card_idx < global_available_slots; card_idx += 1)
   {
-    *(int *)&global_raw_cards_storage[card_idx].full_name += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[card_idx].name += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[card_idx].type_text += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[card_idx].rules_text += (int)global_base_txt;
-    *(int *)&global_raw_cards_storage[card_idx].flavor_text += (int)global_base_txt;
+    if (!convert_card_disk_record(&global_raw_cards_storage[card_idx],
+                                  &disk_records[card_idx], text_size))
+    {
+      free(disk_records);
+      free(global_base_txt);
+      global_base_txt = NULL;
+      return 0;
+    }
 
     if (_strcmpi(global_raw_cards_storage[card_idx].rules_text, "None") == 0)
       global_raw_cards_storage[card_idx].rules_text = read_db_empty_rules;
@@ -193,12 +340,10 @@ int read_db_guts(char *cards_dat_filename)
         (_strcmpi(global_raw_cards_storage[card_idx].flavor_text, "Blank") == 0))
       global_raw_cards_storage[card_idx].flavor_text = read_db_empty_flavor;
 
-    global_raw_cards_storage[card_idx].artist =
-        const_db_artist_names[(int)global_raw_cards_storage[card_idx].artist];
-
     if (global_raw_cards_storage[card_idx].num_pics == 0)
       global_raw_cards_storage[card_idx].num_pics = 1;
   }
+  free(disk_records);
 
   for (exp_idx = 0; exp_idx < global_available_slots; exp_idx += 1)
     if (global_raw_cards_storage[exp_idx].expansion & 0x40)

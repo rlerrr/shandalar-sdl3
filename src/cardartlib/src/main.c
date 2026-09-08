@@ -56,6 +56,22 @@ typedef struct VersionedArtCacheEntry
   int version;
 } VersionedArtCacheEntry;
 
+/* CARDS.DAT stores the original fixed-width 32-bit record layout.  CardArtLib
+ * only needs num_pics, which is the signed 32-bit field at offset 0x44. */
+typedef struct CardArtDiskRecord
+{
+  unsigned char bytes[0x98];
+} CardArtDiskRecord;
+
+STATIC_ASSERT(sizeof(CardArtDiskRecord) == 0x98, CardArtDiskRecord_wrong_size);
+
+static int CardArtDiskRecord_GetNumPics(const CardArtDiskRecord *record)
+{
+  int num_pics;
+  memcpy(&num_pics, record->bytes + 0x44, sizeof(num_pics));
+  return num_pics;
+}
+
 // GLOBAL: CARDARTLIB 0x1011f740
 VersionedArtCacheEntry g_versionedSmallArtCache[100];
 
@@ -86,7 +102,7 @@ bool ReloadVersionedSmallArtIfWrongSize(card_id_t id, int version, int width, in
 int CardArtLib_InitializeFromRoot(const char *asset_root)
 {
   char cards_dat_path[0x208];
-  card_ptr_t *records;
+  CardArtDiskRecord *records;
   int card_count = 0;
   int unused_header_value;
   int idx;
@@ -110,7 +126,7 @@ int CardArtLib_InitializeFromRoot(const char *asset_root)
   if (!InitCardArtGdiResources())
     return 0;
 
-  records = (card_ptr_t *)calloc(2000, sizeof(*records));
+  records = (CardArtDiskRecord *)calloc(2000, sizeof(*records));
   if (!records)
     return 0;
 
@@ -136,7 +152,10 @@ int CardArtLib_InitializeFromRoot(const char *asset_root)
   }
 
   for (idx = 0; idx < 2000; ++idx)
-    g_cardPicCounts[idx] = idx < card_count && records[idx].num_pics > 0 ? records[idx].num_pics : 1;
+  {
+    int num_pics = idx < card_count ? CardArtDiskRecord_GetNumPics(&records[idx]) : 0;
+    g_cardPicCounts[idx] = num_pics > 0 ? num_pics : 1;
+  }
   free(records);
   for (i = 0; i < 2000; ++i)
     g_SmallArtCache[i].hbm = 0;
