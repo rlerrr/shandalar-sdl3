@@ -3781,7 +3781,10 @@ unsigned int choose_response_card(int player)
       }
     }
 
-    g_ai_recorded_action = ((PLAYER_CARD_INSTANCE(player, (int)candidates[g_ai_recorded_choice]).state & STATE_IN_PLAY) ? 0x2000 : 0x1000) | candidates[g_ai_recorded_choice] | ((player != 0) ? 0x100 : 0);
+    g_ai_recorded_action = candidates[g_ai_recorded_choice] == 0xffffffffU
+                               ? -1
+                               : ((PLAYER_CARD_INSTANCE(player, (int)candidates[g_ai_recorded_choice]).state & STATE_IN_PLAY) ? 0x2000 : 0x1000) |
+                                     candidates[g_ai_recorded_choice] | ((player != 0) ? 0x100 : 0);
 
     g_ai_recorded_action_type = 4;
     record_ai_action_selection();

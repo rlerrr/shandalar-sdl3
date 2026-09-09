@@ -763,8 +763,10 @@ int choose_ai_main_phase_action(int player)
         }
         g_ai_search_force_pass = -1;
       }
-      g_ai_recorded_action = (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & STATE_IN_PLAY) == 0) ? 0x1000 : 0x2000) |
-                             candidates[g_ai_recorded_choice] | (player != 0 ? 0x100 : 0);
+      g_ai_recorded_action = candidates[g_ai_recorded_choice] == 0xffffffffU
+                                 ? -1
+                                 : (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & STATE_IN_PLAY) == 0) ? 0x1000 : 0x2000) |
+                                       candidates[g_ai_recorded_choice] | (player != 0 ? 0x100 : 0);
       g_ai_recorded_action_type = 2;
       record_ai_action_selection();
     }
@@ -799,8 +801,10 @@ int choose_ai_main_phase_action(int player)
           g_ai_recorded_choice = candidate_count - 1;
         }
       }
-      g_ai_recorded_action = (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & STATE_IN_PLAY) == 0) ? 0x1000 : 0x2000) |
-                             candidates[g_ai_recorded_choice] | (player != 0 ? 0x100 : 0);
+      g_ai_recorded_action = candidates[g_ai_recorded_choice] == 0xffffffffU
+                                 ? -1
+                                 : (((global_card_instances[player][candidates[g_ai_recorded_choice]].state & STATE_IN_PLAY) == 0) ? 0x1000 : 0x2000) |
+                                       candidates[g_ai_recorded_choice] | (player != 0 ? 0x100 : 0);
       g_ai_recorded_action_type = 2;
       record_ai_action_selection();
       if ((candidate_count - 1 == g_ai_recorded_choice) && (ai_depth < g_ai_search_target_depth))
@@ -841,7 +845,10 @@ void record_ai_action_selection(void)
   if (g_recorded_action_count < 0x100)
   {
     g_trial_recorded_action_targets[g_recorded_action_count] = g_ai_recorded_action;
-    g_trial_recorded_action_internal_card_ids[g_recorded_action_count] = PLAYER_CARD_INSTANCE((g_ai_recorded_action & 0x100) >> 8, g_ai_recorded_action & 0xff).internal_card_id;
+    g_trial_recorded_action_internal_card_ids[g_recorded_action_count] =
+        (g_ai_recorded_action & 0xff) == 0xff
+            ? -1
+            : PLAYER_CARD_INSTANCE((g_ai_recorded_action & 0x100) >> 8, g_ai_recorded_action & 0xff).internal_card_id;
     g_trial_recorded_action_types[g_recorded_action_count] = g_ai_recorded_action_type;
     g_trial_recorded_action_codes[g_recorded_action_count] = g_ai_recorded_choice;
     ++g_recorded_action_count;

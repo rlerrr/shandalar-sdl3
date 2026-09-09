@@ -55,12 +55,6 @@ HDC global_screen_dc = (HDC)0x0;
 // GLOBAL: SHANDALAR 0x00581ea0
 int g_octree_depth_max = 0x00000000;
 
-// GLOBAL: CARDARTLIB 0x1001d244
-// GLOBAL: DRAWCARDLIB 0x10021034
-// GLOBAL: DECKDLL 0x10031934
-// GLOBAL: SHANDALAR 0x00581ea4
-int *g_diff_squared_table_mid_ptr = &g_diff_squared_table[0xFF];
-
 // GLOBAL: CARDARTLIB 0x1001d248
 // GLOBAL: DRAWCARDLIB 0x10021038
 // GLOBAL: DECKDLL 0x10031938
@@ -642,6 +636,12 @@ bool InitDiffSquaredLookupTable(void)
   return 1;
 }
 
+static int SquaredPaletteChannelDelta(int lhs, int rhs)
+{
+  int delta = (int)lhs - (int)rhs;
+  return delta * delta;
+}
+
 // FUNCTION: CARDARTLIB 0x10004d49
 // FUNCTION: DRAWCARDLIB 0x100012f9
 // FUNCTION: DECKDLL 0x10009cb4
@@ -899,9 +899,9 @@ undefined4 Octree_FindNearestColor(uint rgb_color)
 
       pal_r = (g_paletteRgbTable[index_list[i]] & 0xff0000) >> 0x10;
 
-      distance = g_diff_squared_table_mid_ptr[green - pal_g] +
-                 g_diff_squared_table_mid_ptr[blue - pal_b] +
-                 g_diff_squared_table_mid_ptr[red - pal_r];
+      distance = SquaredPaletteChannelDelta(green, pal_g) +
+                 SquaredPaletteChannelDelta(blue, pal_b) +
+                 SquaredPaletteChannelDelta(red, pal_r);
 
       if (distance < best_distance)
       {
@@ -995,9 +995,9 @@ uint Octree_FindNearestPaletteIndex(uint rgb_color)
       pal_green = ((RGBQUAD *)&g_paletteRgbTable[index_list[i]])->rgbGreen;
       pal_red = (g_paletteRgbTable[index_list[i]] & 0xff0000) >> 0x10;
 
-      distance = g_diff_squared_table_mid_ptr[pal_b - pal_red] +
-                 g_diff_squared_table_mid_ptr[pal_r - pal_blue] +
-                 g_diff_squared_table_mid_ptr[pal_g - pal_green];
+      distance = SquaredPaletteChannelDelta(pal_b, pal_red) +
+                 SquaredPaletteChannelDelta(pal_r, pal_blue) +
+                 SquaredPaletteChannelDelta(pal_g, pal_green);
 
       if (distance < best_distance)
       {
@@ -1138,9 +1138,9 @@ int Palette_FindNearestEntryIndex(int target_r, int target_g, int target_b, byte
   best_distance = 0x7fffffff;
   for (i = 0; i < 0x100; i++, palette_bytes += 3)
   {
-    distance = *(int *)(g_diff_squared_table_mid_ptr + (target_b - (uint)palette_bytes[2])) +
-               *(int *)(g_diff_squared_table_mid_ptr + (target_g - (uint)palette_bytes[1])) +
-               *(int *)(g_diff_squared_table_mid_ptr + (target_r - (uint)*palette_bytes));
+    distance = SquaredPaletteChannelDelta(target_b, palette_bytes[2]) +
+               SquaredPaletteChannelDelta(target_g, palette_bytes[1]) +
+               SquaredPaletteChannelDelta(target_r, palette_bytes[0]);
 
     if (distance < best_distance)
     {
