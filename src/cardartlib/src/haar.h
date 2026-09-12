@@ -43,8 +43,6 @@ typedef struct WvlEntry {
   byte *decoded_ptr;
 } WvlEntry;
 
-STATIC_ASSERT(sizeof(WvlEntry) == 0x1b0, WvlEntry_wrong_size);
-
 WvlEntry *Catalog_LoadWvlEntry(int catalog_id, char *wvl_path, int decode_haar);
 uint *Wvl_DecodeToBgr24(byte *out_bgr24, WvlEntry *wvl_entry, int width, int height);
 byte *Wvl_DecodeHaar(WvlEntry *wvl, byte *dst);

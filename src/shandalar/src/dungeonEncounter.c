@@ -612,7 +612,7 @@ int RunCastleDungeonBoard(int dungeon_index)
                   mana_reward_delta = internal_rand(2);
                   if (mana_reward_delta != 0)
                   {
-                    sprintf((char *)((int)mana_reward_text + strlen(mana_reward_text)), gs_dungeon_0077f000[mana_color + 5], mana_reward_delta);
+                    sprintf(mana_reward_text + strlen(mana_reward_text), gs_dungeon_0077f000[mana_color + 5], mana_reward_delta);
                     has_mana_reward = 1;
                     g_amulet_inventory[mana_color - 1] += mana_reward_delta;
                   }
@@ -1043,7 +1043,7 @@ undefined4 HandleDefeatedWizardCastle(int castle_index)
     StretchBlitGraphicsRect(g_page1_window_bounds, 0, 0, 0x280, 0x1e0, g_page0_window_bounds, 0, 0, global_screen_width,
                             global_screen_height);
     strcpy(g_ui_message_buffer, gs_castlewin_0074b8c0[6]);
-    *(undefined4 *)((int)g_page0_window_bounds + 0x20) = 5;
+    g_page0_window_bounds->font_slot = 5;
     DrawUiScaledCenteredTextWithShadow(g_page0_window_bounds, 99, 0x140, 0x100, g_ui_message_buffer);
     ClearInputAndWaitForMouseRelease();
     WaitForInputEventUnlessBlocked();

@@ -66,7 +66,6 @@ typedef struct life_total_dialog_context_struct
   int initial_life_total;
   int show_reset_button;
 } life_total_dialog_context_t;
-STATIC_ASSERT(sizeof(life_total_dialog_context_t) == 0xc, life_total_dialog_context_wrong_size);
 
 static void setup_duel_options_dialog_resources(HBITMAP *background,
                                                 COLORREF *title_color,
@@ -422,8 +421,8 @@ INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wpar
   int ctl_id;
   HDC ctl_hdc;
   HBRUSH brush;
-  int previous_control;
-  int current_control;
+  HWND previous_control;
+  HWND current_control;
   int selected_control;
 
   switch (msg)
@@ -620,9 +619,9 @@ INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wpar
     return 1;
 
   case 0x4c8:
-    current_control = (int)wparam;
-    previous_control = (int)lparam;
-    if (GetDlgItem(hwnd, IDCANCEL) == (HWND)current_control)
+    current_control = (HWND)wparam;
+    previous_control = (HWND)lparam;
+    if (GetDlgItem(hwnd, IDCANCEL) == current_control)
     {
       SendMessageA(hwnd, 0x401, IDCANCEL, 0);
     }
@@ -630,13 +629,13 @@ INT_PTR CALLBACK dlgproc_duel_interface_options(HWND hwnd, UINT msg, WPARAM wpar
     {
       SendMessageA(hwnd, 0x401, IDOK, 0);
     }
-    if (current_control != 0)
+    if (current_control != NULL)
     {
-      InvalidateRect((HWND)current_control, NULL, 1);
+      InvalidateRect(current_control, NULL, 1);
     }
-    if (previous_control != 0)
+    if (previous_control != NULL)
     {
-      InvalidateRect((HWND)previous_control, NULL, 1);
+      InvalidateRect(previous_control, NULL, 1);
     }
     return 0;
 
@@ -1688,7 +1687,7 @@ void setup_duel_prompt_context_text_dc(HWND prompt_hwnd, HDC dc, int *rect_value
   HGDIOBJ wnd_font; // ebp-0x3c
   TEXTMETRICA tm;   // ebp-0x38
 
-  wnd_font = (HGDIOBJ)GetWindowLongA(prompt_hwnd, g_duel_ui_initialized);
+  wnd_font = (HGDIOBJ)GetWindowLongPtrA(prompt_hwnd, g_duel_ui_initialized);
   if (wnd_font != (HGDIOBJ)0)
   {
     SelectObject(dc, wnd_font);

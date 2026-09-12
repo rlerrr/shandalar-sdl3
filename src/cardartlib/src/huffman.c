@@ -23,7 +23,7 @@ uint *g_bitstreamCursor;
 // GLOBAL: CARDARTLIB 0x10021a8c
 // GLOBAL: DRAWCARDLIB 0x10029fb4
 // GLOBAL: SHANDALAR 0x0066a3a4
-int g_bitstreamBase;
+unsigned char *g_bitstreamBase;
 
 // GLOBAL: CARDARTLIB 0x10021a90
 // GLOBAL: DRAWCARDLIB 0x10029fb8
@@ -63,7 +63,7 @@ int g_nodeBase;
 // GLOBAL: CARDARTLIB 0x10021a9c
 // GLOBAL: DRAWCARDLIB 0x10029fc4
 // GLOBAL: SHANDALAR 0x0066a3b4
-undefined4 g_symbolTable;
+uint *g_symbolTable;
 
 // GLOBAL: CARDARTLIB 0x10021aa0
 // GLOBAL: DRAWCARDLIB 0x10029fc8
@@ -73,7 +73,7 @@ unsigned char g_treeNodeTable[0x10000];
 // FUNCTION: CARDARTLIB 0x10001f40
 // FUNCTION: DRAWCARDLIB 0x10002ea0
 // FUNCTION: SHANDALAR 0x00563cc0
-void MemZeroDwords(undefined8 *dst, uint dword_count)
+void MemZeroDwords(void *dst, uint dword_count)
 {
 #ifdef MODERN_FIXES
   memset(dst, 0, (size_t)dword_count * 4);
@@ -115,7 +115,7 @@ void MemZeroDwords(undefined8 *dst, uint dword_count)
 // MATCHING
 // FUNCTION: CARDARTLIB 0x10002457
 // FUNCTION: DRAWCARDLIB 0x100033b7
-int Huffman13_DecodeDwords(undefined4 *out_dwords, undefined4 bitstream_start, undefined4 bitstream_end)
+int Huffman13_DecodeDwords(undefined4 *out_dwords, uint *bitstream_start, int bitstream_end)
 {
   uint bit_count;
   uint new_bits;
@@ -128,8 +128,8 @@ int Huffman13_DecodeDwords(undefined4 *out_dwords, undefined4 bitstream_start, u
 
   decoded_count = 0;
   out_base = out_dwords;
-  g_bitstreamCursor = (uint *)bitstream_start;
-  g_bitstreamBase = (int)g_bitstreamCursor;
+  g_bitstreamCursor = bitstream_start;
+  g_bitstreamBase = (unsigned char *)g_bitstreamCursor;
   g_bitstreamEnd = bitstream_end;
   g_bitsRemaining = 0;
   lookahead = (int)BitStream_ReadBits(8);
@@ -167,7 +167,7 @@ int Huffman13_DecodeDwords(undefined4 *out_dwords, undefined4 bitstream_start, u
         node = symbol - g_nodeBase;
         if (node < 0)
         {
-          *(undefined4 *)out_dwords = *(undefined4 *)(g_symbolTable + symbol * 4);
+          *out_dwords = g_symbolTable[symbol];
           out_dwords = out_dwords + 1;
           break;
         }
@@ -175,13 +175,13 @@ int Huffman13_DecodeDwords(undefined4 *out_dwords, undefined4 bitstream_start, u
       lookahead = (int)BitStream_ReadBits(8);
     }
   }
-  return (int)out_dwords - (int)out_base >> 2;
+  return (int)(out_dwords - out_base);
 }
 
 // FUNCTION: CARDARTLIB 0x100025cb
 // FUNCTION: DRAWCARDLIB 0x1000352b
 // FUNCTION: SHANDALAR 0x0056434a
-int Huffman13_Init(undefined4 bitstream_start, undefined4 symbol_table, undefined4 node_index_base)
+int Huffman13_Init(uint *bitstream_start, uint *symbol_table, int node_index_base)
 {
   int result;
   int i;
@@ -194,8 +194,8 @@ int Huffman13_Init(undefined4 bitstream_start, undefined4 symbol_table, undefine
     g_bitMaskTable[i] = 0xffffffff >> (byte)i;
   }
 
-  g_bitstreamCursor = (uint *)bitstream_start;
-  g_bitstreamBase = (int)g_bitstreamCursor;
+  g_bitstreamCursor = bitstream_start;
+  g_bitstreamBase = (unsigned char *)g_bitstreamCursor;
   g_bitstreamEnd = 100000;
   g_bitsRemaining = 0;
   g_bitBuffer = g_bitsRemaining;
@@ -331,7 +331,7 @@ int Huffman13_BuildDecodeTable(int node_count)
 // FUNCTION: CARDARTLIB 0x10002cde
 // FUNCTION: DRAWCARDLIB 0x10003c3e
 // FUNCTION: SHANDALAR 0x00564a5a
-int Huffman13_DecodeDwordsWithZeroRuns(undefined8 *out_dwords, uint *bitstream, undefined4 bitstream_end)
+int Huffman13_DecodeDwordsWithZeroRuns(uint *out_dwords, uint *bitstream, int bitstream_end)
 {
   int run_len10;        /* -0x2c */
   int run_bits;         /* -0x28 */
@@ -341,7 +341,7 @@ int Huffman13_DecodeDwordsWithZeroRuns(undefined8 *out_dwords, uint *bitstream, 
   int bit;              /* -0x18 */
   int zero;             /* -0x14 */
   int leaf_sym;         /* -0x10 */
-  undefined8 *out_base; /* -0x0c */
+  uint *out_base;       /* -0x0c */
   int lookahead;        /* -0x08 */
   int tree_node;        /* -0x04 */
 
@@ -349,20 +349,20 @@ int Huffman13_DecodeDwordsWithZeroRuns(undefined8 *out_dwords, uint *bitstream, 
   out_base = out_dwords;
 
   g_bitstreamCursor = bitstream;
-  g_bitstreamBase = (int)g_bitstreamCursor;
+  g_bitstreamBase = (unsigned char *)g_bitstreamCursor;
   g_bitstreamEnd = bitstream_end;
 
-  if (((uint)bitstream & 3) == 0)
+  if (((uintptr_t)bitstream & 3) == 0)
   {
     g_bitsRemaining = 0;
     g_bitBuffer = g_bitsRemaining;
   }
   else
   {
-    align_bytes = 4 - ((uint)bitstream & 3);
+    align_bytes = 4 - ((uintptr_t)bitstream & 3);
     g_bitsRemaining = align_bytes * 8;
     g_bitBuffer = 0xffffffffU >> (0x20U - g_bitsRemaining) & *bitstream;
-    *(int *)&g_bitstreamCursor += align_bytes;
+    g_bitstreamCursor = (uint *)((unsigned char *)g_bitstreamCursor + align_bytes);
   }
 
   lookahead = (int)BitStream_ReadBits(8);
@@ -384,13 +384,12 @@ int Huffman13_DecodeDwordsWithZeroRuns(undefined8 *out_dwords, uint *bitstream, 
         run_bits = (run_bits << (8 - bit_count)) | (lookahead >> (byte)bit_count);
 
         MemZeroDwords(out_dwords, (uint)run_bits);
-        *(int *)&out_dwords += (run_bits << 2);
+        out_dwords += run_bits;
         lookahead = (int)BitStream_ReadBits(8);
       }
       else
       {
-        *(int *)out_dwords = ((int *)g_decodeLookup)[lookahead * 3];
-        out_dwords = (undefined8 *)((int)out_dwords + 4);
+        *out_dwords++ = ((uint *)g_decodeLookup)[lookahead * 3];
 
         lookahead = lookahead >> (byte)bit_count;
         bits8 = (int)BitStream_ReadBits((uint)bit_count);
@@ -430,12 +429,11 @@ int Huffman13_DecodeDwordsWithZeroRuns(undefined8 *out_dwords, uint *bitstream, 
             }
 
             MemZeroDwords(out_dwords, (uint)run_len10);
-            *(int *)&out_dwords += (run_len10 << 2);
+            out_dwords += run_len10;
           }
           else
           {
-            *(int *)out_dwords = *(int *)(g_symbolTable + leaf_sym * 4);
-            out_dwords = (undefined8 *)((int)out_dwords + 4);
+            *out_dwords++ = g_symbolTable[leaf_sym];
           }
           break;
         }
@@ -446,7 +444,7 @@ int Huffman13_DecodeDwordsWithZeroRuns(undefined8 *out_dwords, uint *bitstream, 
   }
 
   (void)zero;
-  return ((int)out_dwords - (int)out_base) >> 2;
+  return (int)(out_dwords - out_base);
 }
 
 // FUNCTION: CARDARTLIB 0x10002f70
@@ -470,7 +468,7 @@ uint BitStream_ReadBits(uint bit_count)
     result = g_bitBuffer;
     bit_count = (int)bit_count - (int)g_bitsRemaining;
 
-    if ((int)g_bitstreamCursor - g_bitstreamBase + 4 >= g_bitstreamEnd)
+    if ((unsigned char *)g_bitstreamCursor - g_bitstreamBase + 4 >= g_bitstreamEnd)
     {
       return 0xffffffff;
     }
@@ -494,7 +492,7 @@ static uint BitStream_ReadBit(void)
 
   if (g_bitsRemaining == 0)
   {
-    if (g_bitstreamEnd <= (int)g_bitstreamCursor - g_bitstreamBase)
+    if (g_bitstreamEnd <= (unsigned char *)g_bitstreamCursor - g_bitstreamBase)
     {
       return 0xffffffff;
     }

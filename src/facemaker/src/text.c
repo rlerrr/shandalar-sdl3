@@ -17,7 +17,7 @@
 extern int LoadBitmapFontFromFile(int font_id, FILE *file);
 extern int SetFontStyleSize(int font_id, unsigned int style);
 extern int DrawTextFormatted(FacemakerWindowBounds *dst, int text_id, int draw_shadow, int scale_to_screen, int center_x, int center_y,
-                             int x, int y, int *format_and_args);
+                             int x, int y, intptr_t *format_and_args);
 extern void PutGraphicsPixel(FacemakerWindowBounds *window_bounds, int x, int y, unsigned int color_index);
 extern void WriteGraphicsScanline(unsigned int *scanline_data, int page_number, int dst_x, int dst_y,
                                   unsigned int byte_count);
@@ -336,7 +336,7 @@ int SetFontStyleSize(int font_id, unsigned int style)
     }
     if ((unsigned int)font->point_size == style)
     {
-        return (int)font->hfont;
+        return font->hfont != NULL;
     }
 
     current_font = font->hfont;
@@ -354,7 +354,7 @@ int SetFontStyleSize(int font_id, unsigned int style)
     GetTextMetricsA(hdc, &text_metrics);
     ReleaseDC((HWND)0, hdc);
     font->tm_leading = text_metrics.tmInternalLeading + text_metrics.tmExternalLeading;
-    return (int)font->hfont;
+    return font->hfont != NULL;
 }
 
 // FUNCTION: SHANDALAR 0x0057bb90
@@ -366,14 +366,14 @@ void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedI
     DIBSurface *page;
     int row_stride;
     int sprite_row_count;
-    int dst_row_ptr;
+    unsigned char *dst_row_ptr;
     int is_raw_span;
     int span_length;
     int draw_to_page;
     unsigned int span_offset;
     unsigned char source_pixel;
     unsigned char *span_data_bytes;
-    int span_data_ptr;
+    unsigned char *span_data_ptr;
 
     page_number = dst->page_number;
     if (encoded_image == (EncodedImage *)0)
@@ -384,9 +384,9 @@ void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedI
     page = g_graphics_pages[page_number];
     y = y + (int)encoded_image->first_row;
     sprite_row_count = (int)encoded_image->row_count;
-    span_data_ptr = (int)encoded_image->spans;
+    span_data_ptr = encoded_image->spans;
     row_stride = page->rowPadding + page->width;
-    dst_row_ptr = (int)((char *)page->pBits + x + row_stride * y);
+    dst_row_ptr = (unsigned char *)page->pBits + x + row_stride * y;
     draw_to_page = page_number;
     row_index = 0;
     if (sprite_row_count <= 0)
@@ -397,16 +397,16 @@ void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedI
     do
     {
         is_raw_span = 0;
-        span_offset = (unsigned int)*(unsigned char *)span_data_ptr;
+        span_offset = (unsigned int)*span_data_ptr;
         span_data_ptr = span_data_ptr + 1;
         if (span_offset != 0xff)
         {
-            span_length = (int)*(unsigned char *)span_data_ptr;
+            span_length = (int)*span_data_ptr;
             span_data_ptr = span_data_ptr + 1;
             if (span_length == 0xfe)
             {
                 is_raw_span = 1;
-                span_length = (int)*(unsigned char *)span_data_ptr;
+                span_length = (int)*span_data_ptr;
                 span_data_ptr = span_data_ptr + is_raw_span;
             }
 
@@ -418,16 +418,16 @@ void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedI
             {
                 if (draw_to_page != 0)
                 {
-                    span_data_bytes = (unsigned char *)span_data_ptr;
-                    memcpy((void *)(dst_row_ptr + span_offset), span_data_bytes, (size_t)span_length);
-                    span_data_ptr = (int)(span_data_bytes + span_length);
+                    span_data_bytes = span_data_ptr;
+                    memcpy(dst_row_ptr + span_offset, span_data_bytes, (size_t)span_length);
+                    span_data_ptr = span_data_bytes + span_length;
                 }
                 else
                 {
-                    span_data_bytes = (unsigned char *)span_data_ptr;
+                    span_data_bytes = span_data_ptr;
                     WriteGraphicsScanline((unsigned int *)span_data_bytes, draw_to_page, x + (int)span_offset,
                                           y + row_index, (unsigned int)span_length);
-                    span_data_ptr = (int)(span_data_bytes + span_length);
+                    span_data_ptr = span_data_bytes + span_length;
                 }
             }
             else if (draw_to_page != 0)
@@ -437,10 +437,10 @@ void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedI
                 {
                     do
                     {
-                        source_pixel = *(unsigned char *)span_data_ptr;
+                        source_pixel = *span_data_ptr;
                         if (source_pixel != '\0')
                         {
-                            *(unsigned char *)(dst_row_ptr + span_offset + is_raw_span) = source_pixel;
+                            dst_row_ptr[span_offset + is_raw_span] = source_pixel;
                         }
                         is_raw_span = is_raw_span + 1;
                         span_data_ptr = span_data_ptr + 1;
@@ -454,7 +454,7 @@ void DrawEncodedImageUnscaled(FacemakerWindowBounds *dst, int x, int y, EncodedI
                 {
                     do
                     {
-                        source_pixel = *(unsigned char *)span_data_ptr;
+                        source_pixel = *span_data_ptr;
                         if (source_pixel != '\0')
                         {
                             PutGraphicsPixel(dst, x + (int)span_offset + is_raw_span, y + row_index,
@@ -485,7 +485,7 @@ void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int wid
     int j;
     int k;
     int row_stride;
-    int row_base;
+    unsigned char *row_base;
     int row_index;
     int top_clip;
     int run_start;
@@ -601,7 +601,7 @@ void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int wid
     row_count = encoded_image->row_count;
     row_stride = surface->width + surface->rowPadding;
     row_index = 0;
-    row_base = (int)surface->pBits + y * row_stride + x;
+    row_base = (unsigned char *)surface->pBits + y * row_stride + x;
     if ((g_resample_accum_y >> 0x10) < row_count + top_clip)
     {
         do
@@ -674,7 +674,7 @@ void DrawEncodedImageResampled(FacemakerWindowBounds *dst, int x, int y, int wid
                             mapping_index = g_resample_src_x_for_dst_x[run_start] - run_x;
                             if (next_row_data[mapping_index] != 0)
                             {
-                                *(unsigned char *)(row_base + run_start) = next_row_data[mapping_index];
+                                row_base[run_start] = next_row_data[mapping_index];
                             }
                             run_start = run_start + 1;
                         }
@@ -968,7 +968,7 @@ int DrawTextLine(FacemakerWindowBounds *window_bounds, int x, int y, char *text)
             x = x + local.char_width;
             text = text + 1;
         } while (*text != '\0');
-        return (int)text - (int)local.start;
+        return (int)(text - local.start);
     }
     return 0;
 }
@@ -1073,14 +1073,14 @@ static int DrawTextFormattedString(FacemakerWindowBounds *dst, int text_color,
 // FUNCTION: SHANDALAR 0x0057b230
 // FUNCTION: FACEMAKER 0x004086c0
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow, int scale_to_screen, int center_x, int center_y,
-                      int x, int y, int *format_and_args)
+                      int x, int y, intptr_t *format_and_args)
 {
     int formatted_length;
     char formatted_text[1024];
     char *format_string;
     va_list args;
 
-    format_string = (char *)*format_and_args;
+    format_string = (char *)(uintptr_t)*format_and_args;
     args = (va_list)(format_and_args + 1);
     formatted_length = _vsnprintf(formatted_text, sizeof(formatted_text) - 1, format_string, args);
     formatted_text[sizeof(formatted_text) - 1] = '\0';

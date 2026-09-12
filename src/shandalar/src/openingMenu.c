@@ -220,7 +220,7 @@ EncodedImage *g_opening_menu_icon_state_sprites[4];
 // GLOBAL: SHANDALAR 0x005aa440
 EncodedImage *g_opening_menu_unused_sprite_group_c[3];
 // GLOBAL: SHANDALAR 0x005a9d8c
-int *g_opening_menu_text_table;
+char **g_opening_menu_text_table;
 // GLOBAL: SHANDALAR 0x005a9d90
 EncodedImage *g_opening_menu_unused_sprite_group_e[2];
 // GLOBAL: SHANDALAR 0x00587378
@@ -309,15 +309,15 @@ int g_difficulty_menu_strings_loaded;
 // GLOBAL: SHANDALAR 0x005aa3f0
 int g_color_menu_strings_loaded;
 // GLOBAL: SHANDALAR 0x005aa420
-int *g_difficulty_caption_table;
+char **g_difficulty_caption_table;
 // GLOBAL: SHANDALAR 0x005aa428
-int *g_color_menu_flavor_table;
+char **g_color_menu_flavor_table;
 // GLOBAL: SHANDALAR 0x005aa42c
-int *g_color_menu_color_name_table;
+char **g_color_menu_color_name_table;
 // GLOBAL: SHANDALAR 0x005a9d88
-int *g_difficulty_option_table;
+char **g_difficulty_option_table;
 // GLOBAL: SHANDALAR 0x005a9d98
-int *g_color_caption_table;
+char **g_color_caption_table;
 // GLOBAL: SHANDALAR 0x00587370
 int g_menu_selection_value = -1;
 
@@ -483,7 +483,7 @@ int DrawOpeningMenuEntry(int entry_index, int visual_state)
   DrawFormattedTextShadowed(g_page0_window_bounds, (&label_x_0)[icon_sprite_index], icon_x + ScaleUiCoordinate(0x24),
                             (icon_y + g_opening_menu_icon_size / 2) - (GetFontStyleSize(6) / 2),
                             "%s",
-                            (char *)g_opening_menu_text_table[text_table_index]);
+                            g_opening_menu_text_table[text_table_index]);
 
   g_page0_window_bounds->page_number = 0;
   BlitGraphicsRect(g_page1_window_bounds, g_opening_menu_entry_rects[entry_index].x, g_opening_menu_entry_rects[entry_index].y,
@@ -778,7 +778,7 @@ int RunDifficultyMenu(void)
   g_page0_window_bounds->font_slot = 7;
   SetFontStyleSize(7, ScaleUiCoordinate(0x1b));
   DrawFormattedTextShadowedCentered(g_page0_window_bounds, 0x76, ScaleUiCoordinate(0x140), ScaleUiCoordinate(0x2d), "%s",
-                                    (char *)g_difficulty_caption_table[0]);
+                                    g_difficulty_caption_table[0]);
 
   SetFontStyleSize(7, ScaleUiCoordinate(0x16));
   {
@@ -786,10 +786,10 @@ int RunDifficultyMenu(void)
 
     for (difficulty_index = 0; difficulty_index < 4; difficulty_index = difficulty_index + 1)
     {
-      text_width = MeasureMultilineTextWidth(g_page0_window_bounds, (char *)g_difficulty_option_table[difficulty_index]);
+      text_width = MeasureMultilineTextWidth(g_page0_window_bounds, g_difficulty_option_table[difficulty_index]);
       DrawFormattedTextShadowedCenterY(g_page0_window_bounds, 0x7b, ScaleUiCoordinate(0x1b0) - text_width,
                                        ScaleUiCoordinate(difficulty_index * 100 + 0x75),
-                                       "%s", (char *)g_difficulty_option_table[difficulty_index]);
+                                       "%s", g_difficulty_option_table[difficulty_index]);
     }
   }
 
@@ -849,7 +849,7 @@ int HandleDifficultyMenuControlEvent(AdvMenuControl *control, int event_type)
 
   if (g_menu_render_guard == 0)
   {
-    if ((g_mouse_x < *(int *)((int)control + 0x10)) || (*(int *)((int)control + 0x18) + *(int *)((int)control + 0x10) < g_mouse_x))
+    if ((g_mouse_x < control->x) || (control->x + control->width < g_mouse_x))
     {
       is_inside_control_bounds = 0;
     }
@@ -960,20 +960,20 @@ int RunColorMenu(void)
   g_page1_window_bounds->font_slot = 7;
   SetFontStyleSize(7, ScaleUiCoordinate(0x1b));
   DrawFormattedTextShadowedCentered(g_page1_window_bounds, 0x9b, ScaleUiCoordinate(0x140), ScaleUiCoordinate(0x22), "%s",
-                                    (char *)g_color_caption_table[0]);
+                                    g_color_caption_table[0]);
 
   SetFontStyleSize(7, ScaleUiCoordinate(0x12));
   for (color_index = 0; color_index < 5; color_index = color_index + 1)
   {
     DrawFormattedTextShadowed(g_page1_window_bounds, 0xa3, ScaleUiCoordinate(0x7d), ScaleUiCoordinate(color_index * 0x4c + 0x4c), "%s",
-                              (char *)g_color_menu_color_name_table[color_index]);
+                              g_color_menu_color_name_table[color_index]);
   }
 
   SetFontStyleSize(7, ScaleUiCoordinate(10));
   for (color_index = 0; color_index < 5; color_index = color_index + 1)
   {
     DrawFormattedTextShadowed(g_page1_window_bounds, 0x71, ScaleUiCoordinate(0x85), ScaleUiCoordinate(color_index * 0x4c + 100), "%s",
-                              (char *)g_color_menu_flavor_table[color_index]);
+                              g_color_menu_flavor_table[color_index]);
   }
 
   AnimatePaletteToColor(0, 4);

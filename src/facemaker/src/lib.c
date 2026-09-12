@@ -15,7 +15,7 @@ extern int global_screen_height;
 DIBSurface *InitializeGraphicsSystemDefaultMode(void);
 DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_per_pixel);
 int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
-void CopyBytesAsmCompat(double *dst, double *src, unsigned int size);
+void CopyBytesAsmCompat(void *dst, void *src, unsigned int size);
 int LoadFontCollection(char *path);
 
 // GLOBAL: SHANDALAR 0x00581804
@@ -463,7 +463,7 @@ DIBSurface *CreateGraphicsPage(int page_number, int width, int height, int bits_
   page->hBitmap =
       CreateDIBSection(page->hTempDC, page->pBitmapInfo, (unsigned int)(bits_per_pixel == 8),
                        &page->pBits, page->hMapping, 0);
-  assert((int)page->hBitmap, s_D__NewMagic__sources__sidlib__lib_c_0040d0ec, 0x13b,
+  assert(page->hBitmap != NULL, s_D__NewMagic__sources__sidlib__lib_c_0040d0ec, 0x13b,
          "WM_CREATE CreateDIBSection");
 
   page->hPreviousBitmap = SelectObject(page->hTempDC, page->hBitmap);
@@ -1180,7 +1180,7 @@ int AnimatePaletteToColor(int gray, int steps)
 
 // FUNCTION: SHANDALAR 0x00566cea
 // FUNCTION: FACEMAKER 0x0040aa20
-void CopyBytesAsmCompat(double *dst, double *src, unsigned int num)
+void CopyBytesAsmCompat(void *dst, void *src, unsigned int num)
 {
 #ifdef MODERN_FIXES
   memcpy(dst, src, num);

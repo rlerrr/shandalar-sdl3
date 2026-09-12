@@ -14,9 +14,9 @@ void RotateDwordsLeft1(undefined4 *dwords, uint count);
 undefined4 QuantizeBgr24ToNearestPaletteColorInPlace(uint *bgr24, int height, int width, int row_padding);
 int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24, int height, int width,
                                int row_padding);
-int InitErrorDiffusionDeltaTables(int dither_kernel_id, int *delta_table_ptrs_base);
+int InitErrorDiffusionDeltaTables(int dither_kernel_id, void **delta_table_ptrs_base);
 int Octree_FindNearestColor(uint rgb);
-void MemZeroDwords(undefined8 *dst, uint dword_count);
+void MemZeroDwords(void *dst, uint dword_count);
 
 void CopyBgr24RectIntoStridedBuffer(byte *dst_bgr24, byte *src_bgr24, int dst_x, int dst_y,
                                     int rect_width, int rect_height, int dst_stride_pixels, int unused);
@@ -210,7 +210,8 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
   undefined *kernel_ptr; /* [ebp-0x78] */
   int kernel_count;      /* [ebp-0x74] */
   int r_clamped;         /* [ebp-0x70] */
-  int *err_row_ptrs[6];  /* [ebp-0x6c] */
+  short *err_row_ptrs[6]; /* [ebp-0x6c] */
+  int *kernel_end;
   int y;                 /* [ebp-0x54] */
   undefined2 pad_50;     /* [ebp-0x50] */
   undefined2 pad_4e;     /* [ebp-0x4e] */
@@ -301,18 +302,19 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
         g_errorDiffusionDeltaTablePtrs[x] = (void *)0x0;
       }
     }
-    InitErrorDiffusionDeltaTables(dither_kernel_id, (int *)g_errorDiffusionDeltaTablePtrs);
+    InitErrorDiffusionDeltaTables(dither_kernel_id, g_errorDiffusionDeltaTablePtrs);
     g_paletteDitherKernelCachedId = dither_kernel_id;
   }
 
   for (x = 0; (uint)x < 5; x = x + 1)
   {
     SetBytes((void *)(g_errorDiffusionRowStorage + x * 0x8060), 0, 0x8060);
-    err_row_ptrs[x + 1] = (int *)((int)(g_errorDiffusionRowStorage + x * 0x8060) + 0x28);
+    err_row_ptrs[x + 1] = (short *)(g_errorDiffusionRowStorage + x * 0x8060 + 0x28);
   }
 
   kernel_count = g_ditherKernelTapCounts[dither_kernel_id];
-  for (y = 0; y < height; y = y + 1, *(int *)&bgr24 += width * 3 + row_padding)
+  for (y = 0; y < height;
+       y = y + 1, bgr24 = (uint *)((byte *)bgr24 + width * 3 + row_padding))
   {
     if (0 < x_step)
     {
@@ -334,7 +336,7 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
       src_rgb = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xffffff;
       *(uint *)&((byte *)bgr24)[x_byte_off] = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xff000000;
 
-      err_px = (short *)err_row_ptrs[1] + (x << 2);
+      err_px = err_row_ptrs[1] + (x << 2);
 
       if (src_rgb == 0)
       {
@@ -376,13 +378,13 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
       err_r = r_clamped - ((uint)nearest_rgb >> 16);
 
       k_it = (int *)kernel_ptr;
-      err_row_ptrs[0] = &k_it[kernel_count * 4];
-      for (; err_row_ptrs[0] > k_it; k_it += 0x4)
+      kernel_end = &k_it[kernel_count * 4];
+      for (; kernel_end > k_it; k_it += 0x4)
       {
         k_x_off = k_it[1];
         k_row = k_it[2];
-        delta_table = (int *)k_it[3];
-        err_cell = ((k_x_off + x) << 2) + (short *)(err_row_ptrs[k_row + 1]);
+        delta_table = (int *)((byte *)g_errorDiffusionDeltaTablePtrs[k_it[0]] + 0x400);
+        err_cell = err_row_ptrs[k_row + 1] + ((k_x_off + x) << 2);
 
         err_cell[0] = delta_table[err_b] + err_cell[0];
         err_cell[1] = delta_table[err_g] + err_cell[1];
@@ -390,12 +392,18 @@ int DitherBgr24ToPaletteColors(int dither_kernel_id, int serpentine, uint *bgr24
       }
     }
 
-    RotateDwordsLeft1((undefined4 *)(err_row_ptrs + 1), g_ditherKernelErrorRowCounts[dither_kernel_id]);
-    memset((void *)(err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] + -10), 0, clear_dwords << 2);
+    {
+      short *first_row = err_row_ptrs[1];
+      int row_count = g_ditherKernelErrorRowCounts[dither_kernel_id];
+      memmove(&err_row_ptrs[1], &err_row_ptrs[2], (size_t)(row_count - 1) * sizeof(err_row_ptrs[0]));
+      err_row_ptrs[row_count] = first_row;
+    }
+    memset((byte *)err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] - 0x28,
+           0, clear_dwords << 2);
     if (serpentine != 0)
     {
       x_step = -x_step;
-      kernel_ptr = (undefined *)((int)g_ditherKernelTable + (uint)(x_step == -1) * 0x6c0 + dither_kernel_id * 0xc0);
+      kernel_ptr = &g_ditherKernelTable[(uint)(x_step == -1) * 0x6c0 + dither_kernel_id * 0xc0];
     }
   }
 }
@@ -416,7 +424,7 @@ void RotateDwordsLeft1(undefined4 *dwords, uint count)
 // FUNCTION: CARDARTLIB 0x10005cf5
 // FUNCTION: DRAWCARDLIB 0x100022a5
 // FUNCTION: SHANDALAR 0x0042f208
-int InitErrorDiffusionDeltaTables(int dither_kernel_id, int *delta_table_ptrs_base)
+int InitErrorDiffusionDeltaTables(int dither_kernel_id, void **delta_table_ptrs_base)
 {
   int delta;
   int tap_index;    // EBP - 0xc
@@ -428,28 +436,17 @@ int InitErrorDiffusionDeltaTables(int dither_kernel_id, int *delta_table_ptrs_ba
   {
     tap_weight = *(int *)&g_ditherKernelTable[(tap_index << 4) + ((dither_kernel_id << 6) * 3)];
 
-    if (delta_table_ptrs_base[tap_weight] != 0)
-    {
-      *(int *)&g_ditherKernelTable[0xc + ((dither_kernel_id << 6) * 3) + (tap_index << 4)] = delta_table_ptrs_base[tap_weight] + 0x400;
+    if (delta_table_ptrs_base[tap_weight] != NULL)
       continue;
-    }
 
-    delta_table_ptrs_base[tap_weight] = (int)malloc(0x800);
-    assert((uint)(delta_table_ptrs_base[tap_weight] != 0), "D:\\Newmagic\\sources\\NedCard\\Palette.c",
+    delta_table_ptrs_base[tap_weight] = malloc(0x800);
+    assert((uint)(delta_table_ptrs_base[tap_weight] != NULL), "D:\\Newmagic\\sources\\NedCard\\Palette.c",
            0x4fd, "Not enough memory for delta array\r\n");
     for (delta = -0x100; delta < 0x100; delta = delta + 1)
     {
-      *(int *)(delta_table_ptrs_base[tap_weight] + 0x400 + delta * 4) =
+      *(int *)((byte *)delta_table_ptrs_base[tap_weight] + 0x400 + delta * 4) =
           ((tap_weight * delta + half_divisor) * 0x100) / g_ditherKernelDivisors[dither_kernel_id];
     }
-    *(int *)&g_ditherKernelTable[0xc + ((dither_kernel_id << 6) * 3) + (tap_index << 4)] = delta_table_ptrs_base[tap_weight] + 0x3fc;
-  }
-
-  for (tap_index = 0; tap_index < g_ditherKernelTapCounts[dither_kernel_id]; tap_index = tap_index + 1)
-  {
-    tap_weight = *(int *)&g_ditherKernelTable[0xc + 0x6b4 + ((dither_kernel_id << 6) * 3) + (tap_index << 4)];
-
-    *(int *)&g_ditherKernelTable[0xc + 0x6b4 + 0xc + ((dither_kernel_id << 6) * 3) + (tap_index << 4)] = delta_table_ptrs_base[tap_weight] + 0x3fc;
   }
   return 0;
 }
@@ -469,7 +466,8 @@ undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uin
   undefined *kernel_ptr; /* [ebp-0x78] */
   int kernel_count;      /* [ebp-0x74] */
   int r_clamped;         /* [ebp-0x70] */
-  int err_row_ptrs[6];   /* [ebp-0x6c] */
+  short *err_row_ptrs[6]; /* [ebp-0x6c] */
+  int tap_index;
   int y;                 /* [ebp-0x54] */
   undefined2 pad_50;     /* [ebp-0x50] */
   undefined2 pad_4e;     /* [ebp-0x4e] */
@@ -549,18 +547,19 @@ undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uin
         g_errorDiffusionDeltaTablePtrs[x] = (void *)0x0;
       }
     }
-    InitErrorDiffusionDeltaTables(dither_kernel_id, (int *)g_errorDiffusionDeltaTablePtrs);
+    InitErrorDiffusionDeltaTables(dither_kernel_id, g_errorDiffusionDeltaTablePtrs);
     g_rgbQuantKernelCachedId = dither_kernel_id;
   }
 
   for (x = 0; (uint)x < 5; x = x + 1)
   {
     memset((void *)(g_errorDiffusionRowStorage + x * 0x8060), 0, 0x8060);
-    err_row_ptrs[x + 1] = (int)(g_errorDiffusionRowStorage + x * 0x8060) + 0x28;
+    err_row_ptrs[x + 1] = (short *)(g_errorDiffusionRowStorage + x * 0x8060 + 0x28);
   }
 
   kernel_count = g_ditherKernelTapCounts[dither_kernel_id];
-  for (y = 0; y < height; y = y + 1, *(int *)&bgr24 += width * 3 + row_padding)
+  for (y = 0; y < height;
+       y = y + 1, bgr24 = (uint *)((byte *)bgr24 + width * 3 + row_padding))
   {
     if (0 < x_step)
     {
@@ -582,7 +581,7 @@ undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uin
       src_rgb = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xffffff;
       *(uint *)&((byte *)bgr24)[x_byte_off] = *(uint *)(x_byte_off + (ptrdiff_t)bgr24) & 0xff000000;
 
-      err_px = (short *)err_row_ptrs[1] + (x << 2);
+      err_px = err_row_ptrs[1] + (x << 2);
 
       b_clamped = src_rgb & 0xff;
       b_clamped += ((int)*err_px >> 8);
@@ -614,15 +613,13 @@ undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uin
       err_b = b_clamped - (quant_rgb & 0xff);
       err_g = g_clamped - (quant_rgb >> 8 & 0xff);
       err_r = r_clamped - (quant_rgb >> 16 & 0xff);
-      err_row_ptrs[0] = 0;
       k_it = (int *)kernel_ptr;
-      for (; err_row_ptrs[0] < kernel_count; err_row_ptrs[0]++, k_it += 0x4)
+      for (tap_index = 0; tap_index < kernel_count; tap_index++, k_it += 0x4)
       {
         k_x_off = k_it[1];
         k_row = k_it[2];
-        delta_table = (int *)k_it[3];
-        err_cell = (short *)(err_row_ptrs[k_row + 1] +
-                             (k_x_off + x) * 8);
+        delta_table = (int *)((byte *)g_errorDiffusionDeltaTablePtrs[k_it[0]] + 0x400);
+        err_cell = err_row_ptrs[k_row + 1] + ((k_x_off + x) << 2);
 
         err_cell[0] = delta_table[err_b] + err_cell[0];
         err_cell[1] = delta_table[err_g] + err_cell[1];
@@ -630,8 +627,14 @@ undefined4 DitherBgr24ToRgbQuantizedF8(int dither_kernel_id, int serpentine, uin
       }
     }
 
-    RotateDwordsLeft1((undefined4 *)(err_row_ptrs + 1), g_ditherKernelErrorRowCounts[dither_kernel_id]);
-    memset((void *)(err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] + -0x28), 0, clear_dwords << 2);
+    {
+      short *first_row = err_row_ptrs[1];
+      int row_count = g_ditherKernelErrorRowCounts[dither_kernel_id];
+      memmove(&err_row_ptrs[1], &err_row_ptrs[2], (size_t)(row_count - 1) * sizeof(err_row_ptrs[0]));
+      err_row_ptrs[row_count] = first_row;
+    }
+    memset((byte *)err_row_ptrs[g_ditherKernelErrorRowCounts[dither_kernel_id]] - 0x28,
+           0, clear_dwords << 2);
     if (serpentine != 0)
     {
       x_step = -x_step;
@@ -1228,7 +1231,7 @@ BOOL Wvl_UnpackPieces(byte *dst, WvlEntry *wvl)
   bitstream = bitstream + (node_count << 2);
   bitstream =
       bitstream +
-      Huffman13_Init((undefined4)bitstream, (undefined4)symbol_table, (undefined4)node_count);
+      Huffman13_Init((uint *)bitstream, symbol_table, node_count);
 
   for (layer = 0; layer < target->pieces; layer = layer + 1)
   {
@@ -1244,7 +1247,7 @@ BOOL Wvl_UnpackPieces(byte *dst, WvlEntry *wvl)
 
     bitstream += (base_size * base_size) << 2;
 
-    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)dst_y, (uint *)bitstream, target->huff_bytes_y[layer]);
+    Huffman13_DecodeDwordsWithZeroRuns((uint *)dst_y, (uint *)bitstream, target->huff_bytes_y[layer]);
     bitstream = bitstream + target->huff_bytes_y[layer];
 
     memcpy(dst_u, bitstream, (base_size * base_size) << 2);
@@ -1253,7 +1256,7 @@ BOOL Wvl_UnpackPieces(byte *dst, WvlEntry *wvl)
 
     bitstream += (base_size * base_size) << 2;
 
-    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)dst_u, (uint *)bitstream, target->huff_bytes_u[layer]);
+    Huffman13_DecodeDwordsWithZeroRuns((uint *)dst_u, (uint *)bitstream, target->huff_bytes_u[layer]);
     bitstream = bitstream + target->huff_bytes_u[layer];
 
     memcpy(dst_v, bitstream, (base_size * base_size) << 2);
@@ -1262,7 +1265,7 @@ BOOL Wvl_UnpackPieces(byte *dst, WvlEntry *wvl)
 
     bitstream += (base_size * base_size) << 2;
 
-    Huffman13_DecodeDwordsWithZeroRuns((undefined8 *)dst_v, (uint *)bitstream, target->huff_bytes_v[layer]);
+    Huffman13_DecodeDwordsWithZeroRuns((uint *)dst_v, (uint *)bitstream, target->huff_bytes_v[layer]);
     bitstream = bitstream + target->huff_bytes_v[layer];
   }
   return 0;
@@ -1416,7 +1419,7 @@ uint *Wvl_DecodeToBgr24(byte *out_bgr24, WvlEntry *wvl_entry, int width, int hei
 
     for (y = 0; y < height - 1; y++, y_map_ptr++, out_bgr24 += row_bytes)
     {
-      src_ptr = (byte *)(MIN((int)*y_map_ptr >> 8, wvl_entry->height - 2) * row_bytes + (int)tmp_4);
+      src_ptr = tmp_4 + MIN((int)*y_map_ptr >> 8, wvl_entry->height - 2) * row_bytes;
 
       out_bgr24[0] = ((int)((uint)src_ptr[row_bytes] - (uint)src_ptr[0]) * (*y_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[0];
       out_bgr24[1] = ((int)((uint)src_ptr[row_bytes + 1] - (uint)src_ptr[1]) * (*y_map_ptr & 0xff) >> 8) + (int)(uint)src_ptr[1];

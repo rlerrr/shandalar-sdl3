@@ -43,7 +43,7 @@ unsigned int get_displayed_card_mana_source_flag(int player, int card);
 int get_displayed_player_card_counts(int *player_card_counts);
 void get_displayed_card_attachment(int *player_and_card, int player, int card);
 void get_current_duel_selection(int *selected_player, int *selected_card);
-LONG_PTR get_card_window_hidden_flag(HWND hwnd);
+HWND get_card_window_hidden_flag(HWND hwnd);
 void post_card_action_selection(HWND hwnd);
 int draw_masked_bitmap_left_half_to_rect(HDC dc, RECT *rect, HANDLE bitmap);
 BOOL DrawMaskedBitmapToRect(HDC dc, RECT *rect, HANDLE bitmap, int width, int height,
@@ -3674,7 +3674,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         do
         {
           previous_z_order = hidden_parent;
-          hidden_parent = (HWND)get_card_window_hidden_flag(previous_z_order);
+          hidden_parent = get_card_window_hidden_flag(previous_z_order);
         } while (hidden_parent != (HWND)0);
         hidden_parent = (HWND)0;
       }
@@ -3923,7 +3923,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
 
     if (special_counters != counter_power)
     {
-      AppendMenuA(g_cardclass_popup_menu, MF_POPUP, (UINT)g_cardclass_alternate_card_submenu,
+      AppendMenuA(g_cardclass_popup_menu, MF_POPUP, (UINT_PTR)g_cardclass_alternate_card_submenu,
                   g_cardclass_menu_alternate_card_text);
       scratch = CardIDFromType(counter_power);
       ModifyMenuA(g_cardclass_alternate_card_submenu, 0x72, 0, 0x72,

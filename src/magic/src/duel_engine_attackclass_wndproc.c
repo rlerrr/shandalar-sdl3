@@ -52,7 +52,7 @@ int find_battlefield_card_window(HWND hwnd, int *player_and_card, int *unused, H
 int card_window_matches_player_and_card(HWND hwnd, int *player_and_card);
 int card_window_matches_card_id(HWND hwnd, card_id_t card_id);
 card_id_t get_card_window_displayed_card_id(HWND hwnd);
-LONG_PTR get_card_window_hidden_flag(HWND hwnd);
+HWND get_card_window_hidden_flag(HWND hwnd);
 void layout_attack_phase_window(HWND hwnd);
 int handle_button_palette_message(HWND hwnd, UINT msg, HWND wparam, LPARAM lparam);
 void restack_duel_child_windows(void);
@@ -373,7 +373,7 @@ int destroy_attack_window_tree(HWND hwnd, HWND *windows, int window_count)
   destroyed = 0;
   for (i = 0; i < window_count; i++)
   {
-    if (windows[i] != (HWND)0 && (HWND)get_card_window_hidden_flag(windows[i]) == hwnd)
+    if (windows[i] != (HWND)0 && get_card_window_hidden_flag(windows[i]) == hwnd)
     {
       destroy_attack_window_tree(windows[i], windows, window_count);
       DestroyWindow(windows[i]);
@@ -416,7 +416,7 @@ void propagate_attack_window_selection(HWND parent_hwnd, HWND source_hwnd)
 
   for (i = 0; i < window_count; i++)
   {
-    if ((HWND)get_card_window_hidden_flag(windows[i]) == source_hwnd)
+    if (get_card_window_hidden_flag(windows[i]) == source_hwnd)
     {
       SendMessageA(windows[i], 0x401, (WPARAM)player_and_card, 0);
       SendMessageA(g_duel_attack_phase_window_hwnd, 0x406,
@@ -953,7 +953,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
       {
         for (case410_j = 0; case410_j < groups[case410_i].attacker_count; case410_j++)
         {
-          if ((HWND)get_card_window_hidden_flag(groups[case410_i].attackers[case410_j]) ==
+          if (get_card_window_hidden_flag(groups[case410_i].attackers[case410_j]) ==
               (HWND)case410_wparam)
           {
             SetWindowPos(groups[case410_i].attackers[case410_j], case410_child_hwnd,
@@ -965,7 +965,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
         }
         for (case410_j = 0; case410_j < groups[case410_i].blocker_count; case410_j++)
         {
-          if ((HWND)get_card_window_hidden_flag(groups[case410_i].blockers[case410_j]) ==
+          if (get_card_window_hidden_flag(groups[case410_i].blockers[case410_j]) ==
               (HWND)case410_wparam)
           {
             SetWindowPos(groups[case410_i].blockers[case410_j], case410_child_hwnd,

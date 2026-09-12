@@ -65,7 +65,7 @@ int internal_rand(int max_exclusive);
 int ScaleUiCoordinateFrom320(int value);
 int sound_get_state(int sound_id, int *out_state);
 int GetCardAvailabilityMask(unsigned int card_id);
-int GetQuestCardClassName(int card_class);
+char *GetQuestCardClassName(int card_class);
 int GetRelativeWorldQuadrant(int world_x, int world_y);
 int IsCreatureTypeFeminine(int creature_type);
 int IsWizardColorFeminine(int color_index);
@@ -477,7 +477,7 @@ void show_card_image_dialog(unsigned int card_index, int text_color, char *butto
       }
       DrawTextLineNoShadow(g_ui_message_buffer, global_screen_width / 2 + 0x35, 0x6e, 0);
 
-      strcpy(g_ui_message_buffer, (char *)GetQuestCardClassName(global_cards_data[card_index].type));
+      strcpy(g_ui_message_buffer, GetQuestCardClassName(global_cards_data[card_index].type));
       DrawTextLineNoShadow(g_ui_message_buffer, global_screen_width / 2 + 0x35, 0x66, 0);
 
       g_page0_window_bounds->font_slot = 2;

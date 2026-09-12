@@ -562,7 +562,7 @@ int card_matches_excluded_land_type(int player, int card, int excluded_internal_
     return 0;
   }
 
-  if (global_cards_data[excluded_internal_card_id].code_pointer == (int)global_cards_data[internal_card_id].code_pointer)
+  if (global_cards_data[excluded_internal_card_id].code_pointer == global_cards_data[internal_card_id].code_pointer)
   {
     return 1;
   }

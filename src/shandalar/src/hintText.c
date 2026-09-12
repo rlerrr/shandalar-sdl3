@@ -83,7 +83,7 @@ char *WrapTextToWidthForDropCap(char *src, char *dst, int max_width)
 
   while ((word_end = FindTextWordBreak(scan)) != (char *)0)
   {
-    word_length = (int)word_end - (int)scan;
+    word_length = (int)(word_end - scan);
     if (max_width < line_width + MeasureTextSpanWidth(g_page0_window_bounds, scan, word_length))
     {
       strcat(current_line, "\n");
@@ -189,7 +189,7 @@ char *WrapTextToWidthForPopup(char *src, char *dst, int max_width)
       {
         word_end++;
       }
-      word_length = (int)word_end - (int)scan;
+      word_length = (int)(word_end - scan);
       word_width = MeasureTextSpanWidth(g_page0_window_bounds, scan, word_length);
       if (max_width < word_width + line_width)
       {

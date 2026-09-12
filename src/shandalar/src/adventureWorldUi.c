@@ -2189,7 +2189,7 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
   int resolution_index;
   int status_layout_panel_y[3];
   int status_frame_y[3];
-  int scaled_0x100;
+  EncodedImage *quest_status_sprite;
   int monster_tile_screen_x;
   int monster_subcell_screen_y;
   int monster_subcell_screen_x;
@@ -2329,7 +2329,7 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
 
   DrawQueuedWorldSprites();
   g_page0_window_bounds->page_number = 0;
-  scaled_0x100 = (int)g_questnew_sprite_entries[0];
+  quest_status_sprite = g_questnew_sprite_entries[0];
   status_layout_y[0] = 0x40;
   status_layout_y[1] = 0x50;
   status_layout_y[2] = 0x66;
@@ -2348,9 +2348,9 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
   DrawEncodedImageResampled(g_page1_window_bounds,
                             ScaleUiCoordinate(0x141) + 0x40,
                             ScaleUiCoordinate(0x105) + g_world_camera_minimap_panel_y * 2 + g_world_ui_top_offset + 0x10,
-                            ScaleUiCoordinate((int)((EncodedImage *)scaled_0x100)->width),
-                            ScaleUiCoordinate((int)((EncodedImage *)scaled_0x100)->height),
-                            g_questnew_sprite_entries[0]);
+                            ScaleUiCoordinate((int)quest_status_sprite->width),
+                            ScaleUiCoordinate((int)quest_status_sprite->height),
+                            quest_status_sprite);
   switch (global_screen_width)
   {
   case 0x280:

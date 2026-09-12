@@ -46,7 +46,7 @@ typedef struct HSVLike
 extern void RpBits_ApplyPalette(RpBitsPalettePacket *palette_data);
 extern void ConvertRgbToHsv(HSVLike *hsv, RGBLike *rgb);
 extern RGBLike *ConvertHsvToRgb(HSVLike *hsv, RGBLike *rgb);
-extern void CopyBytesAsmCompat(double *dst, double *src, unsigned int size);
+extern void CopyBytesAsmCompat(void *dst, void *src, unsigned int size);
 
 extern RGBQUAD g_palette_rgb[256];
 extern unsigned char *g_palette_rgb_bytes;
@@ -74,8 +74,8 @@ void CopyGraphicsRect(FacemakerWindowBounds *src, int src_x, int src_y, unsigned
 {
   DIBSurface *src_page;
   DIBSurface *dst_page;
-  double *top_row;
-  double *bottom_row;
+  unsigned char *top_row;
+  unsigned char *bottom_row;
   int half_height;
   int i;
 
@@ -105,30 +105,30 @@ void CopyGraphicsRect(FacemakerWindowBounds *src, int src_x, int src_y, unsigned
       memcpy(g_copy_bitmap_info->bmiColors, g_palette_rgb, 0x400);
     }
 
-    top_row = (double *)((int)src_page->pBits + src_x + src_page->width * src_y);
-    bottom_row = (double *)((int)src_page->pBits + src_x + (src_y + height - 1) * src_page->width);
+    top_row = (unsigned char *)src_page->pBits + src_x + src_page->width * src_y;
+    bottom_row = (unsigned char *)src_page->pBits + src_x + (src_y + height - 1) * src_page->width;
     half_height = height / 2;
     for (i = half_height; i > 0; i--)
     {
-      CopyBytesAsmCompat((double *)g_copy_flip_scratch_buffer_ptr, top_row, width);
+      CopyBytesAsmCompat(g_copy_flip_scratch_buffer_ptr, top_row, width);
       CopyBytesAsmCompat(top_row, bottom_row, width);
-      CopyBytesAsmCompat(bottom_row, (double *)g_copy_flip_scratch_buffer_ptr, width);
-      top_row = (double *)((int)top_row + src_page->width);
-      bottom_row = (double *)((int)bottom_row - src_page->width);
+      CopyBytesAsmCompat(bottom_row, g_copy_flip_scratch_buffer_ptr, width);
+      top_row += src_page->width;
+      bottom_row -= src_page->width;
     }
 
     SetDIBitsToDevice(dst_page->hTempDC, dst_x, dst_y, width, height, src_x, src_y, 0, src_page->height,
                       src_page->pBits, g_copy_bitmap_info, (unsigned int)(g_graphics_bpp == 8));
 
-    top_row = (double *)((int)src_page->pBits + src_x + src_page->width * src_y);
-    bottom_row = (double *)((int)src_page->pBits + src_x + (src_y + height - 1) * src_page->width);
+    top_row = (unsigned char *)src_page->pBits + src_x + src_page->width * src_y;
+    bottom_row = (unsigned char *)src_page->pBits + src_x + (src_y + height - 1) * src_page->width;
     for (i = half_height; i > 0; i--)
     {
-      CopyBytesAsmCompat((double *)g_copy_restore_scratch_buffer_ptr, top_row, width);
+      CopyBytesAsmCompat(g_copy_restore_scratch_buffer_ptr, top_row, width);
       CopyBytesAsmCompat(top_row, bottom_row, width);
-      CopyBytesAsmCompat(bottom_row, (double *)g_copy_restore_scratch_buffer_ptr, width);
-      top_row = (double *)((int)top_row + src_page->width);
-      bottom_row = (double *)((int)bottom_row - src_page->width);
+      CopyBytesAsmCompat(bottom_row, g_copy_restore_scratch_buffer_ptr, width);
+      top_row += src_page->width;
+      bottom_row -= src_page->width;
     }
     return;
   }
@@ -147,7 +147,7 @@ int ReadSpriteEntryPointersWithLimit(EncodedImage **out_entry_ptrs, char *sprite
 
   iVar2 = 0;
   _File = fopen(sprite_path, "rb");
-  assert((int)_File, "D:\\NewMagic\\sources\\sidlib\\sprite.c", 0xc5,
+  assert(_File != NULL, "D:\\NewMagic\\sources\\sidlib\\sprite.c", 0xc5,
          "Could not open Sprite File %s\n", sprite_path);
   iVar1 = _fileno(_File);
   _Size = _filelength(iVar1);
@@ -167,7 +167,7 @@ int ReadSpriteEntryPointersWithLimit(EncodedImage **out_entry_ptrs, char *sprite
       *out_entry_ptrs = (EncodedImage *)_DstBuf;
       out_entry_ptrs = out_entry_ptrs + 1;
       iVar2 = iVar2 + 1;
-      _DstBuf = (int *)((int)_DstBuf + *_DstBuf);
+      _DstBuf = (int *)((unsigned char *)_DstBuf + *_DstBuf);
       iVar1 = *_DstBuf;
     } while (iVar1 != -1);
   }
@@ -191,7 +191,7 @@ void DrawEncodedImageUnscaledClipped(FacemakerWindowBounds *dst, int x, int y, E
   int draw_start_x;
   int skip_bytes;
   int row_index;
-  int dst_row_ptr;
+  unsigned char *dst_row_ptr;
 
   page_number = dst->page_number;
   if (((encoded_image != (EncodedImage *)0) && (x <= dst->max_x)) && (y <= dst->max_y))
@@ -210,7 +210,7 @@ void DrawEncodedImageUnscaledClipped(FacemakerWindowBounds *dst, int x, int y, E
     {
       row_stride = page->rowPadding + page->width;
       row_index = 0;
-      dst_row_ptr = (int)page->pBits + x + base_y * row_stride;
+      dst_row_ptr = (unsigned char *)page->pBits + x + base_y * row_stride;
       span_ptr = encoded_image->spans;
       if (0 < row_count)
       {
@@ -297,7 +297,7 @@ void DrawEncodedImageUnscaledClipped(FacemakerWindowBounds *dst, int x, int y, E
                   {
                     if (*span_ptr != 0)
                     {
-                      *(unsigned char *)(dst_row_ptr + draw_start_x + (int)span_offset) = *span_ptr;
+                      dst_row_ptr[draw_start_x + span_offset] = *span_ptr;
                     }
                     span_ptr = span_ptr + 1;
                   }

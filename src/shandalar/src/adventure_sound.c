@@ -438,10 +438,10 @@ int LoadTextSectionStringTable(const char *filename, const char *section, char *
 }
 
 // FUNCTION: SHANDALAR 0x00565fdb
-int FindNextTextBlock(char *scan_start, char *scan_end, int *out_block_start, int *out_next_scan)
+int FindNextTextBlock(char *scan_start, char *scan_end, char **out_block_start, char **out_next_scan)
 {
-  if (scan_start == (char *)0 || scan_end == (char *)0 || scan_end <= scan_start || out_block_start == (int *)0 ||
-      out_next_scan == (int *)0)
+  if (scan_start == NULL || scan_end == NULL || scan_end <= scan_start || out_block_start == NULL ||
+      out_next_scan == NULL)
   {
     return 0;
   }
@@ -454,9 +454,9 @@ int FindNextTextBlock(char *scan_start, char *scan_end, int *out_block_start, in
   if (strncmp(scan_start, "STARTBLOCK", 10) == 0)
   {
     scan_start += 0xc;
-    if (out_block_start != (int *)0)
+    if (out_block_start != NULL)
     {
-      *out_block_start = (int)scan_start;
+      *out_block_start = scan_start;
     }
 
     while (*scan_start != '\0' && scan_start < scan_end && strncmp(scan_start, "ENDBLOCK", 8))
@@ -467,12 +467,12 @@ int FindNextTextBlock(char *scan_start, char *scan_end, int *out_block_start, in
     if (strncmp(scan_start, "ENDBLOCK", 8) == 0)
     {
       *scan_start = '\0';
-      if (out_next_scan != (int *)0)
+      if (out_next_scan != NULL)
       {
-        *out_next_scan = (int)(scan_start + 8);
+        *out_next_scan = scan_start + 8;
       }
     }
-    else if (out_next_scan != (int *)0)
+    else if (out_next_scan != NULL)
     {
       *out_next_scan = 0;
     }
@@ -491,7 +491,7 @@ int LoadAdvBlocksFile(const char *filename)
   int ok;
   DWORD bytes_read;
   DWORD file_size;
-  int block_text_start;
+  char *block_text_start;
   int i;
   char *buffer_end;
   char *carriage_return;
@@ -512,9 +512,9 @@ int LoadAdvBlocksFile(const char *filename)
 
       for (i = 0; i < 4; ++i)
       {
-        if (FindNextTextBlock(cursor, buffer_end, &block_text_start, (int *)&next_block_scan) != 0)
+        if (FindNextTextBlock(cursor, buffer_end, &block_text_start, &next_block_scan) != 0)
         {
-          gs_advblock_city_0074c930[i] = (char *)block_text_start;
+          gs_advblock_city_0074c930[i] = block_text_start;
           cursor = next_block_scan;
           while (carriage_return = strchr(gs_advblock_city_0074c930[i], 0xd))
           {
@@ -529,9 +529,9 @@ int LoadAdvBlocksFile(const char *filename)
 
       for (i = 0; i < 0xc; ++i)
       {
-        if (FindNextTextBlock(cursor, buffer_end, &block_text_start, (int *)&next_block_scan) != 0)
+        if (FindNextTextBlock(cursor, buffer_end, &block_text_start, &next_block_scan) != 0)
         {
-          gs_advblock_general_0077c9e0[i] = (char *)block_text_start;
+          gs_advblock_general_0077c9e0[i] = block_text_start;
           cursor = next_block_scan;
           while (carriage_return = strchr(gs_advblock_general_0077c9e0[i], 0xd))
           {

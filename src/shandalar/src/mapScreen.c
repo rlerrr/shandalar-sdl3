@@ -314,13 +314,13 @@ void SplitMapTooltipTextIntoTwoLines(char *src, char *dst_first, char *dst_secon
   }
 
   if ((space_fwd != (char *)0) &&
-      ((space_back == (char *)0) || ((int)space_fwd - (int)mid <= (int)mid - (int)space_back)))
+      ((space_back == (char *)0) || (space_fwd - mid <= mid - space_back)))
   {
     *space_fwd = '\0';
     strcpy(dst_second, space_fwd + 1);
   }
   else if ((space_back != (char *)0) &&
-           ((space_fwd == (char *)0) || ((int)space_fwd - (int)mid >= (int)mid - (int)space_back)))
+           ((space_fwd == (char *)0) || (space_fwd - mid >= mid - space_back)))
   {
     *space_back = '\0';
     strcpy(dst_second, space_back + 1);
@@ -441,7 +441,7 @@ void ShowWorldMapScreen(int mode)
 
   if (g_map_button_labels_loaded == 0)
   {
-    g_map_button_labels = (char **)LoadIniEscapedStringTable(g_advbuttons_ini_file, "mapButtons", g_ini_string_scratch);
+    g_map_button_labels = LoadIniEscapedStringTable(g_advbuttons_ini_file, "mapButtons", g_ini_string_scratch);
     g_map_button_labels_loaded = 1;
   }
 

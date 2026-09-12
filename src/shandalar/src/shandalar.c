@@ -131,7 +131,7 @@ FILE *g_advbuttons_ini_file;
 // GLOBAL: SHANDALAR 0x0078df10
 char g_ini_string_scratch[0x28];
 // GLOBAL: SHANDALAR 0x0078df38
-int g_done_text_table_entry;
+char *g_done_text_table_entry;
 // GLOBAL: SHANDALAR 0x00586494
 int g_legacy_mouse_active = 0;
 // GLOBAL: SHANDALAR 0x00586498
@@ -474,7 +474,7 @@ int RunAdventureSession(void)
 
   LoadTownHintMetadata();
   LoadCardRaritiesAndCsvOffsets();
-  NoopSetSpecialSprite(1, 1, (int)g_ttsprite_special_sprite_a);
+  NoopSetSpecialSprite(1, 1, g_ttsprite_special_sprite_a);
   ShowMouseCursorNested();
   HideMouseCursorNested();
   temp_value = GdiGetBatchLimit();

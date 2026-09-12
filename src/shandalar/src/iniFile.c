@@ -227,32 +227,32 @@ char *FindIniHeaderEntry(FILE *file, char *headers_section_name, char *entry_nam
 }
 
 // FUNCTION: SHANDALAR 0x004c80d8
-int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch)
+char **LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch)
 {
   int entry_count_remaining;
   int entry_count;
-  int *entry_table;
+  char **entry_table;
   char *decoded_write_ptr;
   char decoded_line[0x200];
   char *entry_line;
-  int *table_entry_ptr;
+  char **table_entry_ptr;
 
   entry_line = FindIniHeaderEntry(ini_file, "[headers]", section_name);
   if (entry_line == (char *)0)
   {
-    return (int *)0;
+    return NULL;
   }
 
   entry_line = strchr(entry_line, ':');
   entry_count = atoi(entry_line + 1);
   if (SeekIniLine(ini_file, BuildIniSectionHeader(section_name, scratch)) == 0)
   {
-    return (int *)0;
+    return NULL;
   }
 
-  entry_table = (int *)malloc((size_t)entry_count << 2);
+  entry_table = malloc((size_t)entry_count * sizeof(*entry_table));
   table_entry_ptr = entry_table;
-  memset(entry_table, 0, (size_t)entry_count << 2);
+  memset(entry_table, 0, (size_t)entry_count * sizeof(*entry_table));
   strcpy(decoded_line, BuildIniSectionHeader(section_name, scratch));
 
   assert(SeekIniLine(ini_file, decoded_line), "D:\\Newmagic\\multiplayer\\sid\\iniFile.c", 0x7b,
@@ -296,8 +296,8 @@ int *LoadIniEscapedStringTable(FILE *ini_file, char *section_name, char *scratch
     }
 
     *decoded_write_ptr = '\0';
-    *table_entry_ptr = (int)malloc(strlen(decoded_line) + 2);
-    strcpy((char *)*table_entry_ptr, decoded_line);
+    *table_entry_ptr = malloc(strlen(decoded_line) + 2);
+    strcpy(*table_entry_ptr, decoded_line);
     table_entry_ptr = table_entry_ptr + 1;
   }
 

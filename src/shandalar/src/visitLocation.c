@@ -1156,7 +1156,7 @@ int RunTownBuyCardsScreen(AdvMenuControl *control)
   for (loop_i = 0; loop_i < 3; loop_i = loop_i + 1)
   {
     SetFontStyleSize(7, (loop_i == 2) ? 9 : 11);
-    DrawFormattedTextNoShadowCentered(g_page1_window_bounds, colors[loop_i], loop_i * 0x5a + 0x2e, 0x10, "%s", (char *)g_done_text_table_entry);
+    DrawFormattedTextNoShadowCentered(g_page1_window_bounds, colors[loop_i], loop_i * 0x5a + 0x2e, 0x10, "%s", g_done_text_table_entry);
     g_buy_cards_done_button_sprites[loop_i] = EncodeSpriteFromPage(1, loop_i * 0x5a + 1, 1, 0x59, 0x23);
   }
   FinalizeSpriteEncodeSession();
@@ -2249,7 +2249,7 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
       SetWindowPos(g_main_window_hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
 
-    thread_exit_code = RunDuelEngineThreadProc((LPVOID)creature_type);
+    thread_exit_code = RunDuelEngineThreadProc((LPVOID)(intptr_t)creature_type);
 
     if (was_topmost != 0)
     {
@@ -3585,7 +3585,7 @@ unsigned int RunCardBrowser(char *title, unsigned int color_mask, unsigned int t
     {
       SetFontStyleSize(7, (card_index == 2) ? 9 : 11);
       DrawFormattedTextNoShadowCentered(g_page1_window_bounds, button_colors[card_index], card_index * 0x62 + 0x32, 0xd, "%s",
-                                        (char *)g_done_text_table_entry);
+                                        g_done_text_table_entry);
       g_card_browser_done_button_sprites[card_index] = EncodeSpriteFromPage(1, card_index * 0x62 + 1, 1, 0x61, 0x1b);
     }
 
@@ -4254,7 +4254,7 @@ int VisitTownSlot(int town_index)
   int duel_deck_seed;             // ebp - 0x40
   int selected_card_id;           // ebp - 0x3c
   int duel_wizard_color;          // ebp - 0x38
-  EncodedImage *sprite;           // ebp - 0x34
+  int nearest_world_magic_distance; // ebp - 0x34
   int ante_card_id;               // ebp - 0x30
   int found_deck_slot;            // ebp - 0x2c
   int duel_ante_slot;             // ebp - 0x28
@@ -4667,7 +4667,7 @@ int VisitTownSlot(int town_index)
   if ((g_town_slots[town_index].location_type == 3) || (g_town_slots[town_index].location_type == 2))
   {
     distance = -1;
-    sprite = (EncodedImage *)999;
+    nearest_world_magic_distance = 999;
     for (world_magic_slot_index = 0; world_magic_slot_index < 0xc; world_magic_slot_index = world_magic_slot_index + 1)
     {
       if (Scards[world_magic_slot_index].worldmagic_city == 0)
@@ -4677,9 +4677,9 @@ int VisitTownSlot(int town_index)
 
       world_magic_distance = ApproximateDistance(g_town_slots[town_index].world_x - g_town_slots[Scards[world_magic_slot_index].worldmagic_city].world_x,
                                                  g_town_slots[town_index].world_y - g_town_slots[Scards[world_magic_slot_index].worldmagic_city].world_y);
-      if (world_magic_distance < (int)sprite)
+      if (world_magic_distance < nearest_world_magic_distance)
       {
-        sprite = (EncodedImage *)world_magic_distance;
+        nearest_world_magic_distance = world_magic_distance;
         distance = world_magic_slot_index;
       }
     }
@@ -4731,7 +4731,7 @@ int VisitTownSlot(int town_index)
       world_magic_text_y += 0x10;
 
       /* Matching: the original early-outs for "this town doesn't sell it" (distance != 0) via a jump. */
-      if (sprite)
+      if (nearest_world_magic_distance)
       {
         // These are calcualted but unused
         world_magic_delta_x = g_town_slots[Scards[distance].worldmagic_city].world_x - g_town_slots[town_index].world_x;

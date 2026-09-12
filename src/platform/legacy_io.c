@@ -633,7 +633,12 @@ static int find_next_match(FindState *state, struct _finddata_t *data)
   struct dirent *entry;
   while ((entry = readdir(state->directory)) != NULL) {
     if (fnmatch(state->pattern, entry->d_name, FNM_CASEFOLD) == 0) {
+      char full_path[sizeof(state->directory_path) + sizeof(data->name) + 2];
+      struct stat st;
       snprintf(data->name, sizeof(data->name), "%s", entry->d_name);
+      snprintf(full_path, sizeof(full_path), "%s/%s", state->directory_path,
+               entry->d_name);
+      data->time_write = stat(full_path, &st) == 0 ? st.st_mtime : 0;
       return 0;
     }
   }

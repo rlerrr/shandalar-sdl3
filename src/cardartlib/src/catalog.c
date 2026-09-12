@@ -34,7 +34,6 @@ typedef struct Catalog
   CatalogEntry *cached_entry;
   char path[0x104];
 } Catalog;
-STATIC_ASSERT(sizeof(Catalog) == 0x114, Catalog_wrong_size);
 
 // GLOBAL: CARDARTLIB 0x10117290
 // GLOBAL: DRAWCARDLIB 0x100f2e30

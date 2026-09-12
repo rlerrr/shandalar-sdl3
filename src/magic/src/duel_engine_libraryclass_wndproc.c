@@ -363,7 +363,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
   case WM_INITMENU:
     previous_count = GetWindowLongA(hwnd, g_library_window_long_offset);
     sprintf(menu_count_text, "%d", previous_count);
-    AppendMenuA(g_library_popup_menu, MF_POPUP, (UINT)g_library_submenu, g_library_menu_count_text);
+    AppendMenuA(g_library_popup_menu, MF_POPUP, (UINT_PTR)g_library_submenu, g_library_menu_count_text);
     ModifyMenuA(g_library_submenu, 0x65, MF_BYCOMMAND, 0x65, menu_count_text);
     AppendMenuA(g_library_popup_menu, MF_STRING, 100, g_library_menu_help_text);
     return 0;

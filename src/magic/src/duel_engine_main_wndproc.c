@@ -44,7 +44,7 @@ void checked_DeleteDC_DeleteObject(HDC dc, HGDIOBJ obj);
 void set_duel_prompt_context(HWND hwnd, char *prompt, unsigned int mode);
 int prompt_for_life_total(int player, char *prompt, int initial_life_total);
 int get_battlefield_card_stagger_offset(HWND hwnd);
-LONG_PTR get_card_window_hidden_flag(HWND hwnd);
+HWND get_card_window_hidden_flag(HWND hwnd);
 void reset_battlefield_layout_positions(HWND hwnd);
 void get_next_battlefield_card_position(HWND parent, int *rect, int value, int *x, int *y, int flag);
 void set_duel_tooltip_text(char *text);
@@ -695,9 +695,9 @@ int find_battlefield_card_window(HWND hwnd, int *player_and_card, int *unused, H
 
 // FUNCTION: MAGIC 0x004d25fe
 // FUNCTION: SHANDALAR 0x00578bda
-LONG_PTR get_card_window_hidden_flag(HWND hwnd)
+HWND get_card_window_hidden_flag(HWND hwnd)
 {
-  return GetWindowLongPtrA(hwnd, 8);
+  return (HWND)GetWindowLongPtrA(hwnd, 8);
 }
 
 // FUNCTION: MAGIC 0x004d153b

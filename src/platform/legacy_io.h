@@ -13,6 +13,7 @@
 #include <strings.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #define _O_BINARY 0
@@ -42,6 +43,7 @@
 
 typedef intptr_t intptr_find_t;
 struct _finddata_t {
+  time_t time_write;
   char name[260];
 };
 

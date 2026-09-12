@@ -22,7 +22,7 @@ extern "C" {
 	CARDART_API int IsSmallArtRightSize(card_id_t id, int version, int width, int height);
 	CARDART_API void DestroyAllBigArts(void);
 	CARDART_API void DestroyAllSmallArts(void);
-	CARDART_API int IsBigArtIn(card_id_t id, int version);
+	CARDART_API void *IsBigArtIn(card_id_t id, int version);
 	CARDART_API int IsSmallArtIn(card_id_t id, int version);
 	CARDART_API int ReloadBigArtIfWrongSize(card_id_t id, int version, int width, int height);
 	CARDART_API int ReloadSmallArtIfWrongSize(card_id_t id, int version, int width, int height);

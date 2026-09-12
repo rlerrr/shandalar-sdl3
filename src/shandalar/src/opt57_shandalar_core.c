@@ -60,7 +60,7 @@ int ConsumeMouseButtonReleaseMask(void)
 }
 
 // FUNCTION: SHANDALAR 0x00578c70
-void NoopSetSpecialSprite(int unused_a, int unused_b, int unused_c)
+void NoopSetSpecialSprite(int unused_a, int unused_b, void *unused_c)
 {
   (void)unused_a;
   (void)unused_b;
@@ -361,9 +361,9 @@ void DrawFormattedTextShadowedCentered(FacemakerWindowBounds *window, int color_
 // FUNCTION: SHANDALAR 0x0057b590
 void DrawUiScaledCenteredTextNoShadow(FacemakerWindowBounds *window, int color_index, int x, int y, char *text)
 {
-  int args[2];
-  args[0] = (int)"%s";
-  args[1] = (int)text;
+  intptr_t args[2];
+  args[0] = (intptr_t)"%s";
+  args[1] = (intptr_t)text;
   DrawTextFormatted(window, color_index, 0, 1, 1, 1, x, y, args);
 }
 

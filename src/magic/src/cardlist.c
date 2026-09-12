@@ -22,7 +22,6 @@ typedef struct show_card_list_dialog_context_struct
   unsigned int require_selection;
   char prompt[12];
 } show_card_list_dialog_context_t;
-STATIC_ASSERT(sizeof(show_card_list_dialog_context_t) == 0x178c, show_card_list_dialog_context_wrong_size);
 
 // GLOBAL: MAGIC 0x0055e0c0
 // GLOBAL: SHANDALAR 0x0057f128

@@ -34,7 +34,7 @@ int g_adv_menu_selected_value;
 // GLOBAL: SHANDALAR 0x00603a38
 int g_city_info_strings_loaded;
 // GLOBAL: SHANDALAR 0x00603a48
-int *g_city_info_heading_strings;
+char **g_city_info_heading_strings;
 
 // GLOBAL: SHANDALAR 0x00746e60
 EncodedImage *g_city_info_done_button_sprites[3];
@@ -311,7 +311,7 @@ void ShowCityInfoScreen(int unused)
     x_table[2] = 0x40;
 
     SetFontStyleSize(7, (unsigned int)(10 - i / 2));
-    DrawFormattedTextNoShadowCentered(g_page1_window_bounds, x_table[i], i * 0x3c + 0x49, 0xe, (char *)g_done_text_table_entry);
+    DrawFormattedTextNoShadowCentered(g_page1_window_bounds, x_table[i], i * 0x3c + 0x49, 0xe, g_done_text_table_entry);
   }
 
   for (i = 0; i < 3; i++)
@@ -335,12 +335,12 @@ void ShowCityInfoScreen(int unused)
   // Headings, loaded from advButtons [cityInfo] (format strings in .rdata are \"%s\")
   g_page1_window_bounds->font_slot = 7;
   SetFontStyleSize(7, (unsigned int)ScaleUiCoordinate(10));
-  DrawTextAt(g_page1_window_bounds, 200, 0x69, 0x28, "%s", (char *)g_city_info_heading_strings[0]);
-  DrawTextAt(g_page1_window_bounds, 200, 0x54, 0x45, "%s", (char *)g_city_info_heading_strings[1]);
-  DrawTextAt(g_page1_window_bounds, 200, 0xb3, 0x45, "%s", (char *)g_city_info_heading_strings[2]);
-  DrawTextAt(g_page1_window_bounds, 200, 0x130, 0x45, "%s", (char *)g_city_info_heading_strings[3]);
-  DrawTextAt(g_page1_window_bounds, 200, 0x1cc, 0x45, "%s", (char *)g_city_info_heading_strings[4]);
-  DrawTextAt(g_page1_window_bounds, 200, 0x23f, 0x45, "%s", (char *)g_city_info_heading_strings[5]);
+  DrawTextAt(g_page1_window_bounds, 200, 0x69, 0x28, "%s", g_city_info_heading_strings[0]);
+  DrawTextAt(g_page1_window_bounds, 200, 0x54, 0x45, "%s", g_city_info_heading_strings[1]);
+  DrawTextAt(g_page1_window_bounds, 200, 0xb3, 0x45, "%s", g_city_info_heading_strings[2]);
+  DrawTextAt(g_page1_window_bounds, 200, 0x130, 0x45, "%s", g_city_info_heading_strings[3]);
+  DrawTextAt(g_page1_window_bounds, 200, 0x1cc, 0x45, "%s", g_city_info_heading_strings[4]);
+  DrawTextAt(g_page1_window_bounds, 200, 0x23f, 0x45, "%s", g_city_info_heading_strings[5]);
 
   EnsureAdvfac64Loaded(1);
 

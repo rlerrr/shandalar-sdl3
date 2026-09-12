@@ -42,8 +42,8 @@ int C_get_abilities(int player, int card, event_t event, int a4);
 int ConsumeUiTickCount(void);
 void HideMouseCursorNested(void);
 void ShowMouseCursorNested(void);
-void NoopSetSpecialSprite(int unused_a, int unused_b, int unused_c);
-extern int g_ttsprite_special_sprite_b;
+void NoopSetSpecialSprite(int unused_a, int unused_b, void *unused_c);
+extern void *g_ttsprite_special_sprite_b;
 #endif
 void set_duel_prompt_text(char *text);
 void process_damage_prevention(int player);
@@ -1476,7 +1476,7 @@ void start_ai_decision_search(int decision_code, int time_scale)
   g_ai_search_force_pass = 1;
 #ifdef SHANDALAR
   HideMouseCursorNested();
-  NoopSetSpecialSprite(1, 1, (int)g_ttsprite_special_sprite_b);
+  NoopSetSpecialSprite(1, 1, g_ttsprite_special_sprite_b);
   ShowMouseCursorNested();
 #endif
   g_adventure_duel_internal_card_id = 0;

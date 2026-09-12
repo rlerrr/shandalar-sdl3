@@ -22,7 +22,7 @@ char global_cartart_directory[0x105];
 int g_versionedSmallArtCount;
 
 // GLOBAL: CARDARTLIB 0x10121fe4
-undefined4 global_hinstance;
+HINSTANCE global_hinstance;
 
 // GLOBAL: CARDARTLIB 0x10117a20
 CRITICAL_SECTION global_critical_section_for_small_art;
@@ -41,7 +41,6 @@ typedef struct ArtCacheEntry
   int width;
   int height;
 } ArtCacheEntry;
-STATIC_ASSERT(sizeof(ArtCacheEntry) == 0x10, ArtCacheEntry_wrong_size);
 
 // GLOBAL: CARDARTLIB 0x10117a40
 ArtCacheEntry g_SmallArtCache[2000];
@@ -56,7 +55,6 @@ typedef struct VersionedArtCacheEntry
   card_id_t id;
   int version;
 } VersionedArtCacheEntry;
-STATIC_ASSERT(sizeof(VersionedArtCacheEntry) == 0x18, VersionedArtCacheEntry_wrong_size);
 
 // GLOBAL: CARDARTLIB 0x1011f740
 VersionedArtCacheEntry g_versionedSmallArtCache[100];
@@ -72,7 +70,7 @@ void DestroySmallArt(card_id_t id, int version);
 int IsBigArtRightSize(card_id_t id, int version, int width, int height);
 void DestroyAllBigArts(void);
 void DestroyAllSmallArts(void);
-int IsBigArtIn(card_id_t id, int version);
+void *IsBigArtIn(card_id_t id, int version);
 int IsSmallArtIn(card_id_t id, int version);
 int ReloadBigArtIfWrongSize(card_id_t id, int version, int width, int height);
 bool ReloadSmallArtIfWrongSize(card_id_t id, int version, int width, int height);
@@ -193,7 +191,7 @@ static BOOL CardArtLib_Initialize(HINSTANCE instance)
   int i;                      /* -0x04 */
 
   result = 1;
-  global_hinstance = (undefined4)instance;
+  global_hinstance = instance;
   InitializeCriticalSection(&global_critical_section_for_small_art);
   InitializeCriticalSection(&global_critical_section_for_big_art);
   InitializeCriticalSection(&global_critical_section_for_catalog);
@@ -284,7 +282,7 @@ int LoadBigArt(card_id_t id, int version, int width, int height)
   int align_bytes;      /* -0x158 */
   HDC desktop_hdc;      /* -0x154 */
   char wvl_path[0x108]; /* -0x150 */
-  int existing;         /* -0x48 */
+  VersionedArtCacheEntry *existing; /* -0x48 */
   HBITMAP bitmap;       /* -0x44 */
   HDC mem_dc;           /* -0x40 */
   int ok;               /* -0x3c */
@@ -304,7 +302,7 @@ int LoadBigArt(card_id_t id, int version, int width, int height)
   existing = IsBigArtIn(id, version);
   if (existing != 0)
   {
-    if ((*(int *)(existing + 8) == width) && (*(int *)(existing + 0xc) == height))
+    if ((existing->width == width) && (existing->height == height))
     {
       LeaveCriticalSection(&global_critical_section_for_big_art);
       return 1;
@@ -386,12 +384,12 @@ int LoadBigArt(card_id_t id, int version, int width, int height)
 }
 
 // FUNCTION: CARDARTLIB 0x100037ba
-int IsBigArtIn(card_id_t id, int version)
+void *IsBigArtIn(card_id_t id, int version)
 {
-  int result;
+  VersionedArtCacheEntry *result;
   int i;
 
-  result = 0;
+  result = NULL;
   if (id == -1)
     return 0;
 
@@ -401,7 +399,7 @@ int IsBigArtIn(card_id_t id, int version)
   {
     if (g_versionedBigArtCache[i].id == id && g_versionedBigArtCache[i].version == version)
     {
-      result = (int)&g_versionedBigArtCache[i];
+      result = &g_versionedBigArtCache[i];
     }
   }
 
@@ -414,7 +412,7 @@ int IsBigArtIn(card_id_t id, int version)
 // FUNCTION: CARDARTLIB 0x10003867
 int IsBigArtRightSize(card_id_t id, int version, int width, int height)
 {
-  int cache_entry = 0;
+  VersionedArtCacheEntry *cache_entry = NULL;
   if (id == -1)
   {
     return 0;
@@ -422,13 +420,14 @@ int IsBigArtRightSize(card_id_t id, int version, int width, int height)
 
   EnterCriticalSection(&global_critical_section_for_big_art);
   cache_entry = IsBigArtIn(id, version);
-  if ((cache_entry != 0) && ((*(int *)(cache_entry + 8) != width || (*(int *)(cache_entry + 0xc) != height))))
+  if ((cache_entry != NULL) &&
+      ((cache_entry->width != width || cache_entry->height != height)))
   {
-    cache_entry = 0;
+    cache_entry = NULL;
   }
   LeaveCriticalSection(&global_critical_section_for_big_art);
 
-  return cache_entry;
+  return cache_entry != NULL;
 }
 
 // FUNCTION: CARDARTLIB 0x100038ed

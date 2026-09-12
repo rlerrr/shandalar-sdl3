@@ -105,7 +105,7 @@ void noop_phase_display_user_message(HWND hwnd, WPARAM wparam, LPARAM lparam);
 void delete_and_close_object(HANDLE obj);
 unsigned int refresh_duel_display_cache(void);
 LRESULT handle_duel_inactive_cursor(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-LONG get_card_window_hidden_flag(HWND hwnd);
+HWND get_card_window_hidden_flag(HWND hwnd);
 int card_window_matches_player_and_card(HWND hwnd, int *player_and_card);
 card_id_t get_card_window_displayed_card_id(HWND hwnd);
 int is_attack_phase_window_enabled(void);
@@ -304,7 +304,7 @@ static int count_attack_phase_hidden_descendants(HWND hwnd, HWND parent_card_hwn
   {
     for (card_index = 0; card_index < (groups + group_index)->attacker_count; card_index++)
     {
-      if ((HWND)get_card_window_hidden_flag((groups + group_index)->attackers[card_index]) == parent_card_hwnd)
+      if (get_card_window_hidden_flag((groups + group_index)->attackers[card_index]) == parent_card_hwnd)
       {
         result++;
         result += count_attack_phase_hidden_descendants(hwnd, (groups + group_index)->attackers[card_index]);
@@ -312,7 +312,7 @@ static int count_attack_phase_hidden_descendants(HWND hwnd, HWND parent_card_hwn
     }
     for (card_index = 0; card_index < (groups + group_index)->blocker_count; card_index++)
     {
-      if ((HWND)get_card_window_hidden_flag((groups + group_index)->blockers[card_index]) == parent_card_hwnd)
+      if (get_card_window_hidden_flag((groups + group_index)->blockers[card_index]) == parent_card_hwnd)
       {
         result++;
         result += count_attack_phase_hidden_descendants(hwnd, (groups + group_index)->blockers[card_index]);

@@ -115,7 +115,7 @@ static int g_stats_creature_page_index;
 // GLOBAL: SHANDALAR 0x00650648
 static int g_stats_menu_selection;
 // GLOBAL: SHANDALAR 0x0065064c
-static int *g_stats_text_table;
+static char **g_stats_text_table;
 // GLOBAL: SHANDALAR 0x006506c8
 static int g_stats_text_loaded;
 
@@ -1431,15 +1431,15 @@ int RunAdventureStatsMenu(void)
   {
     SetFontStyleSize(6, 9 + (((unsigned int)(world_magic_slot_index - 2) < 1) ? -1 : 0));
     DrawFormattedTextNoShadowCentered(g_page1_window_bounds, colors[world_magic_slot_index], world_magic_slot_index * 0x55 + 0x2b, 0xc,
-                                      "%s", (char *)g_stats_text_table[0]);
+                                      "%s", g_stats_text_table[0]);
     g_stats_menu_button_sprites.normal[world_magic_slot_index] =
         EncodeSpriteFromPage(1, world_magic_slot_index * 0x55 + 1, 1, 0x54, 0x18);
     DrawFormattedTextNoShadowCentered(g_page1_window_bounds, colors[world_magic_slot_index], world_magic_slot_index * 0x4a + 0x26, 0x25,
-                                      "%s", (char *)g_stats_text_table[1]);
+                                      "%s", g_stats_text_table[1]);
     g_stats_menu_button_sprites.highlight[world_magic_slot_index] =
         EncodeSpriteFromPage(1, world_magic_slot_index * 0x4a + 1, 0x1a, 0x49, 0x18);
     DrawFormattedTextNoShadowCentered(g_page1_window_bounds, colors[world_magic_slot_index], world_magic_slot_index * 0x32 + 0x1a, 0x3e,
-                                      "%s", (char *)g_stats_text_table[2]);
+                                      "%s", g_stats_text_table[2]);
     g_stats_menu_button_sprites.pressed[world_magic_slot_index] =
         EncodeSpriteFromPage(1, world_magic_slot_index * 0x32 + 1, 0x33, 0x31, 0x18);
   }

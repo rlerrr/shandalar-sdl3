@@ -774,7 +774,7 @@ DWORD WINAPI RunDuelEngineThreadProc(LPVOID creature_type)
   g_duel_use_previous_backdrop_colors = 0;
   InitializeDuelUiGlobalIds();
   g_duel_run_mode = 4;
-  g_duel_creature_type = (int)creature_type;
+  g_duel_creature_type = (int)(intptr_t)creature_type;
 #ifdef SHANDALAR
   shandalar_host_begin_duel();
 #endif

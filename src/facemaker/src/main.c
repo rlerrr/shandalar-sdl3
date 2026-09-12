@@ -98,7 +98,7 @@ extern void LoadPcxIntoPage(int page_number, char *path);
 extern size_t WriteSpriteBlob(void *sprite_blob, char *output_path);
 extern int ReadSpriteEntryPointers(EncodedImage **out_entry_ptrs, char *sprite_path);
 extern int DrawTextFormatted(FacemakerWindowBounds *dst, int text_id, int draw_shadow, int scale_to_screen, int center_x, int center_y,
-                             int x, int y, int *format_and_args);
+                             int x, int y, intptr_t *format_and_args);
 extern void StretchBlitGraphicsRect(FacemakerWindowBounds *dst, int dst_x, int dst_y, int src_w, int src_h, FacemakerWindowBounds *src,
                                     int src_x, int src_y, int copy_w, int copy_h);
 extern int InitializeFaceMakerAssets(void);
@@ -140,7 +140,7 @@ extern void ReadGraphicsScanline(unsigned int *out_scanline, int page_number, in
                                  unsigned int byte_count);
 extern int AnimatePaletteToColor(int enabled, int mode);
 extern int ClearGraphicsPageWithPaletteColor(int page_number, int color_index);
-extern void CopyBytesAsmCompat(double *dst, double *src, unsigned int size);
+extern void CopyBytesAsmCompat(void *dst, void *src, unsigned int size);
 extern int g_frontbuffer_direct_blit_enabled;
 extern int g_graphics_bpp;
 extern RGBQUAD g_palette_rgb[256];
@@ -302,6 +302,7 @@ extern int global_screen_height;
 
 // GLOBAL: FACEMAKER 0x0041d120
 char *g_face_set_display_names[1000];
+static FacemakerFaceDefinition g_face_definitions[FACEMAKER_MAX_FACE_SETS];
 
 // GLOBAL: FACEMAKER 0x0041d0f0
 FaceSpriteRootStorage g_face_sprite_roots;
@@ -682,78 +683,17 @@ int InitializeFaceMakerAssets(void)
   g_face_slot_background_sprite = EncodeSpriteFromPage(2, 0, 0, 0x8a, 0xac);
   FinalizeSpriteEncodeSession();
 
-  local.file = fopen("FaceData.txt", "rt");
-  local.tmp_y = _filelength(_fileno(local.file));
-  g_face_set_display_names[0] = malloc(local.tmp_y + 1);
-  local.scan_ptr = g_face_set_display_names[0];
-  fread(local.scan_ptr, local.tmp_y, 1, local.file);
-  local.scan_ptr[local.tmp_y] = '\0';
-  fclose(local.file);
-
-  g_face_set_total = 0;
-  local.line_start = local.scan_ptr;
-  for (local.loop_index = 0; local.loop_index <= local.tmp_y && g_face_set_total < 1000;
+  g_face_set_total = facemaker_face_definitions_load(
+      "FaceData.txt", g_face_definitions, FACEMAKER_MAX_FACE_SETS);
+  for (local.loop_index = 0; local.loop_index < g_face_set_total;
        local.loop_index = local.loop_index + 1)
   {
-    if (local.scan_ptr[local.loop_index] == '\r' ||
-        local.scan_ptr[local.loop_index] == '\n' ||
-        local.scan_ptr[local.loop_index] == '\0')
-    {
-      local.char_temp = local.scan_ptr[local.loop_index];
-      local.scan_ptr[local.loop_index] = '\0';
-      if (local.line_start[0] != '\0')
-      {
-        g_face_set_display_names[g_face_set_total] = local.line_start;
-        g_face_set_total = g_face_set_total + 1;
-      }
-      if (local.char_temp == '\r' &&
-          local.loop_index + 1 < local.tmp_y &&
-          local.scan_ptr[local.loop_index + 1] == '\n')
-      {
-        local.loop_index = local.loop_index + 1;
-        local.scan_ptr[local.loop_index] = '\0';
-      }
-      local.line_start = local.scan_ptr + local.loop_index + 1;
-    }
-  }
-
-  for (local.loop_index = 0; local.loop_index < g_face_set_total; local.loop_index = local.loop_index + 1)
-  {
-    local.scan_ptr = g_face_set_display_names[local.loop_index];
-    while (*local.scan_ptr != '\0' && *local.scan_ptr != ',')
-    {
-      local.scan_ptr = local.scan_ptr + 1;
-    }
-    if (*local.scan_ptr == '\0')
-    {
-      g_face_set_names[local.loop_index] = local.scan_ptr;
-      g_face_set_gender_tags[local.loop_index] = local.scan_ptr;
-      continue;
-    }
-    *local.scan_ptr = '\0';
-    local.scan_ptr = local.scan_ptr + 1;
-    while (*local.scan_ptr == ' ' || *local.scan_ptr == '\t')
-    {
-      local.scan_ptr = local.scan_ptr + 1;
-    }
-    g_face_set_names[local.loop_index] = local.scan_ptr;
-    while (*local.scan_ptr != '\0' &&
-           *local.scan_ptr != ',' &&
-           *local.scan_ptr != ' ' &&
-           *local.scan_ptr != '\t')
-    {
-      local.scan_ptr = local.scan_ptr + 1;
-    }
-    if (*local.scan_ptr != '\0')
-    {
-      *local.scan_ptr = '\0';
-      local.scan_ptr = local.scan_ptr + 1;
-    }
-    while (*local.scan_ptr == ' ' || *local.scan_ptr == '\t')
-    {
-      local.scan_ptr = local.scan_ptr + 1;
-    }
-    g_face_set_gender_tags[local.loop_index] = local.scan_ptr;
+    g_face_set_display_names[local.loop_index] =
+        g_face_definitions[local.loop_index].display_name;
+    g_face_set_names[local.loop_index] =
+        g_face_definitions[local.loop_index].file_name;
+    g_face_set_gender_tags[local.loop_index] =
+        &g_face_definitions[local.loop_index].gender;
   }
 
   return 0;
@@ -1532,17 +1472,17 @@ int LoadFaceSpriteSet(char *base_path, int *group_frame_counts, EncodedImage **g
     int frames_in_group;
     int tile_index;
     int group_count;
-    long find_handle;
+    intptr_t find_handle;
     char path_buffer[260];
     int use_pcx_tiles;
     int saw_separator;
-    long pcx_find_handle;
-    unsigned char find_data[0x118];
+    intptr_t pcx_find_handle;
+    struct _finddata_t find_data;
     EncodedImage *current_sprite;
     char group_suffix_storage[2];
     char *group_suffix;
     int first_tile;
-    unsigned char pcx_find_data[0x118];
+    struct _finddata_t pcx_find_data;
   } face_loader;
 
   face_loader.group_count = 0;
@@ -1553,14 +1493,14 @@ int LoadFaceSpriteSet(char *base_path, int *group_frame_counts, EncodedImage **g
   face_loader.group_suffix = face_loader.group_suffix_storage;
   face_loader.first_tile = 1;
   face_loader.use_pcx_tiles = 0;
-  memset(group_entries, 0, 4);
+  *group_entries = NULL;
   *face_loader.group_suffix = 'a';
   strcpy(face_loader.path_buffer, base_path);
-  face_loader.find_handle = _findfirst(face_loader.path_buffer, (struct _finddata_t *)face_loader.find_data);
+  face_loader.find_handle = _findfirst(face_loader.path_buffer, &face_loader.find_data);
   strcpy(face_loader.path_buffer, base_path);
   strcat(face_loader.path_buffer, "*.pcx");
   face_loader.pcx_find_handle =
-      _findfirst(face_loader.path_buffer, (struct _finddata_t *)face_loader.pcx_find_data);
+      _findfirst(face_loader.path_buffer, &face_loader.pcx_find_data);
   if ((face_loader.pcx_find_handle == -1) && (face_loader.find_handle == -1))
   {
     return face_loader.group_count;
@@ -1573,11 +1513,11 @@ int LoadFaceSpriteSet(char *base_path, int *group_frame_counts, EncodedImage **g
   {
     do
     {
-      if (*(int *)(face_loader.find_data + 0xc) < *(int *)(face_loader.pcx_find_data + 0xc))
+      if (face_loader.find_data.time_write < face_loader.pcx_find_data.time_write)
       {
         face_loader.use_pcx_tiles = 1;
       }
-    } while (_findnext(face_loader.pcx_find_handle, (struct _finddata_t *)face_loader.pcx_find_data) == 0);
+    } while (_findnext(face_loader.pcx_find_handle, &face_loader.pcx_find_data) == 0);
   }
   if (face_loader.pcx_find_handle != -1)
   {
@@ -1647,7 +1587,7 @@ int LoadFaceSpriteSet(char *base_path, int *group_frame_counts, EncodedImage **g
     strcat(face_loader.path_buffer, ".pcx");
     ++*face_loader.group_suffix;
     face_loader.pcx_find_handle =
-        _findfirst(face_loader.path_buffer, (struct _finddata_t *)face_loader.pcx_find_data);
+        _findfirst(face_loader.path_buffer, &face_loader.pcx_find_data);
     if (face_loader.pcx_find_handle == -1)
     {
       break;
