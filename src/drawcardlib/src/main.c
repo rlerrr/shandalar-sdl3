@@ -766,7 +766,7 @@ undefined4 DrawFullCard(HDC dc, RECT *rect, card_ptr_t *card, undefined4 version
       rulesBackgroundRect.top = rulesTextRect.top - rulesBackgroundTopInset;
       if (backgroundBitmap != 0)
       {
-        GetObjectA(backgroundBitmap, 0x18, &backgroundBitmapInfo);
+        GetObjectA(backgroundBitmap, sizeof(backgroundBitmapInfo), &backgroundBitmapInfo);
         backgroundCropLeftPermille = 0x49;
         backgroundCropTopPermille = 0x25d;
         backgroundCropWidthPermille = 0x359;
@@ -1037,7 +1037,7 @@ void DrawCardSet(HDC dc, RECT *rect, uint expansion)
   {
     if (((expansion & 0x2e) != 0) || ((expansion & 0x100) != 0))
     {
-      GetObjectA(global_CardSets, 0x18, &bm);
+      GetObjectA(global_CardSets, sizeof(bm), &bm);
       cellW = bm.bmWidth / 10;
       cellH = bm.bmHeight;
       if ((expansion & 0x20) != 0)
@@ -1253,7 +1253,7 @@ void DrawManaSymbol(HDC dc, char symbol, int left, int top, int width, int heigh
   {
     return;
   }
-  GetObjectA(global_ManaSymbols, 0x18, &bm);
+  GetObjectA(global_ManaSymbols, sizeof(bm), &bm);
   wSrc = bm.bmHeight;
   hSrc = wSrc;
   maskX = bm.bmWidth - wSrc;
@@ -1566,7 +1566,7 @@ void DrawCardBackground(HDC dc, RECT *rect, card_ptr_t *card)
   LoadCardBackground(backgroundPointer);
   if (*backgroundPointer != 0)
   {
-    GetObjectA(*backgroundPointer, 0x18, &bm);
+    GetObjectA(*backgroundPointer, sizeof(bm), &bm);
     SetRect(&dstRect, 0, 0, 200, 0x118);
     DrawBitmapSubrectToRect(dc, &dstRect, *backgroundPointer, 0, 0, bm.bmWidth,
                             (bm.bmHeight * 0x3b) / 100);
@@ -1657,7 +1657,7 @@ void DeleteAndCloseObject(HANDLE handle)
   }
   if (handle != (HANDLE)0x0)
   {
-    GetObjectA(handle, 0x54, &dibSection);
+    GetObjectA(handle, sizeof(dibSection), &dibSection);
     sectionHandle = dibSection.dshSection;
     bitsPointer = (char *)dibSection.dsBm.bmBits;
     bitsPointer += dibSection.dsOffset;
@@ -1772,7 +1772,7 @@ int read_cfg(HINSTANCE hinst)
     return 0;
   }
 #else
-  GetModuleFileNameA((HMODULE)0x0, global_base_directory, 0x105);
+  GetModuleFileNameA((HMODULE)0x0, global_base_directory, sizeof(global_base_directory));
   lastSlash = strrchr(global_base_directory, '\\');
   *lastSlash = '\0';
 #endif

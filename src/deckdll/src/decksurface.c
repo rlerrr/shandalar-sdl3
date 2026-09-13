@@ -1022,7 +1022,7 @@ wndproc_DeckSurfaceClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     GetClientRect(hwnd, &r2);
     GetClientRect(hwnd, &tile_rect);
-    GetObjectA(global_pic_bldr01c, 0x18, &bmp);
+    GetObjectA(global_pic_bldr01c, sizeof(bmp), &bmp);
 
     tile_rect.right = r2.right / 6;
     tile_rect.bottom = r2.bottom / 5;

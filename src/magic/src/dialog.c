@@ -842,7 +842,8 @@ unsigned int refresh_duel_display_cache(void)
 
   EnterCriticalSection(&g_duel_render_lock);
   needs_refresh = memcmp(global_displayed_card_instances, global_card_instances, 0x161e8);
-  memcpy(global_displayed_card_instances, global_card_instances, 0x161e8);
+  memcpy(global_displayed_card_instances, global_card_instances,
+         sizeof(global_displayed_card_instances));
   if (g_active_cards_count[0] != g_duel_cached_active_cards_count_player_0 ||
       g_active_cards_count[1] != g_duel_cached_active_cards_count_player_1)
   {
@@ -873,8 +874,10 @@ unsigned int refresh_duel_display_cache(void)
 
   needs_refresh |= memcmp(g_duel_cached_raw_mana_player_0, g_raw_mana_available, 0x1c);
   needs_refresh |= memcmp(g_duel_cached_raw_mana_player_1, g_raw_mana_available + 1, 0x1c);
-  memcpy(g_duel_cached_raw_mana_player_0, g_raw_mana_available, 0x1c);
-  memcpy(g_duel_cached_raw_mana_player_1, g_raw_mana_available + 1, 0x1c);
+  memcpy(g_duel_cached_raw_mana_player_0, g_raw_mana_available,
+         sizeof(g_duel_cached_raw_mana_player_0));
+  memcpy(g_duel_cached_raw_mana_player_1, g_raw_mana_available + 1,
+         sizeof(g_duel_cached_raw_mana_player_1));
 
   needs_refresh |= memcmp(g_duel_cached_graveyard_player_0, global_graveyard_slots, 2000);
   needs_refresh |= memcmp(g_duel_cached_graveyard_player_1, global_graveyard_slots[1], 2000);
@@ -951,14 +954,14 @@ unsigned int refresh_duel_display_cache(void)
   {
     ++g_duel_cached_ante_count_player_1;
   }
-  memcpy(g_duel_cached_ante_player_1, global_ante_cards[1], 0x40);
+  memcpy(g_duel_cached_ante_player_1, global_ante_cards[1], sizeof(g_duel_cached_ante_player_1));
   zone_index = 0;
   g_duel_cached_ante_count_player_0 = 0;
   for (; zone_index < 0x10 && global_ante_cards[0][zone_index] != -1; ++zone_index)
   {
     ++g_duel_cached_ante_count_player_0;
   }
-  memcpy(g_duel_cached_ante_player_0, global_ante_cards, 0x40);
+  memcpy(g_duel_cached_ante_player_0, global_ante_cards, sizeof(g_duel_cached_ante_player_0));
 
   for (zone_index = 0; zone_index <= 0x25; ++zone_index)
   {
@@ -1023,7 +1026,7 @@ unsigned int draw_displayed_full_card(HDC dc, RECT *rect, card_ptr_t *raw_card, 
     return 0;
   }
 
-  memcpy(&card_data, global_raw_cards_storage + card_id, 0x98);
+  memcpy(&card_data, global_raw_cards_storage + card_id, sizeof(card_data));
   color_test = get_displayed_card_color_flags(player, card);
   number_of_colors = 0;
   for (color_index = 1; color_index <= 5; ++color_index)
@@ -1117,7 +1120,7 @@ void draw_displayed_card_overlaid_full_card(HDC dc, RECT *rect, int player, int 
     return;
   }
 
-  memcpy(&card_data, global_raw_cards_storage + card_id, 0x98);
+  memcpy(&card_data, global_raw_cards_storage + card_id, sizeof(card_data));
   color_test = get_displayed_card_color_flags(player, card);
   number_of_colors = 0;
   for (color_index = 1; color_index <= 5; ++color_index)

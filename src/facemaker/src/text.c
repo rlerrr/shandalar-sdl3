@@ -341,7 +341,7 @@ int SetFontStyleSize(int font_id, unsigned int style)
 
     current_font = font->hfont;
     memset(&log_font, 0, sizeof(log_font));
-    if (GetObjectA(current_font, 0x3c, &log_font) == 0)
+    if (GetObjectA(current_font, sizeof(log_font), &log_font) == 0)
     {
         return 0;
     }

@@ -175,8 +175,10 @@ void LoadOpeningMenuSpriteResources(void)
       tsprite2_entry_index = tsprite2_entry_index + 1;
     }
   }
-  memcpy(&g_tsprite2_extra_sprite_entries, &tsprite2_entries[tsprite2_entry_index], 0x34);
-  memcpy(&g_tsprite2_overlay_sprite_entries, &tsprite2_entries[tsprite2_entry_index + 13], 0x18);
+  memcpy(g_tsprite2_extra_sprite_entries, &tsprite2_entries[tsprite2_entry_index],
+         sizeof(g_tsprite2_extra_sprite_entries));
+  memcpy(g_tsprite2_overlay_sprite_entries, &tsprite2_entries[tsprite2_entry_index + 13],
+         6 * sizeof(g_tsprite2_overlay_sprite_entries[0]));
 
   for (entry_index = 0; entry_index < 0x20; entry_index = entry_index + 1)
   {

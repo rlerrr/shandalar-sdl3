@@ -2282,7 +2282,7 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
 
     if (g_restore_deck_after_duel != 0)
     {
-      memcpy(deck, g_deck_restore_buffer, 2000);
+      memcpy(deck, g_deck_restore_buffer, sizeof(deck));
     }
 
     g_duel_active = 0;

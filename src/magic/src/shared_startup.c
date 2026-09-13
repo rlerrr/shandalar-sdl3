@@ -235,7 +235,7 @@ void set_global_base_directory(char *path)
 #else
   char *last_slash;
 
-  GetModuleFileNameA(NULL, path, 0x105);
+  GetModuleFileNameA(NULL, path, MAX_PATH + 1);
   last_slash = strrchr(path, '\\');
   *last_slash = '\0';
 #endif

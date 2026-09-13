@@ -2112,13 +2112,13 @@ unsigned int choose_attackers_ai(int player)
   }
 
   setup_combat_damage_simulation(player);
-  memcpy(saved_attacker_damage, combat_damage_attacker_damage, 0x40);
-  memcpy(saved_attacker_toughness, combat_damage_attacker_toughness, 0x40);
-  memcpy(saved_attacker_abilities, combat_damage_attacker_abilities, 0x40);
-  memcpy(saved_attacker_scores, g_ai_attacker_cards, 0x40);
-  memcpy(blocker_toughness, g_ai_attacker_power, 0x40);
-  memcpy(g_ai_attacker_damage, g_ai_attacker_toughness, 0x40);
-  memcpy(g_ai_attacker_scores, g_ai_blocker_power, 0x40);
+  memcpy(saved_attacker_damage, combat_damage_attacker_damage, sizeof(saved_attacker_damage));
+  memcpy(saved_attacker_toughness, combat_damage_attacker_toughness, sizeof(saved_attacker_toughness));
+  memcpy(saved_attacker_abilities, combat_damage_attacker_abilities, sizeof(saved_attacker_abilities));
+  memcpy(saved_attacker_scores, g_ai_attacker_cards, sizeof(saved_attacker_scores));
+  memcpy(blocker_toughness, g_ai_attacker_power, sizeof(blocker_toughness));
+  memcpy(g_ai_attacker_damage, g_ai_attacker_toughness, sizeof(g_ai_attacker_damage));
+  memcpy(g_ai_attacker_scores, g_ai_blocker_power, sizeof(g_ai_attacker_scores));
 
   save_combat_simulation_state();
   g_duel_ai_mode_state = 1;
@@ -2999,8 +2999,8 @@ void setup_combat_damage_simulation(int player)
       }
     }
 
-    memset(g_ai_attacker_ability_counts, 0, 0x1c);
-    memset(g_ai_blocker_ability_counts, 0, 0x1c);
+    memset(g_ai_attacker_ability_counts, 0, sizeof(g_ai_attacker_ability_counts));
+    memset(g_ai_blocker_ability_counts, 0, sizeof(g_ai_blocker_ability_counts));
     for (card = 0; card < combat_damage_attacker_count; card++)
     {
       for (attacker_index = 0; attacker_index < ai_blocker_count; attacker_index++)

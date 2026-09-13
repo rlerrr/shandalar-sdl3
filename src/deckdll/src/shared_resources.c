@@ -294,7 +294,7 @@ void delete_and_close_object(HANDLE obj)
 
   if (obj != (HANDLE)0)
   {
-    GetObjectA(obj, 0x54, &dib_section);
+    GetObjectA(obj, sizeof(dib_section), &dib_section);
     section_handle = dib_section.dshSection;
     bits_pointer = (char *)dib_section.dsBm.bmBits;
     bits_pointer += dib_section.dsOffset;

@@ -1180,7 +1180,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
     return 0;
   }
 #else
-  GetModuleFileNameA((HMODULE)0, global_base_directory, 0x105);
+  GetModuleFileNameA((HMODULE)0, global_base_directory, sizeof(global_base_directory));
   local.last_backslash = strrchr(global_base_directory, '\\');
   if (local.last_backslash == (char *)0)
   {

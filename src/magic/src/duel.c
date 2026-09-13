@@ -2322,7 +2322,7 @@ int play_duel(int player, int creature_type)
     if (shandalar_deck_minimums[4] < shandalar_deck_minimums[g_shandalar_difficulty])
     {
       g_restore_deck_after_duel = 1;
-      memcpy(g_deck_restore_buffer, deck, 2000);
+      memcpy(g_deck_restore_buffer, deck, sizeof(g_deck_restore_buffer));
       for (card_index = 0;
            card_index < shandalar_deck_minimums[g_shandalar_difficulty] - shandalar_deck_minimums[4];
            card_index = card_index + 1)
@@ -2470,7 +2470,7 @@ int play_duel(int player, int creature_type)
       g_duel_ai_mode_state = 1;
       shuffle_duel_library(0, 1);
       g_duel_ai_mode_state = card_index;
-      memcpy(global_card_instances[1], global_card_instances[0], 0xb0f4);
+      memcpy(global_card_instances[1], global_card_instances[0], sizeof(global_card_instances[1]));
       for (card_index = 0; card_index < 0x96; card_index = card_index + 1)
       {
         if (global_card_instances[1][card_index].internal_card_id != -1)

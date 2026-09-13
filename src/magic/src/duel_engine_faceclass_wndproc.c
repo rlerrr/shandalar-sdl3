@@ -393,7 +393,7 @@ void draw_duel_face_window(HDC dc, RECT *rect, int player)
 
   if (face_bitmap != (HBITMAP)0)
   {
-    GetObjectA(face_bitmap, 0x18, &bitmap);
+    GetObjectA(face_bitmap, sizeof(bitmap), &bitmap);
     bitmap.bmWidth = bitmap.bmWidth / 2;
     saved_dc = SaveDC(dc);
     SetMapMode(dc, MM_ISOTROPIC);
@@ -551,7 +551,7 @@ int draw_masked_bitmap_left_half_to_rect(HDC dc, RECT *rect, HANDLE bitmap)
   int unused_c;
   int width;
 
-  GetObjectA(bitmap, 0x18, &bitmap_info);
+  GetObjectA(bitmap, sizeof(bitmap_info), &bitmap_info);
   half_width = bitmap_info.bmWidth / 2;
   height = bitmap_info.bmHeight;
   unused_10 = 0;

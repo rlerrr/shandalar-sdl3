@@ -118,7 +118,7 @@ BOOL DrawMaskedBitmapToRect(HDC dc, RECT *rect, HANDLE bitmap, int wSrc, int hSr
   EnterCriticalSection(&global_critical_section_for_drawing);
   nSavedDC = SaveDC(dc);
   SelectObject(global_screen_dc, bitmap);
-  GetObjectA(bitmap, 0x18, &bm);
+  GetObjectA(bitmap, sizeof(bm), &bm);
   xDest = rect->left;
   yDest = rect->top;
   if (rect->right >= rect->left)
@@ -163,7 +163,7 @@ BOOL TileBitmapIntoRect(HDC hdc, RECT *r, HBITMAP bmp)
   saved = SaveDC(hdc);
   IntersectClipRect(hdc, r->left, r->top, r->right, r->bottom);
 
-  GetObjectA(bmp, 0x18, &bm);
+  GetObjectA(bmp, sizeof(bm), &bm);
 
   for (x = r->left; x < r->right; x += bm.bmWidth)
   {
