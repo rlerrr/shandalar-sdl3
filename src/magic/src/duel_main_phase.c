@@ -107,6 +107,47 @@ int main_phase_selected_card;
 // GLOBAL: SHANDALAR 0x0097f1a8
 int legal_attacker_count;
 
+static void undeclare_attacker(int player, int attacker)
+{
+  int bandmate;
+  int bandmate_count = 0;
+  int first_bandmate = -1;
+  char band = (char)global_card_instances[player][attacker].blocking;
+
+  global_card_instances[player][attacker].state &= ~STATE_ATTACKING;
+  global_card_instances[player][attacker].blocking = 0xff;
+
+  if (band == -1)
+  {
+    return;
+  }
+
+  for (bandmate = 0; bandmate < g_active_cards_count[player]; bandmate++)
+  {
+    if (bandmate != attacker &&
+        (global_card_instances[player][bandmate].state & STATE_ATTACKING) != 0 &&
+        (char)global_card_instances[player][bandmate].blocking == band)
+    {
+      if (first_bandmate == -1)
+      {
+        first_bandmate = bandmate;
+      }
+      bandmate_count++;
+    }
+  }
+
+  for (bandmate = 0; bandmate < g_active_cards_count[player]; bandmate++)
+  {
+    if (bandmate != attacker &&
+        (global_card_instances[player][bandmate].state & STATE_ATTACKING) != 0 &&
+        (char)global_card_instances[player][bandmate].blocking == band)
+    {
+      global_card_instances[player][bandmate].blocking =
+          bandmate_count < 2 ? 0xff : (unsigned char)first_bandmate;
+    }
+  }
+}
+
 // FUNCTION: MAGIC 0x0044118f
 // FUNCTION: SHANDALAR 0x0040ca0f
 int player_has_legal_attacker(int player)
@@ -688,6 +729,7 @@ restart_main_phase_action_loop:
               g_phase_response_window_open = 0;
               g_phase_stop_suppressed = 0;
             }
+            g_undeclare_attackers_possible = 1;
             g_current_phase = PHASE_DECLARE_ATTACKERS;
             if (((g_active_player == g_current_player) && (g_active_player == g_stop_phase_player)) &&
                 (g_stop_phase == PHASE_DECLARE_ATTACKERS))
@@ -1000,8 +1042,25 @@ restart_main_phase_action_loop:
         }
         g_x_value = 0;
       }
+      else if (g_current_phase == PHASE_DECLARE_ATTACKERS &&
+               ((player == g_active_player) || ((g_duel_network_flags & 2) != 0)) &&
+               ((global_card_instances[player][main_phase_selected_card].state & STATE_ATTACKING) != 0))
+      {
+        if (g_undeclare_attackers_possible != 0)
+        {
+          undeclare_attacker(player, main_phase_selected_card);
+          update_attacker_count_and_check_combat_done(player);
+          request_duel_display_refresh_if_human(player, main_phase_selected_card, 3, 2);
+        }
+        else if (g_duel_ai_mode_state != 1)
+        {
+          set_duel_prompt_text("Attackers cannot be undeclared after attack costs or attacker-chosen abilities have resolved.");
+          Sleep(2000);
+          set_duel_prompt_text("");
+        }
+      }
       else if ((((player == g_active_player) || ((g_duel_network_flags & 2) != 0)) &&
-                (((global_cards_data[main_phase_selected_internal_card_id].type & 2) != 0 ||
+                 (((global_cards_data[main_phase_selected_internal_card_id].type & 2) != 0 ||
                   ((global_card_instances[player][main_phase_selected_card].state & STATE_NONCREATURE_CAN_ATTACK) != 0)))) &&
                (((global_card_instances[player][main_phase_selected_card].state & (STATE_SUMMONSICK_NOATTACK | STATE_TAPPED | STATE_ATTACKING)) == 0 &&
                  (g_attacking_creature_count >= 0))) &&
@@ -1016,6 +1075,7 @@ restart_main_phase_action_loop:
         g_combat_assignment_cancelled = 0;
         if ((g_battlefield_extra_ability_flags & 0x400000) != 0)
         {
+          g_undeclare_attackers_possible = 0;
           push_affected_card_stack();
           strcpy(g_duel_main_phase_text_buffer, g_ui_message_buffer);
           g_trigger_cause_controller = player;
@@ -1058,6 +1118,7 @@ restart_main_phase_action_loop:
           global_card_instances[player][main_phase_selected_card].state |= 4;
           if ((g_battlefield_extra_ability_flags & 0x80000) != 0)
           {
+            g_undeclare_attackers_possible = 0;
             g_trigger_cause_controller = player;
             g_trigger_cause = main_phase_selected_card;
             dispatch_trigger_twice_once_with_each_player_as_reason(g_current_player, 0xde, gs_attacker_selected_008b32d0, 0);

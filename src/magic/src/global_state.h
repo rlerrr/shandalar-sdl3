@@ -629,6 +629,10 @@ GLOBAL_STATE_EXTERN int g_adventure_world_state;
 // GLOBAL: SHANDALAR 0x008ca260
 GLOBAL_STATE_EXTERN int g_attacking_creature_count;
 
+/* Cleared for the rest of a combat once declaring an attacker performs an
+ * action that cannot safely be rolled back. */
+GLOBAL_STATE_EXTERN int g_undeclare_attackers_possible;
+
 // GLOBAL: MAGIC 0x00926668
 // GLOBAL: SHANDALAR 0x0093a798
 GLOBAL_STATE_EXTERN int g_duel_extra_turn_player;
