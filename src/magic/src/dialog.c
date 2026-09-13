@@ -712,7 +712,7 @@ int do_dialog(int who_chooses,
     return ai_choice;
   }
 
-  strcpy(displayed_options, options);
+  snprintf(displayed_options, sizeof(displayed_options), "%s", options);
   strcpy(g_ui_message_buffer, "");
   if (who_chooses == g_other_player)
   {
@@ -720,7 +720,9 @@ int do_dialog(int who_chooses,
     strcat(g_ui_message_buffer, "\n\n");
     at_start_of_line = 1;
     remaining_choice = ai_choice;
-    for (option_index = 0; option_index < 1000; ++option_index)
+    for (option_index = 0;
+         option_index < (int)sizeof(displayed_options) && displayed_options[option_index] != '\0';
+         ++option_index)
     {
       if (at_start_of_line != 0 && displayed_options[option_index] == ' ')
       {
@@ -1396,7 +1398,7 @@ void draw_special_effect_full_card(HDC dc, RECT *rect, card_id_t card_id, int pl
   card_data.power = 0;
   card_data.toughness = 0;
   card_data.sleight_color = 0;
-  *(int *)&card_data.currently_zero_for_all_cards = 0;
+  *(uint32_t *)&card_data.hack_colors = 0;
   DrawFullCard(dc, rect, &card_data, display_version, 2, g_duel_interface_options.expand_text_box_on_big_card, gs_illus_00789130);
 }
 
