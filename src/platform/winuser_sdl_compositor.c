@@ -21,6 +21,16 @@ static SDL_Renderer *g_renderer;
 static WindowTexture *g_textures;
 static WPARAM g_mouse_buttons;
 
+typedef struct CardListDragState {
+  HWND initial_target;
+  HWND scroll_target;
+  POINT start;
+  POINT last;
+  int dragging;
+} CardListDragState;
+
+static CardListDragState g_card_list_drag;
+
 static WindowTexture *find_texture(HWND window)
 {
   WindowTexture *entry;
@@ -360,6 +370,98 @@ static int point_in_rendered_caption(HWND window, POINT point)
   return 0;
 }
 
+static int window_class_is(HWND window, const char *wanted)
+{
+  char name[32] = {0};
+  return window && GetClassNameA(window, name, sizeof(name)) &&
+         SDL_strcasecmp(name, wanted) == 0;
+}
+
+static int has_show_list_card_child(HWND window)
+{
+  HWND child = GetWindow(window, GW_CHILD);
+  for (; child; child = GetWindow(child, GW_HWNDNEXT))
+    if (window_class_is(child, "ShowListCard"))
+      return 1;
+  return 0;
+}
+
+static HWND find_scrollable_card_list_dialog(HWND window)
+{
+  int saw_card = 0;
+  while (window && window != GetDesktopWindow()) {
+    int minimum;
+    int maximum;
+    if (window_class_is(window, "ShowListCard"))
+      saw_card = 1;
+    if (window_class_is(window, "#32770") &&
+        (GetWindowLongA(window, GWL_STYLE) & WS_VSCROLL) &&
+        GetScrollRange(window, SB_VERT, &minimum, &maximum) &&
+        maximum > minimum && (saw_card || has_show_list_card_child(window)))
+      return window;
+    window = GetParent(window);
+  }
+  return NULL;
+}
+
+static int continue_card_list_drag(const SDL_Event *event, POINT screen)
+{
+  const int drag_threshold = 6;
+  int minimum;
+  int maximum;
+  int position;
+  int next_position;
+  int delta_y;
+
+  if (!g_card_list_drag.initial_target)
+    return 0;
+  if (!IsWindow(g_card_list_drag.initial_target) ||
+      !IsWindow(g_card_list_drag.scroll_target)) {
+    SDL_zero(g_card_list_drag);
+    return 0;
+  }
+  if (event->type == SDL_EVENT_MOUSE_MOTION) {
+    if (!g_card_list_drag.dragging &&
+        (abs(screen.x - g_card_list_drag.start.x) > drag_threshold ||
+         abs(screen.y - g_card_list_drag.start.y) > drag_threshold))
+      g_card_list_drag.dragging = 1;
+    if (g_card_list_drag.dragging) {
+      delta_y = screen.y - g_card_list_drag.last.y;
+      if (delta_y != 0 &&
+          GetScrollRange(g_card_list_drag.scroll_target, SB_VERT,
+                         &minimum, &maximum)) {
+        position = GetScrollPos(g_card_list_drag.scroll_target, SB_VERT);
+        next_position = position - delta_y;
+        if (next_position < minimum)
+          next_position = minimum;
+        if (next_position > maximum)
+          next_position = maximum;
+        SendMessageA(g_card_list_drag.scroll_target, WM_VSCROLL,
+                     MAKEWPARAM(SB_THUMBPOSITION, next_position), 0);
+      }
+      g_card_list_drag.last = screen;
+    }
+    return 1;
+  }
+  if (event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
+      event->button.button == SDL_BUTTON_LEFT) {
+    g_mouse_buttons &= ~MK_LBUTTON;
+    if (!g_card_list_drag.dragging) {
+      POINT down = g_card_list_drag.start;
+      POINT up = screen;
+      ScreenToClient(g_card_list_drag.initial_target, &down);
+      ScreenToClient(g_card_list_drag.initial_target, &up);
+      PostMessageA(g_card_list_drag.initial_target, WM_LBUTTONDOWN,
+                   MK_LBUTTON, MAKELPARAM(down.x, down.y));
+      PostMessageA(g_card_list_drag.initial_target, WM_LBUTTONUP, 0,
+                   MAKELPARAM(up.x, up.y));
+    }
+    SDL_zero(g_card_list_drag);
+    return 1;
+  }
+  return 1;
+}
+
 int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
                                                   const SDL_Event *event)
 {
@@ -387,6 +489,8 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
   screen.x = (LONG)x;
   screen.y = (LONG)y;
   shandalar_win32_set_cursor_position(screen.x, screen.y);
+  if (continue_card_list_drag(event, screen))
+    return 1;
   /*
    * ImGui owns mouse input while it is displaying a Win32 popup menu.  Keep
    * our button-state bookkeeping current, but do not route the same event to
@@ -443,6 +547,20 @@ int shandalar_win32_sdl_compositor_process_event(SDL_Renderer *renderer,
         g_mouse_buttons &= ~button;
     }
     return 0;
+  }
+  if (!force_captured_release &&
+      event->type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
+      event->button.button == SDL_BUTTON_LEFT) {
+    HWND scroll_target = find_scrollable_card_list_dialog(target);
+    if (scroll_target) {
+      g_card_list_drag.initial_target = target;
+      g_card_list_drag.scroll_target = scroll_target;
+      g_card_list_drag.start = screen;
+      g_card_list_drag.last = screen;
+      g_card_list_drag.dragging = 0;
+      g_mouse_buttons |= MK_LBUTTON;
+      return 1;
+    }
   }
   if (!force_captured_release && shandalar_win32_is_builtin_control(target))
     return 0;
@@ -534,4 +652,5 @@ void shandalar_win32_sdl_compositor_shutdown(void)
   }
   g_renderer = NULL;
   g_mouse_buttons = 0;
+  SDL_zero(g_card_list_drag);
 }
