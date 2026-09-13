@@ -21,15 +21,17 @@ if(EMSCRIPTEN)
   # chunks, which ASan catches on short strings. Use SDL's bounded-copy
   # fallback instead, including when reconfiguring an existing build.
   set(LIBC_HAS_STRLCPY OFF)
+  # Keep the regular Debug build symbol-enabled without the ASan overhead.
+  add_compile_options("$<$<CONFIG:Debug>:-g>")
   # Instrument dependencies too: ASan must be enabled when compiling every
   # library as well as when linking the final WebAssembly application.
   # Unoptimized ASan instrumentation can exceed browser limits on Wasm
   # locals in SDL's macro-heavy software rendering functions.
-  add_compile_options("$<$<CONFIG:Debug>:-O1;-g;-fsanitize=address;-fsanitize-recover=address;-mllvm;-asan-instrument-reads=false>")
+  add_compile_options("$<$<CONFIG:DebugAsan>:-O1;-g;-fsanitize=address;-fsanitize-recover=address;-mllvm;-asan-instrument-reads=false>")
   # ASan's shadow memory and instrumented globals must fit at link time;
   # runtime memory growth cannot satisfy wasm-ld's initial-memory minimum.
-  add_link_options("$<IF:$<CONFIG:Debug>,-g,--profiling-funcs>"
-                   "$<$<CONFIG:Debug>:-O1;-fsanitize=address;-asan-instrument-reads=false;-sASSERTIONS=1;-sINITIAL_MEMORY=256MB>")
+  add_link_options("$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:DebugAsan>>,-g,--profiling-funcs>"
+                   "$<$<CONFIG:DebugAsan>:-O1;-fsanitize=address;-asan-instrument-reads=false;-sASSERTIONS=1;-sINITIAL_MEMORY=256MB>")
 endif()
 
 option(SHANDALAR_BUILD_FACEMAKER "Build the SDL3 Facemaker application" ON)
