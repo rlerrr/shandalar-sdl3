@@ -203,6 +203,20 @@ int main(void)
   point.y = rect.top;
   CHECK(ScreenToClient(caption_window, &point));
   CHECK(point.x == 4 && point.y == 6);
+  {
+    HWND sorted_listbox =
+        CreateWindowExA(0, "LISTBOX", "", WS_CHILD | WS_VISIBLE | LBS_SORT,
+                        0, 0, 80, 80, caption_window, (HMENU)46, NULL, NULL);
+    CHECK(sorted_listbox);
+    CHECK(SendMessageA(sorted_listbox, LB_ADDSTRING, 0, (LPARAM)"beta") == 0);
+    CHECK(SendMessageA(sorted_listbox, LB_SETITEMDATA, 0, 22) == 0);
+    CHECK(SendMessageA(sorted_listbox, LB_ADDSTRING, 0, (LPARAM)"Alpha") == 0);
+    CHECK(SendMessageA(sorted_listbox, LB_SETITEMDATA, 0, 11) == 0);
+    CHECK(SendMessageA(sorted_listbox, LB_GETTEXT, 0, (LPARAM)text) == 5);
+    CHECK(strcmp(text, "Alpha") == 0);
+    CHECK(SendMessageA(sorted_listbox, LB_GETITEMDATA, 0, 0) == 11);
+    CHECK(SendMessageA(sorted_listbox, LB_GETITEMDATA, 1, 0) == 22);
+  }
   popup = CreateWindowExA(0, "CompatTest", "popup", WS_POPUP,
                           0, 0, 20, 20, parent, NULL, NULL, NULL);
   CHECK(popup);

@@ -102,6 +102,16 @@ static BOOL valid_index(ControlState *state, WPARAM index)
   return state && (size_t)index < state->count;
 }
 
+static int sorted_insert_index(ControlState *state, LPCSTR text)
+{
+  size_t index;
+  const char *candidate = text ? text : "";
+  for (index = 0; index < state->count; ++index)
+    if (SDL_strcasecmp(candidate, state->items[index].text) < 0)
+      return (int)index;
+  return (int)state->count;
+}
+
 LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
                                  LPARAM lparam, BOOL *handled)
 {
@@ -173,6 +183,10 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
   case LB_ADDSTRING:
   case CB_ADDSTRING:
     *handled = TRUE;
+    if ((is_list && (GetWindowLongA(window, GWL_STYLE) & LBS_SORT)) ||
+        (is_combo && (GetWindowLongA(window, GWL_STYLE) & CBS_SORT)))
+      return insert_item(state, sorted_insert_index(state, (LPCSTR)lparam),
+                         (LPCSTR)lparam);
     return insert_item(state, (int)state->count, (LPCSTR)lparam);
   case LB_INSERTSTRING:
   case CB_INSERTSTRING:
