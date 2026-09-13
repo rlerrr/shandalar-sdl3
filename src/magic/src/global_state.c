@@ -485,6 +485,8 @@ int save_or_load_data(void *buf, unsigned int count)
 unsigned int save_or_load_ver1(void)
 {
   unsigned int result;
+  int saved_world_player_x;
+  int saved_world_player_y;
 
   result = 1;
   result &= save_or_load_data((char *)global_cards_data + g_card_count * 0x48, 0x480);
@@ -641,8 +643,17 @@ unsigned int save_or_load_ver1(void)
   result &= save_or_load_data(&g_shandalar_difficulty, 4);
   result &= save_or_load_data(&g_skip_new_game_state_initialization, 4);
   result &= save_or_load_data(&g_lair_or_monster_slots, 0xc0);
-  result &= save_or_load_data(&g_world_player_x, 4);
-  result &= save_or_load_data(&g_world_player_y, 4);
+  // The on-disk format stores integral world coordinates. Keep that layout so
+  // old saves remain readable while runtime movement uses subpixel positions.
+  saved_world_player_x = (int)(g_world_player_x + 0.5);
+  saved_world_player_y = (int)(g_world_player_y + 0.5);
+  result &= save_or_load_data(&saved_world_player_x, 4);
+  result &= save_or_load_data(&saved_world_player_y, 4);
+  if (global_saveload_loading)
+  {
+    g_world_player_x = saved_world_player_x;
+    g_world_player_y = saved_world_player_y;
+  }
   result &= save_or_load_data(&g_monster_timer, 4);
   result &= save_or_load_data(&g_town_slots, 0x3200);
   result &= save_or_load_data(&g_current_quest_type, 4);

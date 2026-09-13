@@ -35,99 +35,22 @@
 #endif
 
 #define OVERWORLD_LOGIC_INTERVAL_NS (60ULL * 1000000ULL)
-#define OVERWORLD_FRAME_INTERVAL_NS (1000000000ULL / 30ULL)
+
+double g_overworld_target_fps = 30.0;
 
 #ifdef MODERN_FIXES
 #endif
 
 DIBSurface *GetPrimaryPage(int unused);
 
-// The authoritative integer player position advances on the original movement
-// cadence.  Keep a separate camera position so rendering can scroll smoothly
-// at the host frame rate without changing adventure-world game logic.
-static double g_cam_smooth_x;
-static double g_cam_smooth_y;
-static double g_cam_vel_x;
-static double g_cam_vel_y;
-static int g_cam_last_gate_x;
-static int g_cam_last_gate_y;
-static int g_cam_move_direction;
-
-static void AdvanceSmoothWorldCamera(double elapsed_ms)
+static uint64_t GetOverworldFrameIntervalNs(void)
 {
-  double next_x;
-  double next_y;
-
-  if (elapsed_ms <= 0.0)
+  double target_fps = g_overworld_target_fps;
+  if (target_fps <= 0.0)
   {
-    return;
+    target_fps = 30.0;
   }
-
-  next_x = g_cam_smooth_x + g_cam_vel_x * (elapsed_ms / 60.0);
-  next_y = g_cam_smooth_y + g_cam_vel_y * (elapsed_ms / 60.0);
-
-  if ((g_cam_vel_x > 0.0 && next_x > g_cam_last_gate_x) ||
-      (g_cam_vel_x < 0.0 && next_x < g_cam_last_gate_x))
-  {
-    next_x = g_cam_last_gate_x;
-  }
-  if ((g_cam_vel_y > 0.0 && next_y > g_cam_last_gate_y) ||
-      (g_cam_vel_y < 0.0 && next_y < g_cam_last_gate_y))
-  {
-    next_y = g_cam_last_gate_y;
-  }
-
-  g_cam_smooth_x = next_x;
-  g_cam_smooth_y = next_y;
-}
-
-static void GetSmoothWorldCameraRenderPosition(double *world_x, double *world_y)
-{
-  double smooth_x = g_cam_smooth_x;
-  double smooth_y = g_cam_smooth_y;
-
-  if (g_cam_vel_x != 0.0 && g_cam_vel_x == g_cam_vel_y)
-  {
-    smooth_y = smooth_x - (g_cam_last_gate_x - g_cam_last_gate_y);
-  }
-  else if (g_cam_vel_x != 0.0 && g_cam_vel_x == -g_cam_vel_y)
-  {
-    smooth_y = (g_cam_last_gate_x + g_cam_last_gate_y) - smooth_x;
-  }
-
-  *world_x = smooth_x;
-  *world_y = smooth_y;
-}
-
-void SetSmoothWorldCameraVelocity(int player_x, int player_y, int movement_tick_interval)
-{
-  // Retarget from the camera's actual fractional position. This normally
-  // equals the preceding gate position, while also recovering cleanly after a
-  // direction change or a late frame without retaining a permanent offset.
-  g_cam_vel_x = ((double)player_x - g_cam_smooth_x) / (double)movement_tick_interval;
-  g_cam_vel_y = ((double)player_y - g_cam_smooth_y) / (double)movement_tick_interval;
-  g_cam_last_gate_x = player_x;
-  g_cam_last_gate_y = player_y;
-}
-
-void SyncSmoothWorldCameraDirection(int player_x, int player_y, int move_direction)
-{
-  if (move_direction == g_cam_move_direction)
-  {
-    return;
-  }
-
-  // Velocity describes the interval following the last accepted movement
-  // gate. A turn or stop invalidates that prediction immediately. The sprite
-  // changes heading without an animation blend, so make the camera corner just
-  // as sharply instead of carrying fractional motion around the turn.
-  g_cam_vel_x = 0.0;
-  g_cam_vel_y = 0.0;
-  g_cam_smooth_x = player_x;
-  g_cam_smooth_y = player_y;
-  g_cam_last_gate_x = player_x;
-  g_cam_last_gate_y = player_y;
-  g_cam_move_direction = move_direction;
+  return (uint64_t)(1000000000.0 / target_fps);
 }
 
 
@@ -625,9 +548,12 @@ opening_menu:
       {
         g_world_player_x = internal_rand(0x40) * 0x20 + 0x10;
         g_world_player_y = internal_rand(0x40) * 0x20 + 0x10;
-        tile_mask = GetWorldTileMagicMask(GetWorldTileType(g_world_player_x / 0x20, g_world_player_y / 0x20));
+        tile_mask = GetWorldTileMagicMask(GetWorldTileType(AdventureWorldTileFromCoordinate(g_world_player_x),
+                                                          AdventureWorldTileFromCoordinate(g_world_player_y)));
       } while ((g_deck_color_bitmap & tile_mask) == 0);
-    } while ((GetWorldMapPixelFlags(g_world_player_x / 0x20, g_world_player_y / 0x20) & 0x10) != 0);
+    } while ((GetWorldMapPixelFlags(AdventureWorldTileFromCoordinate(g_world_player_x),
+                                    AdventureWorldTileFromCoordinate(g_world_player_y)) &
+              0x10) != 0);
 
     SaveGameToSlot(3);
     break;
@@ -707,25 +633,16 @@ opening_menu:
       uint64_t last_frame_ns;
       uint64_t last_tick_ns;
 
-      g_cam_smooth_x = g_world_player_x;
-      g_cam_smooth_y = g_world_player_y;
-      g_cam_vel_x = 0.0;
-      g_cam_vel_y = 0.0;
-      g_cam_last_gate_x = g_world_player_x;
-      g_cam_last_gate_y = g_world_player_y;
-      g_cam_move_direction = g_world_move_dir_index;
       last_frame_ns = SDL_GetTicksNS();
       last_tick_ns = last_frame_ns;
 
       do
       {
-        double render_world_x;
-        double render_world_y;
         uint64_t now_ns = SDL_GetTicksNS();
-        double frame_delta_ms = (double)(now_ns - last_frame_ns) / 1000000.0;
+        uint64_t frame_start_ns = now_ns;
+        uint64_t frame_interval_ns = GetOverworldFrameIntervalNs();
+        double frame_delta_seconds = (double)(now_ns - last_frame_ns) / 1000000000.0;
         last_frame_ns = now_ns;
-
-        AdvanceSmoothWorldCamera(frame_delta_ms);
 
         if ((now_ns - last_tick_ns) >= OVERWORLD_LOGIC_INTERVAL_NS)
         {
@@ -738,8 +655,7 @@ opening_menu:
           pending_ui_action_queued = (g_pending_ui_action_code != 0);
           QueuePendingMenuActionInput();
 
-          UpdateAdventureWorldInputAndMovement();
-          SyncSmoothWorldCameraDirection(g_world_player_x, g_world_player_y, g_world_move_dir_index);
+          UpdateAdventureWorldInputAndLogic();
           UpdateWorldLairAndMonsterSlots();
 
           TickWorldMagicSlotTimers();
@@ -753,7 +669,7 @@ opening_menu:
 
           // Modal locations and duels can hold this call for a long time.
           // Restart both clocks when they return so their elapsed time affects
-          // neither camera velocity nor overworld movement.
+          // neither world movement nor fixed-cadence logic.
           if ((SDL_GetTicksNS() - now_ns) >= OVERWORLD_LOGIC_INTERVAL_NS)
           {
             now_ns = SDL_GetTicksNS();
@@ -773,27 +689,16 @@ opening_menu:
           }
         }
 
-        if ((fabs(g_cam_smooth_x - (double)g_world_player_x) >= 32.0) ||
-            (fabs(g_cam_smooth_y - (double)g_world_player_y) >= 32.0))
-        {
-          g_cam_smooth_x = g_world_player_x;
-          g_cam_smooth_y = g_world_player_y;
-          g_cam_last_gate_x = g_world_player_x;
-          g_cam_last_gate_y = g_world_player_y;
-          g_cam_vel_x = 0.0;
-          g_cam_vel_y = 0.0;
-        }
-        GetSmoothWorldCameraRenderPosition(&render_world_x, &render_world_y);
-        RenderAdventureWorldScene(render_world_x, render_world_y, g_world_scene_force_redraw);
+        AdvanceAdventureWorldPlayer(frame_delta_seconds);
+        RenderAdventureWorldScene(g_world_player_x, g_world_player_y, g_world_scene_force_redraw);
         g_world_scene_force_redraw = 0;
 
         shandalar_host_pump();
         setjmp(g_adventure_world_exit_jump_buffer);
 
-        // This is an old 2D game; rendering faster than 30 FPS adds heat and
-        // makes fractional scrolling look unnaturally busy without improving
-        // its 60 ms gameplay cadence.
-        while ((SDL_GetTicksNS() - now_ns) < OVERWORLD_FRAME_INTERVAL_NS)
+        // Keep rendering independently configurable from the 60 ms gameplay
+        // cadence. The target is a double so fractional refresh rates work.
+        while ((SDL_GetTicksNS() - frame_start_ns) < frame_interval_ns)
         {
 #ifdef __EMSCRIPTEN__
           emscripten_sleep(0);
@@ -1099,8 +1004,8 @@ void RunDebugEncounterCreatureMenu(void)
   }
 
   g_lair_or_monster_slots[slot_index].entry_type = (ShandalarEntryType)creature_index;
-  g_lair_or_monster_slots[slot_index].world_x = g_world_player_x;
-  g_lair_or_monster_slots[slot_index].world_y = g_world_player_y;
+  g_lair_or_monster_slots[slot_index].world_x = QuantizeAdventureWorldCoordinate(g_world_player_x);
+  g_lair_or_monster_slots[slot_index].world_y = QuantizeAdventureWorldCoordinate(g_world_player_y);
   g_lair_or_monster_slots[slot_index].color = monster_color;
 
   RunWorldLairMonsterEncounter(slot_index, monster_color);

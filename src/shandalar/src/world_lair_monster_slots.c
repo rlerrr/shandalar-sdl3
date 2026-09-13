@@ -354,7 +354,11 @@ void UpdateWorldLairAndMonsterSlots(void)
   int nearest_slot;       // ebp - 0xc
   int speed;              // ebp - 0x8
   int prev_x;             // ebp - 0x4
+  int player_world_x;
+  int player_world_y;
 
+  player_world_x = QuantizeAdventureWorldCoordinate(g_world_player_x);
+  player_world_y = QuantizeAdventureWorldCoordinate(g_world_player_y);
   nearest_distance = 0x7fff;
 #ifdef MODERN_FIXES
   nearest_slot = -1;
@@ -362,8 +366,8 @@ void UpdateWorldLairAndMonsterSlots(void)
 
   for (slot_index = 0; slot_index < 6; slot_index = slot_index + 1)
   {
-    distance_to_player = ApproximateDistance(g_world_player_x - g_lair_or_monster_slots[slot_index].world_x,
-                                             g_world_player_y - g_lair_or_monster_slots[slot_index].world_y);
+    distance_to_player = ApproximateDistance(player_world_x - g_lair_or_monster_slots[slot_index].world_x,
+                                             player_world_y - g_lair_or_monster_slots[slot_index].world_y);
     if ((distance_to_player < nearest_distance) && (g_lair_or_monster_slots[slot_index].entry_type != SHANDALAR_ENTRY_LAIR))
     {
       nearest_distance = distance_to_player;
@@ -378,8 +382,8 @@ void UpdateWorldLairAndMonsterSlots(void)
 
   for (slot_index = 0; slot_index < 8; slot_index = slot_index + 1)
   {
-    distance_to_player = ApproximateDistance(g_world_player_x - g_lair_or_monster_slots[slot_index].world_x,
-                                             g_world_player_y - g_lair_or_monster_slots[slot_index].world_y);
+    distance_to_player = ApproximateDistance(player_world_x - g_lair_or_monster_slots[slot_index].world_x,
+                                             player_world_y - g_lair_or_monster_slots[slot_index].world_y);
 
     tile_dist_x = abs(g_world_player_tile_x - g_lair_or_monster_slots[slot_index].world_x / 0x20);
     tile_dist_y = abs(g_world_player_tile_y - g_lair_or_monster_slots[slot_index].world_y / 0x20);
@@ -728,17 +732,17 @@ void UpdateWorldLairAndMonsterSlots(void)
     {
       tile_dist_x = (ClampIntToRange(distance_to_player / 3, 0, g_shandalar_difficulty << 4) *
                          g_neighbor_dx[g_world_player_animation_direction] +
-                     g_world_player_x) -
+                     player_world_x) -
                     prev_x;
       tile_dist_y = (ClampIntToRange(distance_to_player / 3, 0, g_shandalar_difficulty << 4) *
                          g_neighbor_dy[g_world_player_animation_direction] +
-                     g_world_player_y) -
+                     player_world_y) -
                     prev_y;
     }
     else
     {
-      tile_dist_x = g_world_player_x - prev_x;
-      tile_dist_y = g_world_player_y - prev_y;
+      tile_dist_x = player_world_x - prev_x;
+      tile_dist_y = player_world_y - prev_y;
     }
 
     if (g_shandalar_monster_definitions[creature_tier].flags_0a & 1)
@@ -941,8 +945,8 @@ void UpdateWorldLairAndMonsterSlots(void)
       }
     }
 
-    if (ApproximateDistance(g_world_player_x - g_lair_or_monster_slots[slot_index].world_x,
-                            g_world_player_y - g_lair_or_monster_slots[slot_index].world_y) <
+    if (ApproximateDistance(player_world_x - g_lair_or_monster_slots[slot_index].world_x,
+                            player_world_y - g_lair_or_monster_slots[slot_index].world_y) <
         ((g_lair_or_monster_slots[slot_index].entry_type == SHANDALAR_ENTRY_LAIR) ? 0x1a : 0x10))
     {
       SaveGameToSlot(3);

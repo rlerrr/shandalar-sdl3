@@ -530,8 +530,8 @@ void AddJournalEntry(int entry_type, int entry_arg)
   {
     g_journal_entries[g_journal_entry_count].type = entry_type;
     g_journal_entries[g_journal_entry_count].arg = entry_arg;
-    g_journal_entries[g_journal_entry_count].tile_x = g_world_player_x / 32;
-    g_journal_entries[g_journal_entry_count].tile_y = g_world_player_y / 32;
+    g_journal_entries[g_journal_entry_count].tile_x = AdventureWorldTileFromCoordinate(g_world_player_x);
+    g_journal_entries[g_journal_entry_count].tile_y = AdventureWorldTileFromCoordinate(g_world_player_y);
     g_journal_entry_count = g_journal_entry_count + 1;
   }
 }

@@ -1051,17 +1051,17 @@ GLOBAL_STATE_EXTERN int g_quest_restock_timer;
 #if defined(GLOBAL_STATE_IMPL) && defined(SHANDALAR)
 // GLOBAL: MAGIC 0x007497a8
 // GLOBAL: SHANDALAR 0x005911f8
-GLOBAL_STATE_EXTERN int g_world_player_x = 1296;
+GLOBAL_STATE_EXTERN double g_world_player_x = 1296.0;
 #else
-GLOBAL_STATE_EXTERN int g_world_player_x;
+GLOBAL_STATE_EXTERN double g_world_player_x;
 #endif
 
 #if defined(GLOBAL_STATE_IMPL) && defined(SHANDALAR)
 // GLOBAL: MAGIC 0x007497ac
 // GLOBAL: SHANDALAR 0x005911fc
-GLOBAL_STATE_EXTERN int g_world_player_y = 816;
+GLOBAL_STATE_EXTERN double g_world_player_y = 816.0;
 #else
-GLOBAL_STATE_EXTERN int g_world_player_y;
+GLOBAL_STATE_EXTERN double g_world_player_y;
 #endif
 
 // GLOBAL: MAGIC 0x007497bc

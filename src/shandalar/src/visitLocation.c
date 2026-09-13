@@ -4112,7 +4112,9 @@ int BuyAnyCardFromTown(int payment_color, int town_index)
       price = CalculateCardShopPrice(card_id);
       price = price << 2;
 
-      tile_magic_index = single_color_test_bit_to_color_t((int)GetWorldTileMagicMask(GetWorldTileType(g_world_player_x / 32, g_world_player_y / 32)));
+      tile_magic_index = single_color_test_bit_to_color_t((int)GetWorldTileMagicMask(
+          GetWorldTileType(AdventureWorldTileFromCoordinate(g_world_player_x),
+                           AdventureWorldTileFromCoordinate(g_world_player_y))));
 
       if (((tile_magic_index & (int)(signed char)global_cards_data[card_id].color) == 0) &&
           ((signed char)global_cards_data[card_id].color != 0))
@@ -4127,7 +4129,11 @@ int BuyAnyCardFromTown(int payment_color, int town_index)
         }
       }
 
-      price = (price * 0x4e2) / (internal_rand(((g_world_player_y & 0x1f) * (g_world_player_x & 0x1f)) / 10) + 0x2ee);
+      price = (price * 0x4e2) /
+              (internal_rand(((QuantizeAdventureWorldCoordinate(g_world_player_y) & 0x1f) *
+                              (QuantizeAdventureWorldCoordinate(g_world_player_x) & 0x1f)) /
+                             10) +
+               0x2ee);
 
       price = ClampIntToRange((price / 0x32) * 5, 5, 1000);
 

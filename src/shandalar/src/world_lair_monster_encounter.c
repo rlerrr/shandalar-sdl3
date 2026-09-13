@@ -2243,8 +2243,10 @@ LAB_4F4BB2:
   {
     if ((slot_index != loop_index) && (g_lair_or_monster_slots[loop_index].entry_type != SHANDALAR_ENTRY_LAIR))
     {
-      if ((ApproximateDistance(g_world_player_x - g_lair_or_monster_slots[loop_index].world_x,
-                               g_world_player_y - g_lair_or_monster_slots[loop_index].world_y) < 0x40) &&
+      if ((ApproximateDistance(QuantizeAdventureWorldCoordinate(g_world_player_x) -
+                                   g_lair_or_monster_slots[loop_index].world_x,
+                               QuantizeAdventureWorldCoordinate(g_world_player_y) -
+                                   g_lair_or_monster_slots[loop_index].world_y) < 0x40) &&
           (g_lair_or_monster_slots[loop_index].entry_type != SHANDALAR_ENTRY_NONE))
       {
         FreeOpeningMenuSpriteWorkEntries(loop_index, loop_index + 8);

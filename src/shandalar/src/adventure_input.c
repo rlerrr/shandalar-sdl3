@@ -8,6 +8,7 @@
 #include <setjmp.h>
 #include <time.h>
 #include <errno.h>
+#include <math.h>
 
 #include "platform/legacy_io.h"
 #include "defs.h"
@@ -280,8 +281,111 @@ int MapWorldClickToMovementKey(int x, int y)
   return keycode_map[direction];
 }
 
+int QuantizeAdventureWorldCoordinate(double coordinate)
+{
+  return (int)floor(coordinate + 0.5);
+}
+
+int AdventureWorldTileFromCoordinate(double coordinate)
+{
+  return (int)floor(coordinate / 32.0);
+}
+
+static int GetAdventureMovementTickInterval(int tile_type)
+{
+  int movement_tick_interval;
+
+  movement_tick_interval = 1;
+  if ((tile_type == 2) || ((tile_type == 3 && ((g_world_magic_bitmap & 8U) == 0)) ||
+                           (tile_type == 4 && ((g_world_magic_bitmap & 0x200U) == 0))) ||
+      ((tile_type == 5) && ((g_world_magic_bitmap & 0x200U) == 0)))
+  {
+    movement_tick_interval = 3;
+  }
+  if ((WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y, g_world_move_dir_index) != 0) ||
+      (WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y,
+                                 (g_world_move_dir_index + 3U & 7) + 1) != 0))
+  {
+    movement_tick_interval = 1;
+  }
+  if (g_food == 0)
+  {
+    movement_tick_interval = ClampIntToRange(movement_tick_interval + 2, 0, 4);
+  }
+  return movement_tick_interval;
+}
+
+void AdvanceAdventureWorldPlayer(double elapsed_seconds)
+{
+  double movement_step;
+  double movement_speed;
+  double previous_world_x;
+  double previous_world_y;
+  int previous_tile_x;
+  int previous_tile_y;
+  int tile_type;
+  int movement_tick_interval;
+  int road_acceleration;
+
+  if ((elapsed_seconds <= 0.0) || (g_world_move_dir_index == 0))
+  {
+    return;
+  }
+  if (elapsed_seconds > 0.1)
+  {
+    elapsed_seconds = 0.1;
+  }
+
+  previous_world_x = g_world_player_x;
+  previous_world_y = g_world_player_y;
+  previous_tile_x = AdventureWorldTileFromCoordinate(previous_world_x);
+  previous_tile_y = AdventureWorldTileFromCoordinate(previous_world_y);
+  g_world_player_tile_x = previous_tile_x;
+  g_world_player_tile_y = previous_tile_y;
+
+  tile_type = GetWorldTileType(AdventureWorldTileFromCoordinate(
+                                  g_world_player_x + g_neighbor_dx[g_world_move_dir_index]),
+                              AdventureWorldTileFromCoordinate(
+                                  g_world_player_y + g_neighbor_dy[g_world_move_dir_index]));
+  movement_tick_interval = GetAdventureMovementTickInterval(tile_type);
+  movement_step = movement_tick_interval == 3 ? 2.0 : 1.0;
+  road_acceleration = WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y,
+                                                (g_world_move_dir_index + 3U & 7) + 1);
+  if (Scards[WORLDMAGIC_QUICKENING].worldmagic_duration != 0)
+  {
+    movement_step += 1.0;
+  }
+  else if (road_acceleration != 0)
+  {
+    // The original added one unit every other accepted road step.
+    movement_step += 0.5;
+  }
+  movement_speed = movement_step / ((double)movement_tick_interval * 0.060);
+
+  g_world_player_x += g_neighbor_dx[g_world_move_dir_index] * movement_speed * elapsed_seconds;
+  g_world_player_y += g_neighbor_dy[g_world_move_dir_index] * movement_speed * elapsed_seconds;
+
+  tile_type = GetWorldTileType(AdventureWorldTileFromCoordinate(g_world_player_x),
+                               AdventureWorldTileFromCoordinate(g_world_player_y));
+  if ((tile_type == 0) &&
+      ((fabs(g_world_player_x - (floor(g_world_player_x / 32.0) * 32.0 + 16.0)) < 12.0) ||
+       (fabs(g_world_player_y - (floor(g_world_player_y / 32.0) * 32.0 + 16.0)) < 12.0)))
+  {
+    g_world_move_dir_index = 0;
+    g_world_player_x = previous_world_x;
+    g_world_player_y = previous_world_y;
+  }
+
+  g_world_player_tile_x = AdventureWorldTileFromCoordinate(g_world_player_x);
+  g_world_player_tile_y = AdventureWorldTileFromCoordinate(g_world_player_y);
+  if ((previous_tile_x != g_world_player_tile_x) || (previous_tile_y != g_world_player_tile_y))
+  {
+    g_world_location_entry_latched = 0;
+  }
+}
+
 // FUNCTION: SHANDALAR 0x0055e808
-void UpdateAdventureWorldInputAndMovement(void)
+void UpdateAdventureWorldInputAndLogic(void)
 {
   int move_offset_y;             // ebp - 0x70
   int move_offset_x;             // ebp - 0x6c
@@ -297,8 +401,6 @@ void UpdateAdventureWorldInputAndMovement(void)
   int move_step_divisor;         // ebp - 0x44
   unsigned int tile_magic_mask;  // ebp - 0x40
   int abs_delta_y;               // ebp - 0x3c
-  int previous_world_y;          // ebp - 0x38
-  int previous_world_x;          // ebp - 0x34
   int key_code;                  // ebp - 0x30
   int key_magic_index;           // ebp - 0x2c
   int slot_index;                // ebp - 0x28
@@ -311,6 +413,8 @@ void UpdateAdventureWorldInputAndMovement(void)
   int nearest_slot_index;        // ebp - 0xc
   int movement_tick_interval;    // ebp - 0x8
   int dungeon_index;             // ebp - 0x4
+  int player_world_x;
+  int player_world_y;
 
   if (IsKeyInputQueueEmpty() == 0)
   {
@@ -477,8 +581,9 @@ void UpdateAdventureWorldInputAndMovement(void)
           {
             if (SHANDALAR_ENTRY_LAIR < g_lair_or_monster_slots[slot_index].entry_type)
             {
-              nearest_slot_distance = ApproximateDistance(g_world_player_x - g_lair_or_monster_slots[slot_index].world_x,
-                                                          g_world_player_y - g_lair_or_monster_slots[slot_index].world_y);
+              nearest_slot_distance = ApproximateDistance(
+                  QuantizeAdventureWorldCoordinate(g_world_player_x) - g_lair_or_monster_slots[slot_index].world_x,
+                  QuantizeAdventureWorldCoordinate(g_world_player_y) - g_lair_or_monster_slots[slot_index].world_y);
               if ((int)nearest_slot_distance < (int)tile_magic_mask)
               {
                 tile_magic_mask = nearest_slot_distance;
@@ -521,12 +626,11 @@ void UpdateAdventureWorldInputAndMovement(void)
     g_adventure_demo_idle_ticks = 300;
   }
 
-  // Input can change direction between movement-gate ticks. Cancel the
-  // preceding direction's camera velocity before applying this tick's move.
-  SyncSmoothWorldCameraDirection(g_world_player_x, g_world_player_y, g_world_move_dir_index);
+  player_world_x = QuantizeAdventureWorldCoordinate(g_world_player_x);
+  player_world_y = QuantizeAdventureWorldCoordinate(g_world_player_y);
 
-  random_value = g_neighbor_dx[g_world_move_dir_index] + g_world_player_x;
-  random_world_x = g_neighbor_dy[g_world_move_dir_index] + g_world_player_y;
+  random_value = QuantizeAdventureWorldCoordinate(g_neighbor_dx[g_world_move_dir_index] + g_world_player_x);
+  random_world_x = QuantizeAdventureWorldCoordinate(g_neighbor_dy[g_world_move_dir_index] + g_world_player_y);
   tile_type = GetWorldTileType(random_value / 32, random_world_x / 32);
   key_magic_index = GetWorldTileMagicMask(tile_type);
   if (key_magic_index != 0)
@@ -541,54 +645,14 @@ void UpdateAdventureWorldInputAndMovement(void)
     abs_delta_y = 0;
   }
 
-  movement_tick_interval = 1;
-  g_world_player_tile_x = g_world_player_x / 32;
-  g_world_player_tile_y = g_world_player_y / 32;
-  if ((tile_type == 2) || ((tile_type == 3 && ((g_world_magic_bitmap & 8U) == 0)) || (tile_type == 4 && ((g_world_magic_bitmap & 0x200U) == 0))))
-  {
-    movement_tick_interval = 3;
-  }
-  if ((tile_type == 5) && ((g_world_magic_bitmap & 0x200U) == 0))
-  {
-    movement_tick_interval = 3;
-  }
-  if (WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y, g_world_move_dir_index) != 0)
-  {
-    movement_tick_interval = 1;
-  }
-  if (WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y, (g_world_move_dir_index + 3U & 7) + 1) != 0)
-  {
-    movement_tick_interval = 1;
-  }
-  if (g_food == 0)
-  {
-    movement_tick_interval = ClampIntToRange(movement_tick_interval + 2, 0, 4);
-  }
+  g_world_player_tile_x = AdventureWorldTileFromCoordinate(g_world_player_x);
+  g_world_player_tile_y = AdventureWorldTileFromCoordinate(g_world_player_y);
+  movement_tick_interval = GetAdventureMovementTickInterval(tile_type);
 
-  random_value = g_world_player_x / 32;
-  random_world_x = g_world_player_y / 32;
-  previous_world_x = g_world_player_x;
-  previous_world_y = g_world_player_y;
+  random_value = g_world_player_tile_x;
+  random_world_x = g_world_player_tile_y;
   if (g_monster_timer % movement_tick_interval == 0)
   {
-    if (movement_tick_interval == 3)
-    {
-      g_world_player_x += g_neighbor_dx[g_world_move_dir_index] * 2;
-    }
-    else
-    {
-      g_world_player_x += g_neighbor_dx[g_world_move_dir_index];
-    }
-
-    if (movement_tick_interval == 3)
-    {
-      g_world_player_y += g_neighbor_dy[g_world_move_dir_index] * 2;
-    }
-    else
-    {
-      g_world_player_y += g_neighbor_dy[g_world_move_dir_index];
-    }
-
     g_world_player_animation_frame = g_world_player_animation_frame + 1;
     if (4 < g_world_player_animation_frame)
     {
@@ -609,24 +673,8 @@ void UpdateAdventureWorldInputAndMovement(void)
       g_world_player_animation_direction = g_world_move_dir_index;
     }
 
-    if ((Scards[WORLDMAGIC_QUICKENING].worldmagic_duration != 0) ||
-        (((g_monster_timer & 1U) != 0 &&
-          (WorldRoadTileHasDirection(g_world_player_tile_x, g_world_player_tile_y, (g_world_move_dir_index + 3U & 7) + 1) != 0))))
-    {
-      g_world_player_x = g_world_player_x + g_neighbor_dx[g_world_move_dir_index];
-      g_world_player_y = g_world_player_y + g_neighbor_dy[g_world_move_dir_index];
-    }
-
-    tile_type = GetWorldTileType(g_world_player_x / 32, g_world_player_y / 32);
-    if ((tile_type == 0) &&
-        ((abs(g_world_player_x - ((g_world_player_x & 0xffffffe0U) + 0x10)) < 0xc) || (abs(g_world_player_y - ((g_world_player_y & 0xffffffe0U) + 0x10)) < 0xc)))
-    {
-      g_world_move_dir_index = 0;
-      g_world_player_x = previous_world_x;
-      g_world_player_y = previous_world_y;
-    }
-
-    SetSmoothWorldCameraVelocity(g_world_player_x, g_world_player_y, movement_tick_interval);
+    tile_type = GetWorldTileType(AdventureWorldTileFromCoordinate(g_world_player_x),
+                                 AdventureWorldTileFromCoordinate(g_world_player_y));
 
     if ((internal_rand(0x28) == 0) && (g_skip_world_sfx_preload == 0))
     {
@@ -664,12 +712,8 @@ void UpdateAdventureWorldInputAndMovement(void)
       }
     }
 
-    g_world_player_tile_x = g_world_player_x / 32;
-    g_world_player_tile_y = g_world_player_y / 32;
-    if ((random_value != g_world_player_tile_x) || (random_world_x != g_world_player_tile_y))
-    {
-      g_world_location_entry_latched = 0;
-    }
+    g_world_player_tile_x = AdventureWorldTileFromCoordinate(g_world_player_x);
+    g_world_player_tile_y = AdventureWorldTileFromCoordinate(g_world_player_y);
 
     if ((g_monster_timer & 1U) == 0)
     {
@@ -678,8 +722,8 @@ void UpdateAdventureWorldInputAndMovement(void)
       {
         if (g_town_slots[nearest_town_index].location_type != -1)
         {
-          castle_index = ApproximateDistance(g_town_slots[nearest_town_index].world_x * 0x20 + 0x10 - g_world_player_x,
-                                             g_town_slots[nearest_town_index].world_y * 0x20 + 0x10 - g_world_player_y);
+          castle_index = ApproximateDistance(g_town_slots[nearest_town_index].world_x * 0x20 + 0x10 - player_world_x,
+                                             g_town_slots[nearest_town_index].world_y * 0x20 + 0x10 - player_world_y);
           if (castle_index < nearest_town_distance)
           {
             nearest_town_distance = castle_index;
@@ -846,8 +890,10 @@ void UpdateAdventureWorldInputAndMovement(void)
       }
     }
 
-    if ((g_world_location_entry_latched == 0) && (abs((g_world_player_x & 0x1fU) - 0x10) < 0xc) &&
-        (abs((g_world_player_y & 0x1fU) - 0x10) < 0xc) && ((GetWorldMapPixelFlags(g_world_player_tile_x, g_world_player_tile_y) & 0x10) != 0))
+    if ((g_world_location_entry_latched == 0) &&
+        (abs((QuantizeAdventureWorldCoordinate(g_world_player_x) & 0x1f) - 0x10) < 0xc) &&
+        (abs((QuantizeAdventureWorldCoordinate(g_world_player_y) & 0x1f) - 0x10) < 0xc) &&
+        ((GetWorldMapPixelFlags(g_world_player_tile_x, g_world_player_tile_y) & 0x10) != 0))
     {
       move_step_divisor = FindTownAtWorldCoordinates(g_world_player_tile_x, g_world_player_tile_y);
       if (move_step_divisor != -1)
@@ -862,11 +908,11 @@ void UpdateAdventureWorldInputAndMovement(void)
         {
           if (SHANDALAR_ENTRY_LAIR < g_lair_or_monster_slots[slot_index].entry_type)
           {
-            if (ApproximateDistance(g_world_player_x - g_lair_or_monster_slots[slot_index].world_x,
-                                    g_world_player_y - g_lair_or_monster_slots[slot_index].world_y) < 0x60)
+            if (ApproximateDistance(player_world_x - g_lair_or_monster_slots[slot_index].world_x,
+                                    player_world_y - g_lair_or_monster_slots[slot_index].world_y) < 0x60)
             {
-              delta_x = g_world_player_x - g_lair_or_monster_slots[slot_index].world_x;
-              delta_y = g_world_player_y - g_lair_or_monster_slots[slot_index].world_y;
+              delta_x = player_world_x - g_lair_or_monster_slots[slot_index].world_x;
+              delta_y = player_world_y - g_lair_or_monster_slots[slot_index].world_y;
               if (abs(delta_y) / 2 < abs(delta_x))
               {
                 move_offset_x = SignNonZero(delta_x) * 0x30;
@@ -875,7 +921,7 @@ void UpdateAdventureWorldInputAndMovement(void)
               {
                 move_offset_x = 0;
               }
-              g_lair_or_monster_slots[slot_index].world_x = g_world_player_x - move_offset_x;
+              g_lair_or_monster_slots[slot_index].world_x = player_world_x - move_offset_x;
 
               if (abs(delta_x) / 2 < abs(delta_y))
               {
@@ -885,7 +931,7 @@ void UpdateAdventureWorldInputAndMovement(void)
               {
                 move_offset_y = 0;
               }
-              g_lair_or_monster_slots[slot_index].world_y = g_world_player_y - move_offset_y;
+              g_lair_or_monster_slots[slot_index].world_y = player_world_y - move_offset_y;
             }
           }
         }
@@ -901,7 +947,9 @@ void UpdateAdventureWorldInputAndMovement(void)
       }
     }
 
-    if ((g_world_location_entry_latched == 0) && ((g_world_player_x - 8U & 0x10) == 0) && ((g_world_player_y - 8U & 0x10) == 0) &&
+    if ((g_world_location_entry_latched == 0) &&
+        (((QuantizeAdventureWorldCoordinate(g_world_player_x) - 8U) & 0x10) == 0) &&
+        (((QuantizeAdventureWorldCoordinate(g_world_player_y) - 8U) & 0x10) == 0) &&
         ((GetWorldMapPixelFlags(g_world_player_tile_x, g_world_player_tile_y) & 0x40) != 0))
     {
       dungeon_index = FindCastleDungeonAtWorldCoordinates(g_world_player_tile_x, g_world_player_tile_y);
