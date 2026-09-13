@@ -249,6 +249,22 @@ int player_has_available_blocker(int player)
   } while (1);
 }
 
+static int player_has_declared_blocker(int player)
+{
+  int card;
+
+  for (card = 0; card < g_active_cards_count[player]; card++)
+  {
+    if (is_in_play(player, card) != 0 &&
+        (global_card_instances[player][card].state & STATE_BLOCKING) != 0)
+    {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 // FUNCTION: MAGIC 0x00440d82
 // FUNCTION: SHANDALAR 0x0040c602
 void choose_blockers_human(int player)
@@ -272,6 +288,7 @@ void choose_blockers_human(int player)
     return;
   }
 
+  g_undeclare_blockers_possible = 1;
   TENTATIVE_reassess_all_cards(0, 0xff);
   attacking_player_copy = player;
   defending_player = 1 - player;
@@ -293,19 +310,38 @@ void choose_blockers_human(int player)
     }
   }
   done = 0;
-  while ((done == 0) && (player_has_available_blocker(defending_player) != 0))
+  while ((done == 0) &&
+         (player_has_available_blocker(defending_player) != 0 ||
+          player_has_declared_blocker(defending_player) != 0))
   {
     load_text(global_ui_strings_filename, "PROMPT_CHOOSEBLOCKERS");
     if (C_real_select_target(defending_player, defending_player, defending_player, 0x2200, 0x2000002, 0, 0, 0, 0, 0,
-                             -1, -1, -1, -1, 0x400, 0, 0x11, g_text_lines[0], 2, &selected_blocker) == 0)
+                             -1, -1, -1, -1, 0x400, 0, TARGET_STATE_TAPPED, g_text_lines[0], 2, &selected_blocker) == 0)
     {
       done = 1;
+    }
+    else if ((global_card_instances[selected_blocker.player][selected_blocker.card].state & STATE_BLOCKING) != 0)
+    {
+      if (g_undeclare_blockers_possible != 0)
+      {
+        global_card_instances[selected_blocker.player][selected_blocker.card].state &= ~STATE_BLOCKING;
+        global_card_instances[selected_blocker.player][selected_blocker.card].blocking = 0xff;
+        TENTATIVE_reassess_all_cards(0, 0xff);
+        request_duel_display_refresh_if_human(selected_blocker.player, selected_blocker.card, 3, 2);
+      }
+      else
+      {
+        set_duel_prompt_text("Blockers cannot be undeclared after block costs or blocker-chosen abilities have resolved.");
+        Sleep(2000);
+        set_duel_prompt_text("");
+      }
     }
     else
     {
       g_combat_assignment_cancelled = 0;
       if ((g_battlefield_extra_ability_flags & 0x800000) != 0)
       {
+        g_undeclare_blockers_possible = 0;
         push_affected_card_stack();
         g_trigger_cause_controller = selected_blocker.player;
         g_trigger_cause = selected_blocker.card;
@@ -335,6 +371,7 @@ void choose_blockers_human(int player)
           TENTATIVE_reassess_all_cards(0, 0xff);
           if ((g_battlefield_extra_ability_flags & 0x100000) != 0)
           {
+            g_undeclare_blockers_possible = 0;
             g_trigger_cause_controller = selected_blocker.player;
             g_trigger_cause = selected_blocker.card;
             dispatch_trigger_twice_once_with_each_player_as_reason(g_current_player, TRIGGER_BLOCKER_CHOSEN, gs_blocker_selected_00926210, 0);

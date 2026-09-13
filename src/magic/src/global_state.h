@@ -633,6 +633,9 @@ GLOBAL_STATE_EXTERN int g_attacking_creature_count;
  * action that cannot safely be rolled back. */
 GLOBAL_STATE_EXTERN int g_undeclare_attackers_possible;
 
+/* The corresponding undo guard while the defending player chooses blockers. */
+GLOBAL_STATE_EXTERN int g_undeclare_blockers_possible;
+
 // GLOBAL: MAGIC 0x00926668
 // GLOBAL: SHANDALAR 0x0093a798
 GLOBAL_STATE_EXTERN int g_duel_extra_turn_player;
