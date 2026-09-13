@@ -1,4 +1,5 @@
 #include "platform/winuser_compat.h"
+#include "platform/winuser_sdl_compositor.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -401,6 +402,7 @@ BOOL DestroyWindow(HWND window)
   SendMessageA(window, WM_DESTROY, 0, 0);
   SendMessageA(window, WM_NCDESTROY, 0, 0);
   unlink_child(window);
+  shandalar_win32_sdl_compositor_forget_window(window);
   /*
    * Keep the window allocation as a tombstone so stale HWND values can be
    * rejected safely, but release everything owned by the live window.  Deck

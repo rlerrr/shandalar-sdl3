@@ -33,6 +33,7 @@ SDL_Texture *shandalar_win32_sdl_compositor_texture(HWND window,
 SDL_Texture *shandalar_win32_sdl_compositor_control_texture(HWND window,
                                                              int *width,
                                                              int *height);
+void shandalar_win32_sdl_compositor_forget_window(HWND window);
 int shandalar_win32_is_builtin_control(HWND window);
 void shandalar_win32_sdl_compositor_shutdown(void);
 

@@ -278,6 +278,23 @@ SDL_Texture *shandalar_win32_sdl_compositor_control_texture(HWND window,
   return update_window_texture(window, width, height, 1);
 }
 
+void shandalar_win32_sdl_compositor_forget_window(HWND window)
+{
+  WindowTexture **link = &g_textures;
+
+  while (*link) {
+    WindowTexture *entry = *link;
+    if (entry->window == window) {
+      *link = entry->next;
+      SDL_DestroyTexture(entry->texture);
+      free(entry->pixels);
+      free(entry);
+      return;
+    }
+    link = &entry->next;
+  }
+}
+
 static int event_mouse_position(SDL_Renderer *renderer, const SDL_Event *event,
                                 float *x, float *y)
 {
