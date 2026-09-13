@@ -15,6 +15,8 @@ namespace {
 
 SDL_Renderer *g_renderer;
 HWND g_territory_menu_windows[2];
+HWND g_listbox_drag_candidate;
+HWND g_listbox_drag_target;
 /* This cache is an adventure asset and survives duel ImGui contexts. */
 ImU32 g_shared_menu_sprite_pixels[64 * 64];
 int g_shared_menu_sprite_width;
@@ -478,6 +480,17 @@ void draw_builtin_control(HWND window)
     if (ImGui::IsItemFocused()) SetFocus(window);
   } else if (SDL_strcasecmp(class_name, "LISTBOX") == 0) {
     if (ImGui::BeginListBox("##list", ImVec2(width, height))) {
+      const bool hovered = ImGui::IsWindowHovered(
+          ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+      if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        g_listbox_drag_candidate = window;
+      if (g_listbox_drag_candidate == window &&
+          ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        g_listbox_drag_target = window;
+      const bool drag_scrolling = g_listbox_drag_target == window;
+      if (drag_scrolling)
+        ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+
       int count = static_cast<int>(SendMessageA(window, LB_GETCOUNT, 0, 0));
       bool multiple = (style & LBS_MULTIPLESEL) != 0;
       for (int i = 0; i < count; ++i) {
@@ -486,7 +499,7 @@ void draw_builtin_control(HWND window)
         bool selected = multiple ? SendMessageA(window, LB_GETSEL, i, 0) > 0 :
                                    SendMessageA(window, LB_GETCURSEL, 0, 0) == i;
         ImGui::PushID(i);
-        if (ImGui::Selectable(text, selected)) {
+        if (ImGui::Selectable(text, selected) && !drag_scrolling) {
           if (multiple)
             SendMessageA(window, LB_SETSEL, !selected, i);
           else
@@ -917,6 +930,10 @@ void draw_controls(void)
   draw_popup_menu();
   ImGui::End();
   ImGui::PopStyleVar();
+  if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    g_listbox_drag_candidate = nullptr;
+    g_listbox_drag_target = nullptr;
+  }
 }
 
 }  // namespace
@@ -1003,6 +1020,8 @@ extern "C" void shandalar_win32_imgui_shutdown(void)
   g_renderer = nullptr;
   g_territory_menu_windows[0] = nullptr;
   g_territory_menu_windows[1] = nullptr;
+  g_listbox_drag_candidate = nullptr;
+  g_listbox_drag_target = nullptr;
 }
 
 extern "C" void shandalar_win32_imgui_set_menu_sprite(
