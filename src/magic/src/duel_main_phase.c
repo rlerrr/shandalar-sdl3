@@ -331,7 +331,7 @@ void choose_blockers_human(int player)
       }
       else
       {
-        set_duel_prompt_text("Blockers cannot be undeclared after block costs or blocker-chosen abilities have resolved.");
+        set_duel_prompt_text("Can't undeclare blockers after block costs or abilities.");
         Sleep(2000);
         set_duel_prompt_text("");
       }
@@ -1091,7 +1091,7 @@ restart_main_phase_action_loop:
         }
         else if (g_duel_ai_mode_state != 1)
         {
-          set_duel_prompt_text("Attackers cannot be undeclared after attack costs or attacker-chosen abilities have resolved.");
+          set_duel_prompt_text("Can't undeclare attackers after attack costs or abilities.");
           Sleep(2000);
           set_duel_prompt_text("");
         }
