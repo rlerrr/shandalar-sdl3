@@ -291,8 +291,8 @@ int RenderStatsTabButtonControl(AdvMenuControl *control, int mode)
   {
     return 0;
   }
-  encoded_image = *(EncodedImage **)((char *)&g_stats_menu_button_sprites + ((control->selection_value - 1) << 4) + mode * 4);
-  highlight_image = *(EncodedImage **)((char *)&g_stats_menu_button_sprites + ((control->selection_value - 1) << 4) + 4);
+  encoded_image = ((EncodedImage **)&g_stats_menu_button_sprites)[(control->selection_value - 1) * 4 + mode];
+  highlight_image = g_stats_menu_button_sprites.highlight[control->selection_value - 1];
   x = control->x;
   y = control->y;
   width = control->width;

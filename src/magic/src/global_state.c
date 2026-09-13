@@ -863,11 +863,10 @@ unsigned int save_or_load_ver2(void)
   {
     for (card_index = g_card_count; g_card_count + 0x10 > card_index; ++card_index)
     {
-      if (*(int *)((char *)global_cards_data + card_index * 0x48 + 0x24) != -1)
+      if (global_cards_data[card_index].id != -1)
       {
-        card_type = CardTypeFromID(*(int *)((char *)global_cards_data + card_index * 0x48 + 0x24));
-        *(int *)((char *)global_cards_data + card_index * 0x48 + 0x34) =
-            *(int *)((char *)global_cards_data + card_type * 0x48 + 0x34);
+        card_type = CardTypeFromID(global_cards_data[card_index].id);
+        global_cards_data[card_index].code_pointer = global_cards_data[card_type].code_pointer;
       }
     }
   }

@@ -288,7 +288,8 @@ void ShowCityInfoScreen(int unused)
 
     for (i = 0; i < 4; i++)
     {
-      *(EncodedImage **)((char *)g_city_info_scroll_button_sprites + j * 0x10 + i * 4) = EncodeSpriteFromPage(1, i * 0x12 + 0x2b, j * 0x31 + 0x1c, 0x11, 0x2f);
+      g_city_info_scroll_button_sprites[j * 4 + i] =
+          EncodeSpriteFromPage(1, i * 0x12 + 0x2b, j * 0x31 + 0x1c, 0x11, 0x2f);
     }
   }
 
