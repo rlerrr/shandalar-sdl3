@@ -16,6 +16,22 @@ static int menu_closures;
 static int text_changes;
 static int mouse_downs;
 static int mouse_ups;
+static int sleep_pump_calls;
+static int sleep_pump_depth;
+static int sleep_pump_max_depth;
+
+static BOOL sleep_test_pump(BOOL wait)
+{
+  ++sleep_pump_calls;
+  ++sleep_pump_depth;
+  if (sleep_pump_depth > sleep_pump_max_depth)
+    sleep_pump_max_depth = sleep_pump_depth;
+  if (sleep_pump_calls == 1)
+    Sleep(1);
+  --sleep_pump_depth;
+  (void)wait;
+  return TRUE;
+}
 
 static HWND modal_test_factory(HINSTANCE instance, LPCSTR template_name,
                                HWND parent)
@@ -381,6 +397,11 @@ int main(void)
   CHECK(PeekMessageA(&message, NULL, WM_TIMER, WM_TIMER, PM_REMOVE));
   CHECK(message.hwnd == NULL && message.wParam == thread_timer);
   CHECK(KillTimer(NULL, thread_timer));
+  shandalar_win32_set_pump_proc(sleep_test_pump);
+  Sleep(2);
+  shandalar_win32_set_pump_proc(NULL);
+  CHECK(sleep_pump_calls > 0);
+  CHECK(sleep_pump_max_depth == 1);
   listbox = CreateWindowExA(0, "LISTBOX", "", WS_CHILD | WS_VISIBLE,
                             0, 0, 80, 80, parent, (HMENU)43, NULL, NULL);
   CHECK(listbox);

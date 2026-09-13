@@ -115,7 +115,7 @@ BOOL CopyFileA(LPCSTR existing_filename, LPCSTR new_filename, BOOL fail_if_exist
   return SDL_CopyFile(existing_filename, new_filename) ? TRUE : FALSE;
 }
 
-void Sleep(DWORD milliseconds) { SDL_Delay(milliseconds); }
+void Sleep(DWORD milliseconds) { shandalar_win32_pump_for(milliseconds); }
 
 DWORD GetTickCount(void)
 {

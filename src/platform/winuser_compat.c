@@ -68,6 +68,7 @@ static size_t g_queue_count;
 static int g_quit_posted;
 static int g_quit_code;
 static ShandalarWin32PumpProc g_pump_proc;
+static int g_pump_depth;
 static POINT g_system_drag_endpoint;
 static int g_has_system_drag_endpoint;
 static POINT g_system_drag_origin;
@@ -649,7 +650,7 @@ BOOL PeekMessageA(MSG *message, HWND window, UINT min_message, UINT max_message,
 BOOL GetMessageA(MSG *message, HWND window, UINT min_message, UINT max_message)
 {
   while (!PeekMessageA(message, window, min_message, max_message, PM_REMOVE)) {
-    if (!g_pump_proc || !g_pump_proc(TRUE)) {
+    if (!shandalar_win32_pump(TRUE)) {
       /* A platform pump commonly reports shutdown in the same call that posts
        * WM_QUIT.  Consume that message before returning so the caller receives
        * a defined wParam, as it would from Win32 GetMessage(). */
@@ -1359,7 +1360,36 @@ void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc) { g_pump_proc = 
 
 BOOL shandalar_win32_pump(BOOL wait)
 {
-  return !g_pump_proc || g_pump_proc(wait);
+  BOOL result;
+
+  if (!g_pump_proc)
+    return TRUE;
+
+  ++g_pump_depth;
+  result = g_pump_proc(wait);
+  --g_pump_depth;
+  return result;
+}
+
+void shandalar_win32_pump_for(DWORD milliseconds)
+{
+  uint64_t end_tick;
+
+  if (!g_pump_proc || g_pump_depth != 0) {
+    SDL_Delay(milliseconds);
+    return;
+  }
+
+  if (milliseconds == 0) {
+    shandalar_win32_pump(FALSE);
+    return;
+  }
+
+  end_tick = SDL_GetTicks() + milliseconds;
+  do {
+    if (!shandalar_win32_pump(TRUE))
+      break;
+  } while (SDL_GetTicks() < end_tick);
 }
 
 void shandalar_win32_clear_quit_message(void)
@@ -1421,6 +1451,7 @@ void shandalar_win32_reset(void)
   g_quit_posted = 0;
   g_quit_code = 0;
   g_pump_proc = NULL;
+  g_pump_depth = 0;
   g_has_system_drag_endpoint = 0;
   g_has_system_drag_origin = 0;
   shandalar_controls_reset();

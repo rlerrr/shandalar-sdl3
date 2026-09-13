@@ -693,6 +693,7 @@ UINT timeKillEvent(UINT timer_id);
 typedef BOOL (*ShandalarWin32PumpProc)(BOOL wait);
 void shandalar_win32_set_pump_proc(ShandalarWin32PumpProc proc);
 BOOL shandalar_win32_pump(BOOL wait);
+void shandalar_win32_pump_for(DWORD milliseconds);
 void shandalar_win32_clear_quit_message(void);
 void shandalar_win32_set_system_drag_endpoint(int x, int y);
 void shandalar_win32_clear_system_drag_endpoint(void);
