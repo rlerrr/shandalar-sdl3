@@ -921,7 +921,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_AttackClass(HWND hwnd, UINT msg, WPARAM wpara
             case406_child_hwnd;
         groups[case406_group_index].attacker_count++;
       }
-      else if (case406_child_side != 0 && groups[case406_group_index].blocker_count < ATTACK_MAX_CARDS_PER_GROUP)
+      else if (case406_child_side == 0 && groups[case406_group_index].blocker_count < ATTACK_MAX_CARDS_PER_GROUP)
       {
         groups[case406_group_index].blockers[groups[case406_group_index].blocker_count] =
             case406_child_hwnd;
