@@ -35,13 +35,68 @@
 #endif
 
 #define OVERWORLD_LOGIC_INTERVAL_NS (60ULL * 1000000ULL)
+#define WORLD_SETTINGS_REGISTRY_PATH \
+  "Software\\MicroProse\\Magic: The Gathering\\WorldSettings"
 
-double g_overworld_target_fps = 30.0;
+// This may seem low but it's higher than original (16.67), and much higher when movement speed drops
+#define DEFAULT_OVERWORLD_TARGET_FPS 20.0
+
+double g_overworld_target_fps = DEFAULT_OVERWORLD_TARGET_FPS;
 
 #ifdef MODERN_FIXES
 #endif
 
 DIBSurface *GetPrimaryPage(int unused);
+
+static void LoadOverworldTargetFpsFromRegistry(void)
+{
+  static const char default_value[] = "20";
+  BYTE value[64];
+  DWORD type;
+  DWORD value_size;
+  HKEY settings_key;
+  char *parse_end;
+  double parsed_value;
+  int value_is_valid;
+
+  g_overworld_target_fps = DEFAULT_OVERWORLD_TARGET_FPS;
+  if (RegCreateKeyExA(HKEY_CURRENT_USER, WORLD_SETTINGS_REGISTRY_PATH, 0, NULL, 0,
+                      KEY_ALL_ACCESS, NULL, &settings_key, NULL) != ERROR_SUCCESS)
+  {
+    return;
+  }
+
+  type = 0;
+  memset(value, 0, sizeof(value));
+  value_size = sizeof(value) - 1;
+  value_is_valid = 0;
+  if ((RegQueryValueExA(settings_key, "TargetFPS", NULL, &type, value, &value_size) == ERROR_SUCCESS) &&
+      (type == REG_SZ) && (value_size > 1) && (value_size <= sizeof(value)))
+  {
+    value[sizeof(value) - 1] = '\0';
+    errno = 0;
+    parse_end = NULL;
+    parsed_value = strtod((const char *)value, &parse_end);
+    while ((parse_end != NULL) && isspace((unsigned char)*parse_end))
+    {
+      parse_end++;
+    }
+    if ((errno != ERANGE) && (parse_end != (char *)value) && (parse_end != NULL) &&
+        (*parse_end == '\0') && isfinite(parsed_value) &&
+        (parsed_value >= 1.0) && (parsed_value <= 1000.0))
+    {
+      g_overworld_target_fps = parsed_value;
+      value_is_valid = 1;
+    }
+  }
+
+  if (!value_is_valid)
+  {
+    RegSetValueExA(settings_key, "TargetFPS", 0, REG_SZ,
+                   (const BYTE *)default_value, sizeof(default_value));
+  }
+  RegCloseKey(settings_key);
+}
 
 static uint64_t GetOverworldFrameIntervalNs(void)
 {
@@ -1251,6 +1306,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
   srand(GetTickCount());
   set_global_base_directory(global_base_directory);
   _chdir(global_base_directory);
+  LoadOverworldTargetFpsFromRegistry();
 
   if (LoadAdvStringsFile("AdvStrings.txt") == 0)
   {
