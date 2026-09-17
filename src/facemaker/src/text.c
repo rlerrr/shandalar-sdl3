@@ -1071,7 +1071,11 @@ static int DrawTextFormattedString(FacemakerWindowBounds *dst, int text_color,
 
 /* Matching note: legacy callers pass `&format` from their own variadic frame,
  * so this entry point still accepts that old stack-pack pointer. New code
- * should use DrawTextFormattedVa instead. */
+ * should use DrawTextFormattedVa instead.
+ * Only defined where va_list is pointer-sized (MSVC, Emscripten): the cast
+ * below is illegal on SysV 64-bit ABIs (Linux/macOS), and the raw-stack
+ * trick wouldn't work there anyway since varargs live in registers. */
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
 // FUNCTION: SHANDALAR 0x0057b230
 // FUNCTION: FACEMAKER 0x004086c0
 int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shadow, int scale_to_screen, int center_x, int center_y,
@@ -1090,6 +1094,7 @@ int DrawTextFormatted(FacemakerWindowBounds *dst, int text_color, int draw_shado
                                    center_x, center_y, x, y, formatted_text,
                                    formatted_length);
 }
+#endif
 
 int DrawTextFormattedVa(FacemakerWindowBounds *dst, int text_color, int draw_shadow,
                         int scale_to_screen, int center_x, int center_y,

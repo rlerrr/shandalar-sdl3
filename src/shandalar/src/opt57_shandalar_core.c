@@ -359,12 +359,17 @@ void DrawFormattedTextShadowedCentered(FacemakerWindowBounds *window, int color_
 }
 
 // FUNCTION: SHANDALAR 0x0057b590
+void DrawFormattedTextCenteredNoShadow(FacemakerWindowBounds *window, int color_index, int x, int y, char *format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  DrawTextFormattedVa(window, color_index, 0, 1, 1, 1, x, y, format, args);
+  va_end(args);
+}
+
 void DrawUiScaledCenteredTextNoShadow(FacemakerWindowBounds *window, int color_index, int x, int y, char *text)
 {
-  intptr_t args[2];
-  args[0] = (intptr_t)"%s";
-  args[1] = (intptr_t)text;
-  DrawTextFormatted(window, color_index, 0, 1, 1, 1, x, y, args);
+  DrawFormattedTextCenteredNoShadow(window, color_index, x, y, "%s", text);
 }
 
 // FUNCTION: SHANDALAR 0x0057b5f0
