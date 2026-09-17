@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#ifdef _MSC_VER
 #include <malloc.h>
+#endif
 #include "platform/legacy_io.h"
 #include <string.h>
 #include "cardartlib/src/assert.h"

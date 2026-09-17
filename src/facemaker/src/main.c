@@ -3,7 +3,9 @@
 #include "platform/winuser_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _MSC_VER
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <ctype.h>
 #include "cardartlib/src/assert.h"

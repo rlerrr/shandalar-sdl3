@@ -1,7 +1,9 @@
 #include "platform/gdi_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _MSC_VER
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <stdarg.h>
 #include "cardartlib/src/assert.h"
