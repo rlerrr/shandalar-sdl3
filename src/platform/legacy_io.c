@@ -632,7 +632,20 @@ static int find_next_match(FindState *state, struct _finddata_t *data)
 {
   struct dirent *entry;
   while ((entry = readdir(state->directory)) != NULL) {
-    if (fnmatch(state->pattern, entry->d_name, FNM_CASEFOLD) == 0) {
+    /* DOS findfirst semantics are case-insensitive, but FNM_CASEFOLD is a
+     * GNU/musl extension: glibc hides it without _GNU_SOURCE and Apple libc
+     * lacks it entirely. Lowercase both sides (ASCII only, matching DOS
+     * behavior) and use plain fnmatch instead. */
+    char lower_pattern[sizeof(state->pattern)];
+    char lower_name[sizeof(data->name) + 16];
+    size_t i;
+    for (i = 0; i + 1 < sizeof(lower_pattern) && state->pattern[i]; ++i)
+      lower_pattern[i] = (char)tolower((unsigned char)state->pattern[i]);
+    lower_pattern[i] = '\0';
+    for (i = 0; i + 1 < sizeof(lower_name) && entry->d_name[i]; ++i)
+      lower_name[i] = (char)tolower((unsigned char)entry->d_name[i]);
+    lower_name[i] = '\0';
+    if (fnmatch(lower_pattern, lower_name, 0) == 0) {
       char full_path[sizeof(state->directory_path) + sizeof(data->name) + 2];
       struct stat st;
       snprintf(data->name, sizeof(data->name), "%s", entry->d_name);
