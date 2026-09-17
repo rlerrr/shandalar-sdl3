@@ -71,7 +71,10 @@ target_compile_definitions(shandalar PRIVATE
   SHANDALAR
   LoadPcxIntoPageNoPalette=ShandalarLoadPcxIntoPageNoPalette
 )
-if(EMSCRIPTEN)
+# Non-Windows libcs lack MSVC's extras (_itoa, _stricmp, ...). Force-include the
+# platform shim everywhere except Windows: MSVC/clang-cl provide the real
+# functions (and clang-cl wants /FI rather than -include).
+if(NOT WIN32)
   target_compile_options(shandalar PRIVATE
     -include platform/legacy_io.h
   )
