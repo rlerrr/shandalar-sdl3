@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "platform/legacy_io.h"
+#include "platform/file_io.h"
 
 
 enum ObjectKind {
@@ -208,20 +209,15 @@ static unsigned int read_be32(const unsigned char *data)
  * em height. SDL_ttf exposes the cell metrics but not the em square, so read
  * the small amount of sfnt metadata needed to reproduce that value.
  */
-static void load_font_design_metrics(struct ShandalarFont *font, const char *path)
+static void load_font_design_metrics(struct ShandalarFont *font, const unsigned char *data, size_t size)
 {
-  unsigned char *data;
-  size_t size;
   unsigned int table_count;
   unsigned int table_index;
   unsigned int head_offset = 0;
   unsigned int os2_offset = 0;
 
-  if (!font || !path)
+  if (!font || !data || size < 12)
     return;
-  data = (unsigned char *)SDL_LoadFile(path, &size);
-  if (!data || size < 12)
-    goto done;
   table_count = read_be16(data + 4);
   if (table_count > (size - 12) / 16)
     goto done;
@@ -2062,8 +2058,27 @@ static HFONT open_font(const LOGFONTA *description)
                                    ? -result->size
                                    : result->size;
   SDL_snprintf(path, sizeof(path), "%s/%s", g_font_root, filename);
-  load_font_design_metrics(result, path);
-  result->font = TTF_OpenFont(path, (float)result->size);
+  
+  /* Route font loading through the legacy_io stream layer so it gets the
+    * same case-insensitive asset resolution as everything else (the R2
+    * bucket is all-lowercase; Windows never noticed). */
+  SDL_IOStream *io = shandalar_open_file_io(path, "rb");
+  if (!io) {
+    SDL_Log("gdi: could not open font %s", path);
+    free(result);
+    return NULL;
+  }
+  {
+    size_t metrics_size = 0;
+    unsigned char *metrics = (unsigned char *)SDL_LoadFile_IO(io, &metrics_size, false);
+    if (metrics) {
+      load_font_design_metrics(result, metrics, metrics_size);
+      SDL_free(metrics);
+    }
+    SDL_SeekIO(io, 0, SDL_IO_SEEK_SET);
+  }
+  result->font = TTF_OpenFontIO(io, true, (float)result->size);
+  
   if (result->font) {
     if (description && description->lfWeight >= FW_BOLD &&
         SDL_strcasecmp(filename, "TT0300M_.TTF") != 0)
