@@ -1,12 +1,6 @@
 #ifndef SHANDALAR_GDI_COMPAT_H
 #define SHANDALAR_GDI_COMPAT_H
 
-/*
- * 32-bit stdcall name decoration used to keep these compatibility functions
- * distinct from the real Win32 imports used by SDL.  The x64 ABI does not
- * decorate those names, so namespace the shim at preprocessing time.
- */
-#if defined(_WIN64)
 #define BeginPaint ShandalarBeginPaint
 #define BitBlt ShandalarBitBlt
 #define ClientToScreen ShandalarClientToScreen
@@ -89,7 +83,6 @@
 #define UnregisterClassA ShandalarUnregisterClassA
 #define timeBeginPeriod ShandalarTimeBeginPeriod
 #define timeEndPeriod ShandalarTimeEndPeriod
-#endif
 
 #include <SDL3/SDL.h>
 #include <stdint.h>
