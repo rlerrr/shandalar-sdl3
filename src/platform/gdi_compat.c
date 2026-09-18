@@ -220,7 +220,7 @@ static void load_font_design_metrics(struct ShandalarFont *font, const unsigned 
     return;
   table_count = read_be16(data + 4);
   if (table_count > (size - 12) / 16)
-    goto done;
+    return;
   for (table_index = 0; table_index < table_count; ++table_index) {
     const unsigned char *record = data + 12 + table_index * 16;
     unsigned int offset = read_be32(record + 8);
@@ -241,8 +241,6 @@ static void load_font_design_metrics(struct ShandalarFont *font, const unsigned 
       font->cell_height_units = win_ascent + win_descent;
     }
   }
-done:
-  SDL_free(data);
 }
 
 static unsigned int cp1252_codepoint(unsigned char ch)
