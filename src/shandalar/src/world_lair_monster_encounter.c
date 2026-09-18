@@ -19,23 +19,6 @@
 #include "drawcardlib/src/pic.h"
 #include "cardartlib/src/palette.h"
 
-typedef unsigned char byte;
-typedef unsigned char uchar;
-typedef int undefined3;
-typedef __int64 longlong;
-#ifndef true
-#define true 1
-#endif
-#ifndef false
-#define false 0
-#endif
-#ifndef bool
-#define bool int
-#endif
-#define CONCAT31(a, b) ((int)(b))
-#define CONCAT44(a, b) (((__int64)(a) << 32) | (unsigned int)(b))
-
-
 extern int g_player_starting_life;
 // GLOBAL: SHANDALAR 0x007483e4
 int g_analyzed_deck_special_rules;
@@ -1412,7 +1395,7 @@ undefined4 BuildQuestStatusMessage(void)
     }
     if ((((g_current_quest_type == 0) || (g_current_quest_type == 2)) ||
          ((g_current_quest_type == 1 &&
-           (FindDeckSlotForQuestColorAndType((uchar)g_current_quest_color,
+           (FindDeckSlotForQuestColorAndType((uint8_t)g_current_quest_color,
                                              (1 << (g_current_quest_destination & 3))) != 0)))) ||
         (g_current_quest_type < -100))
     {
