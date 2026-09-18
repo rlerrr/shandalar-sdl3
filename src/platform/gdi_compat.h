@@ -52,6 +52,7 @@
 #define GetSystemMetrics ShandalarGetSystemMetrics
 #define GetTextExtentPoint32A ShandalarGetTextExtentPoint32A
 #define GetTickCount ShandalarGetTickCount
+#define GetWindow ShandalarGetWindow
 #define GetWindowRect ShandalarGetWindowRect
 #define GetWindowLongPtrA ShandalarGetWindowLongPtrA
 #define GetWindowThreadProcessId ShandalarGetWindowThreadProcessId

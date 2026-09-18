@@ -80,7 +80,7 @@ static int shandalar_deck_card_sort_key(int internal_card_id)
          (unsigned char)global_cards_data[internal_card_id].name[0];
 }
 
-#ifdef __EMSCRIPTEN__
+#ifndef _WIN32
 void __cdecl _assert(void *expression, void *filename, unsigned line)
 {
   fprintf(stderr, "Assertion failed: %s, file %s, line %u\n",
