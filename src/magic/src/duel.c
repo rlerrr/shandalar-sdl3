@@ -591,17 +591,17 @@ int TENTATIVE_start_turn(int player)
   if ((g_land_can_be_played & LCBP_SKIP_TURN) != 0)
   {
     g_land_can_be_played &= ~LCBP_SKIP_TURN;
-    C_dispatch_event_raw(0x22);
+    C_dispatch_event_raw(EVENT_CLEANUP);
     return 1;
   }
   reset_recorded_actions();
   g_current_phase = PHASE_START;
   update_phase_display(player, g_current_phase);
-  C_dispatch_event_raw(0x6a);
+  C_dispatch_event_raw(EVENT_CAN_SKIP_TURN);
   if ((g_land_can_be_played & LCBP_SKIP_TURN) != 0)
   {
     g_land_can_be_played &= ~LCBP_SKIP_TURN;
-    C_dispatch_event_raw(0x22);
+    C_dispatch_event_raw(EVENT_CLEANUP);
     return 1;
   }
   g_duel_winner = 0;
@@ -947,7 +947,7 @@ int untap_phase_exe(unsigned int player)
             g_affected_card_controller = loop_player;
             g_affected_card = card;
             g_event_result = 0;
-            C_dispatch_event_raw(0x7d);
+            C_dispatch_event_raw(EVENT_TRIGGER);
             event_result_copy = g_event_result;
             if (event_result_copy == 1)
             {
@@ -1020,7 +1020,7 @@ int untap_phase_exe(unsigned int player)
             {
               g_affected_card_controller = g_target_player_choice;
               g_affected_card = selected_card;
-              C_dispatch_event_raw(0x7e);
+              C_dispatch_event_raw(EVENT_RESOLVE_TRIGGER);
             }
             else if ((can_activate_mana_source_for_stop_prompt(g_target_player_choice, selected_card) != 0) &&
                      (g_target_player_choice == player))
@@ -1055,7 +1055,7 @@ int untap_phase_exe(unsigned int player)
               g_affected_card_controller = loop_player;
               g_affected_card = card;
               g_event_result = 0;
-              C_dispatch_event_raw(0x7d);
+              C_dispatch_event_raw(EVENT_TRIGGER);
               event_result_copy = g_event_result;
               if (event_result_copy == 2)
               {
@@ -1075,7 +1075,7 @@ int untap_phase_exe(unsigned int player)
         {
           g_affected_card_controller = must_untap_cards[0];
           g_affected_card = must_untap_cards[1];
-          C_dispatch_event_raw(0x7e);
+          C_dispatch_event_raw(EVENT_RESOLVE_TRIGGER);
         }
       }
     }
@@ -1250,7 +1250,7 @@ int draw_phase(unsigned int player)
     }
     dispatch_trigger(player, 0xce, gs_draw_phase_008cf560, 1);
     g_event_result = 1;
-    C_dispatch_event_raw(10);
+    C_dispatch_event_raw(EVENT_DRAW_PHASE);
     draw_count = g_event_result;
     if (draw_count > 0)
     {
@@ -1418,7 +1418,7 @@ int discard_phase(unsigned int player, int phase_mode)
         }
       }
       g_event_result = 0;
-      C_dispatch_event_raw(0x1f);
+      C_dispatch_event_raw(EVENT_MAX_HAND_SIZE);
       did_discard = 0;
       while ((g_event_result == 0) && (hand_count_for_discard > 7))
       {
@@ -1665,7 +1665,7 @@ int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int
       g_special_mana_pool[opponent][index] = g_basiclandtypes_controlled[opponent][index];
     }
 
-    C_dispatch_event_raw(199);
+    C_dispatch_event_raw(EVENT_SHOULD_AI_PLAY);
     for (index = 0; index < g_active_cards_count[g_other_player]; index = index + 1)
     {
       if (global_card_instances[g_other_player][index].internal_card_id != -1)
