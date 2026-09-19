@@ -104,6 +104,21 @@ void default_target_definition(int player, int card, target_definition_t *td, in
   td->card = card;
 }
 
+static int build_duel_sound_path(char *out, size_t out_size, int filename_index)
+{
+  const char *filename;
+  /* g_duel_sound_filenames contains NULL holes for unmapped ids; the +1/+2/+3
+   * offsets used below skip over them, but guard anyway. */
+  if (filename_index < 0 || filename_index >= 72)
+    return 0;
+  filename = g_duel_sound_filenames[filename_index];
+  if (!filename || !filename[0])
+    return 0;
+  if (snprintf(out, out_size, "%s\\%s", global_duelsounds_path, filename) >= (int)out_size)
+    return 0;
+  return 1;
+}
+
 // FUNCTION: MAGIC 0x0044331f
 // FUNCTION: SHANDALAR 0x0040ebb9
 int play_sound_effect(wav_t sound_id)
@@ -146,9 +161,8 @@ int play_sound_effect(wav_t sound_id)
         return 0;
       }
 
-      strcpy(path, global_duelsounds_path);
-      strcat(path, "\\");
-      strcat(path, g_duel_sound_filenames[sound_id]);
+      if (!build_duel_sound_path(path, sizeof(path), sound_id))
+        return 0;
       sound_load(path, sound_num, &sound);
     }
 
@@ -168,9 +182,8 @@ int play_sound_effect(wav_t sound_id)
         return 0;
       }
 
-      strcpy(path, global_duelsounds_path);
-      strcat(path, "\\");
-      strcat(path, g_duel_sound_filenames[sound_id + 1]);
+      if (!build_duel_sound_path(path, sizeof(path), sound_id + 1))
+        return 0;
       sound_load(path, sound_num, &sound);
     }
 
@@ -190,9 +203,8 @@ int play_sound_effect(wav_t sound_id)
         sound.field_14 = -1;
       }
 
-      strcpy(path, global_duelsounds_path);
-      strcat(path, "\\");
-      strcat(path, g_duel_sound_filenames[sound_id + 2]);
+      if (!build_duel_sound_path(path, sizeof(path), sound_id + 2))
+        return 0;
       sound_load(path, sound_num, &sound);
       sound_play(sound_num, &sound);
     }
@@ -224,9 +236,8 @@ int play_sound_effect(wav_t sound_id)
         return 0;
       }
 
-      strcpy(path, global_duelsounds_path);
-      strcat(path, "\\");
-      strcat(path, g_duel_sound_filenames[sound_id + 2]);
+      if (!build_duel_sound_path(path, sizeof(path), sound_id + 2))
+        return 0;
       sound_load(path, sound_num, &sound);
     }
 
@@ -246,9 +257,8 @@ int play_sound_effect(wav_t sound_id)
         return 0;
       }
 
-      strcpy(path, global_duelsounds_path);
-      strcat(path, "\\");
-      strcat(path, g_duel_sound_filenames[sound_id + 3]);
+      if (!build_duel_sound_path(path, sizeof(path), sound_id + 3))
+        return 0;
       sound_load(path, sound_num, &sound);
     }
 

@@ -4,6 +4,7 @@
 #include "platform/file_io.h"
 
 #include <SDL3/SDL.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define MAGSND_MAX_SLOTS 0x110
@@ -71,6 +72,13 @@ static void normalize_slashes(char *path)
   }
 }
 
+/* DuelSounds are tiny (tens of KB).  Cap what we'll hand to the WAV parser so a
+ * corrupt/truncated file (e.g. an HTML error page cached as .wav, or a
+ * truncated fetch) can't coax SDL into a gigabyte SDL_malloc.  On Emscripten
+ * the default build aborts with "memory access out of bounds" inside malloc
+ * instead of returning NULL, which is the crash in question. */
+#define MAGSND_MAX_WAV_BYTES (4 * 1024 * 1024)
+
 static SDL_IOStream *open_sound_io(const char *path)
 {
   const char *asset_path;
@@ -87,6 +95,61 @@ static SDL_IOStream *open_sound_io(const char *path)
   }
   normalize_slashes(resolved);
   return shandalar_open_file_io(resolved, "rb");
+}
+
+static Sint64 sound_io_size(SDL_IOStream *io)
+{
+  Sint64 size = SDL_GetIOSize(io);
+  if (size >= 0)
+    return size;
+  /* No size callback (custom FILE* wrapper): seek to end and back. */
+  {
+    Sint64 pos = SDL_TellIO(io);
+    Sint64 end;
+    if (pos < 0)
+      return -1;
+    end = SDL_SeekIO(io, 0, SDL_IO_SEEK_END);
+    if (end < 0)
+      return -1;
+    if (SDL_SeekIO(io, pos, SDL_IO_SEEK_SET) != pos)
+      return -1;
+    return end;
+  }
+}
+
+/* Returns 1 if the stream looks like a plausible WAV of a sane size, with the
+ * stream rewound to position 0.  Returns 0 otherwise. */
+static int sound_header_is_plausible(SDL_IOStream *io, Sint64 file_size)
+{
+  Uint8 header[12];
+  size_t got;
+  Uint32 riff_len;
+
+  if (file_size < 44 || file_size > MAGSND_MAX_WAV_BYTES)
+    return 0;
+  if (SDL_SeekIO(io, 0, SDL_IO_SEEK_SET) != 0)
+    return 0;
+  got = SDL_ReadIO(io, header, sizeof(header));
+  if (got != sizeof(header))
+    return 0;
+  if (SDL_SeekIO(io, 0, SDL_IO_SEEK_SET) != 0)
+    return 0;
+  if (SDL_memcmp(header, "RIFF", 4) == 0) {
+    if (SDL_memcmp(header + 8, "WAVE", 4) != 0)
+      return 0;
+    riff_len = (Uint32)header[4] | ((Uint32)header[5] << 8) |
+               ((Uint32)header[6] << 16) | ((Uint32)header[7] << 24);
+    /* 0 means "unknown length" to some writers; otherwise it must roughly
+     * match the file size and stay under the cap. */
+    if (riff_len != 0 &&
+        (riff_len > (Uint32)(file_size + 8) || riff_len > MAGSND_MAX_WAV_BYTES))
+      return 0;
+    return 1;
+  }
+  /* SDL also accepts RIFF-less files starting with "WAVE". */
+  if (SDL_memcmp(header, "WAVE", 4) == 0)
+    return 1;
+  return 0;
 }
 
 static void free_slot(SdlSndSlot *slot)
@@ -238,7 +301,22 @@ int __cdecl LoadSnd(LPSTR path, int num, Sound *snd)
   io = open_sound_io(path);
   if (!io)
     return MAGSND_NOT_LOADED;
+  {
+    Sint64 file_size = sound_io_size(io);
+    if (!sound_header_is_plausible(io, file_size)) {
+      SDL_CloseIO(io);
+      SDL_zero(*slot);
+      return MAGSND_NOT_LOADED;
+    }
+  }
   if (!SDL_LoadWAV_IO(io, true, &slot->spec, &slot->buffer, &slot->length)) {
+    SDL_zero(*slot);
+    return MAGSND_NOT_LOADED;
+  }
+  if (slot->length == 0 || slot->length > MAGSND_MAX_WAV_BYTES ||
+      !slot->buffer) {
+    if (slot->buffer)
+      SDL_free(slot->buffer);
     SDL_zero(*slot);
     return MAGSND_NOT_LOADED;
   }
@@ -449,8 +527,10 @@ int __cdecl IsSndLoaded(int loadId, int *out_slot)
       return 1;
     }
   }
-  if (out_slot)
-    *out_slot = -1;
+  /* Leave *out_slot untouched on a miss: play_sound_effect()'s direct-mapped
+   * range (e.g. WAV_ASWANJAG..WAV_TOSS) passes sound_num == sound_id in and
+   * expects it to still hold the slot number so it can LoadSnd into that
+   * slot.  Clobbering it with -1 turned every miss into LoadSnd(-1). */
   return 0;
 }
 
