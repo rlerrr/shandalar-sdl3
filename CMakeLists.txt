@@ -49,7 +49,12 @@ set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SDL_PTHREADS OFF CACHE BOOL "" FORCE)
+if(EMSCRIPTEN)
+  # Threadless SDL is only supported by upstream on Emscripten (and N-Gage);
+  # native builds (Windows/macOS) require threads. Our own code still avoids
+  # spawning threads and pumps UI via Asyncify yields on Emscripten.
+  set(SDL_PTHREADS OFF CACHE BOOL "" FORCE)
+endif()
 if(SHANDALAR_BUILD_DECK OR SHANDALAR_BUILD_SHANDALAR)
   set(SDL_AUDIO ON CACHE BOOL "" FORCE)
 else()
