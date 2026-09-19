@@ -32,24 +32,36 @@ jobs:
       - name: Install dependencies
         run: brew install ninja || true
 
-      - name: Configure CMake (${{ matrix.target }})
+      - name: Configure + build per arch, then lipo (${{ matrix.target }})
+        # NOTE: single-pass fat builds (-arch arm64 -arch x86_64 in one cc
+        # invocation) are NOT used here on purpose. SDL_image's vendored
+        # libwebp deliberately fails its SIMD detection for multi-arch
+        # compiles and then forces -mno-sse2/-mno-sse4.1 onto generic sources,
+        # which makes Xcode 26's math.h _Float16 declarations unavailable on
+        # the x86_64 slice ("_Float16 is not supported on this target" in
+        # sharpyuv). Single-arch builds detect SIMD normally and compile
+        # cleanly, so build each arch separately and fuse with lipo.
         run: |
-          cmake -S "${{ github.workspace }}" \
-                -B "${{ github.workspace }}/build-${{ matrix.target }}" \
-                -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-                -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-                -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{ github.workspace }}/out/${{ matrix.target }}" \
-                -DSHANDALAR_BUILD_TESTS=OFF \
-                ${{ matrix.cmake_args }}
-
-      - name: Build (${{ matrix.target }})
-        run: cmake --build "${{ github.workspace }}/build-${{ matrix.target }}"
-
-      - name: Verify universal binary (${{ matrix.target }})
-        run: |
+          for ARCH in arm64 x86_64; do
+            cmake -S "${{ github.workspace }}" \
+                  -B "${{ github.workspace }}/build-${{ matrix.target }}-${ARCH}" \
+                  -G Ninja \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DCMAKE_OSX_ARCHITECTURES=${ARCH} \
+                  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{ github.workspace }}/out/${{ matrix.target }}-${ARCH}" \
+                  -DSHANDALAR_BUILD_TESTS=OFF \
+                  ${{ matrix.cmake_args }}
+            cmake --build "${{ github.workspace }}/build-${{ matrix.target }}-${ARCH}"
+          done
+          mkdir -p "${{ github.workspace }}/out/${{ matrix.target }}"
+          lipo -create \
+            "${{ github.workspace }}/out/${{ matrix.target }}-arm64/${{ matrix.target }}" \
+            "${{ github.workspace }}/out/${{ matrix.target }}-x86_64/${{ matrix.target }}" \
+            -output "${{ github.workspace }}/out/${{ matrix.target }}/${{ matrix.target }}"
           lipo -info "${{ github.workspace }}/out/${{ matrix.target }}/${{ matrix.target }}"
+          rm -rf "${{ github.workspace }}/out/${{ matrix.target }}-arm64" \
+                 "${{ github.workspace }}/out/${{ matrix.target }}-x86_64"
 
       - name: Upload artifacts (${{ matrix.target }})
         uses: actions/upload-artifact@v4
