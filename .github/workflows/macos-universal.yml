@@ -1,0 +1,58 @@
+name: macOS Universal Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or SHA to build (64-bit code must come from x64-port)
+        default: x64-port
+        type: string
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: facemaker
+            cmake_args: -DSHANDALAR_BUILD_FACEMAKER=ON -DSHANDALAR_BUILD_SHANDALAR=OFF -DSHANDALAR_BUILD_DECK=OFF
+          - target: shandalar
+            cmake_args: -DSHANDALAR_BUILD_FACEMAKER=OFF -DSHANDALAR_BUILD_SHANDALAR=ON -DSHANDALAR_BUILD_DECK=OFF
+          - target: deck
+            cmake_args: -DSHANDALAR_BUILD_FACEMAKER=OFF -DSHANDALAR_BUILD_SHANDALAR=OFF -DSHANDALAR_BUILD_DECK=ON
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+
+      - name: Install dependencies
+        run: brew install ninja || true
+
+      - name: Configure CMake (${{ matrix.target }})
+        run: |
+          cmake -S "${{ github.workspace }}" \
+                -B "${{ github.workspace }}/build-${{ matrix.target }}" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+                -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{ github.workspace }}/out/${{ matrix.target }}" \
+                -DSHANDALAR_BUILD_TESTS=OFF \
+                ${{ matrix.cmake_args }}
+
+      - name: Build (${{ matrix.target }})
+        run: cmake --build "${{ github.workspace }}/build-${{ matrix.target }}"
+
+      - name: Verify universal binary (${{ matrix.target }})
+        run: |
+          lipo -info "${{ github.workspace }}/out/${{ matrix.target }}/${{ matrix.target }}"
+
+      - name: Upload artifacts (${{ matrix.target }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: shandalar-${{ matrix.target }}-macos-universal
+          path: ${{ github.workspace }}/out/${{ matrix.target }}/
