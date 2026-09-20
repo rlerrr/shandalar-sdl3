@@ -25,7 +25,7 @@ jobs:
         # up front rather than one fatal error at a time).
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ninja-build python3-pip \
+          sudo apt-get install -y -qq ninja-build clang python3-pip \
             build-essential git \
             libasound2-dev libpulse-dev \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
@@ -50,6 +50,8 @@ jobs:
                 -B "${{ github.workspace }}/build-appimage" \
                 -G Ninja \
                 -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_CXX_COMPILER=clang++ \
                 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/AppDir/usr" \
                 -DSHANDALAR_BUILD_FACEMAKER=OFF \
                 -DSHANDALAR_BUILD_SHANDALAR=ON \
