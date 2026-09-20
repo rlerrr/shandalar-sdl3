@@ -64,6 +64,11 @@ jobs:
       - name: Stage AppDir (binary, icon, desktop entry, AppRun)
         run: |
           cmake --install "${{ github.workspace }}/build-appimage"
+          # RUNTIME DESTINATION is '.' so the binary lands in AppDir/usr;
+          # move it to the usr/bin linuxdeploy expects and fail fast if absent.
+          mkdir -p "${{ github.workspace }}/AppDir/usr/bin"
+          mv "${{ github.workspace }}/AppDir/usr/shandalar" "${{ github.workspace }}/AppDir/usr/bin/shandalar"
+          test -x "${{ github.workspace }}/AppDir/usr/bin/shandalar"
           python3 -c "from PIL import Image; Image.open('${{ github.workspace }}/src/shandalar/shandalar.ico').save('${{ github.workspace }}/AppDir/shandalar.png')"
           cat > "${{ github.workspace }}/AppDir/shandalar.desktop" <<'EOF'
           [Desktop Entry]
