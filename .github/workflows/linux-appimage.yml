@@ -1,0 +1,99 @@
+name: Linux AppImage Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or SHA to build (64-bit code must come from x64-port)
+        default: x64-port
+        type: string
+
+jobs:
+  build:
+    name: shandalar AppImage
+    # Pinned to 22.04 (glibc 2.35) so the AppImage runs on older distros too.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ninja-build \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+            libxi-dev libxss-dev libgl1-mesa-dev libasound2-dev libpulse-dev \
+            python3-pip
+          pip3 install --quiet pillow
+
+      - name: Install packaging tools (linuxdeploy, rclone)
+        run: |
+          mkdir -p "${{ github.workspace }}/tools-appimage"
+          cd "${{ github.workspace }}/tools-appimage"
+          curl -fsSL -o linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSL -o linuxdeploy-plugin-appimage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+          chmod +x linuxdeploy linuxdeploy-plugin-appimage
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Configure CMake (shandalar)
+        run: |
+          cmake -S "${{ github.workspace }}" \
+                -B "${{ github.workspace }}/build-appimage" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/AppDir/usr" \
+                -DSHANDALAR_BUILD_FACEMAKER=OFF \
+                -DSHANDALAR_BUILD_SHANDALAR=ON \
+                -DSHANDALAR_BUILD_DECK=OFF \
+                -DSHANDALAR_BUILD_TESTS=OFF
+
+      - name: Build (shandalar)
+        run: cmake --build "${{ github.workspace }}/build-appimage"
+
+      - name: Stage AppDir (binary, icon, desktop entry, AppRun)
+        run: |
+          cmake --install "${{ github.workspace }}/build-appimage"
+          python3 -c "from PIL import Image; Image.open('${{ github.workspace }}/src/shandalar/shandalar.ico').save('${{ github.workspace }}/AppDir/shandalar.png')"
+          cat > "${{ github.workspace }}/AppDir/shandalar.desktop" <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Shandalar
+          Comment=Magic: The Gathering (1997) SDL3 port
+          Exec=shandalar
+          Icon=shandalar
+          Categories=Game;CardGame;
+          Terminal=false
+          EOF
+          cat > "${{ github.workspace }}/AppDir/AppRun" <<'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          exec "$HERE/usr/bin/shandalar" "$HERE/usr/share/shandalar/assets" "$@"
+          EOF
+          chmod +x "${{ github.workspace }}/AppDir/AppRun"
+
+      - name: Download game assets from R2 (bucket shandalar-dotp, no prefix)
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          rclone sync R2:shandalar-dotp "${{ github.workspace }}/AppDir/usr/share/shandalar/assets" --progress=false --checkers=8 --transfers=8
+
+      - name: Build AppImage
+        run: |
+          cd "${{ github.workspace }}"
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          ./tools-appimage/linuxdeploy --appdir AppDir \
+            -d AppDir/shandalar.desktop -i AppDir/shandalar.png \
+            --output appimage
+          ls -la ./*.AppImage
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shandalar-linux-appimage
+          path: ${{ github.workspace }}/*.AppImage
