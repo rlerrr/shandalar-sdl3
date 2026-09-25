@@ -7,6 +7,10 @@ on:
         description: Branch, tag, or SHA to build (64-bit code must come from x64-port)
         default: x64-port
         type: string
+      asan:
+        description: Build an AddressSanitizer-instrumented binary instead of an AppImage (for debugging crashes; run it against the assets from an extracted AppImage)
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -36,6 +40,7 @@ jobs:
           pip3 install --quiet pillow
 
       - name: Install packaging tools (linuxdeploy, rclone)
+        if: ${{ !inputs.asan }}
         run: |
           mkdir -p "${{ github.workspace }}/tools-appimage"
           cd "${{ github.workspace }}/tools-appimage"
@@ -46,12 +51,21 @@ jobs:
 
       - name: Configure CMake (shandalar)
         run: |
+          ASAN_FLAGS=""
+          BUILD_TYPE=Release
+          if [ "${{ inputs.asan }}" = "true" ]; then
+            ASAN_FLAGS="-fsanitize=address"
+            BUILD_TYPE=Debug
+          fi
           cmake -S "${{ github.workspace }}" \
                 -B "${{ github.workspace }}/build-appimage" \
                 -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
                 -DCMAKE_C_COMPILER=clang \
                 -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_C_FLAGS="${ASAN_FLAGS}" \
+                -DCMAKE_CXX_FLAGS="${ASAN_FLAGS}" \
+                -DCMAKE_EXE_LINKER_FLAGS="${ASAN_FLAGS}" \
                 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/AppDir/usr" \
                 -DSHANDALAR_BUILD_FACEMAKER=OFF \
                 -DSHANDALAR_BUILD_SHANDALAR=ON \
@@ -62,6 +76,7 @@ jobs:
         run: cmake --build "${{ github.workspace }}/build-appimage"
 
       - name: Stage AppDir (binary, icon, desktop entry, AppRun)
+        if: ${{ !inputs.asan }}
         run: |
           cmake --install "${{ github.workspace }}/build-appimage"
           # RUNTIME DESTINATION is '.' so the binary lands in AppDir/usr;
@@ -88,6 +103,7 @@ jobs:
           chmod +x "${{ github.workspace }}/AppDir/AppRun"
 
       - name: Download game assets from R2 (bucket shandalar-dotp, no prefix)
+        if: ${{ !inputs.asan }}
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare
@@ -98,6 +114,7 @@ jobs:
           rclone sync R2:shandalar-dotp "${{ github.workspace }}/AppDir/usr/share/shandalar/assets" --progress=false --checkers=8 --transfers=8
 
       - name: Build AppImage
+        if: ${{ !inputs.asan }}
         run: |
           cd "${{ github.workspace }}"
           export APPIMAGE_EXTRACT_AND_RUN=1
@@ -107,7 +124,15 @@ jobs:
           ls -la ./*.AppImage
 
       - name: Upload artifact
+        if: ${{ !inputs.asan }}
         uses: actions/upload-artifact@v4
         with:
           name: shandalar-linux-appimage
           path: ${{ github.workspace }}/*.AppImage
+
+      - name: Upload ASan binary
+        if: ${{ inputs.asan }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shandalar-linux-asan
+          path: ${{ github.workspace }}/build-appimage/src/shandalar/shandalar
