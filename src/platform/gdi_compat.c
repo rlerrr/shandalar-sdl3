@@ -659,17 +659,32 @@ HGDIOBJ SelectObject(HDC dc, HGDIOBJ object)
   case OBJECT_BITMAP:
     previous = dc->bitmap;
     if (previous != object) {
+      /* If this release destroys a DeleteObject'd bitmap (pending + last
+       * ref), don't hand the now-dangling handle back: real GDI would
+       * return a dead-but-harmless handle and fail a later re-select
+       * gracefully, but our handles are raw pointers, so NULL is the
+       * fail-closed equivalent. */
+      int previous_doomed = previous != NULL && ((HBITMAP)previous)->delete_pending &&
+                            ((HBITMAP)previous)->dc_references == 1;
       reference_bitmap((HBITMAP)object);
       dc->bitmap = (HBITMAP)object;
       release_bitmap((HBITMAP)previous);
+      if (previous_doomed) {
+        previous = NULL;
+      }
     }
     break;
   case OBJECT_FONT:
     previous = dc->font;
     if (previous != (HFONT)object) {
+      int previous_doomed = previous != NULL && ((HFONT)previous)->delete_pending &&
+                            ((HFONT)previous)->dc_references == 1;
       reference_font((HFONT)object);
       dc->font = (HFONT)object;
       release_font((HFONT)previous);
+      if (previous_doomed) {
+        previous = NULL;
+      }
     }
     break;
   case OBJECT_PEN: previous = dc->pen; dc->pen = (HPEN)object; break;
