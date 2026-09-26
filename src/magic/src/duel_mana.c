@@ -376,6 +376,17 @@ int charge_mana(int player, color_t color, int amount)
                 copy_mana_pool_to_display();
               }
             }
+            if (g_recorded_action_player != 0 &&
+                is_mana_cost_paid(g_mana_charge, g_x_value, g_max_x_value) == 0)
+            {
+              max_colorless = has_mana(player, COLOR_ARTIFACT, 1) - has_mana(player, COLOR_ANY, 1);
+              auto_pay_colored_mana(player, mana_paid_by_color, &mana_paid_total, max_colorless);
+              auto_pay_variable_mana(player, mana_paid_by_color, &mana_paid_total, max_colorless, &g_x_value, g_max_x_value);
+              auto_pay_generic_mana(player, mana_paid_by_color, &mana_paid_total, max_colorless, &g_x_value, g_max_x_value);
+              activate_mana_sources_for_payment(player, mana_paid_by_color, &mana_paid_total, 0x1e, 0);
+              activate_mana_sources_for_payment(player, mana_paid_by_color, &mana_paid_total, 0x1c, 0);
+              copy_mana_pool_to_display();
+            }
           }
         }
         else
@@ -467,6 +478,17 @@ int charge_mana(int player, color_t color, int amount)
               }
 
               copy_mana_pool_to_display();
+            }
+            if (g_recorded_action_player != 0 &&
+                is_mana_cost_paid(g_mana_charge, g_x_value, g_max_x_value) == 0)
+            {
+              max_colorless = has_mana(player, COLOR_ARTIFACT, 1) - has_mana(player, COLOR_ANY, 1);
+              auto_pay_colored_mana(player, mana_paid_by_color, &mana_paid_total, max_colorless);
+              auto_pay_variable_mana(player, mana_paid_by_color, &mana_paid_total, max_colorless, &g_x_value, g_max_x_value);
+              auto_pay_generic_mana(player, mana_paid_by_color, &mana_paid_total, max_colorless, &g_x_value, g_max_x_value);
+                activate_mana_sources_for_payment(player, mana_paid_by_color, &mana_paid_total, 0x1e, 0);
+                activate_mana_sources_for_payment(player, mana_paid_by_color, &mana_paid_total, 0x1c, 0);
+                copy_mana_pool_to_display();
             }
           }
         }

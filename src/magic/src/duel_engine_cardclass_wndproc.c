@@ -62,6 +62,7 @@ unsigned int draw_target_canttarget(HDC dc, RECT *rect, int is_target, int can_t
 void draw_id_tag(HDC dc, RECT *rect, int player, int card, int enabled);
 void draw_card_debug_id_tag(HDC dc, RECT *rect, int player, int card);
 int card_window_matches_action_request(HWND hwnd);
+static int card_double_click_posts_selection(HWND hwnd);
 int find_attack_phase_card_window(HWND hwnd, int *player_and_card, int *unused1, HWND *child_hwnd, int *unused2);
 int find_battlefield_card_window(HWND hwnd, int *player_and_card, int *unused, HWND *child_hwnd);
 void notify_duel_action(int player, unsigned int value);
@@ -654,6 +655,54 @@ int card_window_matches_action_request(HWND hwnd)
     result = 0;
   }
   return result;
+}
+
+static int card_double_click_posts_selection(HWND hwnd)
+{
+  int player;
+  int card;
+  int charge_color;
+  int charge_mana_open;
+  int clicked_internal;
+
+  if (card_window_matches_action_request(hwnd) == 0)
+  {
+    return 0;
+  }
+  player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
+  card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
+  charge_mana_open = 0;
+  for (charge_color = 0; charge_color < 8; ++charge_color)
+  {
+    if (g_mana_charge[charge_color] != 0)
+    {
+      charge_mana_open = 1;
+      break;
+    }
+  }
+  if (charge_mana_open == 0)
+  {
+    return g_duel_action_request_copy.type_flags != -1;
+  }
+  if (g_stack_size > 0 &&
+      global_stack_cards[g_stack_size - 1].player == player &&
+      global_stack_cards[g_stack_size - 1].card == card)
+  {
+    return 1;
+  }
+  if (player < 0 || player >= 2 || card < 0)
+  {
+    return 0;
+  }
+  clicked_internal = global_card_instances[player][card].internal_card_id;
+  if (clicked_internal >= 0 &&
+      (global_cards_data[clicked_internal].extra_ability & EA_MANA_SOURCE) != 0 &&
+      (global_card_instances[player][card].state & STATE_IN_PLAY) != 0 &&
+      (global_card_instances[player][card].state & (STATE_TAPPED | STATE_SUMMONSICK_NOTAP)) == 0)
+  {
+    return 1;
+  }
+  return 0;
 }
 
 // FUNCTION: MAGIC 0x004d1263
@@ -2684,7 +2733,7 @@ int register_MAGICGAME_CardClass(LPCSTR class_name)
   WNDCLASSA wndclass;
 
   registered = 1;
-  SET_DUEL_WNDCLASS(wndclass, 0xb, wndproc_MAGICGAME_CardClass, g_cardclass_window_extra_bytes,
+  SET_DUEL_WNDCLASS(wndclass, CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS, wndproc_MAGICGAME_CardClass, g_cardclass_window_extra_bytes,
                     LoadIconA((HINSTANCE)0, (LPCSTR)0x7f00), (HBRUSH)0, class_name);
   if (RegisterClassA(&wndclass) == 0)
   {
@@ -3632,7 +3681,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     counter_power = GetDoubleClickTime();
     scratch = GetMessageTime();
     damage_on_card = GetTickCount();
-#ifdef SHANDALAR
+
     SetCapture(hwnd);
     /*
      * Windows continues collecting input while this handler waits for a
@@ -3643,7 +3692,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     while ((int)(damage_on_card - GetTickCount()) > 0)
     {
       if (PeekMessageA((MSG *)&paint_struct, hwnd,
-                       WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0))
+                       WM_LBUTTONUP, WM_LBUTTONUP, 0))
         break;
       if (!shandalar_win32_pump(TRUE))
         break;
@@ -3657,9 +3706,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
       SendMessageA(hwnd, WM_COMMAND, 0x6e, 0);
       long_press_previewed = 1;
     }
-#else
-    Sleep(counter_power - (scratch - damage_on_card));
-#endif
+
     cuecard_found = PeekMessageA((MSG *)&paint_struct, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0);
     if (GetParent(hwnd) == g_duel_player_battlefield_window_hwnd ||
         GetParent(hwnd) == g_duel_help_owner_hwnd)
@@ -3998,6 +4045,15 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
         previous_z_order = (HWND)GetWindowLongPtrA(hwnd, CARDCLASS_PREVIOUS_Z_ORDER_WINDOW_LONG_OFFSET);
         SetWindowPos(hwnd, previous_z_order, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
       }
+    }
+    return 0;
+
+  case WM_LBUTTONDBLCLK:
+    if (g_duel_modal_action_active != 0 &&
+        card_double_click_posts_selection(hwnd) != 0)
+    {
+      g_recorded_action_player = 1;
+      post_card_action_selection(hwnd);
     }
     return 0;
 

@@ -1613,7 +1613,9 @@ int get_ai_search_elapsed_time(void)
   current_time = (uint32_t)get_duel_thread_time_ms();
   start_time = (uint32_t)g_ai_trace_enabled;
   elapsed_time = current_time - start_time;
-  return (int)(((uint64_t)elapsed_time * 100u) / 0x151d);
+
+  // Original denominator value is 5405
+  return (int)(((uint64_t)elapsed_time * 100u) / 1000);
 }
 
 // FUNCTION: MAGIC 0x0050e79b
