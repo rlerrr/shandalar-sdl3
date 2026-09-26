@@ -1,4 +1,5 @@
 #include "platform/winuser_compat.h"
+#include "platform/winuser_sdl_compositor.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -424,6 +425,29 @@ int main(void)
   CHECK(SendMessageA(listbox, LB_GETCOUNT, 0, 0) == 2);
   CHECK(SendMessageA(listbox, LB_SETCURSEL, 1, 0) == 1);
   CHECK(SendMessageA(listbox, LB_GETCURSEL, 0, 0) == 1);
+  {
+    HWND buddy = CreateWindowExA(0, "EDIT", "", WS_CHILD | WS_VISIBLE,
+                                 0, 0, 40, 20, parent, (HMENU)47, NULL, NULL);
+    HWND spin = CreateWindowExA(0, "msctls_updown32", "", WS_CHILD | WS_VISIBLE,
+                                40, 0, 15, 20, parent, (HMENU)48, NULL, NULL);
+    CHECK(buddy && spin);
+    CHECK(shandalar_win32_is_builtin_control(spin));
+    SendMessageA(spin, WM_USER + 101, 0, MAKELONG(20, 0));
+    SendMessageA(spin, WM_USER + 103, 0, MAKELONG(4, 0));
+    CHECK(GetWindowTextA(buddy, text, sizeof(text)) == 1);
+    CHECK(strcmp(text, "4") == 0);
+    CHECK(SendMessageA(spin, WM_USER + 104, 0, 0) == 4);
+    CHECK(SetWindowTextA(buddy, "12"));
+    CHECK(SendMessageA(spin, WM_USER + 104, 0, 0) == 12);
+    CHECK(SetWindowTextA(buddy, "25"));
+    CHECK(HIWORD(SendMessageA(spin, WM_USER + 104, 0, 0)) != 0);
+    CHECK(SetWindowTextA(buddy, ""));
+    CHECK(HIWORD(SendMessageA(spin, WM_USER + 104, 0, 0)) != 0);
+    CHECK(SetWindowTextA(buddy, "19"));
+    CHECK(SendMessageA(spin, WM_USER + 104, 0, 0) == 19);
+    SendMessageA(spin, WM_USER + 103, 0, MAKELONG(21, 0));
+    CHECK(SendMessageA(spin, WM_USER + 104, 0, 0) == 20);
+  }
   button = CreateWindowExA(0, "BUTTON", "", WS_CHILD | WS_VISIBLE,
                            0, 0, 20, 20, parent, (HMENU)44, NULL, NULL);
   CHECK(button);

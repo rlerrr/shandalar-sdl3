@@ -56,7 +56,8 @@ int shandalar_win32_is_builtin_control(HWND window)
          SDL_strcasecmp(name, "STATIC") == 0 ||
          SDL_strcasecmp(name, "LISTBOX") == 0 ||
          SDL_strcasecmp(name, "COMBOBOX") == 0 ||
-         SDL_strcasecmp(name, "SCROLLBAR") == 0;
+         SDL_strcasecmp(name, "SCROLLBAR") == 0 ||
+         SDL_strcasecmp(name, "msctls_updown32") == 0;
 }
 
 static int is_descendant_or_self(HWND window, HWND ancestor)

@@ -156,6 +156,27 @@ int choose_fireball_options(int player, int internal_card_id, int maximum_mana, 
   }
 }
 
+static void refresh_fireball_outputs(HWND hwnd)
+{
+  unsigned int mana_pos = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN,
+                                              UDM_GETPOS, 0, 0);
+  unsigned int targets_pos = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN,
+                                                 UDM_GETPOS, 0, 0);
+  int mana_value;
+  int target_count;
+
+  if (HIWORD(mana_pos) || HIWORD(targets_pos))
+    return;
+
+  mana_value = LOWORD(mana_pos);
+  target_count = LOWORD(targets_pos);
+  SetDlgItemInt(hwnd, FIREBALL_MANA_TO_PAY,
+                mana_value - (target_count - 1), 1);
+  SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, target_count - 1, 1);
+  SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET,
+                calculate_fireball_damage_per_target(mana_value, target_count), 1);
+}
+
 // FUNCTION: MAGIC 0x004a4691
 // FUNCTION: SHANDALAR 0x0054001c
 INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -185,7 +206,6 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
   int mana_value;
   HWND button_hwnd;
   char formatted_text[100];
-  unsigned int damage;
   char format_text[52];
 
   switch (msg)
@@ -225,9 +245,7 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                         (unsigned int)(unsigned short)g_fireball_dialog_context->mana_to_pay);
     SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_SETPOS, 0,
                         (unsigned int)(unsigned short)g_fireball_dialog_context->number_of_targets);
-    damage = calculate_fireball_damage_per_target(g_fireball_dialog_context->mana_to_pay,
-                                                  g_fireball_dialog_context->number_of_targets);
-    SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET, damage, 1);
+    refresh_fireball_outputs(hwnd);
     SetFocus(GetDlgItem(hwnd, IDOK));
     SendMessageA(hwnd, 0x401, IDOK, 0);
     button_hwnd = GetDlgItem(hwnd, IDOK);
@@ -241,24 +259,13 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     notify_code = HIWORD(wparam);
     if (command_id == FIREBALL_MANA_NOTIFY)
     {
-      if (notify_code == 0x200)
+      if (notify_code == EN_CHANGE)
       {
         spin_result = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
         spin_error = HIWORD(spin_result) != 0;
         if (spin_error == 0)
         {
-          mana_value = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-          target_count = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
-          SetDlgItemInt(hwnd, FIREBALL_MANA_TO_PAY,
-                        mana_value - (target_count - 1), 1);
-          SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, target_count - 1, 1);
-          SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET,
-                        calculate_fireball_damage_per_target(mana_value, target_count), 1);
-        }
-        else
-        {
-          SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_SETPOS, 0,
-                              (unsigned int)(unsigned short)g_fireball_dialog_context->mana_to_pay);
+          refresh_fireball_outputs(hwnd);
         }
       }
     }
@@ -306,31 +313,20 @@ INT_PTR WINAPI dlgproc_fireball_options(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                                         g_fireball_dialog_button_pen2);
       EndDialog(hwnd, -2);
     }
-    else if ((command_id == FIREBALL_TARGETS_NOTIFY) && (notify_code == 0x200))
+    else if ((command_id == FIREBALL_TARGETS_NOTIFY) && (notify_code == EN_CHANGE))
     {
       spin_result = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
       spin_error = HIWORD(spin_result) != 0;
       if (spin_error == 0)
       {
-        mana_value = SendDlgItemMessageA(hwnd, FIREBALL_MANA_SPIN, UDM_GETPOS, 0, 0);
-        target_count = SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_GETPOS, 0, 0);
-        SetDlgItemInt(hwnd, FIREBALL_MANA_TO_PAY,
-                      mana_value - (target_count - 1), 1);
-        SetDlgItemInt(hwnd, FIREBALL_EXTRA_TARGET_COST, target_count - 1, 1);
-        SetDlgItemInt(hwnd, FIREBALL_DAMAGE_PER_TARGET,
-                      calculate_fireball_damage_per_target(mana_value, target_count), 1);
-      }
-      else
-      {
-        SendDlgItemMessageA(hwnd, FIREBALL_TARGETS_SPIN, UDM_SETPOS, 0,
-                            (unsigned int)(unsigned short)g_fireball_dialog_context->number_of_targets);
+        refresh_fireball_outputs(hwnd);
       }
     }
     return 1;
 
   case WM_NOTIFY:
     notify_dc = (HDC)wparam;
-    PostMessageA(hwnd, WM_COMMAND, 0x020004d0,
+    PostMessageA(hwnd, WM_COMMAND, MAKEWPARAM(FIREBALL_MANA_NOTIFY, EN_CHANGE),
                  (LPARAM)GetDlgItem(hwnd, FIREBALL_MANA_NOTIFY));
     return 0;
 

@@ -458,7 +458,26 @@ void draw_builtin_control(HWND window)
   } else if (SDL_strcasecmp(class_name, "STATIC") == 0) {
     if (!draw_coin_flip_title(window, text, rect)) {
       HWND click_proxy;
-      draw_static_text(text, rect, style, legacy_static_text_color(window));
+      if (style & WS_BORDER) {
+        // These bordered static controls are calculated, read-only values.
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+        const ImVec2 top_left(static_cast<float>(rect.left),
+                              static_cast<float>(rect.top));
+        const ImVec2 bottom_right(static_cast<float>(rect.right),
+                                  static_cast<float>(rect.bottom));
+        const ImVec2 text_size = ImGui::CalcTextSize(text);
+        draw_list->AddRectFilled(top_left, bottom_right,
+                                 ImGui::GetColorU32(ImGuiCol_FrameBg));
+        draw_list->AddRect(top_left, bottom_right,
+                           ImGui::GetColorU32(ImGuiCol_Border));
+        draw_list->PushClipRect(top_left, bottom_right, true);
+        draw_list->AddText(ImVec2(top_left.x + (width - text_size.x) * 0.5f,
+                                  top_left.y + (height - text_size.y) * 0.5f),
+                           ImGui::GetColorU32(ImGuiCol_TextDisabled), text);
+        draw_list->PopClipRect();
+      } else {
+        draw_static_text(text, rect, style, legacy_static_text_color(window));
+      }
       click_proxy = static_click_proxy(window);
       if (click_proxy && ImGui::InvisibleButton("##static-click-proxy",
                                                 ImVec2(width, height)))
@@ -467,12 +486,28 @@ void draw_builtin_control(HWND window)
   } else if (SDL_strcasecmp(class_name, "EDIT") == 0) {
     ImGuiInputTextFlags flags = 0;
     if (style & ES_READONLY) flags |= ImGuiInputTextFlags_ReadOnly;
+    HWND next_control = GetWindow(window, GW_HWNDPREV);
+    char next_class[32] = {};
+    const bool spin_buddy =
+        next_control && GetClassNameA(next_control, next_class, sizeof(next_class)) &&
+        SDL_strcasecmp(next_class, "msctls_updown32") == 0;
+    if (spin_buddy)
+      flags |= ImGuiInputTextFlags_CharsDecimal |
+               ImGuiInputTextFlags_CharsNoBlank;
     bool changed;
     ImGui::SetNextItemWidth(width);
+    if (spin_buddy && !(style & ES_MULTILINE)) {
+      float padding_y = (height - ImGui::GetTextLineHeight()) * 0.5f;
+      if (padding_y < 0.0f) padding_y = 0.0f;
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                          ImVec2(ImGui::GetStyle().FramePadding.x, padding_y));
+    }
     if (style & ES_MULTILINE)
       changed = ImGui::InputTextMultiline("##edit", text, sizeof(text), ImVec2(width, height), flags);
     else
       changed = ImGui::InputText("##edit", text, sizeof(text), flags);
+    if (spin_buddy && !(style & ES_MULTILINE))
+      ImGui::PopStyleVar();
     if (changed) {
       SetWindowTextA(window, text);
       send_control_command(window, EN_CHANGE);
@@ -532,11 +567,24 @@ void draw_builtin_control(HWND window)
       ImGui::EndCombo();
     }
   } else if (SDL_strcasecmp(class_name, "msctls_updown32") == 0) {
-    int position = static_cast<short>(SendMessageA(window, WM_USER + 104, 0, 0));
-    if (ImGui::ArrowButton("##up", ImGuiDir_Up))
-      SendMessageA(window, WM_USER + 103, 0, MAKELONG(position + 1, 0));
-    if (ImGui::ArrowButton("##down", ImGuiDir_Down))
-      SendMessageA(window, WM_USER + 103, 0, MAKELONG(position - 1, 0));
+    HWND buddy = GetWindow(window, GW_HWNDNEXT);
+    RECT buddy_rect = {};
+    if (buddy && GetWindowRect(buddy, &buddy_rect)) {
+      const int position = static_cast<short>(SendMessageA(window, WM_USER + 104, 0, 0));
+      ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(buddy_rect.left) - width,
+                                        static_cast<float>(rect.top)));
+      const bool decrement = ImGui::Button("-", ImVec2(width, height));
+      ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.left),
+                                        static_cast<float>(rect.top)));
+      const bool increment = ImGui::Button("+", ImVec2(width, height));
+      if (decrement || increment) {
+        const int next = static_cast<int>(SendMessageA(
+            window, WM_USER + 103, 0, MAKELONG(position + (increment ? 1 : -1), 0)));
+        SetFocus(buddy);
+        if (next != position)
+          send_control_command(buddy, EN_CHANGE);
+      }
+    }
   }
   if (use_dialog_text_color)
     ImGui::PopStyleColor();

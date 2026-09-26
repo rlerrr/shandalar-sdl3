@@ -1,5 +1,7 @@
 #include "platform/winuser_compat.h"
 
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -143,7 +145,7 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
         state->updown_position = state->updown_min;
       if (state->updown_position > state->updown_max)
         state->updown_position = state->updown_max;
-      buddy = GetWindow(window, GW_HWNDPREV);
+      buddy = GetWindow(window, GW_HWNDNEXT);
       if (buddy) {
         SDL_snprintf(text, sizeof(text), "%d", state->updown_position);
         SetWindowTextA(buddy, text);
@@ -151,6 +153,21 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
       *handled = TRUE;
       return state->updown_position;
     case WM_USER + 104:
+      buddy = GetWindow(window, GW_HWNDNEXT);
+      if (buddy) {
+        char *end;
+        long position;
+        GetWindowTextA(buddy, text, sizeof(text));
+        errno = 0;
+        position = strtol(text, &end, 10);
+        if (text == end || *end != '\0' || errno == ERANGE ||
+            position < state->updown_min || position > state->updown_max ||
+            position < INT_MIN || position > INT_MAX) {
+          *handled = TRUE;
+          return MAKELONG(state->updown_position, 1);
+        }
+        state->updown_position = (int)position;
+      }
       *handled = TRUE;
       return state->updown_position;
     default:
