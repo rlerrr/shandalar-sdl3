@@ -114,6 +114,42 @@ static int sorted_insert_index(ControlState *state, LPCSTR text)
   return (int)state->count;
 }
 
+static int set_updown_position(ControlState *state, HWND window, int position)
+{
+  HWND buddy;
+  char text[32];
+  if (position < state->updown_min)
+    position = state->updown_min;
+  if (position > state->updown_max)
+    position = state->updown_max;
+  state->updown_position = position;
+  buddy = GetWindow(window, GW_HWNDNEXT);
+  if (buddy) {
+    SDL_snprintf(text, sizeof(text), "%d", position);
+    SetWindowTextA(buddy, text);
+  }
+  return position;
+}
+
+static BOOL read_updown_buddy(ControlState *state, HWND window)
+{
+  HWND buddy = GetWindow(window, GW_HWNDNEXT);
+  char text[32];
+  char *end;
+  long position;
+  if (!buddy)
+    return TRUE;
+  GetWindowTextA(buddy, text, sizeof(text));
+  errno = 0;
+  position = strtol(text, &end, 10);
+  if (text == end || *end != '\0' || errno == ERANGE ||
+      position < state->updown_min || position > state->updown_max ||
+      position < INT_MIN || position > INT_MAX)
+    return FALSE;
+  state->updown_position = (int)position;
+  return TRUE;
+}
+
 LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
                                  LPARAM lparam, BOOL *handled)
 {
@@ -127,8 +163,6 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
   is_list = SDL_strcasecmp(class_name, "LISTBOX") == 0;
   is_combo = SDL_strcasecmp(class_name, "COMBOBOX") == 0;
   if (SDL_strcasecmp(class_name, "msctls_updown32") == 0) {
-    HWND buddy;
-    char text[32];
     state = get_state(window, TRUE);
     switch (message) {
     case WM_USER + 101:
@@ -140,36 +174,34 @@ LRESULT shandalar_control_message(HWND window, UINT message, WPARAM wparam,
       *handled = TRUE;
       return MAKELONG(state->updown_max, state->updown_min);
     case WM_USER + 103:
-      state->updown_position = (short)LOWORD(lparam);
-      if (state->updown_position < state->updown_min)
-        state->updown_position = state->updown_min;
-      if (state->updown_position > state->updown_max)
-        state->updown_position = state->updown_max;
-      buddy = GetWindow(window, GW_HWNDNEXT);
-      if (buddy) {
-        SDL_snprintf(text, sizeof(text), "%d", state->updown_position);
-        SetWindowTextA(buddy, text);
-      }
       *handled = TRUE;
-      return state->updown_position;
+      return set_updown_position(state, window, (short)LOWORD(lparam));
     case WM_USER + 104:
-      buddy = GetWindow(window, GW_HWNDNEXT);
-      if (buddy) {
-        char *end;
-        long position;
-        GetWindowTextA(buddy, text, sizeof(text));
-        errno = 0;
-        position = strtol(text, &end, 10);
-        if (text == end || *end != '\0' || errno == ERANGE ||
-            position < state->updown_min || position > state->updown_max ||
-            position < INT_MIN || position > INT_MAX) {
-          *handled = TRUE;
-          return MAKELONG(state->updown_position, 1);
-        }
-        state->updown_position = (int)position;
+      {
+        BOOL valid = read_updown_buddy(state, window);
+        *handled = TRUE;
+        return MAKELONG(state->updown_position, valid ? 0 : 1);
       }
+    case UDM_SETRANGE32:
+      state->updown_min = (int)wparam;
+      state->updown_max = (int)lparam;
       *handled = TRUE;
-      return state->updown_position;
+      return 0;
+    case UDM_GETRANGE32:
+      if (wparam) *(int *)wparam = state->updown_min;
+      if (lparam) *(int *)lparam = state->updown_max;
+      *handled = TRUE;
+      return 0;
+    case UDM_SETPOS32:
+      *handled = TRUE;
+      return set_updown_position(state, window, (int)lparam);
+    case UDM_GETPOS32:
+      {
+        BOOL valid = read_updown_buddy(state, window);
+        if (lparam) *(BOOL *)lparam = !valid;
+        *handled = TRUE;
+        return state->updown_position;
+      }
     default:
       return 0;
     }

@@ -2,6 +2,7 @@
 // deckdll.c: primary interface to Magic.exe/Shandalar.exe
 
 #include <ctype.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -2004,6 +2005,10 @@ INT_PTR CALLBACK dlgproc_AskX(HWND hdlg, UINT msg, WPARAM wparam, LPARAM lparam)
     sprintf(edit_txt, "%d", global_dlg_parameter);
     SetWindowTextA(hdlg, global_ask_x_dlg_title);
     SetWindowTextA(GetDlgItem(hdlg, RES_ASKVALUE_EDITTEXT), edit_txt);
+#ifdef SHANDALAR_SDL_WIN32_COMPAT
+    SendMessageA(GetDlgItem(hdlg, RES_ASKVALUE_SPIN), UDM_SETRANGE32,
+                 0, INT_MAX);
+#endif
 
     load_text("menus", "OKCANCEL");
     SetWindowTextA(GetDlgItem(hdlg, RES_BUTTON_OK), text_lines[0]);

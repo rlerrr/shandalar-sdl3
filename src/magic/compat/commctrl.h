@@ -7,5 +7,11 @@
 #define UDM_GETRANGE (WM_USER + 102)
 #define UDM_SETPOS (WM_USER + 103)
 #define UDM_GETPOS (WM_USER + 104)
+#ifndef UDM_SETRANGE32
+#define UDM_SETRANGE32 (WM_USER + 111)
+#define UDM_GETRANGE32 (WM_USER + 112)
+#define UDM_SETPOS32 (WM_USER + 113)
+#define UDM_GETPOS32 (WM_USER + 114)
+#endif
 
 #endif

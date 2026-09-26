@@ -10,6 +10,7 @@
 #include <imgui_impl_sdlrenderer3.h>
 
 #include <cctype>
+#include <climits>
 
 namespace {
 
@@ -467,13 +468,13 @@ void draw_builtin_control(HWND window)
                                   static_cast<float>(rect.bottom));
         const ImVec2 text_size = ImGui::CalcTextSize(text);
         draw_list->AddRectFilled(top_left, bottom_right,
-                                 ImGui::GetColorU32(ImGuiCol_FrameBg));
+                                 IM_COL32(162, 76, 70, 255));
         draw_list->AddRect(top_left, bottom_right,
-                           ImGui::GetColorU32(ImGuiCol_Border));
+                           IM_COL32(225, 198, 184, 255));
         draw_list->PushClipRect(top_left, bottom_right, true);
         draw_list->AddText(ImVec2(top_left.x + (width - text_size.x) * 0.5f,
                                   top_left.y + (height - text_size.y) * 0.5f),
-                           ImGui::GetColorU32(ImGuiCol_TextDisabled), text);
+                           IM_COL32(242, 248, 247, 255), text);
         draw_list->PopClipRect();
       } else {
         draw_static_text(text, rect, style, legacy_static_text_color(window));
@@ -495,6 +496,12 @@ void draw_builtin_control(HWND window)
       flags |= ImGuiInputTextFlags_CharsDecimal |
                ImGuiInputTextFlags_CharsNoBlank;
     bool changed;
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(255, 255, 255, 255));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, IM_COL32(255, 255, 255, 255));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, IM_COL32(255, 255, 255, 255));
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(20, 20, 20, 255));
+    if (style & WS_BORDER)
+      ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
     ImGui::SetNextItemWidth(width);
     if (spin_buddy && !(style & ES_MULTILINE)) {
       float padding_y = (height - ImGui::GetTextLineHeight()) * 0.5f;
@@ -508,6 +515,9 @@ void draw_builtin_control(HWND window)
       changed = ImGui::InputText("##edit", text, sizeof(text), flags);
     if (spin_buddy && !(style & ES_MULTILINE))
       ImGui::PopStyleVar();
+    if (style & WS_BORDER)
+      ImGui::PopStyleVar();
+    ImGui::PopStyleColor(4);
     if (changed) {
       SetWindowTextA(window, text);
       send_control_command(window, EN_CHANGE);
@@ -570,7 +580,9 @@ void draw_builtin_control(HWND window)
     HWND buddy = GetWindow(window, GW_HWNDNEXT);
     RECT buddy_rect = {};
     if (buddy && GetWindowRect(buddy, &buddy_rect)) {
-      const int position = static_cast<short>(SendMessageA(window, WM_USER + 104, 0, 0));
+      BOOL invalid = FALSE;
+      const int position = static_cast<int>(SendMessageA(
+          window, UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(&invalid)));
       ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(buddy_rect.left) - width,
                                         static_cast<float>(rect.top)));
       const bool decrement = ImGui::Button("-", ImVec2(width, height));
@@ -578,8 +590,10 @@ void draw_builtin_control(HWND window)
                                         static_cast<float>(rect.top)));
       const bool increment = ImGui::Button("+", ImVec2(width, height));
       if (decrement || increment) {
-        const int next = static_cast<int>(SendMessageA(
-            window, WM_USER + 103, 0, MAKELONG(position + (increment ? 1 : -1), 0)));
+        int next = position;
+        if (increment && next < INT_MAX) ++next;
+        if (decrement && next > INT_MIN) --next;
+        next = static_cast<int>(SendMessageA(window, UDM_SETPOS32, 0, next));
         SetFocus(buddy);
         if (next != position)
           send_control_command(buddy, EN_CHANGE);

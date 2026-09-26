@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <commctrl.h>
+#include <limits.h>
 
 #include "magic/src/duel_engine.h"
 
@@ -119,7 +120,8 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   DWORD style = 0x80800840;
   HWND dialog;
   static const ControlSpec d220[] = {
-      C(CT_STATIC,1101,27,11,113,56,0), C(CT_EDIT,1100,64,73,40,12,WS_BORDER),
+      C(CT_STATIC,1101,27,11,113,56,0), C(CT_EDIT,1100,64,71,40,16,WS_BORDER),
+      C(CT_UPDOWN,1103,104,71,16,16,0),
       C(CT_BUTTON,IDOK,27,95,50,14,OWNER), C(CT_BUTTON,IDCANCEL,88,95,50,14,OWNER)};
   static const ControlSpec d222[] = {
       C(CT_ICON,1120,85,33,20,22,0), C(CT_ICON,1122,136,73,20,22,0),
@@ -209,6 +211,8 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   }
 #undef D
   dialog = make_dialog(instance, parent, title, width, height, style, specs, count);
+  if (dialog && id == 220)
+    SendDlgItemMessageA(dialog, 1103, UDM_SETRANGE32, 0, INT_MAX);
   if (dialog && id == 223) {
     /* Resource 223 uses DS_SETFONT with 12-point Benguiat Bk BT.  The stock
      * SDL GUI font has those same metrics; send it before WM_INITDIALOG so

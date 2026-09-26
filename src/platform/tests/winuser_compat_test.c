@@ -1,6 +1,7 @@
 #include "platform/winuser_compat.h"
 #include "platform/winuser_sdl_compositor.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -447,6 +448,18 @@ int main(void)
     CHECK(SendMessageA(spin, WM_USER + 104, 0, 0) == 19);
     SendMessageA(spin, WM_USER + 103, 0, MAKELONG(21, 0));
     CHECK(SendMessageA(spin, WM_USER + 104, 0, 0) == 20);
+    {
+      BOOL invalid = TRUE;
+      SendMessageA(spin, UDM_SETRANGE32, 0, INT_MAX);
+      CHECK(SendMessageA(spin, UDM_SETPOS32, 0, 100000) == 100000);
+      CHECK(GetWindowTextA(buddy, text, sizeof(text)) == 6);
+      CHECK(strcmp(text, "100000") == 0);
+      CHECK(SendMessageA(spin, UDM_GETPOS32, 0, (LPARAM)&invalid) == 100000);
+      CHECK(!invalid);
+      CHECK(SetWindowTextA(buddy, "100001"));
+      CHECK(SendMessageA(spin, UDM_GETPOS32, 0, (LPARAM)&invalid) == 100001);
+      CHECK(!invalid);
+    }
   }
   button = CreateWindowExA(0, "BUTTON", "", WS_CHILD | WS_VISIBLE,
                            0, 0, 20, 20, parent, (HMENU)44, NULL, NULL);

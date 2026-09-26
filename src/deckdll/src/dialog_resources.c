@@ -1,4 +1,5 @@
 #include "deckdll.h"
+#include <limits.h>
 
 extern HINSTANCE global_hinstance;
 #include "resources.h"
@@ -45,7 +46,12 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
   switch (id) {
   case RES_DIALOG_ASK_VALUE:
     dialog = make_dialog(instance, parent, 114, 61, DFLT_DLG_STYLE);
-    add_control(dialog, "EDIT", RES_ASKVALUE_EDITTEXT, 42, 10, 30, 12, WS_BORDER);
+    add_control(dialog, "EDIT", RES_ASKVALUE_EDITTEXT, 42, 8, 30, 18, WS_BORDER);
+    {
+      HWND spin = add_control(dialog, "msctls_updown32", RES_ASKVALUE_SPIN,
+                              72, 8, 20, 18, 0);
+      SendMessageA(spin, UDM_SETRANGE32, SHRT_MIN, SHRT_MAX);
+    }
     add_control(dialog, "BUTTON", RES_BUTTON_OK, 10, 35, 35, 14, BS_DEFPUSHBUTTON);
     add_control(dialog, "BUTTON", RES_BUTTON_CANCEL, 60, 35, 45, 14, 0);
     return dialog;
