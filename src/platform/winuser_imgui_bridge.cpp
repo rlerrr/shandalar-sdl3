@@ -1,5 +1,6 @@
 #include "platform/winuser_imgui_bridge.h"
 
+#include "platform/gdi_compat.h"
 #include "platform/winuser_compat.h"
 #include "platform/winuser_sdl_compositor.h"
 #include "facemaker/src/facemaker_types.h"
@@ -15,6 +16,21 @@
 namespace {
 
 SDL_Renderer *g_renderer;
+struct DialogFont {
+  const char *face;
+  int pixel_size;
+  const char *file;
+  ImFont *font;
+};
+DialogFont g_dialog_fonts[] = {
+    {"Benguiat Bk BT", 13, "TT0127M_.TTF", nullptr},
+    {"Benguiat Bk BT", 16, "TT0127M_.TTF", nullptr},
+    {"Benguiat Bk BT", 19, "TT0127M_.TTF", nullptr},
+    {"Benguiat Bk BT", 23, "TT0127M_.TTF", nullptr},
+    {"Benguiat Bk BT", 30, "TT0127M_.TTF", nullptr},
+    {"Trebuchet MS", 12, "TT0298M_.TTF", nullptr},
+    {"MS Sans Serif", 15, "TT0298M_.TTF", nullptr},
+};
 HWND g_territory_menu_windows[2];
 HWND g_listbox_drag_candidate;
 HWND g_listbox_drag_target;
@@ -273,6 +289,21 @@ void draw_static_text(const char *text, const RECT &rect, LONG style,
   draw_list->PopClipRect();
 }
 
+ImFont *dialog_control_font(HWND window)
+{
+  LOGFONTA description = {};
+  HFONT font = reinterpret_cast<HFONT>(SendMessageA(window, WM_GETFONT, 0, 0));
+  if (!font || GetObjectA(font, sizeof(description), &description) != sizeof(description))
+    return nullptr;
+  const int size = description.lfHeight < 0 ? -description.lfHeight
+                                             : description.lfHeight;
+  for (const DialogFont &candidate : g_dialog_fonts)
+    if (candidate.font && candidate.pixel_size == size &&
+        SDL_strcasecmp(candidate.face, description.lfFaceName) == 0)
+      return candidate.font;
+  return nullptr;
+}
+
 ImU32 legacy_static_text_color(HWND window)
 {
   HDC dc = shandalar_window_backing_dc(window);
@@ -387,6 +418,9 @@ void draw_builtin_control(HWND window)
 
   ImGui::SetCursorScreenPos(ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)));
   ImGui::PushID(window);
+  ImFont *control_font = dialog_control_font(window);
+  if (control_font)
+    ImGui::PushFont(control_font);
   const bool use_dialog_text_color = is_dialog_control(window);
   if (use_dialog_text_color)
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32_BLACK);
@@ -602,6 +636,8 @@ void draw_builtin_control(HWND window)
   }
   if (use_dialog_text_color)
     ImGui::PopStyleColor();
+  if (control_font)
+    ImGui::PopFont();
   ImGui::PopID();
 }
 
@@ -1005,7 +1041,19 @@ extern "C" int shandalar_win32_imgui_init(SDL_Window *window, SDL_Renderer *rend
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGui::StyleColorsClassic();
-  ImGui::GetIO().IniFilename = nullptr;
+  ImGuiIO &io = ImGui::GetIO();
+  io.IniFilename = nullptr;
+  io.Fonts->AddFontDefault();
+  const char *font_root = shandalar_default_font_root();
+  for (DialogFont &candidate : g_dialog_fonts) {
+    candidate.font = nullptr;
+    if (font_root && *font_root) {
+      char path[1024];
+      SDL_snprintf(path, sizeof(path), "%s/%s", font_root, candidate.file);
+      candidate.font = io.Fonts->AddFontFromFileTTF(
+          path, static_cast<float>(candidate.pixel_size));
+    }
+  }
   g_renderer = renderer;
   return shandalar_win32_sdl_compositor_init(renderer) &&
          ImGui_ImplSDL3_InitForSDLRenderer(window, renderer) &&
@@ -1080,6 +1128,8 @@ extern "C" void shandalar_win32_imgui_shutdown(void)
     ImGui::DestroyContext();
   }
   g_renderer = nullptr;
+  for (DialogFont &candidate : g_dialog_fonts)
+    candidate.font = nullptr;
   g_territory_menu_windows[0] = nullptr;
   g_territory_menu_windows[1] = nullptr;
   g_listbox_drag_candidate = nullptr;

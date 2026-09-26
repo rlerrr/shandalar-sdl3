@@ -456,6 +456,7 @@ COLORREF shandalar_dc_resolve_color(HDC dc, COLORREF color);
 BOOL shandalar_dc_blit_argb8888(HDC dc, const uint32_t *pixels,
                                 int pitch_bytes, int width, int height);
 void shandalar_set_default_font_root(const char *root);
+const char *shandalar_default_font_root(void);
 double shandalar_set_font_device_scale(double scale);
 
 #ifdef __cplusplus

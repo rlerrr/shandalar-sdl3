@@ -653,6 +653,8 @@ BOOL shandalar_win32_register_dialog_factory(UINT resource_id,
                                              ShandalarDialogFactory factory);
 HWND shandalar_win32_create_dialog(HINSTANCE instance, HWND parent, LPCSTR title,
                                    int x, int y, int width, int height);
+BOOL shandalar_win32_set_dialog_template_font(HWND dialog, LPCSTR face,
+                                              int pixel_height);
 
 HMODULE GetModuleHandleA(LPCSTR module_name);
 FARPROC GetProcAddress(HMODULE module, LPCSTR proc_name);

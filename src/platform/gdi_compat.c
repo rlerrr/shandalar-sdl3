@@ -2022,6 +2022,9 @@ static const char *font_filename_for_face(const char *face, int bold, int italic
     return "TT0530M_.TTF";
   if (SDL_strcasecmp(face, "Benguiat Bk BT") == 0)
     return "TT0127M_.TTF";
+  if (SDL_strcasecmp(face, "Trebuchet MS") == 0 ||
+      SDL_strcasecmp(face, "MS Sans Serif") == 0)
+    return "TT0298M_.TTF";
   if (SDL_strcasecmp(face, "CentSchbook BT") == 0)
     return "TT0085M_.TTF";
   if (SDL_strcasecmp(face, "MPZurich Cn BT") == 0 ||
@@ -2448,6 +2451,11 @@ void shandalar_set_default_font_root(const char *root)
     if (*cursor == '\\')
       *cursor = '/';
   }
+}
+
+const char *shandalar_default_font_root(void)
+{
+  return g_font_root;
 }
 
 BOOL shandalar_dc_copy_rgba(HDC dc, uint32_t *pixels, int pitch_bytes)

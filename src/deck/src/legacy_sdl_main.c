@@ -305,6 +305,7 @@ int main(int argc, char **argv)
   SDL_SetRenderLogicalPresentation(g_renderer, 1024, 768,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_StartTextInput(g_window);
+  shandalar_set_default_font_root(asset_root);
   if (!shandalar_win32_imgui_init(g_window, g_renderer)) {
     printf("deck: imgui init failed\n");
     return 1;
@@ -313,7 +314,6 @@ int main(int argc, char **argv)
   shandalar_assets_set_root(asset_root);
   SDL_snprintf(module_path, sizeof(module_path), "%s/deck.exe", asset_root);
   shandalar_win32_set_module_path(module_path);
-  shandalar_set_default_font_root(asset_root);
   shandalar_win32_set_pump_proc(pump_legacy_ui);
   deck_register_dialog_resources();
 

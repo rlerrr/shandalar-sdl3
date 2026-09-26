@@ -14,14 +14,16 @@ extern HINSTANCE global_hinstance;
 static HWND add_control(HWND dialog, const char *class_name, int id,
                         int x, int y, int width, int height, DWORD style)
 {
-  return CreateWindowExA(0, class_name, "", WS_CHILD | WS_VISIBLE | style,
-                         SX(x), SY(y),
-                         SX(width), SY(height), dialog,
-                         (HMENU)(intptr_t)id, global_hinstance, NULL);
+  HWND control = CreateWindowExA(0, class_name, "", WS_CHILD | WS_VISIBLE | style,
+                                 SX(x), SY(y), SX(width), SY(height), dialog,
+                                 (HMENU)(intptr_t)id, global_hinstance, NULL);
+  if (control)
+    SendMessageA(control, WM_SETFONT, SendMessageA(dialog, WM_GETFONT, 0, 0), FALSE);
+  return control;
 }
 
 static HWND make_dialog(HINSTANCE instance, HWND parent, int width, int height,
-                        DWORD style)
+                        DWORD style, const char *font_face, int font_points)
 {
   RECT desktop;
   HWND dialog;
@@ -36,6 +38,9 @@ static HWND make_dialog(HINSTANCE instance, HWND parent, int width, int height,
                                          pixel_width, pixel_height);
   if (dialog)
     SetWindowLongA(dialog, GWL_STYLE, style);
+  if (dialog)
+    shandalar_win32_set_dialog_template_font(
+        dialog, font_face, (font_points * 4 + 1) / 3);
   return dialog;
 }
 
@@ -45,7 +50,8 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
   HWND dialog;
   switch (id) {
   case RES_DIALOG_ASK_VALUE:
-    dialog = make_dialog(instance, parent, 114, 61, DFLT_DLG_STYLE);
+    dialog = make_dialog(instance, parent, 114, 61, DFLT_DLG_STYLE,
+                         "Trebuchet MS", 9);
     add_control(dialog, "EDIT", RES_ASKVALUE_EDITTEXT, 42, 8, 30, 18, WS_BORDER);
     {
       HWND spin = add_control(dialog, "msctls_updown32", RES_ASKVALUE_SPIN,
@@ -57,7 +63,8 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
     return dialog;
 
   case RES_DIALOG_FILTER_LIST:
-    dialog = make_dialog(instance, parent, 164, 216, DFLT_DLG_STYLE);
+    dialog = make_dialog(instance, parent, 164, 216, DFLT_DLG_STYLE,
+                         "Benguiat Bk BT", 10);
     add_control(dialog, "LISTBOX", RES_FILTERLIST_LISTBOX, 5, 5, 155, 135,
                 WS_BORDER | WS_VSCROLL | WS_HSCROLL | LBS_SORT | LBS_MULTIPLESEL);
     add_control(dialog, "BUTTON", RES_BUTTON_OK, 10, 190, 65, 14, BS_DEFPUSHBUTTON);
@@ -69,7 +76,8 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
     return dialog;
 
   case RES_DIALOG_DECKINFO:
-    dialog = make_dialog(instance, parent, 279, 180, DFLT_DLG_STYLE);
+    dialog = make_dialog(instance, parent, 279, 180, DFLT_DLG_STYLE,
+                         "Benguiat Bk BT", 12);
     add_control(dialog, "EDIT", RES_DECKINFO_DECKTITLE_EDITTEXT, 65, 15, 185, 12, WS_BORDER);
     add_control(dialog, "EDIT", RES_DECKINFO_DESCRIPTION_EDITTEXT, 65, 30, 185, 12, WS_BORDER);
     add_control(dialog, "EDIT", RES_DECKINFO_NAME_EDITTEXT, 65, 45, 185, 12, WS_BORDER);
@@ -94,10 +102,12 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
     return dialog;
 
   case RES_DIALOG_DECKSTATS:
-    return make_dialog(instance, parent, 270, 179, DFLT_DLG_STYLE);
+    return make_dialog(instance, parent, 270, 179, DFLT_DLG_STYLE,
+                       "Benguiat Bk BT", 12);
 
   case RES_DIALOG_INFOBOX:
-    dialog = make_dialog(instance, parent, 219, 151, NOSYS_DLG_STYLE);
+    dialog = make_dialog(instance, parent, 219, 151, NOSYS_DLG_STYLE,
+                         "Benguiat Bk BT", 10);
     add_control(dialog, "BUTTON", RES_BUTTON_OK, 25, 130, 85, 14, BS_DEFPUSHBUTTON);
     add_control(dialog, "BUTTON", RES_BUTTON_CANCEL, 135, 130, 60, 14, 0);
     add_control(dialog, "STATIC", RES_INFOBOX_DESCRIPTION, 20, 15, 190, 10, 0);
@@ -112,7 +122,8 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
       RES_GROUPMOVE_BUTTON_WHITE, RES_GROUPMOVE_BUTTON_ARTIFACT
     };
     int i;
-    dialog = make_dialog(instance, parent, 164, 136, NOSYS_DLG_STYLE);
+    dialog = make_dialog(instance, parent, 164, 136, NOSYS_DLG_STYLE,
+                         "Benguiat Bk BT", 10);
     for (i = 0; i < 5; ++i)
       add_control(dialog, "BUTTON", button_ids[i], 45, 15 + i * 15, 95, 10,
                   BS_AUTOCHECKBOX);
@@ -123,7 +134,8 @@ static HWND create_deck_dialog(HINSTANCE instance, LPCSTR template_name, HWND pa
   }
 
   case RES_DIALOG_LOADDECK:
-    dialog = make_dialog(instance, parent, 342, 94, DFLT_DLG_STYLE);
+    dialog = make_dialog(instance, parent, 342, 94, DFLT_DLG_STYLE,
+                         "Benguiat Bk BT", 10);
     add_control(dialog, "STATIC", RES_LOADDECK_PLAYERDECK, 9, 6, 47, 19, 0);
     add_control(dialog, "COMBOBOX", RES_LOADDECK_DECKLIST, 61, 6, 259, 14,
                 WS_VSCROLL | CBS_DROPDOWNLIST | CBS_SORT);

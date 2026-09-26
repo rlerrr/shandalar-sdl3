@@ -49,6 +49,7 @@ struct ShandalarWindow {
   int erase;
   uint64_t content_revision;
   HFONT font;
+  HFONT owned_dialog_font;
   char *text;
   unsigned char *extra;
   size_t extra_size;
@@ -414,6 +415,10 @@ BOOL DestroyWindow(HWND window)
    */
   shandalar_destroy_screen_dc(window->backing_dc);
   window->backing_dc = NULL;
+  if (window->owned_dialog_font) {
+    DeleteObject(window->owned_dialog_font);
+    window->owned_dialog_font = NULL;
+  }
   free(window->extra);
   window->extra = NULL;
   window->extra_size = 0;
@@ -424,6 +429,28 @@ BOOL DestroyWindow(HWND window)
   free(window->text);
   window->text = NULL;
   window->alive = 0;
+  return TRUE;
+}
+
+BOOL shandalar_win32_set_dialog_template_font(HWND dialog, LPCSTR face,
+                                              int pixel_height)
+{
+  HWND child;
+  HFONT font;
+  if (!valid_window(dialog) || !face || pixel_height <= 0)
+    return FALSE;
+  font = CreateFontA(-pixel_height, 0, 0, 0, FW_NORMAL,
+                     0, 0, 0, 0, 0, 0, 0, 0, face);
+  if (!font)
+    return FALSE;
+  HFONT old_font = dialog->owned_dialog_font;
+  dialog->owned_dialog_font = font;
+  SendMessageA(dialog, WM_SETFONT, (WPARAM)font, FALSE);
+  for (child = GetWindow(dialog, GW_CHILD); child;
+       child = GetWindow(child, GW_HWNDNEXT))
+    SendMessageA(child, WM_SETFONT, (WPARAM)font, FALSE);
+  if (old_font)
+    DeleteObject(old_font);
   return TRUE;
 }
 

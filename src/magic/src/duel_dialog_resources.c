@@ -211,16 +211,23 @@ static HWND create_duel_dialog(HINSTANCE instance, LPCSTR template_name,
   }
 #undef D
   dialog = make_dialog(instance, parent, title, width, height, style, specs, count);
+  if (dialog) {
+    const char *font_face = "Benguiat Bk BT";
+    int font_points = 10;
+    if (id == 223 || id == 235 || id == 246)
+      font_points = 12;
+    else if (id == 243 || id == 249)
+      font_points = 16;
+    else if (id == 224 || id == 233) {
+      font_face = "MS Sans Serif";
+      font_points = 8;
+    }
+    /* Eight vertical dialog units are approximately one 10-point text line. */
+    shandalar_win32_set_dialog_template_font(
+        dialog, font_face, (font_points * 19 + 5) / 10);
+  }
   if (dialog && id == 220)
     SendDlgItemMessageA(dialog, 1103, UDM_SETRANGE32, 0, INT_MAX);
-  if (dialog && id == 223) {
-    /* Resource 223 uses DS_SETFONT with 12-point Benguiat Bk BT.  The stock
-     * SDL GUI font has those same metrics; send it before WM_INITDIALOG so
-     * dlgproc_BigCardChoice can derive the bold prompt font just as Win32's
-     * dialog manager does. */
-    SendDlgItemMessageA(dialog, 1021, WM_SETFONT,
-                        (WPARAM)GetStockObject(DEFAULT_GUI_FONT), FALSE);
-  }
   return dialog;
 }
 
