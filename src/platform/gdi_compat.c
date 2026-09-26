@@ -85,17 +85,18 @@ typedef struct PaintObject {
   int is_null;
   int style;
   int width;
+  int hatch;
 } PaintObject;
 
-static PaintObject g_stock_white_brush = {{OBJECT_BRUSH}, RGB(255, 255, 255), 0, 0, 1};
-static PaintObject g_stock_light_gray_brush = {{OBJECT_BRUSH}, RGB(192, 192, 192), 0, 0, 1};
-static PaintObject g_stock_gray_brush = {{OBJECT_BRUSH}, RGB(128, 128, 128), 0, 0, 1};
-static PaintObject g_stock_dark_gray_brush = {{OBJECT_BRUSH}, RGB(64, 64, 64), 0, 0, 1};
-static PaintObject g_stock_black_brush = {{OBJECT_BRUSH}, RGB(0, 0, 0), 0, 0, 1};
-static PaintObject g_stock_null_brush = {{OBJECT_BRUSH}, RGB(0, 0, 0), 1, 0, 1};
-static PaintObject g_stock_white_pen = {{OBJECT_PEN}, RGB(255, 255, 255), 0, 0, 1};
-static PaintObject g_stock_black_pen = {{OBJECT_PEN}, RGB(0, 0, 0), 0, 0, 1};
-static PaintObject g_stock_null_pen = {{OBJECT_PEN}, RGB(0, 0, 0), 1, 0, 1};
+static PaintObject g_stock_white_brush = {{OBJECT_BRUSH}, RGB(255, 255, 255), 0, 0, 1, 0};
+static PaintObject g_stock_light_gray_brush = {{OBJECT_BRUSH}, RGB(192, 192, 192), 0, 0, 1, 0};
+static PaintObject g_stock_gray_brush = {{OBJECT_BRUSH}, RGB(128, 128, 128), 0, 0, 1, 0};
+static PaintObject g_stock_dark_gray_brush = {{OBJECT_BRUSH}, RGB(64, 64, 64), 0, 0, 1, 0};
+static PaintObject g_stock_black_brush = {{OBJECT_BRUSH}, RGB(0, 0, 0), 0, 0, 1, 0};
+static PaintObject g_stock_null_brush = {{OBJECT_BRUSH}, RGB(0, 0, 0), 1, 0, 1, 0};
+static PaintObject g_stock_white_pen = {{OBJECT_PEN}, RGB(255, 255, 255), 0, 0, 1, 0};
+static PaintObject g_stock_black_pen = {{OBJECT_PEN}, RGB(0, 0, 0), 0, 0, 1, 0};
+static PaintObject g_stock_null_pen = {{OBJECT_PEN}, RGB(0, 0, 0), 1, 0, 1, 0};
 
 typedef struct CompatRegion {
   ObjectHeader header;
@@ -1002,7 +1003,29 @@ static PaintObject *create_paint(int kind, COLORREF color, int is_null)
 
 HBRUSH CreateSolidBrush(COLORREF color) { return create_paint(OBJECT_BRUSH, color, 0); }
 HBRUSH CreateBrushIndirect(const LOGBRUSH *brush) { return CreateSolidBrush(brush ? brush->lbColor : 0); }
-HBRUSH CreateHatchBrush(int hatch, COLORREF color) { (void)hatch; return CreateSolidBrush(color); }
+HBRUSH CreateHatchBrush(int hatch, COLORREF color)
+{
+  PaintObject *brush = create_paint(OBJECT_BRUSH, color, 0);
+  if (brush) {
+    brush->style = 2; /* BS_HATCHED */
+    brush->hatch = hatch;
+  }
+  return brush;
+}
+
+static int hatch_has_foreground(int hatch, int x, int y)
+{
+  switch (hatch) {
+  case 0: return (y & 7) == 0;                         /* HS_HORIZONTAL */
+  case 1: return (x & 7) == 0;                         /* HS_VERTICAL */
+  case 2: return ((x - y) & 7) == 0;                   /* HS_FDIAGONAL */
+  case 3: return ((x + y) & 7) == 0;                   /* HS_BDIAGONAL */
+  case 4: return (x & 7) == 0 || (y & 7) == 0;         /* HS_CROSS */
+  case 5: return ((x + y) & 7) == 0 ||
+                 ((x - y) & 7) == 0;                   /* HS_DIAGCROSS */
+  default: return 1;
+  }
+}
 HPEN CreatePen(int style, int width, COLORREF color)
 {
   PaintObject *pen = create_paint(OBJECT_PEN, color, 0);
@@ -1035,6 +1058,18 @@ int FillRect(HDC dc, const RECT *rect, HBRUSH brush)
   top = map_y(dc, rect->top);
   right = map_x(dc, rect->right);
   bottom = map_y(dc, rect->bottom);
+  if (paint->style == 2) {
+    COLORREF foreground = resolve_color(dc, paint->color);
+    COLORREF background = resolve_color(dc, dc->background_color);
+    for (y = top; y < bottom; ++y)
+      for (x = left; x < right; ++x) {
+        if (hatch_has_foreground(paint->hatch, x, y))
+          write_pixel_color(dc, x, y, foreground, SRCCOPY);
+        else if (dc->background_mode == OPAQUE)
+          write_pixel_color(dc, x, y, background, SRCCOPY);
+      }
+    return 1;
+  }
   if (is_true_color_bitmap(dc->bitmap)) {
     COLORREF color = resolve_color(dc, paint->color);
     for (y = top; y < bottom; ++y)

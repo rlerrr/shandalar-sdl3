@@ -20,6 +20,10 @@ int main(void)
   HPALETTE palette;
   HDC destination;
   HDC source;
+  HDC hatch_dc;
+  HBRUSH hatch_brush;
+  HBRUSH previous_brush;
+  HPEN previous_pen;
   HBITMAP source_bitmap;
   HBITMAP temporary_bitmap;
   void *source_bits;
@@ -87,6 +91,29 @@ int main(void)
   CHECK(SetPixelV(destination, 0, 0, PALETTEINDEX(42)));
   CHECK(shandalar_dc_copy_rgba(destination, rgba, 4 * sizeof(rgba[0])));
   CHECK(rgba[0] == 0xff0000ffu);
+
+  hatch_dc = shandalar_create_screen_dc(16, 16);
+  hatch_brush = CreateHatchBrush(3, RGB(128, 128, 128));
+  CHECK(hatch_dc && hatch_brush);
+  {
+    RECT hatch_rect = {0, 0, 16, 16};
+    CHECK(FillRect(hatch_dc, &hatch_rect, GetStockObject(WHITE_BRUSH)));
+  }
+  previous_brush = SelectObject(hatch_dc, hatch_brush);
+  previous_pen = SelectObject(hatch_dc, GetStockObject(NULL_PEN));
+  CHECK(SetBkMode(hatch_dc, TRANSPARENT) == OPAQUE);
+  CHECK(Rectangle(hatch_dc, 0, 0, 16, 16));
+  CHECK(GetPixel(hatch_dc, 2, 6) == RGB(128, 128, 128));
+  CHECK(GetPixel(hatch_dc, 3, 2) == RGB(255, 255, 255));
+  CHECK(GetPixel(hatch_dc, 3, 3) == RGB(255, 255, 255));
+  CHECK(SetBkMode(hatch_dc, OPAQUE) == TRANSPARENT);
+  CHECK(SetBkColor(hatch_dc, RGB(255, 0, 0)) != (COLORREF)-1);
+  CHECK(Rectangle(hatch_dc, 0, 0, 16, 16));
+  CHECK(GetPixel(hatch_dc, 3, 2) == RGB(255, 0, 0));
+  SelectObject(hatch_dc, previous_pen);
+  SelectObject(hatch_dc, previous_brush);
+  CHECK(DeleteObject(hatch_brush));
+  shandalar_destroy_screen_dc(hatch_dc);
 
   CHECK(DeleteDC(source));
   shandalar_destroy_screen_dc(destination);
