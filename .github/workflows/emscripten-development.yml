@@ -12,18 +12,8 @@ concurrency:
 
 jobs:
   build:
-    name: ${{ matrix.target }}
+    name: shandalar
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: facemaker
-            cmake_args: -DSHANDALAR_BUILD_FACEMAKER=ON -DSHANDALAR_BUILD_SHANDALAR=OFF -DSHANDALAR_BUILD_DECK=OFF
-          - target: shandalar
-            cmake_args: -DSHANDALAR_BUILD_FACEMAKER=OFF -DSHANDALAR_BUILD_SHANDALAR=ON -DSHANDALAR_BUILD_DECK=OFF
-          - target: deck
-            cmake_args: -DSHANDALAR_BUILD_FACEMAKER=OFF -DSHANDALAR_BUILD_SHANDALAR=OFF -DSHANDALAR_BUILD_DECK=ON
 
     steps:
       - uses: actions/checkout@v7
@@ -37,39 +27,39 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
 
-      - name: Configure CMake (${{ matrix.target }})
+      - name: Configure CMake
         run: |
           emcmake cmake -S "${{ github.workspace }}" \
-                       -B "${{ github.workspace }}/build-${{ matrix.target }}" \
+                       -B "${{ github.workspace }}/build-shandalar" \
                        -G Ninja \
                        -DCMAKE_BUILD_TYPE=Release \
-                       -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{ github.workspace }}/out/${{ matrix.target }}" \
+                       -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{ github.workspace }}/out/shandalar" \
                        -DSHANDALAR_ASSET_DIR="${{ github.workspace }}/assets" \
                        -DSHANDALAR_BUILD_TESTS=OFF \
-                       ${{ matrix.cmake_args }}
+                       -DSHANDALAR_BUILD_FACEMAKER=OFF -DSHANDALAR_BUILD_SHANDALAR=ON -DSHANDALAR_BUILD_DECK=OFF
 
-      - name: Build (${{ matrix.target }})
-        run: cmake --build "${{ github.workspace }}/build-${{ matrix.target }}"
+      - name: Build
+        run: cmake --build "${{ github.workspace }}/build-shandalar"
 
       - name: Select R2 destination
         id: destination
         shell: bash
         run: |
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            directory="development/${{ matrix.target }}"
+            directory="development/shandalar"
           else
-            directory="development/branches/${GITHUB_REF_NAME}/${{ matrix.target }}"
+            directory="development/branches/${GITHUB_REF_NAME}/shandalar"
           fi
 
           echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
 
-      - name: Upload to Cloudflare R2 (${{ matrix.target }})
+      - name: Upload to Cloudflare R2
         uses: ryand56/r2-upload-action@latest
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
           r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
           r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           r2-bucket: shandalar-sdl3
-          source-dir: ${{ github.workspace }}/out/${{ matrix.target }}
+          source-dir: ${{ github.workspace }}/out/shandalar
           destination-dir: ${{ steps.destination.outputs.directory }}
           output-file-url: false
