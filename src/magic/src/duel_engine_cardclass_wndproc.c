@@ -2943,6 +2943,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
   int player;
   HWND hidden_parent;
   int long_press_previewed;
+  static HWND g_pending_double_click_card;
 
   if (msg == WM_MOUSEMOVE || msg == WM_NCMOUSEMOVE)
   {
@@ -3663,6 +3664,14 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_DESTROY:
+    if (g_pending_double_click_card == hwnd)
+    {
+      g_pending_double_click_card = NULL;
+      if (GetCapture() == hwnd)
+      {
+        ReleaseCapture();
+      }
+    }
     snapshot = (card_instance_t *)GetWindowLongPtrA(hwnd, CARDCLASS_SNAPSHOT_WINDOW_LONG_OFFSET);
     free(snapshot);
     return 0;
@@ -3671,6 +3680,10 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 1;
 
   case WM_LBUTTONDOWN:
+    if (g_pending_double_click_card == hwnd)
+    {
+      g_pending_double_click_card = NULL;
+    }
     long_press_previewed = 0;
     player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
     card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
@@ -4049,11 +4062,30 @@ LRESULT CALLBACK wndproc_MAGICGAME_CardClass(HWND hwnd, UINT msg, WPARAM wparam,
     return 0;
 
   case WM_LBUTTONDBLCLK:
+    // Double click happens on mouse down, remember we've done that until the next mouse up.
     if (g_duel_modal_action_active != 0 &&
         card_double_click_posts_selection(hwnd) != 0)
     {
-      g_recorded_action_player = 1;
-      post_card_action_selection(hwnd);
+      g_pending_double_click_card = hwnd;
+      SetCapture(hwnd);
+    }
+    return 0;
+
+  case WM_LBUTTONUP:
+    if (g_pending_double_click_card == hwnd)
+    {
+      // Finally perform the cast.  We do this on mouse up to avoid insta-clicking other things.
+      g_pending_double_click_card = NULL;
+      if (GetCapture() == hwnd)
+      {
+        ReleaseCapture();
+        if (g_duel_modal_action_active != 0 &&
+            card_double_click_posts_selection(hwnd) != 0)
+        {
+          g_recorded_action_player = 1;
+          post_card_action_selection(hwnd);
+        }
+      }
     }
     return 0;
 
