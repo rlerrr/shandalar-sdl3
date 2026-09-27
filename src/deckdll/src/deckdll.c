@@ -1256,11 +1256,18 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   SetForegroundWindow(global_main_hwnd);
 
   while (GetMessage(&msg, NULL, 0, 0))
+  {
+    if ((global_db_flags_1 & DBFLAGS_SHANDALAR) && msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
+    {
+      SendMessageA(global_main_hwnd, WM_CLOSE, 0, 0);
+      continue;
+    }
     if (!TranslateAccelerator(global_main_hwnd, accel, &msg) && !process_cue_cards(&msg))
     {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
+  }
 
   delete_resources();
   if (!(global_db_flags_1 & DBFLAGS_SHANDALAR))

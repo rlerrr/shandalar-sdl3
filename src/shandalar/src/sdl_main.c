@@ -223,9 +223,10 @@ static void forward_deckbuilder_keyboard_event(const SDL_Event *event)
   if (!focus)
     return;
   GetClassNameA(focus, class_name, sizeof(class_name));
-  if (SDL_strcasecmp(class_name, "EDIT") == 0 ||
-      SDL_strcasecmp(class_name, "LISTBOX") == 0 ||
-      SDL_strcasecmp(class_name, "COMBOBOX") == 0)
+  if ((SDL_strcasecmp(class_name, "EDIT") == 0 ||
+       SDL_strcasecmp(class_name, "LISTBOX") == 0 ||
+       SDL_strcasecmp(class_name, "COMBOBOX") == 0) &&
+      (event->type != SDL_EVENT_KEY_DOWN || event->key.key != SDLK_ESCAPE))
     return;
   if (event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP)
   {

@@ -1655,7 +1655,11 @@ int CalculateCardShopPrice(int card_index)
     break;
 
   case 64:
-    price = 0xfa / (global_cards_data[card_index].ai_base_value + abs((int)(char)global_cards_data[card_index].cc[1]) + 2);
+    int artifact_price_divisor = global_cards_data[card_index].ai_base_value + abs((int)(char)global_cards_data[card_index].cc[1]) + 2;
+    // Mana Crypt has an AI value of -2 and no colored mana cost; price it like a zero-cost Mox.
+    if (artifact_price_divisor <= 0)
+      artifact_price_divisor = 5;
+    price = 250 / artifact_price_divisor;
 
     if (global_cards_data[card_index].extra_ability & 3)
     {
