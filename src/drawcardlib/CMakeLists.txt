@@ -30,7 +30,7 @@ target_link_libraries(drawcard_static PUBLIC
   rpbits
   shandalar_platform
 )
-target_compile_definitions(drawcard_static PRIVATE DRAWCARDLIB MODERN_FIXES SHANDALAR_STATIC_LIB)
+target_compile_definitions(drawcard_static PRIVATE DRAWCARDLIB MODERN_FIXES)
 
 add_library(drawcard_shandalar STATIC
   src/drawing.c
@@ -52,5 +52,4 @@ target_compile_definitions(drawcard_shandalar PRIVATE
   DRAWCARDLIB
   MODERN_FIXES
   SHANDALAR
-  SHANDALAR_STATIC_LIB
 )

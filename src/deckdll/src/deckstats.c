@@ -1,9 +1,5 @@
 #include <stddef.h>
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 #include "platform/winuser_compat.h"
-#else
-#include <windows.h>
-#endif
 #include "mystdbool.h"
 #include "defs.h"
 #include "deckdll.h"

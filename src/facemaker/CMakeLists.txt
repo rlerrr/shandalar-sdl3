@@ -10,7 +10,6 @@ if(SHANDALAR_BUILD_FACEMAKER OR SHANDALAR_BUILD_SHANDALAR)
   target_compile_definitions(facemaker_legacy_ui PRIVATE
     FACEMAKER
     MODERN_FIXES
-    SHANDALAR_SDL_WIN32_COMPAT
     WinMain=FacemakerWinMain
     ConsumeUiTickCount=FacemakerConsumeUiTickCount
     MainWindowProc=FacemakerMainWindowProc

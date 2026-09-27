@@ -78,7 +78,6 @@ int restore_duel_turn_resume_state(void);
 int upkeep_phase(unsigned int player);
 int end_turn_phase(unsigned int player);
 int ai_decision_phase(unsigned int player, int *next_state, int *phase_mode, int *phase_value);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 static void pump_ai_thinking_host(void)
 {
   static DWORD last_pump_tick;
@@ -92,9 +91,6 @@ static void pump_ai_thinking_host(void)
     last_pump_tick = GetTickCount();
   }
 }
-#else
-#define pump_ai_thinking_host() ((void)0)
-#endif
 #ifndef SHANDALAR
 extern HANDLE global_mutex_GameInit;
 #endif

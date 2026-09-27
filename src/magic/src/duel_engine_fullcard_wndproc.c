@@ -16,14 +16,12 @@
 
 #define DUEL_MAIN_WINDOW_HWND g_duel_window_hwnd
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 #define FULL_CARD_LONG_PRESS_TIMER_ID 2
 #define FULL_CARD_LONG_PRESS_DEAD_ZONE 8
 static HWND g_full_card_press_window;
 static POINT g_full_card_press_origin;
 static int g_full_card_press_timer_active;
 static int g_full_card_long_press_triggered;
-#endif
 
 extern int global_available_slots;
 extern card_ptr_t global_raw_cards_storage[2000];
@@ -419,7 +417,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     return 1;
 
   case WM_LBUTTONDOWN:
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (g_full_card_press_window != (HWND)0)
       KillTimer(g_full_card_press_window, FULL_CARD_LONG_PRESS_TIMER_ID);
     g_full_card_press_window = hwnd;
@@ -429,16 +426,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     g_full_card_long_press_triggered = 0;
     SetCapture(hwnd);
     SetTimer(hwnd, FULL_CARD_LONG_PRESS_TIMER_ID, GetDoubleClickTime(), (TIMERPROC)0);
-#else
-    if (g_duel_interface_options.layout == 2)
-    {
-      ShowWindow(hwnd, SW_HIDE);
-      KillTimer(hwnd, 1);
-    }
-#endif
     return 0;
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   case WM_LBUTTONUP:
     if (g_full_card_press_window == hwnd)
     {
@@ -456,10 +445,8 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
       g_full_card_long_press_triggered = 0;
     }
     return 0;
-#endif
 
   case WM_MOUSEMOVE:
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (g_full_card_press_window == hwnd &&
         g_full_card_press_timer_active != 0 &&
         (wparam & MK_LBUTTON) != 0)
@@ -473,7 +460,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
         g_full_card_press_timer_active = 0;
       }
     }
-#endif
     if (GetParent(hwnd) != DUEL_MAIN_WINDOW_HWND)
     {
       return 0;
@@ -745,7 +731,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
     return 0;
 
   case WM_TIMER:
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (wparam == FULL_CARD_LONG_PRESS_TIMER_ID &&
         g_full_card_press_window == hwnd &&
         g_full_card_press_timer_active != 0)
@@ -756,7 +741,6 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
       SendMessageA(hwnd, WM_COMMAND, 1, 0);
       return 0;
     }
-#endif
     if ((HWND)wparam == (HWND)1 && g_duel_interface_options.layout == 2)
     {
       GetCursorPos(&timer_cursor);

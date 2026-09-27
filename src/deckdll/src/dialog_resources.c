@@ -4,8 +4,6 @@
 extern HINSTANCE global_hinstance;
 #include "resources.h"
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
-
 #define SX(value) ((value) * 3 / 2)
 #define SY(value) ((value) * 5 / 3)
 #define NOSYS_DLG_STYLE (WS_POPUP | WS_CAPTION)
@@ -157,5 +155,3 @@ void deck_register_dialog_resources(void)
   for (index = 0; index < sizeof(resource_ids) / sizeof(resource_ids[0]); ++index)
     shandalar_win32_register_dialog_factory(resource_ids[index], create_deck_dialog);
 }
-
-#endif

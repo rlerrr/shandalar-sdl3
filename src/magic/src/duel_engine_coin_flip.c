@@ -43,9 +43,7 @@ void draw_duel_dialog_bitmap_button(DRAWITEMSTRUCT *draw_item,
 INT_PTR CALLBACK dlgproc_duel_coin_flip_animation(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 void load_coin_flip_animation_dialog_assets(HBRUSH *brush, COLORREF *text_color);
 void cleanup_coin_flip_animation_dialog_assets(HGDIOBJ brush);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 static BOOL CALLBACK restore_coin_flip_palette(HWND hwnd, LPARAM palette);
-#endif
 void load_redraw_ante_dialog_assets(HBITMAP *background,
                                     int *text_color,
                                     HBITMAP *normal_button_bitmap,
@@ -238,17 +236,14 @@ int coin_flip(int player, char *dialog_title, int show_dialog_if_animation_is_of
     InvalidateRect(g_duel_help_owner_hwnd, (RECT *)0, 1);
     global_cart_art_hpalette = old_palette;
     ApplyCardArtPaletteToDc(g_shared_offscreen_dc);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     restore_coin_flip_palette(g_duel_window_hwnd, (LPARAM)old_palette);
     EnumChildWindows(g_duel_window_hwnd, restore_coin_flip_palette,
                      (LPARAM)old_palette);
-#endif
     DeleteObject(coin_flip_palette);
   }
   return animation_context.coin_result;
 }
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 static BOOL CALLBACK restore_coin_flip_palette(HWND hwnd, LPARAM palette)
 {
   HDC dc = GetDC(hwnd);
@@ -266,7 +261,6 @@ static BOOL CALLBACK restore_coin_flip_palette(HWND hwnd, LPARAM palette)
    */
   return TRUE;
 }
-#endif
 
 // FUNCTION: MAGIC 0x004a44b7
 // FUNCTION: SHANDALAR 0x0053fe44

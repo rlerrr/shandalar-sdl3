@@ -1,11 +1,7 @@
 #ifndef __SHARED_RESOURCES_H__
 #define __SHARED_RESOURCES_H__
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 #include "platform/winuser_compat.h"
-#else
-#include <windows.h>
-#endif
 #include "mystdbool.h"
 
 // Single header library style

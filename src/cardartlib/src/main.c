@@ -79,7 +79,6 @@ int DrawSmallArt(HDC hdc, RECT *rect, card_id_t id, int version);
 VersionedArtCacheEntry *FindVersionedSmallArtCacheEntry(card_id_t id, int version);
 void DestroyVersionedSmallArt(card_id_t id, int version);
 void DestroyAllVersionedSmallArts(void);
-static BOOL CardArtLib_Initialize(HINSTANCE instance);
 int LoadVersionedSmallArt(card_id_t id, int version, int width, int height);
 int DrawVersionedSmallArt(HDC hdc, RECT *rect, card_id_t id, int version);
 bool ReloadVersionedSmallArtIfWrongSize(card_id_t id, int version, int width, int height);
@@ -149,119 +148,6 @@ int CardArtLib_InitializeFromRoot(const char *asset_root)
   g_versionedBigArtCount = 0;
   global_dither_kernel_id = 3;
   return 1;
-}
-
-// MATCHING
-// FUNCTION: CARDARTLIB 0x100030f0
-#ifndef SHANDALAR_STATIC_LIB
-BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
-{
-  uint uVar1;
-
-  (void)reserved;
-  switch (reason)
-  {
-  case 1:
-    uVar1 = 1;
-    uVar1 = (uint)CardArtLib_Initialize(instance) & uVar1;
-    return uVar1;
-  case 2:
-    return 1;
-  case 3:
-    return 1;
-  case 0:
-    CardArtLib_Shutdown();
-    return 1;
-  }
-}
-#endif
-
-// MATCHING
-// FUNCTION: CARDARTLIB 0x10003175
-static BOOL CardArtLib_Initialize(HINSTANCE instance)
-{
-  char *last_slash;           /* -0x4a4a4 */
-  char cards_dat_path[0x108]; /* -0x4a4a0 */
-  int card_count;             /* -0x4a398 */
-  int unused_header_value;    /* -0x4a394 */
-  int idx;                    /* -0x4a390 */
-  FILE *cards_file;           /* -0x4a38c */
-  card_ptr_t records[2000];   /* -0x4a388 */
-  int result;                 /* -0x08 */
-  int i;                      /* -0x04 */
-
-  result = 1;
-  global_hinstance = instance;
-  InitializeCriticalSection(&global_critical_section_for_small_art);
-  InitializeCriticalSection(&global_critical_section_for_big_art);
-  InitializeCriticalSection(&global_critical_section_for_catalog);
-
-#ifdef _DEBUG
-  // Allow debugging directly from output directory
-  if (getcwd(global_base_directory, sizeof(global_base_directory)) == NULL)
-  {
-    return 0;
-  }
-#else
-  GetModuleFileNameA((HMODULE)0x0, global_base_directory, 0x105);
-  last_slash = strrchr(global_base_directory, 0x5c);
-  *last_slash = '\0';
-#endif
-
-  strcpy(global_cartart_directory, global_base_directory);
-  strcat(global_cartart_directory, "\\CARDART");
-  InitCardArtGdiResources();
-  strcpy(cards_dat_path, global_base_directory);
-  strcat(cards_dat_path, "\\CARDS.DAT");
-  cards_file = fopen(cards_dat_path, "rb");
-
-  if (cards_file != (FILE *)0x0)
-  {
-    fread(&card_count, 4, 1, cards_file);
-    fread(&unused_header_value, 4, 1, cards_file);
-    fread(records, 0x98, (size_t)card_count, cards_file);
-
-    for (idx = 0; idx < card_count; idx = idx + 1)
-    {
-      if (records[idx].num_pics > 0)
-      {
-        g_cardPicCounts[idx] = records[idx].num_pics;
-      }
-      else
-      {
-        g_cardPicCounts[idx] = 1;
-      }
-    }
-
-    fclose(cards_file);
-  }
-  else
-  {
-    for (idx = 0; idx < card_count; idx = idx + 1)
-    {
-      g_cardPicCounts[idx] = 1;
-    }
-  }
-
-  for (i = 0; i < 2000; i = i + 1)
-  {
-    g_SmallArtCache[i].hbm = 0;
-  }
-
-  for (i = 0; i < 100; i = i + 1)
-  {
-    g_versionedSmallArtCache[i].hbm = 0;
-  }
-  g_versionedSmallArtCount = 0;
-
-  for (i = 0; i < 0x14; i = i + 1)
-  {
-    g_versionedBigArtCache[i].hbm = 0;
-  }
-
-  g_versionedBigArtCount = 0;
-  global_dither_kernel_id = 3;
-  return result;
 }
 
 // MATCHING

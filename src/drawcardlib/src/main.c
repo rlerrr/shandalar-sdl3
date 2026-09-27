@@ -1719,38 +1719,9 @@ void ReplaceSubstring(char *inOutStr, char *needle, int caseSensitive, char *rep
   strcpy(inOutStr, outStr);
 }
 
-// FUNCTION: DRAWCARDLIB 0x1000bd90
-#ifndef SHANDALAR_STATIC_LIB
-BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved)
-{
-  undefined4 result;
-
-  (void)reserved;
-  switch (reason)
-  {
-  case 1:
-    result = 1;
-    result &= read_cfg(hinst);
-    result &= prepare_fonts_and_imgs();
-    return (BOOL)result;
-  case 2:
-    return (BOOL)1;
-  case 3:
-    return (BOOL)1;
-  case 0:
-    DestroyAllResources();
-    DrawCardLib_Shutdown();
-    return (BOOL)1;
-  }
-}
-#endif
-
 // FUNCTION: DRAWCARDLIB 0x1000be22
 int read_cfg(HINSTANCE hinst)
 {
-#ifndef SHANDALAR_STATIC_LIB
-  char *lastSlash;
-#endif
   void *recordBuf;
   char cards_dat_filename[264];
   uint32_t global_available_slots = 0;
@@ -1764,26 +1735,8 @@ int read_cfg(HINSTANCE hinst)
   g_drawCardLibInstance = hinst;
   InitializeCriticalSection(&global_critical_section_for_catalog);
 
-#ifndef SHANDALAR_STATIC_LIB
-#ifdef _DEBUG
-  // Allow debugging directly from output directory
-  if (getcwd(global_base_directory, sizeof(global_base_directory)) == NULL)
-  {
-    return 0;
-  }
-#else
-  GetModuleFileNameA((HMODULE)0x0, global_base_directory, sizeof(global_base_directory));
-  lastSlash = strrchr(global_base_directory, '\\');
-  *lastSlash = '\0';
-#endif
-#endif
-
   strcpy(global_cardart_directory, global_base_directory);
-#ifdef SHANDALAR_STATIC_LIB
   strcat(global_cardart_directory, "\\CardArt");
-#else
-  strcat(global_cardart_directory, "\\CARDART");
-#endif
   global_dither_kernel_id = 3;
   global_color_depth = 0x10;
   if (!InitCardArtGdiResources())

@@ -19,7 +19,6 @@
   target_compile_definitions(deck_legacy_ui PRIVATE
     DECKDLL
     MODERN_FIXES
-    SHANDALAR_SDL_WIN32_COMPAT
     global_hinstance=deckdll_global_hinstance
     global_main_hwnd=deckdll_global_main_hwnd
     LoadFontFromIni=deckdll_LoadFontFromIni

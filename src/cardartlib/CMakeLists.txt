@@ -24,4 +24,4 @@ target_include_directories(cardart_static PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 target_link_libraries(cardart_static PUBLIC shandalar_platform)
-target_compile_definitions(cardart_static PRIVATE CARDARTLIB MODERN_FIXES SHANDALAR_STATIC_LIB)
+target_compile_definitions(cardart_static PRIVATE CARDARTLIB MODERN_FIXES)

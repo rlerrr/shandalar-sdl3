@@ -69,7 +69,6 @@ add_dependencies(shandalar shandalar_version_header_target)
 target_compile_definitions(shandalar PRIVATE
   MODERN_FIXES
   SHANDALAR
-  SHANDALAR_SDL_WIN32_COMPAT
   LoadPcxIntoPageNoPalette=ShandalarLoadPcxIntoPageNoPalette
 )
 if(EMSCRIPTEN)

@@ -1,9 +1,5 @@
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 #include "platform/winuser_compat.h"
 #include "platform/legacy_io.h"
-#else
-#include "WINDOWS.H"
-#endif
 
 extern HPALETTE global_cart_art_hpalette;
 

@@ -1,6 +1,3 @@
-#ifdef _WIN32
-#include <process.h>
-#endif
 #include "platform/gdi_compat.h"
 #include "platform/legacy_io.h"
 #include "platform/winuser_compat.h"
@@ -374,7 +371,6 @@ extern DIBSurface *g_graphics_pages[10];
 extern int g_graphics_height;
 extern int g_graphics_width;
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 extern int g_worker_should_exit;
 int LoadSpriteGroupsFromFile(char *sprite_path, int *group_frame_counts,
                              EncodedImage **group_entries, EncodedImage **first_sprite_out);
@@ -404,7 +400,6 @@ static void pump_facemaker_compat_host(int wait)
     g_worker_should_exit = 1;
   }
 }
-#endif
 
 static void strip_trailing_newline(char *text)
 {
@@ -1341,9 +1336,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   local.hover_button_index = -1;
   do
   {
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     pump_facemaker_compat_host(1);
-#endif
     if (local.hover_button_index >= 0)
     {
       if (g_mouse_x <
@@ -1416,9 +1409,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
       ConsumeUiTickCount();
       while (g_mouse_button_down != 0)
       {
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
         pump_facemaker_compat_host(1);
-#endif
         if (PeekUiTickCount() >= 5)
         {
           if (local.next_hover_button_index >= 0)
@@ -1454,11 +1445,7 @@ DWORD __cdecl FaceMakerWorkerThread(LPVOID unused)
   }
   chdir(g_original_working_dir);
   SendMessageA(g_main_hwnd, 0x12, g_worker_exit_code, 0);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   return g_worker_exit_code;
-#else
-  ExitThread(g_worker_exit_code);
-#endif
 }
 
 // FUNCTION: FACEMAKER 0x00404d70
@@ -1862,7 +1849,6 @@ void RestoreDisplayResolution(void)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, int nShowCmd)
 {
   char *slash;
-  DWORD thread_id;
   MSG msg;
   // int horzres;
   //  unsigned int matched_mode;
@@ -2020,13 +2006,7 @@ LOOP:
 
   SetSystemPaletteUse(global_main_hdc, 2);
   atexit(RestoreSystemPalette);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
-  (void)thread_id;
   FaceMakerWorkerThread((LPVOID)0);
-#else
-  CreateThread((LPSECURITY_ATTRIBUTES)0, 0, (LPTHREAD_START_ROUTINE)FaceMakerWorkerThread,
-               (LPVOID)0, 0, &thread_id);
-#endif
   while (GetMessageA(&msg, (HWND)0, 0, 0) != 0)
   {
     TranslateMessage(&msg);

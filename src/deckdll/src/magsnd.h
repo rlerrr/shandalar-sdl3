@@ -1,11 +1,7 @@
 #ifndef MAGSND_H
 #define MAGSND_H
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 #include "platform/winuser_compat.h"
-#else
-#include <windows.h>
-#endif
 
 typedef struct Sound_t
 {                 // very little idea what any of these fields do.

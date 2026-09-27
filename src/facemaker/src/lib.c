@@ -742,12 +742,10 @@ void WriteGraphicsScanline(unsigned int *scanline_data, int page_number, int dst
     g_scanline_bitmap_info_initialized = 1;
   }
   page = g_graphics_pages[page_number];
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   if (!page || (page_number != 0 && !page->pBits))
   {
     return;
   }
-#endif
   g_scanline_bitmap_info->bmiHeader.biWidth = byte_count;
   if (page_number == 0)
   {

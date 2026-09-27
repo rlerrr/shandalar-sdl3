@@ -34,13 +34,11 @@
 
 #define WM_DECKBUILDER_DRAG_SELL_HOVER (WM_APP + 0x442)
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 #define DECK_FULL_CARD_LONG_PRESS_TIMER_ID 2
 #define DECK_FULL_CARD_LONG_PRESS_DEAD_ZONE 8
 static HWND g_deck_full_card_press_window;
 static POINT g_deck_full_card_press_origin;
 static int g_deck_full_card_press_timer_active;
-#endif
 
 #define MAKELONG2(a, b) ((LONG)(((a) & 0xffff) | ((DWORD)((WORD)(b))) << 16))
 #define MAKELONG3(a, b) ((LONG)(((a) & 0xffff) | ((DWORD)((b) & 0xffff)) << 16))
@@ -485,7 +483,6 @@ void fatal(const char *fmt, ...)
   exit(1);
 }
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
 void deck_set_host_pump_hooks(void (*begin)(void), void (*end)(void))
 {
   g_host_begin_deckbuilder = begin;
@@ -498,7 +495,6 @@ void deck_set_debug_card_picker(int (*pick_card)(HWND owner),
   g_debug_card_picker = pick_card;
   g_debug_card_sort_key = card_sort_key;
 }
-#endif
 
 // FUNCTION: DECKDLL 0x10028350
 int load_text(const char *file_name, const char *section_name)
@@ -1143,9 +1139,7 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   }
 
   global_deckbuilder_owns_card_art_palette = 0;
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   if (!((global_db_flags_1 & DBFLAGS_SHANDALAR) && global_cart_art_hpalette))
-#endif
   {
     if (!SetupDuelPalette())
     {
@@ -1197,13 +1191,11 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
 
   ReadDeckbuilderCsv("DeckBuilder.csv", global_origrarities);
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   if ((global_db_flags_1 & DBFLAGS_SHANDALAR) && g_host_begin_deckbuilder)
   {
     g_host_begin_deckbuilder();
     host_pump_active = 1;
   }
-#endif
 
   screen_width = GetSystemMetrics(0);
   screen_height = GetSystemMetrics(1);
@@ -1217,10 +1209,8 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!global_main_hwnd)
   {
     fatal_err("WinMain: Couldn't create the main window", 0);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (host_pump_active && g_host_end_deckbuilder)
       g_host_end_deckbuilder();
-#endif
     return 0;
   }
 
@@ -1233,10 +1223,8 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!global_cuecard_hwnd)
   {
     fatal_err("WinMain: Couldn't create the cue card window", global_main_hwnd);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (host_pump_active && g_host_end_deckbuilder)
       g_host_end_deckbuilder();
-#endif
     return 0;
   }
 
@@ -1244,10 +1232,8 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!accel)
   {
     fatal_err("WinMain: Couldn't load the accelerator table", global_main_hwnd);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (host_pump_active && g_host_end_deckbuilder)
       g_host_end_deckbuilder();
-#endif
     return 0;
   }
 
@@ -1275,10 +1261,8 @@ DeckBuilderMain(HWND parent_hwnd, int db_flags_1, int db_flags_2)
   if (!preserve_shared_card_resources)
     destroy_create_fonts_resources();
   DeleteCriticalSection(&global_critical_section_for_unknown);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   if (host_pump_active && g_host_end_deckbuilder)
     g_host_end_deckbuilder();
-#endif
 
   return msg.wParam;
 }
@@ -2012,10 +1996,8 @@ INT_PTR CALLBACK dlgproc_AskX(HWND hdlg, UINT msg, WPARAM wparam, LPARAM lparam)
     sprintf(edit_txt, "%d", global_dlg_parameter);
     SetWindowTextA(hdlg, global_ask_x_dlg_title);
     SetWindowTextA(GetDlgItem(hdlg, RES_ASKVALUE_EDITTEXT), edit_txt);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     SendMessageA(GetDlgItem(hdlg, RES_ASKVALUE_SPIN), UDM_SETRANGE32,
                  0, INT_MAX);
-#endif
 
     load_text("menus", "OKCANCEL");
     SetWindowTextA(GetDlgItem(hdlg, RES_BUTTON_OK), text_lines[0]);
@@ -3008,20 +2990,17 @@ LRESULT CALLBACK wndproc_FullCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     DWORD now = GetTickCount();
     if (now - last_click <= GetDoubleClickTime())
     {
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
       if (g_deck_full_card_press_window != (HWND)0)
         KillTimer(g_deck_full_card_press_window, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
       if (GetCapture() == hwnd)
         ReleaseCapture();
       g_deck_full_card_press_window = (HWND)0;
       g_deck_full_card_press_timer_active = 0;
-#endif
       SendMessageA(hwnd, WM_COMMAND, RES_FULLCARDMENU_EXPAND, 0);
       last_click = 0;
       return 0;
     }
     last_click = now;
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
     if (g_deck_full_card_press_window != (HWND)0)
       KillTimer(g_deck_full_card_press_window, DECK_FULL_CARD_LONG_PRESS_TIMER_ID);
     g_deck_full_card_press_window = hwnd;
@@ -3031,12 +3010,8 @@ LRESULT CALLBACK wndproc_FullCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     SetCapture(hwnd);
     SetTimer(hwnd, DECK_FULL_CARD_LONG_PRESS_TIMER_ID, GetDoubleClickTime(), NULL);
     return 0;
-#else
-    return DefWindowProcA(hwnd, msg, wparam, lparam);
-#endif
   }
 
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
   case WM_MOUSEMOVE:
     if (g_deck_full_card_press_window == hwnd &&
         g_deck_full_card_press_timer_active != 0 &&
@@ -3074,7 +3049,6 @@ LRESULT CALLBACK wndproc_FullCardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
       SendMessageA(hwnd, WM_COMMAND, RES_FULLCARDMENU_EXPAND, 0);
     }
     return 0;
-#endif
 
   default:
     return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -4298,7 +4272,6 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
   WORD wPics;               /* ebp - 0x80 */
   int *horz_list_addr;      /* ebp - 0x7c */
 
-  MSG m;        /* ebp - 0x78 */
   int amt;      /* ebp - 0x5c */
   int currsel;  /* ebp - 0x58 */
   POINT p;      /* ebp - 0x54 */
@@ -4845,13 +4818,6 @@ LRESULT CALLBACK wndproc_HorzListClass(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     ScreenToClient(global_main_hwnd, &p);
     ScreenToClient(global_horzlist_hwnd, (LPPOINT)&global_horzlist_mouse_pt);
 
-#ifndef SHANDALAR_SDL_WIN32_COMPAT
-    j = GetDoubleClickTime();
-    Sleep(j);
-    if (PeekMessageA(&m, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0))
-      return 0;
-#endif
-
     SetFocus(hwnd);
     wLast = GetWindowWord(hwnd, HORZLIST_LASTPIC_INDEX);
     if (wLast > 0)
@@ -5381,7 +5347,6 @@ wndproc_CardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   PAINTSTRUCT paint;     /* ebp - 0xc0 */
   int saved_dc;          /* ebp - 0x84 */
   RECT client_rect;      /* ebp - 0x80 */
-  MSG dblclick_msg;      /* ebp - 0x70 */
   WORD amount;           /* ebp - 0x54 */
   POINT popup_pt;        /* ebp - 0x50 */
   UINT i_or_delay_ms;    /* ebp - 0x48 */
@@ -5494,13 +5459,6 @@ wndproc_CardClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   {
     if ((global_db_flags_2 & 1) == 0)
       return 0;
-
-#ifndef SHANDALAR_SDL_WIN32_COMPAT
-    i_or_delay_ms = GetDoubleClickTime();
-    Sleep(i_or_delay_ms);
-    if (PeekMessageA(&dblclick_msg, hwnd, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, 0) != 0)
-      return 0;
-#endif
 
     card_mouse_pt.x = GET_X_LPARAM(lparam);
     card_mouse_pt.y = GET_Y_LPARAM(lparam);

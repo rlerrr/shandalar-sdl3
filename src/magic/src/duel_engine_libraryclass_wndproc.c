@@ -235,9 +235,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
       if (shuffle_windows[shuffle_index] != (HWND)0)
       {
         UpdateWindow(shuffle_windows[shuffle_index]);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
         shandalar_win32_pump(TRUE);
-#endif
         shuffle_x += (shuffle_card_width * 0xf) / 100;
       }
     }
@@ -248,9 +246,7 @@ LRESULT CALLBACK wndproc_MAGICGAME_LibraryClass(HWND hwnd, UINT msg, WPARAM wpar
         DestroyWindow(shuffle_windows[shuffle_index]);
       }
       UpdateWindow(DUEL_MAIN_WINDOW_HWND);
-#ifdef SHANDALAR_SDL_WIN32_COMPAT
       shandalar_win32_pump(TRUE);
-#endif
     }
     return 0;
 

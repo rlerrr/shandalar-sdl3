@@ -20,7 +20,6 @@
   target_include_directories(deck PRIVATE
     "${SHANDALAR_SRC_ROOT}"
   )
-  target_compile_definitions(deck PRIVATE SHANDALAR_SDL_WIN32_COMPAT)
   target_link_libraries(deck PRIVATE
     deck_legacy_ui
     deck_imgui_interaction
