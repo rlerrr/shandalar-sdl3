@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: cmake --build "${{ github.workspace }}/build-shandalar"
 
+      - name: Stamp version file
+        run: printf '{"sha":"%s"}\n' "${GITHUB_SHA}" > "${{ github.workspace }}/out/shandalar/version.json"
+
       - name: Select R2 destination
         id: destination
         shell: bash
