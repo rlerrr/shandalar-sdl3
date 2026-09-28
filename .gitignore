@@ -26,3 +26,7 @@ temp/
 .vs/
 out/
 /build*/
+/AppDir/
+/tools-appimage/
+/*.AppImage
+/Shandalar-x86_64.AppImage.previous.*

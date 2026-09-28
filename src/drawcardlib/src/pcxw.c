@@ -1,4 +1,5 @@
 #include "platform/gdi_compat.h"
+#include "platform/legacy_io.h"
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>

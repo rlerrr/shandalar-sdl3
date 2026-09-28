@@ -271,7 +271,10 @@ int shandalar_run_facemaker_flow(void)
     return -1;
   if (!completed)
     return -1;
-  load_facemaker_portrait_output();
+  if (!load_facemaker_portrait_output()) {
+    fprintf(stderr, "shandalar: Facemaker did not create a readable face.pic\n");
+    return -1;
+  }
   g_name_entry_cursor = (int)strlen(g_name_entry_buffer);
   prepare_name_entry_background();
   g_page0_window_bounds->font_slot = 1;

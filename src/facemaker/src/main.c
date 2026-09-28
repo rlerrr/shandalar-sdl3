@@ -251,34 +251,30 @@ char g_face_output_path[0x105];
 
 static const char *FacemakerRecentFacePath(void)
 {
-#ifdef __EMSCRIPTEN__
   static char path[0x105];
+  if (strcmp(shandalar_user_data_root(), ".") == 0)
+    return "FaceMostRecent.txt";
   snprintf(path, sizeof(path), "%s/FaceMostRecent.txt", shandalar_user_data_root());
   return path;
-#else
-  return "FaceMostRecent.txt";
-#endif
 }
 
 static void SetInitialFaceOutputPath(void)
 {
-#ifdef __EMSCRIPTEN__
-  snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
-           shandalar_user_data_root());
-#else
-  snprintf(g_face_output_path, sizeof(g_face_output_path), "%s\\PlayFace\\*.pic",
-           global_base_directory);
-#endif
+  if (strcmp(shandalar_user_data_root(), ".") != 0)
+    snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
+             shandalar_user_data_root());
+  else
+    snprintf(g_face_output_path, sizeof(g_face_output_path), "%s\\PlayFace\\*.pic",
+             global_base_directory);
 }
 
 static void SetDialogFaceOutputPath(void)
 {
-#ifdef __EMSCRIPTEN__
-  snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
-           shandalar_user_data_root());
-#else
-  strcpy(g_face_output_path, "*.pic");
-#endif
+  if (strcmp(shandalar_user_data_root(), ".") != 0)
+    snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
+             shandalar_user_data_root());
+  else
+    strcpy(g_face_output_path, "*.pic");
 }
 
 // GLOBAL: FACEMAKER 0x0041c140
@@ -446,11 +442,8 @@ void InitOpenFileDialog(HWND owner_hwnd, OPENFILENAMEA *open_file, char *initial
   open_file->nMaxFile = 0x104;
   open_file->lpstrFileTitle = (LPSTR)0;
   open_file->nMaxFileTitle = 0x200;
-#ifdef __EMSCRIPTEN__
-  open_file->lpstrInitialDir = shandalar_user_data_root();
-#else
-  open_file->lpstrInitialDir = "PlayFace";
-#endif
+  open_file->lpstrInitialDir = strcmp(shandalar_user_data_root(), ".") != 0
+                                 ? shandalar_user_data_root() : "PlayFace";
   open_file->lpstrTitle = g_save_dialog_title;
   open_file->Flags = 0x6000c;
   open_file->nFileOffset = 0;

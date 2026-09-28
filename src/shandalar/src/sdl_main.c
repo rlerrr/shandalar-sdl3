@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,10 +66,20 @@ static SDL_Texture *g_texture;
 static uint32_t *g_rgba;
 static int g_texture_width;
 static int g_texture_height;
-static int g_quit_requested;
 static int g_facemaker_host_active;
 static int g_deckbuilder_host_active;
 static int g_duel_host_active;
+
+static void handle_window_close(const SDL_Event *event)
+{
+  if (event->type == SDL_EVENT_QUIT ||
+      event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+  {
+    /* Legacy adventure screens can stay in their own input loops indefinitely.
+     * End the process here instead of leaving a quit flag for those loops. */
+    exit(0);
+  }
+}
 
 static int legacy_key(SDL_Keycode key)
 {
@@ -267,15 +278,8 @@ static BOOL pump_facemaker_ui(BOOL wait)
   while (SDL_PollEvent(&event))
   {
     shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
-    if (event.type == SDL_EVENT_QUIT)
-    {
-      g_quit_requested = 1;
-      PostQuitMessage(0);
-    }
-    else
-    {
-      forward_facemaker_keyboard_event(&event);
-    }
+    handle_window_close(&event);
+    forward_facemaker_keyboard_event(&event);
   }
 
   shandalar_window_content_changed(g_main_hwnd);
@@ -293,7 +297,7 @@ static BOOL pump_facemaker_ui(BOOL wait)
   if (wait)
     SDL_Delay(8);
 #endif
-  return !g_quit_requested && g_facemaker_host_active;
+  return g_facemaker_host_active;
 }
 
 static BOOL pump_deckbuilder_ui(BOOL wait)
@@ -302,15 +306,8 @@ static BOOL pump_deckbuilder_ui(BOOL wait)
   while (SDL_PollEvent(&event))
   {
     shandalar_win32_imgui_process_event(g_renderer, &event);
-    if (event.type == SDL_EVENT_QUIT)
-    {
-      g_quit_requested = 1;
-      PostQuitMessage(0);
-    }
-    else
-    {
-      forward_deckbuilder_keyboard_event(&event);
-    }
+    handle_window_close(&event);
+    forward_deckbuilder_keyboard_event(&event);
   }
 
   shandalar_win32_runtime_tick();
@@ -330,7 +327,7 @@ static BOOL pump_deckbuilder_ui(BOOL wait)
   if (wait)
     SDL_Delay(8);
 #endif
-  return !g_quit_requested && g_deckbuilder_host_active;
+  return g_deckbuilder_host_active;
 }
 
 static BOOL pump_duel_ui(BOOL wait)
@@ -340,15 +337,8 @@ static BOOL pump_duel_ui(BOOL wait)
   {
     shandalar_win32_imgui_process_event(g_renderer, &event);
     shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
-    if (event.type == SDL_EVENT_QUIT)
-    {
-      g_quit_requested = 1;
-      PostQuitMessage(0);
-    }
-    else
-    {
-      forward_deckbuilder_keyboard_event(&event);
-    }
+    handle_window_close(&event);
+    forward_deckbuilder_keyboard_event(&event);
   }
 
   shandalar_win32_runtime_tick();
@@ -367,7 +357,7 @@ static BOOL pump_duel_ui(BOOL wait)
   if (wait)
     SDL_Delay(8);
 #endif
-  return !g_quit_requested && g_duel_host_active;
+  return g_duel_host_active;
 }
 
 static int ensure_framebuffer(int width, int height)
@@ -464,7 +454,7 @@ int shandalar_host_run_facemaker(const char *asset_root, const char *writable_ro
   SDL_SetWindowTitle(g_window, "Magic: Shandalar");
   SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
-  return result == 0 && !g_quit_requested;
+  return result == 0;
 }
 
 void shandalar_host_begin_deckbuilder(void)
@@ -541,11 +531,9 @@ void shandalar_host_pump(void)
   static int s_right_held = 0;
   while (SDL_PollEvent(&event))
   {
+    handle_window_close(&event);
     switch (event.type)
     {
-    case SDL_EVENT_QUIT:
-      g_quit_requested = 1;
-      break;
     case SDL_EVENT_MOUSE_MOTION:
       x = event.motion.x;
       y = event.motion.y;
@@ -691,17 +679,19 @@ static BOOL pump_shandalar_win32_ui(BOOL wait)
 {
   (void)wait;
   shandalar_host_pump();
-  return !g_quit_requested;
+  return TRUE;
 }
 
 int main(int argc, char **argv)
 {
   char cmd_line[1] = "";
   const char *asset_root = argc > 1 ? argv[1] : "C:/Magic/Program";
+  const char *icon_path = SDL_getenv("SHANDALAR_WINDOW_ICON");
   int result;
 #ifdef __EMSCRIPTEN__
   asset_root = argc > 1 ? argv[1] : "/assets";
 #endif
+  SDL_SetHint(SDL_HINT_APP_ID, "shandalar");
   if (!SDL_Init(SDL_INIT_VIDEO))
     return 1;
   if (!shandalar_runtime_init(asset_root))
@@ -717,6 +707,13 @@ int main(int argc, char **argv)
                                    global_screen_height, SDL_WINDOW_RESIZABLE,
                                    &g_window, &g_renderer))
     return 1;
+  if (icon_path && icon_path[0]) {
+    SDL_Surface *icon = IMG_Load(icon_path);
+    if (icon) {
+      SDL_SetWindowIcon(g_window, icon);
+      SDL_DestroySurface(icon);
+    }
+  }
   SDL_SetRenderLogicalPresentation(g_renderer, global_screen_width, global_screen_height,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
   if (!ensure_framebuffer(global_screen_width, global_screen_height))

@@ -60,6 +60,7 @@ int shandalar_close(int fd);
 int shandalar_chdir(const char *path);
 long shandalar_filelength(int fd);
 int shandalar_resolve_existing_path(const char *path, char *out, size_t out_size);
+void shandalar_map_file_path(const char *path, char *out, size_t out_size);
 const char *shandalar_user_data_root(void);
 int shandalar_user_data_sync(void);
 

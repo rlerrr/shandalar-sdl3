@@ -112,6 +112,9 @@ const char *shandalar_user_data_root(void)
   ensure_user_data_ready();
   return "/userdata";
 #else
+  const char *root = getenv("SHANDALAR_USER_DATA_DIR");
+  if (root && root[0])
+    return root;
   return ".";
 #endif
 }
@@ -226,7 +229,6 @@ static int unregister_fd_mode(int fd)
   return 0;
 }
 
-#ifdef __EMSCRIPTEN__
 static int ascii_equal_ignore_case(const char *a, const char *b)
 {
   while (*a && *b) {
@@ -247,13 +249,18 @@ static int is_hex_save_slot(char c)
 static int map_user_data_path(const char *path, char *out, size_t out_size)
 {
   char normalized[1024];
+  const char *root;
   const char *base;
   const char *drive;
   char name[260];
   size_t i;
 
+  root = shandalar_user_data_root();
+  if (strcmp(root, ".") == 0)
+    return 0;
   normalize_path_copy(normalized, sizeof(normalized), path);
-  if (strncmp(normalized, "/userdata/", 10) == 0) {
+  if (strncmp(normalized, root, strlen(root)) == 0 &&
+      (normalized[strlen(root)] == '/' || normalized[strlen(root)] == '\0')) {
     snprintf(out, out_size, "%s", normalized);
     return 1;
   }
@@ -265,13 +272,13 @@ static int map_user_data_path(const char *path, char *out, size_t out_size)
     base = drive + 1;
 
   if (ascii_equal_ignore_case(base, "face.pic")) {
-    snprintf(out, out_size, "/userdata/face.pic");
+    snprintf(out, out_size, "%s/face.pic", root);
   } else if (ascii_equal_ignore_case(base, "FaceMostRecent.txt")) {
-    snprintf(out, out_size, "/userdata/FaceMostRecent.txt");
+    snprintf(out, out_size, "%s/FaceMostRecent.txt", root);
   } else if (ascii_equal_ignore_case(base, "saveDescs")) {
-    snprintf(out, out_size, "/userdata/saveDescs");
+    snprintf(out, out_size, "%s/saveDescs", root);
   } else if (ascii_equal_ignore_case(base, "registry.ini")) {
-    snprintf(out, out_size, "/userdata/registry.ini");
+    snprintf(out, out_size, "%s/registry.ini", root);
   } else if (strlen(base) == 10 &&
              tolower((unsigned char)base[0]) == 'm' &&
              tolower((unsigned char)base[1]) == 'a' &&
@@ -289,7 +296,7 @@ static int map_user_data_path(const char *path, char *out, size_t out_size)
           ascii_equal_ignore_case(name + 7, "fce") ||
           ascii_equal_ignore_case(name + 7, "map")))
       return 0;
-    snprintf(out, out_size, "/userdata/%s", name);
+    snprintf(out, out_size, "%s/%s", root, name);
   } else {
     return 0;
   }
@@ -301,15 +308,6 @@ static int map_user_data_path(const char *path, char *out, size_t out_size)
   ensure_user_data_ready();
   return 1;
 }
-#else
-static int map_user_data_path(const char *path, char *out, size_t out_size)
-{
-  (void)path;
-  (void)out;
-  (void)out_size;
-  return 0;
-}
-#endif
 
 static void normalize_path_copy(char *out, size_t out_size, const char *path)
 {
@@ -321,6 +319,12 @@ static void normalize_path_copy(char *out, size_t out_size, const char *path)
     if (out[i] == '\\')
       out[i] = '/';
   }
+}
+
+void shandalar_map_file_path(const char *path, char *out, size_t out_size)
+{
+  if (!map_user_data_path(path, out, out_size))
+    normalize_path_copy(out, out_size, path);
 }
 
 static int make_asset_relative_path(const char *path, char *out, size_t out_size)

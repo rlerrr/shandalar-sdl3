@@ -11,6 +11,12 @@ Two batch files are available for building the currently tested toolchains.  The
 * `clang.bat` Builds a monolithic 32bit .exe using LLVM and MSVC's STL.
 * `emscripten.bat` Builds a 32bit WebAssembly binary.  This is batteries-not-included, so a harness is needed to also serve assets properly.  Currently requires `emsdk_env.bat` to be ran in advance.
 
+### Local Linux AppImage
+
+Run `./build-appimage.sh` from any directory to build the current checkout and package it as an AppImage in the repository root. It uses game assets from the sibling `shandalar-assets` folder by default; set `SHANDALAR_ASSET_DIR` to use another directory. The script requires CMake 3.24+, Ninja, Clang, Python 3 with Pillow, and curl. It downloads linuxdeploy and its AppImage plugin into `tools-appimage/` on the first run. CMake also fetches source dependencies during its first configure, so network access is needed initially.
+
+The AppImage stores saves, portraits, and settings in `${XDG_DATA_HOME:-$HOME/.local/share}/shandalar/userdata`. Set `SHANDALAR_USER_DATA_DIR` when launching to use another writable location.
+
 ## Changes for SDL3/Emscripten
 To support compiling with Emscripten several technical changes were necessary:
 * Shim GDI32/Win32 to adapt to SDL3.

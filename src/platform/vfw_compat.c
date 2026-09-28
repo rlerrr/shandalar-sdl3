@@ -4,6 +4,7 @@
 #include "platform/file_io.h"
 
 #include <SDL3_image/SDL_image.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +13,7 @@
 #define MCIWNDM_PLAY 0x806
 #define MCIWNDM_STOP 0x808
 #define MCI_FRAME_TIMER 0x4d43
-#define STATWIN_ASSET_DIR "Statwin_SDL"
+#define STATWIN_ASSET_DIR "statwin_sdl"
 
 typedef struct MciWindowState {
   struct MciWindowState *next;
@@ -213,6 +214,8 @@ HWND MCIWndCreateA(HWND parent, HINSTANCE instance, DWORD style,
                 sizeof(asset_name) - (size_t)(extension - asset_name));
   else
     SDL_strlcat(asset_name, ".webp", sizeof(asset_name));
+  for (char *p = asset_name; *p; ++p)
+    *p = (char)tolower((unsigned char)*p);
 
   if (shandalar_assets_fetch_blocking(asset_name) != SHANDALAR_ASSET_READY ||
       !shandalar_assets_join_path(asset_path, sizeof(asset_path), asset_name))

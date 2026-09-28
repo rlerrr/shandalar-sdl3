@@ -266,8 +266,12 @@ int setup_paths_and_load_text_etc(char *message_buffer)
   strcpy(global_duel_dat_path, global_duelart_path);
   strcat(global_duel_dat_path, "\\Duel.dat");
   strcpy(global_ui_strings_filename, "UIStrings.txt");
-  strcpy(global_savegame_path, global_base_directory);
-  strcat(global_savegame_path, "\\SaveGame");
+  if (strcmp(shandalar_user_data_root(), ".") != 0)
+    snprintf(global_savegame_path, sizeof(global_savegame_path), "%s/SaveGame",
+             shandalar_user_data_root());
+  else
+    snprintf(global_savegame_path, sizeof(global_savegame_path), "%s/SaveGame",
+             global_base_directory);
   _mkdir(global_savegame_path);
 
   load_global_ui_strings(global_ui_strings_filename);

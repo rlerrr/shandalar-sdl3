@@ -108,11 +108,15 @@ BOOL SetCurrentDirectoryA(LPCSTR path)
 BOOL CopyFileA(LPCSTR existing_filename, LPCSTR new_filename, BOOL fail_if_exists)
 {
   SDL_PathInfo info;
+  char source[1024];
+  char destination[1024];
   if (!existing_filename || !new_filename)
     return FALSE;
-  if (fail_if_exists && SDL_GetPathInfo(new_filename, &info))
+  shandalar_map_file_path(existing_filename, source, sizeof(source));
+  shandalar_map_file_path(new_filename, destination, sizeof(destination));
+  if (fail_if_exists && SDL_GetPathInfo(destination, &info))
     return FALSE;
-  return SDL_CopyFile(existing_filename, new_filename) ? TRUE : FALSE;
+  return SDL_CopyFile(source, destination) ? TRUE : FALSE;
 }
 
 void Sleep(DWORD milliseconds) { shandalar_win32_pump_for(milliseconds); }
