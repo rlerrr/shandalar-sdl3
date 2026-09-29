@@ -23,11 +23,9 @@
 
 extern HWND g_main_window_hwnd;
 
-
 // The original StretchBlt calls were slow enough to pace this animation on
 // contemporary hardware.  Keep the seven zoom steps visible on modern CPUs.
 #define VISIT_BACKDROP_ZOOM_FRAME_MS 16
-
 
 extern int g_card_count;
 extern int g_current_quest_giver_town_index;
@@ -35,10 +33,8 @@ extern int g_duel_selection_pending;
 extern char g_text_lines[249][300];
 extern int card_dummy(int player, int card, event_t event);
 
-
 // GLOBAL: SHANDALAR 0x0073ea68
 int g_wizard_siege_count;
-
 
 typedef struct
 {
@@ -48,9 +44,7 @@ typedef struct
   int y1;
 } BuyCardsHitRect;
 
-
 int ScaleUiCoordinateFrom320(int value);
-
 
 void ShowDungeonClueDetailScreen(int dungeon_index);
 
@@ -105,10 +99,8 @@ int QuestCardChooserCallback(int x, int y, int width, int height, int frame_styl
 void DrawTownMenuIconWithTooltip(int center_x, int center_y, int icon_index, int draw_mode, char *tooltip_text);
 int RenderCurrentMenuContextControls(void);
 
-
 void DrawWorldUiFormattedText(FacemakerWindowBounds *window, int color_index, int x, int y, char *world_magic_button_sprite, ...);
 void DrawCenteredTextLineWithShadow(char *text, int center_x, int y, int color_index);
-
 
 // GLOBAL: SHANDALAR 0x00582d40
 int g_visit_tips_frame_x_by_resolution[3] = {0x40, 0x50, 0x66};
@@ -123,7 +115,6 @@ int g_visit_tips_icon_y_by_resolution[3] = {0x2f, 0x3c, 0x4d};
 
 int sound_unload(int sound_id);
 void PlaySoundWithPan(int sound_id, int volume, int pan);
-
 
 // GLOBAL: SHANDALAR 0x00591278
 char *PTR_s_x_sound_dueltune_wav_00591278[3] = {
@@ -1655,6 +1646,7 @@ int CalculateCardShopPrice(int card_index)
     break;
 
   case 64:
+  {
     int artifact_price_divisor = global_cards_data[card_index].ai_base_value + abs((int)(char)global_cards_data[card_index].cc[1]) + 2;
     // Mana Crypt has an AI value of -2 and no colored mana cost; price it like a zero-cost Mox.
     if (artifact_price_divisor <= 0)
@@ -1667,7 +1659,7 @@ int CalculateCardShopPrice(int card_index)
     }
 
     break;
-
+  }
   case 16:
   case 32:
     price = global_cards_data[card_index].ai_base_value * 0x14 + (abs((int)(char)global_cards_data[card_index].cc[1]) + (char)global_cards_data[card_index].cc[0] + 1) * 40;
@@ -2226,7 +2218,7 @@ int RunDuelEngine(unsigned int card_id, int creature_type)
   DWORD thread_exit_code; /* ebp - 0x04 */
 
   (void)card_id;
-  
+
   if (shandalar_cheat_enabled(SHANDALAR_CHEAT_INSTA_WIN_DUELS))
   {
     return 1;
@@ -4255,22 +4247,22 @@ int VisitTownSlot(int town_index)
   int world_magic_delta_y; // ebp - 0x48
   int world_magic_delta_x; // ebp - 0x44
 
-  int duel_deck_seed;             // ebp - 0x40
-  int selected_card_id;           // ebp - 0x3c
-  int duel_wizard_color;          // ebp - 0x38
+  int duel_deck_seed;               // ebp - 0x40
+  int selected_card_id;             // ebp - 0x3c
+  int duel_wizard_color;            // ebp - 0x38
   int nearest_world_magic_distance; // ebp - 0x34
-  int ante_card_id;               // ebp - 0x30
-  int found_deck_slot;            // ebp - 0x2c
-  int duel_ante_slot;             // ebp - 0x28
-  int world_magic_slot_index;     // ebp - 0x24
-  int world_magic_text_y;         // ebp - 0x20
-  int deck_card_index;            // ebp - 0x1c
-  int world_magic_center_x;       // ebp - 0x18
-  int duel_creature_tier_or_type; // ebp - 0x14
-  int world_magic_distance;       // ebp - 0x10
-  int distance;                   // ebp - 0xc
-  int quest_handled;              // ebp - 0x8
-  int duel_menu_result;           // ebp - 0x4
+  int ante_card_id;                 // ebp - 0x30
+  int found_deck_slot;              // ebp - 0x2c
+  int duel_ante_slot;               // ebp - 0x28
+  int world_magic_slot_index;       // ebp - 0x24
+  int world_magic_text_y;           // ebp - 0x20
+  int deck_card_index;              // ebp - 0x1c
+  int world_magic_center_x;         // ebp - 0x18
+  int duel_creature_tier_or_type;   // ebp - 0x14
+  int world_magic_distance;         // ebp - 0x10
+  int distance;                     // ebp - 0xc
+  int quest_handled;                // ebp - 0x8
+  int duel_menu_result;             // ebp - 0x4
 
   g_current_town_slot_index = town_index;
   ClearInputAndWaitForMouseRelease();
