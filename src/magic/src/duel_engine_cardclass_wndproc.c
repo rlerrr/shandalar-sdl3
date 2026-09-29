@@ -672,6 +672,9 @@ static int card_double_click_posts_selection(HWND hwnd)
   }
   player = GetWindowLongA(hwnd, CARDCLASS_PLAYER_WINDOW_LONG_OFFSET);
   card = GetWindowLongA(hwnd, CARDCLASS_CARD_WINDOW_LONG_OFFSET);
+  if (player >= 0 && player < 2 && card >= 0 &&
+      mana_undo_can_click(player, card))
+    return 1;
   charge_mana_open = 0;
   for (charge_color = 0; charge_color < 8; ++charge_color)
   {

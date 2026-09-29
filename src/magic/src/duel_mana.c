@@ -15,6 +15,181 @@
 #include "magic/src/duel_runtime.h"
 #include "global_strings.h"
 #include "shared_startup.h"
+#include "card_id.h"
+
+/* Only tap-for-mana abilities with no additional cost are reversible here.
+ * Other mana abilities may sacrifice, pay life, or change game state. */
+typedef struct mana_undo_entry_t
+{
+  int player, card, internal_card_id;
+  phase_t phase;
+  int turn;
+  int ai_modifier_before;
+  int before[8], after[8];
+} mana_undo_entry_t;
+
+static mana_undo_entry_t mana_undo_entries[32];
+static int mana_undo_count;
+static mana_undo_entry_t mana_undo_pending;
+static int mana_undo_pending_valid;
+static int mana_undo_life_before[2];
+static int mana_undo_other_pool_before[8];
+static int mana_undo_payment_player = -1;
+static int mana_undo_payment_start;
+static int mana_undo_payment_pool[8];
+static int mana_undo_payment_invalid;
+static int mana_undo_payment_internal_id[151];
+static int mana_undo_payment_timestamp[151];
+static unsigned int mana_undo_payment_state[151];
+static int mana_undo_payment_card_count;
+static int mana_undo_payment_life[2];
+static int mana_undo_payment_ai_modifier;
+static phase_t mana_undo_payment_phase;
+
+static int mana_undo_is_simple_source(int player, int card)
+{
+  int internal_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
+  if (internal_id < 0)
+    return 0;
+  switch (global_cards_data[internal_id].id)
+  {
+  case CARD_ID_PLAINS:
+  case CARD_ID_ISLAND:
+  case CARD_ID_SWAMP:
+  case CARD_ID_MOUNTAIN:
+  case CARD_ID_FOREST:
+  case CARD_ID_BADLANDS:
+  case CARD_ID_BAYOU:
+  case CARD_ID_PLATEAU:
+  case CARD_ID_SAVANNAH:
+  case CARD_ID_SCRUBLAND:
+  case CARD_ID_TAIGA:
+  case CARD_ID_TROPICAL_ISLAND:
+  case CARD_ID_TUNDRA:
+  case CARD_ID_UNDERGROUND_SEA:
+  case CARD_ID_VOLCANIC_ISLAND:
+  case CARD_ID_MOX_EMERALD:
+  case CARD_ID_MOX_JET:
+  case CARD_ID_MOX_PEARL:
+  case CARD_ID_MOX_RUBY:
+  case CARD_ID_MOX_SAPPHIRE:
+  case CARD_ID_BIRDS_OF_PARADISE:
+  case CARD_ID_LLANOWAR_ELVES:
+  case CARD_ID_SOL_RING:
+    return 1;
+  default:
+    return 0;
+  }
+}
+
+void mana_undo_clear(void)
+{
+  mana_undo_count = 0;
+  mana_undo_pending_valid = 0;
+  if (mana_undo_payment_player >= 0)
+    mana_undo_payment_invalid = 1;
+}
+
+void mana_undo_begin_activation(int player, int card)
+{
+  int color;
+  mana_undo_pending_valid = 0;
+  if (player != g_active_player || g_duel_ai_mode_state == 1 ||
+      (g_duel_network_flags & 2) != 0 || !mana_undo_is_simple_source(player, card) ||
+      (PLAYER_CARD_INSTANCE(player, card).state & STATE_TAPPED) != 0)
+  {
+    mana_undo_clear();
+    return;
+  }
+  mana_undo_pending.player = player;
+  mana_undo_pending.card = card;
+  mana_undo_pending.internal_card_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
+  mana_undo_pending.phase = g_current_phase;
+  mana_undo_pending.turn = g_current_turn;
+  mana_undo_pending.ai_modifier_before = g_ai_modifier;
+  for (color = 0; color < 8; ++color)
+  {
+    mana_undo_pending.before[color] = g_raw_mana_available[player][color];
+    mana_undo_other_pool_before[color] = g_raw_mana_available[1 - player][color];
+  }
+  mana_undo_life_before[0] = g_life[0];
+  mana_undo_life_before[1] = g_life[1];
+  mana_undo_pending_valid = 1;
+}
+
+void mana_undo_finish_activation(int player, int card)
+{
+  int color, produced = 0;
+  if (!mana_undo_pending_valid)
+    return;
+  mana_undo_pending_valid = 0;
+  if (g_spell_fizzled == 1 || player != mana_undo_pending.player || card != mana_undo_pending.card ||
+      g_current_phase != mana_undo_pending.phase || g_current_turn != mana_undo_pending.turn ||
+      PLAYER_CARD_INSTANCE(player, card).internal_card_id != mana_undo_pending.internal_card_id ||
+      (PLAYER_CARD_INSTANCE(player, card).state & (STATE_IN_PLAY | STATE_TAPPED)) != (STATE_IN_PLAY | STATE_TAPPED) ||
+      g_life[0] != mana_undo_life_before[0] || g_life[1] != mana_undo_life_before[1])
+  {
+    mana_undo_clear();
+    return;
+  }
+  for (color = 0; color < 8; ++color)
+  {
+    mana_undo_pending.after[color] = g_raw_mana_available[player][color];
+    if (g_raw_mana_available[1 - player][color] != mana_undo_other_pool_before[color] ||
+        mana_undo_pending.after[color] < mana_undo_pending.before[color])
+    {
+      mana_undo_clear();
+      return;
+    }
+    if (color < 7)
+      produced += mana_undo_pending.after[color] - mana_undo_pending.before[color];
+  }
+  if (produced == 0 ||
+      produced != mana_undo_pending.after[7] - mana_undo_pending.before[7] ||
+      mana_undo_count >= 32)
+  {
+    mana_undo_clear();
+    return;
+  }
+  mana_undo_entries[mana_undo_count++] = mana_undo_pending;
+}
+
+int mana_undo_can_click(int player, int card)
+{
+  mana_undo_entry_t *entry;
+  int color;
+  if (mana_undo_count == 0 || mana_undo_pending_valid ||
+      g_mana_payment_record_depth != 0 || g_duel_ai_mode_state == 1 ||
+      (g_duel_network_flags & 2) != 0)
+    return 0;
+  entry = &mana_undo_entries[mana_undo_count - 1];
+  if (entry->player != player || entry->card != card || entry->phase != g_current_phase ||
+      entry->turn != g_current_turn ||
+      PLAYER_CARD_INSTANCE(player, card).internal_card_id != entry->internal_card_id ||
+      (PLAYER_CARD_INSTANCE(player, card).state & (STATE_IN_PLAY | STATE_TAPPED)) != (STATE_IN_PLAY | STATE_TAPPED))
+    return 0;
+  for (color = 0; color < 8; ++color)
+    if (g_raw_mana_available[player][color] != entry->after[color])
+      return 0;
+  return 1;
+}
+
+int mana_undo_try(int player, int card)
+{
+  mana_undo_entry_t *entry;
+  int color;
+  if (!mana_undo_can_click(player, card))
+    return 0;
+  entry = &mana_undo_entries[mana_undo_count - 1];
+  for (color = 0; color < 8; ++color)
+    g_raw_mana_available[player][color] = entry->before[color];
+  PLAYER_CARD_INSTANCE(player, card).state &= ~STATE_TAPPED;
+  g_ai_modifier = entry->ai_modifier_before;
+  --mana_undo_count;
+  copy_mana_pool_to_display();
+  TENTATIVE_reassess_all_cards(0, 0xff);
+  return 1;
+}
 
 /* A second click on a pending spell/activation requests automatic payment;
  * it must not cast that spell or activate that ability again. */
@@ -450,10 +625,12 @@ int charge_mana(int player, color_t color, int amount)
                   g_required_mana_color_mask = get_required_mana_color_mask(saved_mana_cost);
                   g_produced_mana_color = -1;
                   old_tapped_state_before_activation = (global_card_instances[player] + selected_card)->state & STATE_TAPPED;
+                  mana_undo_begin_activation(player, selected_card);
                   dispatch_event_to_single_card(player, selected_card, EVENT_ACTIVATE, 1 - player, -1);
                   g_required_mana_color_mask = 0;
                   if (g_spell_fizzled == 1)
                   {
+                    mana_undo_clear();
                     g_spell_fizzled = 0;
                     obliterate_top_card_of_stack();
                   }
@@ -468,6 +645,7 @@ int charge_mana(int player, color_t color, int amount)
                       play_sound_effect(WAV_TAP);
                     }
                     resolve_top_card_on_stack();
+                    mana_undo_finish_activation(player, selected_card);
                     TENTATIVE_reassess_all_cards(0, 0xff);
                   }
                 }
@@ -1183,10 +1361,12 @@ int activate_mana_source_for_payment(int player, int card)
   g_required_mana_color_mask = get_required_mana_color_mask(saved_mana_cost);
   g_produced_mana_color = -1;
   original_state = PLAYER_CARD_INSTANCE(player, card).state;
+  mana_undo_begin_activation(player, card);
   dispatch_event_to_single_card(player, card, EVENT_ACTIVATE, 1 - player, -1);
   g_required_mana_color_mask = 0;
   if (g_spell_fizzled == 1)
   {
+    mana_undo_clear();
     g_spell_fizzled = 0;
     obliterate_top_card_of_stack();
     result = 0;
@@ -1202,6 +1382,7 @@ int activate_mana_source_for_payment(int player, int card)
       play_sound_effect(WAV_TAP);
     }
     resolve_top_card_on_stack();
+    mana_undo_finish_activation(player, card);
     result = 1;
   }
   g_max_x_value = old_max_x_value;
@@ -1282,12 +1463,37 @@ int get_mana_payment_amount(int *mana_cost,
 
 // FUNCTION: MAGIC 0x00435c1f
 // FUNCTION: SHANDALAR 0x004170f8
-int begin_mana_payment_record(void)
+int begin_mana_payment_record(int player)
 {
   int color;
 
   if (g_mana_payment_record_depth < 10)
   {
+    if (g_mana_payment_record_depth == 0)
+    {
+      int card;
+      mana_undo_payment_player = player;
+      if (mana_undo_payment_player < 0 || mana_undo_payment_player > 1)
+        mana_undo_payment_player = -1;
+      mana_undo_payment_start = mana_undo_count;
+      mana_undo_payment_invalid = 0;
+      if (mana_undo_payment_player >= 0)
+      {
+        mana_undo_payment_card_count = g_active_cards_count[player];
+        for (color = 0; color < 8; ++color)
+          mana_undo_payment_pool[color] = g_raw_mana_available[mana_undo_payment_player][color];
+        for (card = 0; card < mana_undo_payment_card_count; ++card)
+        {
+          mana_undo_payment_internal_id[card] = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
+          mana_undo_payment_timestamp[card] = PLAYER_CARD_INSTANCE(player, card).timestamp;
+          mana_undo_payment_state[card] = PLAYER_CARD_INSTANCE(player, card).state;
+        }
+        mana_undo_payment_life[0] = g_life[0];
+        mana_undo_payment_life[1] = g_life[1];
+        mana_undo_payment_ai_modifier = g_ai_modifier;
+        mana_undo_payment_phase = g_current_phase;
+      }
+    }
     for (color = 0; color < 7; ++color)
     {
       g_recorded_mana_payments[g_mana_payment_record_depth][color] = 0;
@@ -1320,6 +1526,79 @@ int end_mana_payment_record(void)
 {
   if (g_mana_payment_record_depth > 0)
   {
+    if (g_mana_payment_record_depth == 1)
+    {
+      if (g_spell_fizzled == 1 && mana_undo_payment_player >= 0 &&
+          !mana_undo_payment_invalid)
+      {
+        int card, color, newly_tapped = 0, valid = 1;
+        if (g_current_phase != mana_undo_payment_phase ||
+            g_life[0] != mana_undo_payment_life[0] || g_life[1] != mana_undo_payment_life[1])
+          valid = 0;
+        for (card = 0; card < mana_undo_payment_card_count; ++card)
+        {
+          card_instance_t *instance = &PLAYER_CARD_INSTANCE(mana_undo_payment_player, card);
+          if ((mana_undo_payment_state[card] & STATE_IN_PLAY) != 0 &&
+              (mana_undo_payment_state[card] & STATE_TAPPED) == 0 &&
+              (instance->state & STATE_TAPPED) != 0)
+          {
+            if (instance->internal_card_id != mana_undo_payment_internal_id[card] ||
+                instance->timestamp != mana_undo_payment_timestamp[card] ||
+                !mana_undo_is_simple_source(mana_undo_payment_player, card))
+              valid = 0;
+            else
+              ++newly_tapped;
+          }
+        }
+        if (valid && newly_tapped > 0)
+        {
+          for (card = 0; card < mana_undo_payment_card_count; ++card)
+          {
+            if ((mana_undo_payment_state[card] & (STATE_IN_PLAY | STATE_TAPPED)) == STATE_IN_PLAY &&
+                (PLAYER_CARD_INSTANCE(mana_undo_payment_player, card).state & STATE_TAPPED) != 0)
+            {
+              PLAYER_CARD_INSTANCE(mana_undo_payment_player, card).state &= ~STATE_TAPPED;
+              request_duel_display_refresh_if_human(mana_undo_payment_player, card, 3, 2);
+            }
+          }
+          for (color = 0; color < 8; ++color)
+            g_raw_mana_available[mana_undo_payment_player][color] = mana_undo_payment_pool[color];
+          copy_mana_pool_to_display();
+          TENTATIVE_reassess_all_cards(0, 0xff);
+        }
+        if (valid)
+        {
+          int i;
+          g_ai_modifier = mana_undo_payment_ai_modifier;
+          for (i = mana_undo_payment_start - 1; i >= 0; --i)
+          {
+            mana_undo_entry_t *entry = &mana_undo_entries[i];
+            card_instance_t *instance = &PLAYER_CARD_INSTANCE(entry->player, entry->card);
+            int matches = entry->player == mana_undo_payment_player &&
+                          entry->phase == g_current_phase && entry->turn == g_current_turn &&
+                          instance->internal_card_id == entry->internal_card_id &&
+                          (instance->state & (STATE_IN_PLAY | STATE_TAPPED)) == (STATE_IN_PLAY | STATE_TAPPED);
+            for (color = 0; color < 8 && matches; ++color)
+              if (g_raw_mana_available[entry->player][color] != entry->after[color])
+                matches = 0;
+            if (!matches)
+              break;
+            for (color = 0; color < 8; ++color)
+              g_raw_mana_available[entry->player][color] = entry->before[color];
+            instance->state &= ~STATE_TAPPED;
+            g_ai_modifier = entry->ai_modifier_before;
+            request_duel_display_refresh_if_human(entry->player, entry->card, 3, 2);
+          }
+          copy_mana_pool_to_display();
+          TENTATIVE_reassess_all_cards(0, 0xff);
+        }
+      }
+      if (g_spell_fizzled == 1 || !mana_undo_pending_valid)
+        mana_undo_count = 0;
+      mana_undo_payment_player = -1;
+      if (g_spell_fizzled == 1)
+        mana_undo_pending_valid = 0;
+    }
     --g_mana_payment_record_depth;
     return 1;
   }
@@ -1577,6 +1856,7 @@ int activate_mana_source_card(int player, int card)
   g_required_mana_color_mask = 0x3e;
   g_produced_mana_color = -1;
 
+  mana_undo_begin_activation(player, card);
   dispatch_event_to_single_card(player, card, 0x6d, 1 - player, -1);
 
   if (g_spell_fizzled != 1)
@@ -1588,9 +1868,11 @@ int activate_mana_source_card(int player, int card)
 
     process_damage_prevention(player);
     regenerate_or_graveyard_triggers();
+    mana_undo_finish_activation(player, card);
   }
   else
   {
+    mana_undo_clear();
     g_spell_fizzled = 0;
   }
 
@@ -1879,6 +2161,8 @@ int produce_mana(int player, color_t color, int amount)
 // FUNCTION: SHANDALAR 0x00441607
 int unproduce_mana(int player, int color, int amount)
 {
+  if (amount > 0 && g_mana_payment_record_depth == 0)
+    mana_undo_clear();
   g_raw_mana_available[player][color] -= amount;
   g_raw_mana_available[player][7] -= amount;
   return g_raw_mana_available[player][color];

@@ -287,7 +287,7 @@ int put_card_on_stack(int player, int card, int mode)
   g_current_spell_card = card;
 
   push_card_onto_stack(player, card, 0x71, player, 0);
-  begin_mana_payment_record();
+  begin_mana_payment_record(player);
 
   if (g_adventure_world_state != 0)
   {
@@ -895,9 +895,10 @@ int activate(int who_activates, int player, int card)
       g_produced_mana_color = -1;
     }
 
-    begin_mana_payment_record();
+    begin_mana_payment_record(player);
 
     was_tapped = instance->state & STATE_TAPPED;
+    mana_undo_begin_activation(player, card);
     dispatch_event_to_single_card(player, card, EVENT_ACTIVATE, 1 - player, -1);
 
     if ((g_duel_network_flags & 2) != 0 && g_other_player == who_activates && g_battlefield_ui_flags == 0 &&
@@ -1038,6 +1039,8 @@ int resolve_activated_ability(int player, int card)
 
   g_trigger_cause_controller = saved_trigger_cause_controller;
   g_trigger_cause = saved_trigger_cause;
+
+  mana_undo_finish_activation(player, card);
 
   return 1;
 }
@@ -3590,7 +3593,12 @@ int process_response_actions(int reason_for_trigger_controller, const char *prom
     {
       internal_card_id = PLAYER_CARD_INSTANCE(selected_player, (int)selected_card).internal_card_id;
 
-      if (get_card_response_action_type(selected_player, (int)selected_card) != 0)
+      if (mana_undo_try(selected_player, (int)selected_card))
+      {
+        request_duel_display_refresh_if_human(selected_player, (int)selected_card, 3, 2);
+        result_flags |= 2;
+      }
+      else if (get_card_response_action_type(selected_player, (int)selected_card) != 0)
       {
         if (is_in_play(selected_player, (int)selected_card))
         {

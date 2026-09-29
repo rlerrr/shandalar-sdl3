@@ -943,7 +943,11 @@ restart_main_phase_action_loop:
     if (main_phase_selected_card != 0xffffffff)
     {
       main_phase_selected_internal_card_id = global_card_instances[player][main_phase_selected_card].internal_card_id;
-      if ((global_card_instances[player][main_phase_selected_card].state & (STATE_TAPPED | STATE_IN_PLAY)) == 0)
+      if (mana_undo_try(player, main_phase_selected_card))
+      {
+        request_duel_display_refresh_if_human(player, main_phase_selected_card, 3, 2);
+      }
+      else if ((global_card_instances[player][main_phase_selected_card].state & (STATE_TAPPED | STATE_IN_PLAY)) == 0)
       {
         if (((global_cards_data[main_phase_selected_internal_card_id].type & 1) != 0) && ((g_land_can_be_played & LCBP_LAND_HAS_BEEN_PLAYED) != 0))
         {

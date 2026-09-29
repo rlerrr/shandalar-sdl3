@@ -818,6 +818,7 @@ void reset_recorded_actions(void)
 // FUNCTION: SHANDALAR 0x0040eb87
 void update_phase_display(int player, phase_t phase)
 {
+  mana_undo_clear();
   if (g_duel_ai_mode_state != 1)
   {
     update_duel_selection_display_if_human(player, phase);
