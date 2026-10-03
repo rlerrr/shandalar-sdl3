@@ -664,6 +664,7 @@ static int card_double_click_posts_selection(HWND hwnd)
   int charge_color;
   int charge_mana_open;
   int clicked_internal;
+  int stack_card;
 
   if (card_window_matches_action_request(hwnd) == 0)
   {
@@ -684,11 +685,22 @@ static int card_double_click_posts_selection(HWND hwnd)
   {
     return g_duel_action_request_copy.type_flags != -1;
   }
-  if (g_stack_size > 0 &&
-      global_stack_cards[g_stack_size - 1].player == player &&
-      global_stack_cards[g_stack_size - 1].card == card)
+  if (g_stack_size > 0 && global_stack_cards[g_stack_size - 1].player == player)
   {
-    return 1;
+    stack_card = global_stack_cards[g_stack_size - 1].card;
+    if (stack_card == card)
+    {
+      return 1;
+    }
+    /* Activations use a stack proxy; the clicked permanent is its parent. */
+    if (player >= 0 && player < 2 && stack_card >= 0 &&
+        stack_card < g_active_cards_count[player] &&
+        global_card_instances[player][stack_card].internal_card_id == g_stack_proxy_internal_card_id &&
+        global_card_instances[player][stack_card].parent_controller == player &&
+        global_card_instances[player][stack_card].parent_card == card)
+    {
+      return 1;
+    }
   }
   if (player < 0 || player >= 2 || card < 0)
   {
