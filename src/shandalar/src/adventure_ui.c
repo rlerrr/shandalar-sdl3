@@ -30,11 +30,7 @@
 #include "statwin/statwin.h"
 #include <drawcardlib/src/pic.h>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-
 static unsigned int g_ui_tick_wall_base;
-#endif
 
 // FUNCTION: SHANDALAR 0x005501fe
 int ScaleUiCoordinate(int value)
@@ -419,17 +415,9 @@ void DrawCenteredTextLineClamped(char *text, int center_x, int y, int color_inde
 // FUNCTION: SHANDALAR 0x004ce97d
 int GetUiTickCount(void)
 {
-#ifdef __EMSCRIPTEN__
-  /* Native Shandalar advances g_ui_tick_count from a multimedia-timer thread
-     that keeps running while the duel engine computes.  Single-threaded wasm
-     only fires that timer while pumping messages, so CPU-bound loops such as
-     the AI's damage-prevention search would never see time pass and would
-     spin forever.  Derive the tick count from the real clock instead,
-     measured against the baseline set by ConsumeUiTickCount(). */
+  /* SDL compatibility timers fire while pumping messages.  The duel engine
+     can run CPU-bound searches without pumping, so use elapsed wall time. */
   return (int)((GetTickCount() / g_timer_period_ms) - g_ui_tick_wall_base);
-#else
-  return g_ui_tick_count;
-#endif
 }
 
 // FUNCTION: SHANDALAR 0x004ce955
@@ -437,13 +425,8 @@ int ConsumeUiTickCount(void)
 {
   int queued_ticks;
 
-#ifdef __EMSCRIPTEN__
   queued_ticks = (int)((GetTickCount() / g_timer_period_ms) - g_ui_tick_wall_base);
   g_ui_tick_wall_base = GetTickCount() / g_timer_period_ms;
-#else
-  queued_ticks = g_ui_tick_count;
-  g_ui_tick_count = 0;
-#endif
   return queued_ticks;
 }
 
@@ -796,10 +779,6 @@ void CALLBACK UiTimerTickCallback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, 
     g_timer_thread_handle = GetCurrentThread();
     DuplicateHandle(GetCurrentProcess(), g_timer_thread_handle, GetCurrentProcess(), &g_timer_thread_handle, 0x1f03ff, FALSE, 0);
   }
-
-#ifndef __EMSCRIPTEN__
-  ++g_ui_tick_count;
-#endif
 
   if (g_sound_loader_busy != 0)
   {

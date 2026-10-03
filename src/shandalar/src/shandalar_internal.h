@@ -77,7 +77,6 @@ extern UINT g_timer_resolution_ms;
 extern UINT g_timer_event_handle;
 extern int g_cursor_visibility_depth;
 extern UINT g_timer_period_ms;
-extern int g_ui_tick_count;
 extern int g_default_palette_fade_steps;
 extern int g_sound_loader_busy;
 extern HANDLE g_main_thread_handle;

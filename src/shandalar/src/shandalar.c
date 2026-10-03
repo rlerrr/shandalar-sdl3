@@ -86,11 +86,6 @@ int g_cursor_visibility_depth;
 // GLOBAL: SHANDALAR 0x00589de4
 UINT g_timer_period_ms = 0x21;
 
-#ifndef __EMSCRIPTEN__
-// GLOBAL: SHANDALAR 0x00589df0
-int g_ui_tick_count = 0;
-#endif
-
 // GLOBAL: SHANDALAR 0x00589dec
 int g_default_palette_fade_steps = 0x30;
 // GLOBAL: SHANDALAR 0x00748400
