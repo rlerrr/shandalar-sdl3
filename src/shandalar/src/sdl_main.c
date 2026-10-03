@@ -87,16 +87,28 @@ static int legacy_key(SDL_Keycode key)
   case SDLK_INSERT:
     return 0x5200;
   case SDLK_HOME:
+  case SDLK_KP_7:
     return 0x4700;
   case SDLK_END:
+  case SDLK_KP_1:
     return 0x4f00;
+  case SDLK_PAGEUP:
+  case SDLK_KP_9:
+    return 0x4900;
+  case SDLK_PAGEDOWN:
+  case SDLK_KP_3:
+    return 0x5100;
   case SDLK_LEFT:
+  case SDLK_KP_4:
     return 0x4b00;
   case SDLK_RIGHT:
+  case SDLK_KP_6:
     return 0x4d00;
   case SDLK_UP:
+  case SDLK_KP_8:
     return 0x4800;
   case SDLK_DOWN:
+  case SDLK_KP_2:
     return 0x5000;
   default:
     return 0;
@@ -519,6 +531,14 @@ void shandalar_host_pump(void)
   SDL_Event event;
   float x;
   float y;
+  // Held arrow state (arrows + numpad 2/4/6/8) for diagonal chording.
+  // Adventure movement already handles 8 directions via 0x4700/0x4900/0x4f00/0x5100,
+  // but plain arrows can only express 4. When two orthogonal arrows are held,
+  // synthesize the diagonal keycode instead.
+  static int s_up_held = 0;
+  static int s_down_held = 0;
+  static int s_left_held = 0;
+  static int s_right_held = 0;
   while (SDL_PollEvent(&event))
   {
     switch (event.type)
@@ -553,12 +573,101 @@ void shandalar_host_pump(void)
     case SDL_EVENT_KEY_DOWN:
     {
       int key = 0;
+      int diagonal = 0;
+      switch (event.key.key)
+      {
+      case SDLK_UP:
+      case SDLK_KP_8:
+        s_up_held = 1;
+        break;
+      case SDLK_DOWN:
+      case SDLK_KP_2:
+        s_down_held = 1;
+        break;
+      case SDLK_LEFT:
+      case SDLK_KP_4:
+        s_left_held = 1;
+        break;
+      case SDLK_RIGHT:
+      case SDLK_KP_6:
+        s_right_held = 1;
+        break;
+      default:
+        break;
+      }
+      if (s_up_held && s_left_held)
+        diagonal = 0x4700;
+      else if (s_up_held && s_right_held)
+        diagonal = 0x4900;
+      else if (s_down_held && s_left_held)
+        diagonal = 0x4f00;
+      else if (s_down_held && s_right_held)
+        diagonal = 0x5100;
+      if (diagonal)
+      {
+        PushQueuedKeyInput(diagonal);
+        break;
+      }
       if (event.key.key == SDLK_TAB)
         key = (event.key.mod & SDL_KMOD_SHIFT) ? 0x0f0f : 0x0f09;
       else
         key = legacy_key(event.key.key);
       if (key)
         PushQueuedKeyInput(key);
+      break;
+    }
+    case SDL_EVENT_KEY_UP:
+    {
+      int diagonal = 0;
+      switch (event.key.key)
+      {
+      case SDLK_UP:
+      case SDLK_KP_8:
+        s_up_held = 0;
+        break;
+      case SDLK_DOWN:
+      case SDLK_KP_2:
+        s_down_held = 0;
+        break;
+      case SDLK_LEFT:
+      case SDLK_KP_4:
+        s_left_held = 0;
+        break;
+      case SDLK_RIGHT:
+      case SDLK_KP_6:
+        s_right_held = 0;
+        break;
+      default:
+        break;
+      }
+      if (s_up_held && s_left_held)
+        diagonal = 0x4700;
+      else if (s_up_held && s_right_held)
+        diagonal = 0x4900;
+      else if (s_down_held && s_left_held)
+        diagonal = 0x4f00;
+      else if (s_down_held && s_right_held)
+        diagonal = 0x5100;
+      if (diagonal)
+      {
+        PushQueuedKeyInput(diagonal);
+      }
+      else if (s_up_held)
+      {
+        PushQueuedKeyInput(0x4800);
+      }
+      else if (s_down_held)
+      {
+        PushQueuedKeyInput(0x5000);
+      }
+      else if (s_left_held)
+      {
+        PushQueuedKeyInput(0x4b00);
+      }
+      else if (s_right_held)
+      {
+        PushQueuedKeyInput(0x4d00);
+      }
       break;
     }
     case SDL_EVENT_TEXT_INPUT:
