@@ -16,6 +16,28 @@
 #include "global_strings.h"
 #include "shared_startup.h"
 
+/* A second click on a pending spell/activation requests automatic payment;
+ * it must not cast that spell or activate that ability again. */
+static int mana_source_is_on_stack(int player, int card)
+{
+  int index;
+  int stack_card;
+
+  for (index = 0; index < g_stack_size; ++index)
+  {
+    if (global_stack_cards[index].player != player)
+      continue;
+    stack_card = global_stack_cards[index].card;
+    if (stack_card == card)
+      return 1;
+    if (PLAYER_CARD_INSTANCE(player, stack_card).internal_card_id == g_stack_proxy_internal_card_id &&
+        PLAYER_CARD_INSTANCE(player, stack_card).parent_controller == player &&
+        PLAYER_CARD_INSTANCE(player, stack_card).parent_card == card)
+      return 1;
+  }
+  return 0;
+}
+
 int select_target(int player, int card, target_definition_t *td, const char *prompt, target_t *ret_location)
 {
   (void)player;
@@ -394,7 +416,8 @@ int charge_mana(int player, color_t color, int amount)
           if (g_target_player_choice == -1 || selected_card != -1)
           {
             current_internal_card_id = (global_card_instances[player] + selected_card)->internal_card_id;
-            if ((global_cards_data[current_internal_card_id].extra_ability & EA_MANA_SOURCE) != 0 &&
+            if (!mana_source_is_on_stack(player, selected_card) &&
+                (global_cards_data[current_internal_card_id].extra_ability & EA_MANA_SOURCE) != 0 &&
                 ((global_cards_data[current_internal_card_id].type & TYPE_INTERRUPT) != 0 ||
                  ((((global_card_instances[player] + selected_card)->state & STATE_IN_PLAY) != 0) &&
                   ((global_card_instances[player] + selected_card)->state & STATE_OUBLIETTED) == 0 &&
@@ -1092,6 +1115,9 @@ int can_activate_mana_source(int player, int card, int activation_flags)
   int csvid;
   int result;
   int internal_card_id;
+
+  if (mana_source_is_on_stack(player, card))
+    return 0;
 
   internal_card_id = PLAYER_CARD_INSTANCE(player, card).internal_card_id;
   csvid = global_cards_data[internal_card_id].id;
