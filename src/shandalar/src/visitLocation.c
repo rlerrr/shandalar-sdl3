@@ -2097,9 +2097,11 @@ loop:
   while (g_town_menu_result_state == 0)
   {
     UpdateMouseSnapshot();
+    DrawAdventureRightClickMenuButton();
     (void)UpdateMenuControlSelection(g_mouse_x_snapshot, g_mouse_y_snapshot, g_mouse_button_down_mask);
-    if (((g_mouse_button_down_mask & 2U) != 0) ||
-        (((g_mouse_button_down_mask & 1U) != 0) &&
+    /* Include releases buffered between polls so quick clicks/taps survive. */
+    if (((g_mouse_button_mask_snapshot & 2U) != 0) ||
+        (((g_mouse_button_mask_snapshot & 1U) != 0) &&
          (IsAdventureRightClickMenuButtonHit(g_mouse_x_snapshot, g_mouse_y_snapshot) != 0)))
     {
       menu_context = RunRightClickMenuAndQueueInput();

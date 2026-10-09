@@ -436,6 +436,8 @@ int FindWorldMagicCardIndex(shandalar_worldmagic_index_t world_magic_slot_index)
 void PushQueuedKeyInput(int key_code);
 int MapWorldClickToMovementKey(int x, int y);
 int IsAdventureRightClickMenuButtonHit(int x, int y);
+void GetAdventureRightClickMenuButtonRect(AdvMenuRect *rect);
+void DrawAdventureRightClickMenuButton(void);
 int RenderMenuControlRange(int first_index, int count);
 int GetUiTickCount(void);
 int SeedRandomFromTickCount(void);

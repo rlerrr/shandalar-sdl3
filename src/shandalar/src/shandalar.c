@@ -985,18 +985,24 @@ void RunDebugRightClickMenu(void)
   }
 }
 
-int IsAdventureRightClickMenuButtonHit(int x, int y)
+void GetAdventureRightClickMenuButtonRect(AdvMenuRect *rect)
 {
   int pad;
-  int size;
-  int left;
-  int top;
 
   pad = ScaleUiCoordinate(4);
-  size = ScaleUiCoordinate(0x14);
-  left = global_screen_width - size - pad;
-  top = pad;
-  return left <= x && x <= left + size && top <= y && y <= top + size;
+  rect->width = ScaleUiCoordinate(28);
+  rect->height = ScaleUiCoordinate(28);
+  rect->x = global_screen_width - rect->width - pad;
+  rect->y = pad;
+}
+
+int IsAdventureRightClickMenuButtonHit(int x, int y)
+{
+  AdvMenuRect rect;
+
+  GetAdventureRightClickMenuButtonRect(&rect);
+  return rect.x <= x && x < rect.x + rect.width &&
+         rect.y <= y && y < rect.y + rect.height;
 }
 
 // FUNCTION: SHANDALAR 0x0046e6f0

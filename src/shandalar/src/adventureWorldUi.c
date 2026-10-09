@@ -1370,12 +1370,13 @@ void DrawWorldTileRange(unsigned int world_x, unsigned int world_y, int tile_x_s
 
 void DrawAdventureRightClickMenuButton(void)
 {
-  int pad;
-  int size;
+  AdvMenuRect rect;
+  int height;
   int left;
   int top;
   int plaque_inset;
-  int plaque_size;
+  int plaque_width;
+  int plaque_height;
   int corner;
   int line;
   int icon_size;
@@ -1386,22 +1387,23 @@ void DrawAdventureRightClickMenuButton(void)
   int border_dark;
   EncodedImage *sprite;
 
-  pad = ScaleUiCoordinate(4);
-  size = ScaleUiCoordinate(0x14);
-  left = global_screen_width - size - pad;
-  top = pad;
+  GetAdventureRightClickMenuButtonRect(&rect);
+  height = rect.height;
+  left = rect.x;
+  top = rect.y;
   plaque_inset = ScaleUiCoordinate(1);
-  plaque_size = size - plaque_inset * 2;
+  plaque_width = rect.width - plaque_inset * 2;
+  plaque_height = height - plaque_inset * 2;
   corner = ScaleUiCoordinate(2);
   line = ScaleUiCoordinate(1);
-  icon_size = ScaleUiCoordinate(0xe);
-  icon_left = left + (size - icon_size) / 2;
-  icon_top = top + (size - icon_size) / 2;
+  icon_size = ScaleUiCoordinate(18);
+  icon_left = left + (rect.width - icon_size) / 2;
+  icon_top = top + (height - icon_size) / 2;
 
   fill_color = 0x18;
   border_light = 0x1a;
   border_dark = 0x1b;
-  /* ttsprite[73], fitted to the compact menu plaque. */
+  /* Keep the mana emblem centered in the larger menu plaque. */
   sprite = g_ttsprite_special_sprite_b;
   shandalar_deck_imgui_set_menu_sprite(sprite,
                                        (const unsigned char *)g_palette_rgb);
@@ -1412,37 +1414,37 @@ void DrawAdventureRightClickMenuButton(void)
     border_dark = 0x1a;
   }
 
-  /* A compact chamfered plaque keeps the affordance without looking like a toolbar tile. */
+  /* Chamfered plaque with the same bounds used by input hit testing. */
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner, top + plaque_inset,
-                   plaque_size - corner * 2, plaque_size, fill_color);
+                   plaque_width - corner * 2, plaque_height, fill_color);
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset, top + plaque_inset + corner,
-                   plaque_size, plaque_size - corner * 2, fill_color);
+                   plaque_width, plaque_height - corner * 2, fill_color);
 
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner, top + plaque_inset,
-                   plaque_size - corner * 2, line, border_light);
+                   plaque_width - corner * 2, line, border_light);
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset, top + plaque_inset + corner,
-                   line, plaque_size - corner * 2, border_light);
+                   line, plaque_height - corner * 2, border_light);
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + line, top + plaque_inset + corner - line,
                    corner - line, line, border_light);
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner - line, top + plaque_inset + line,
                    line, corner - line, border_light);
-  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - corner,
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_width - corner,
                    top + plaque_inset + line, line, corner - line, border_light);
-  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - corner + line,
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_width - corner + line,
                    top + plaque_inset + corner - line, corner - line, line, border_light);
 
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + corner,
-                   top + plaque_inset + plaque_size - line, plaque_size - corner * 2, line, border_dark);
-  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - line,
-                   top + plaque_inset + corner, line, plaque_size - corner * 2, border_dark);
-  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - corner,
-                   top + plaque_inset + plaque_size - line * 2, corner - line, line, border_dark);
-  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_size - line * 2,
-                   top + plaque_inset + plaque_size - corner, line, corner - line, border_dark);
+                   top + plaque_inset + plaque_height - line, plaque_width - corner * 2, line, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_width - line,
+                   top + plaque_inset + corner, line, plaque_height - corner * 2, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_width - corner,
+                   top + plaque_inset + plaque_height - line * 2, corner - line, line, border_dark);
+  FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + plaque_width - line * 2,
+                   top + plaque_inset + plaque_height - corner, line, corner - line, border_dark);
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + line,
-                   top + plaque_inset + plaque_size - corner, line, corner - line, border_dark);
+                   top + plaque_inset + plaque_height - corner, line, corner - line, border_dark);
   FillGraphicsRect(g_page0_window_bounds, left + plaque_inset + line * 2,
-                   top + plaque_inset + plaque_size - corner + line, corner - line, line, border_dark);
+                   top + plaque_inset + plaque_height - corner + line, corner - line, line, border_dark);
   if (sprite != 0)
   {
     DrawEncodedImageResampled(g_page0_window_bounds, icon_left, icon_top, icon_size, icon_size, sprite);
