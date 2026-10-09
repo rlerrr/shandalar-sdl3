@@ -2276,7 +2276,15 @@ void RenderAdventureWorldScene(int world_x, int world_y, int world_state)
         current_entry_type -= (ShandalarEntryType)(((unsigned int)g_monster_timer >> 5) & 3);
       }
       if (((g_shandalar_monster_definitions[current_entry_type].flags_0a & 0x100U) != 0) &&
+#ifdef MODERN_FIXES
+          /* Monster coordinates include the cached terrain's scroll offset.
+             Measure proximity to the player's feet in the current viewport. */
+          (ApproximateDistance(player_screen_x - g_world_scroll_x - g_world_camera_viewport_width_pixels / 2,
+                               player_screen_y - g_world_scroll_y - g_world_camera_viewport_height_pixels / 2 - g_world_ui_top_offset) >
+           ScaleUiCoordinateFrom320(0x80)))
+#else
           (ApproximateDistance(player_screen_x - 0x140, player_screen_y - 0xf0) > ScaleUiCoordinateFrom320(0x80)))
+#endif
       {
         continue;
       }
