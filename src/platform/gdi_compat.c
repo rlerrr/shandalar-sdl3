@@ -1,4 +1,5 @@
 #include "platform/gdi_compat.h"
+#include "platform/winuser_compat.h"
 
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include <stdio.h>
 
 #include "platform/legacy_io.h"
+
 
 enum ObjectKind {
   OBJECT_BITMAP = 0x424d,
@@ -2156,11 +2158,40 @@ int SetDIBitsToDevice(HDC dc, int x, int y, DWORD width, DWORD height,
 
 int MessageBoxA(HWND window, LPCSTR message, LPCSTR title, UINT flags)
 {
+  UINT button_type = flags & 0x0f;
+  const char *caption = title ? title : "Facemaker";
+  const char *text = message ? message : "";
   (void)window;
-  (void)flags;
-  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title ? title : "Facemaker",
-                           message ? message : "", NULL);
-  return 1;
+
+  SDL_MessageBoxButtonData buttons[3];
+  SDL_MessageBoxData data;
+  int selected = -1;
+  memset(&data, 0, sizeof(data));
+  data.title = caption;
+  data.message = text;
+  data.buttons = buttons;
+  switch (flags & 0xf0) {
+  case MB_ICONHAND: data.flags = SDL_MESSAGEBOX_ERROR; break;
+  case MB_ICONEXCLAMATION: data.flags = SDL_MESSAGEBOX_WARNING; break;
+  default: data.flags = SDL_MESSAGEBOX_INFORMATION; break;
+  }
+  if (button_type == MB_YESNO || button_type == MB_YESNOCANCEL) {
+    buttons[0] = (SDL_MessageBoxButtonData){SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, IDYES, "Yes"};
+    buttons[1] = (SDL_MessageBoxButtonData){button_type == MB_YESNO ? SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT : 0, IDNO, "No"};
+    data.numbuttons = 2;
+    if (button_type == MB_YESNOCANCEL) {
+      buttons[2] = (SDL_MessageBoxButtonData){SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDCANCEL, "Cancel"};
+      data.numbuttons = 3;
+    }
+  } else {
+    buttons[0] = (SDL_MessageBoxButtonData){SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT |
+                                          SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDOK, "OK"};
+    data.numbuttons = 1;
+  }
+  if (!SDL_ShowMessageBox(&data, &selected) || selected == -1)
+    return button_type == MB_YESNO ? IDNO :
+           button_type == MB_YESNOCANCEL ? IDCANCEL : IDOK;
+  return selected;
 }
 
 UINT GetModuleFileNameA(HMODULE module, LPSTR buffer, UINT size)

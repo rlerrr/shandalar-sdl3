@@ -433,6 +433,7 @@ static Void_fn_int_int SetCardInDeck;
 static Int_fn_int SellPrice;
 static void (*g_host_begin_deckbuilder)(void);
 static void (*g_host_end_deckbuilder)(void);
+static int (*g_host_minimum_deck_size)(void);
 static int (*g_debug_card_picker)(HWND owner);
 static int (*g_debug_card_sort_key)(int internal_card_id);
 
@@ -487,6 +488,11 @@ void deck_set_host_pump_hooks(void (*begin)(void), void (*end)(void))
 {
   g_host_begin_deckbuilder = begin;
   g_host_end_deckbuilder = end;
+}
+
+void deck_set_minimum_deck_size_hook(int (*minimum_deck_size)(void))
+{
+  g_host_minimum_deck_size = minimum_deck_size;
 }
 
 void deck_set_debug_card_picker(int (*pick_card)(HWND owner),
@@ -6019,6 +6025,32 @@ wndproc_MainClass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     return 1;
 
   case WM_CLOSE:
+    if (global_db_flags_1 & DBFLAGS_SHANDALAR)
+    {
+      char validation_message[256];
+      int minimum = g_host_minimum_deck_size ? g_host_minimum_deck_size() : 40;
+
+      if (global_deck_num_cards == 0 && global_deck_num_entries > 0)
+      {
+        MessageBoxA(hwnd,
+                    "Your deck is empty!\n\n"
+                    "Add at least one card from your library before exiting.",
+                    "Deck Builder", MB_OK | MB_ICONEXCLAMATION);
+        return 0;
+      }
+
+      if (global_deck_num_cards < minimum)
+      {
+        snprintf(validation_message, sizeof(validation_message),
+                 "Your deck has only %d cards! The minimum is %d.\n\n"
+                 "Random cards will be added for duels.\n\n"
+                 "Continue anyway?",
+                 global_deck_num_cards, minimum);
+        if (MessageBoxA(hwnd, validation_message, "Deck Builder",
+                        MB_YESNO | MB_ICONEXCLAMATION) != IDYES)
+          return 0;
+      }
+    }
     if ((global_db_flags_1 & 0x0a) || (global_db_flags_1 & 4))
     {
       if (!global_deck_was_edited || ask_about_saving_deck() != 2)

@@ -3,6 +3,7 @@
 #include "magic/src/global_duel_ui_ids.h"
 #include "magic/src/global_other.h"
 #include "magic/src/global_state.h"
+#include "magic/src/shandalar_deck_rules.h"
 #include "magic/src/network.h"
 #include "cardartlib/CardArtLib.h"
 #include "deckdll/src/deckdll.h"
@@ -44,6 +45,11 @@ extern int g_name_entry_cursor;
 static EncodedImage *g_name_entry_portrait_sprite;
 static int g_deckbuilder_attached;
 static int g_card_libraries_initialized;
+
+static int shandalar_deck_minimum_size(void)
+{
+  return shandalar_minimum_deck_size(g_shandalar_difficulty);
+}
 
 int CardIDFromType(unsigned int type);
 int CardTypeFromID(int csvid);
@@ -300,7 +306,8 @@ int shandalar_runtime_init(const char *asset_root)
   deck_register_dialog_resources();
   duel_register_dialog_resources();
   deck_set_host_pump_hooks(shandalar_host_begin_deckbuilder,
-                           shandalar_host_end_deckbuilder);
+                          shandalar_host_end_deckbuilder);
+  deck_set_minimum_deck_size_hook(shandalar_deck_minimum_size);
   deck_set_debug_card_picker(shandalar_pick_debug_deck_card,
                              shandalar_deck_card_sort_key);
   if (!g_deckbuilder_attached) {

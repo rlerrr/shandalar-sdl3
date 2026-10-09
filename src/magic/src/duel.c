@@ -15,6 +15,7 @@
 #include "magic/src/global_strings.h"
 #include "magic/src/network.h"
 #include "magic/src/shared_startup.h"
+#include "magic/src/shandalar_deck_rules.h"
 #ifdef SHANDALAR
 #include "deckdll/src/magsnd.h"
 #endif
@@ -2177,10 +2178,10 @@ int play_duel(int player, int creature_type)
   if (creature_type != -1)
   {
     shandalar_deck_minimums[4] = 0;
-    shandalar_deck_minimums[0] = 0x1e;
-    shandalar_deck_minimums[1] = 0x23;
-    shandalar_deck_minimums[2] = 0x28;
-    shandalar_deck_minimums[3] = 0x28;
+    shandalar_deck_minimums[0] = shandalar_minimum_deck_size(0);
+    shandalar_deck_minimums[1] = shandalar_minimum_deck_size(1);
+    shandalar_deck_minimums[2] = shandalar_minimum_deck_size(2);
+    shandalar_deck_minimums[3] = shandalar_minimum_deck_size(3);
     g_life[0] = 10;
     if ((g_world_magic_bitmap & 2) != 0)
     {
