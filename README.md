@@ -36,3 +36,7 @@ To support touchscreens (no right click, no keyboard) several UI changes were ma
 * Tweak long press/double click in several spots to act as context menus.
 * Switch several actions to trigger on mouse/touch Up rather than Down.
 * Add drop target in deckbuilder to show sell value and allow selling cards.
+
+## License
+
+Original contributions to Shandalar SDL3 are licensed under the [MIT License](LICENSE), to the extent the contributors hold rights in them. This grant does not cover the original game's assets or trademarks; their rights remain with their respective owners. Third-party code retains its own licenses.
