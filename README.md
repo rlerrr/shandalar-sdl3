@@ -9,7 +9,10 @@ A lot has been decompiled with AI assistance.  The entire GDI32/Win32 to SDL shi
 Two batch files are available for building the currently tested toolchains.  They expect their respective toolchains to be installed at their default locations.
 
 * `clang.bat` Builds a monolithic 32bit .exe using LLVM and MSVC's STL.
+* `clang64.bat` Builds a monolithic x86-64 .exe using LLVM and MSVC's STL.
+* `msvc64.bat` Builds a monolithic x86-64 .exe using Visual Studio 2026.
 * `emscripten.bat` Builds a 32bit WebAssembly binary.  This is batteries-not-included, so a harness is needed to also serve assets properly.  Currently requires `emsdk_env.bat` to be ran in advance.
+* `build-appimage.sh` Builds a batteries included x86-64 AppImage using LLVM.  Requires assets to be provided from a separate directory.
 
 ### Local Linux AppImage
 
