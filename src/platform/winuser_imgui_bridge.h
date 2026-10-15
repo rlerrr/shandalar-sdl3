@@ -7,6 +7,10 @@ typedef struct SDL_Renderer SDL_Renderer;
 typedef struct SDL_Window SDL_Window;
 typedef union SDL_Event SDL_Event;
 
+/* Presentation query: nonzero only when a window displays a face-up card.
+ * Kept outside the legacy duel's WM_USER message range. */
+#define SHANDALAR_WM_QUERY_CARD_FOIL 0x8001
+
 #ifdef __cplusplus
 extern "C" {
 #endif

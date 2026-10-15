@@ -11,6 +11,7 @@
 #include "magic/src/global_state.h"
 #include "magic/src/global_strings.h"
 #include "magic/src/shared_startup.h"
+#include "platform/winuser_imgui_bridge.h"
 
 #define DISPLAYED_PLAYER_CARD_INSTANCE(player_, card_) global_displayed_card_instances[(player_)][(card_)]
 
@@ -210,6 +211,19 @@ LRESULT CALLBACK wndproc_MAGICGAME_FullCardClass(HWND hwnd, UINT msg, WPARAM wpa
 
   switch (msg)
   {
+  case SHANDALAR_WM_QUERY_CARD_FOIL:
+    /* The preview prototype applies to real card faces, never hidden cards
+     * or the engine's synthetic damage/activation/effect displays. */
+    window_card_id = GetWindowLongA(hwnd, g_full_card_card_id_window_long_offset);
+    return window_card_id >= 0 && window_card_id < global_available_slots &&
+           window_card_id != g_card_back_display_internal_card_id &&
+           window_card_id != g_damage_display_internal_card_id &&
+           window_card_id != g_hunting_display_internal_card_id &&
+           window_card_id != g_multiblock_display_internal_card_id &&
+           window_card_id != g_effect_display_internal_card_id &&
+           window_card_id != g_legacy_display_internal_card_id &&
+           window_card_id != g_activation_display_internal_card_id;
+
   case 0x437:
     return 0;
 

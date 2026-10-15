@@ -12,6 +12,7 @@
 
 #include <cctype>
 #include <climits>
+#include <cmath>
 
 namespace {
 
@@ -105,6 +106,156 @@ bool push_child_clip_rect(HWND window, ImDrawList *draw_list)
   return true;
 }
 
+float foil_clamp(float value, float minimum, float maximum)
+{
+  return value < minimum ? minimum : value > maximum ? maximum : value;
+}
+
+ImU32 foil_color(float u, float v, float phase)
+{
+  /* DrawFullCard uses a 200 x 300 canvas, with art at (21,25)-(181,164).
+   * Fade the effect near the art boundary; keep lettering easy to read. */
+  const float art_edge = foil_clamp(
+      SDL_min(SDL_min(u - 0.105f, 0.905f - u),
+              SDL_min(v - 0.083f, 0.547f - v)) * 50.0f, 0.0f, 1.0f);
+  const float mask = (v > 0.56f || v < 0.075f ? 0.10f : 0.25f) +
+                     0.75f * art_edge;
+  const float diagonal = u * 0.78f + v * 0.55f;
+  const float wave = std::sin(diagonal * 5.0f - phase);
+  const float band = std::pow(SDL_max(0.0f, wave), 5.0f);
+  const float shine = std::pow(SDL_max(0.0f, wave), 32.0f);
+  const float hue = diagonal * 9.0f - phase * 1.4f;
+  const float grain = 0.90f + 0.10f * std::sin(u * 953.0f + v * 1249.0f);
+  const float alpha = mask * (0.035f + band * 0.24f + shine * 0.12f) * grain;
+  const float white = shine * 0.65f;
+  const float red = 0.5f + 0.5f * std::cos(hue);
+  const float green = 0.5f + 0.5f * std::cos(hue - 2.0944f);
+  const float blue = 0.5f + 0.5f * std::cos(hue + 2.0944f);
+  return ImGui::ColorConvertFloat4ToU32(ImVec4(
+      red + (1.0f - red) * white,
+      green + (1.0f - green) * white,
+      blue + (1.0f - blue) * white, alpha));
+}
+
+void draw_foil_shooting_star(const RECT &rect, ImDrawList *draw_list,
+                             float phase)
+{
+  /* The old-border foil stamp sits at the lower-left of the rules box.
+   * Use the same 200 x 300 coordinates as DrawFullCard so the fine rays
+   * and curved, tapering trails scale with the enlarged preview. */
+  const float scale_x = static_cast<float>(rect.right - rect.left) / 200.0f;
+  const float scale_y = static_cast<float>(rect.bottom - rect.top) / 300.0f;
+  const auto position = [&](float x, float y) {
+    return ImVec2(rect.left + x * scale_x, rect.top + y * scale_y);
+  };
+  constexpr float star_x = 32.0f;
+  constexpr float star_y = 260.0f;
+  const float diagonal = 0.16f * 0.78f + (star_y / 300.0f) * 0.55f;
+  const float reflection = std::pow(SDL_max(0.0f, std::sin(diagonal * 5.0f - phase)), 5.0f);
+  const float hue = diagonal * 9.0f - phase * 1.4f;
+  const float opacity = 0.70f + 0.26f * reflection;
+  const ImVec4 tint(0.95f + 0.05f * std::cos(hue),
+                    0.70f + 0.16f * std::cos(hue - 2.0944f),
+                    0.58f + 0.18f * std::cos(hue + 2.0944f), 1.0f);
+  const auto color = [&](float alpha) {
+    return ImGui::ColorConvertFloat4ToU32(ImVec4(tint.x, tint.y, tint.z, alpha));
+  };
+  const ImVec2 white_uv = ImGui::GetFontTexUvWhitePixel();
+
+  /* A pair of ribbons flatten out as they recede to the right. Build the
+   * glow first, then the narrow reflective stroke, with a soft fade at the tip. */
+  for (int layer = 0; layer < 2; ++layer) {
+    for (int trail = 0; trail < 2; ++trail) {
+      const float length = trail == 0 ? 103.0f : 72.0f;
+      const float rise = trail == 0 ? 14.0f : 8.5f;
+      const float thickness = (trail == 0 ? 2.0f : 0.90f) *
+                               (layer == 0 ? 2.4f : 1.0f);
+      constexpr int segments = 28;
+      for (int segment = 0; segment < segments; ++segment) {
+        const float t0 = static_cast<float>(segment) / segments;
+        const float t1 = static_cast<float>(segment + 1) / segments;
+        const float y0 = star_y - rise * (2.0f * t0 - t0 * t0);
+        const float y1 = star_y - rise * (2.0f * t1 - t1 * t1);
+        const float w0 = thickness * (1.0f - t0);
+        const float w1 = thickness * (1.0f - t1);
+        const ImVec2 ribbon[] = {
+            position(star_x + length * t0, y0 - w0),
+            position(star_x + length * t1, y1 - w1),
+            position(star_x + length * t1, y1 + w1),
+            position(star_x + length * t0, y0 + w0),
+        };
+        /* Shared ribbon edges must not get individual antialias fringes,
+         * which would break the fine trail into visible segments. */
+        draw_list->PrimReserve(6, 4);
+        draw_list->PrimQuadUV(ribbon[0], ribbon[1], ribbon[2], ribbon[3],
+            white_uv, white_uv, white_uv, white_uv,
+            color(opacity * (layer == 0 ? 0.10f : 0.65f) * (1.0f - t0)));
+      }
+    }
+  }
+
+  /* Keep the stamp legible when the duel is scaled down on a phone. The
+   * bronze edge gives the warm reflection contrast against pale rules boxes. */
+  for (int layer = 0; layer < 2; ++layer) {
+    for (int ray = 0; ray < 8; ++ray) {
+      const float angle = ray * 0.78539816f;
+      const float dx = std::cos(angle);
+      const float dy = std::sin(angle);
+      const float length = ray % 2 == 0 ? 18.0f : 10.5f;
+      const float half_width = layer == 0 ? 2.0f : 1.1f;
+      draw_list->AddTriangleFilled(
+          position(star_x + dy * half_width, star_y - dx * half_width),
+          position(star_x + dx * length, star_y + dy * length),
+          position(star_x - dy * half_width, star_y + dx * half_width),
+          layer == 0 ? IM_COL32(128, 70, 45, static_cast<int>(opacity * 64)) :
+                       color(opacity * 0.90f));
+    }
+  }
+  draw_list->AddCircleFilled(position(star_x, star_y),
+                              SDL_min(scale_x, scale_y) * 1.35f,
+                              IM_COL32(255, 247, 226, static_cast<int>(opacity * 255)), 12);
+}
+
+void draw_card_foil(HWND window, const RECT &rect, ImDrawList *draw_list)
+{
+  char class_name[64] = {};
+  if (!GetClassNameA(window, class_name, sizeof(class_name)) ||
+      SDL_strcasecmp(class_name, "MAGICGAME_FullCardClass") != 0 ||
+      !SendMessageA(window, SHANDALAR_WM_QUERY_CARD_FOIL, 0, 0))
+    return;
+
+  const float width = static_cast<float>(rect.right - rect.left);
+  const float height = static_cast<float>(rect.bottom - rect.top);
+  /* Use a slow automatic sweep, equally on desktop and touchscreens. */
+  const float phase = static_cast<float>(std::fmod(ImGui::GetTime() * 0.55, 31.4159265));
+  constexpr int columns = 32;
+  constexpr int rows = 48;
+  ImU32 colors[rows + 1][columns + 1];
+  for (int y = 0; y <= rows; ++y) {
+    for (int x = 0; x <= columns; ++x) {
+      const float u = 0.035f + 0.93f * x / columns;
+      const float v = 0.025f + 0.95f * y / rows;
+      colors[y][x] = foil_color(u, v, phase);
+    }
+  }
+  /* Vertex colors use the existing ImGui/SDL alpha blend path. No per-frame
+   * textures, card repaints, shader state, or backend-specific callbacks. */
+  draw_list->PushClipRect(ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
+                          ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)), true);
+  for (int y = 0; y < rows; ++y) {
+    for (int x = 0; x < columns; ++x) {
+      draw_list->AddRectFilledMultiColor(
+          ImVec2(rect.left + width * (0.035f + 0.93f * x / columns),
+                 rect.top + height * (0.025f + 0.95f * y / rows)),
+          ImVec2(rect.left + width * (0.035f + 0.93f * (x + 1) / columns),
+                 rect.top + height * (0.025f + 0.95f * (y + 1) / rows)),
+          colors[y][x], colors[y][x + 1], colors[y + 1][x + 1], colors[y + 1][x]);
+    }
+  }
+  draw_foil_shooting_star(rect, draw_list, phase);
+  draw_list->PopClipRect();
+}
+
 void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list)
 {
   if (!IsWindowVisible(window))
@@ -134,6 +285,7 @@ void draw_window_tree(SDL_Renderer *renderer, HWND window, ImDrawList *draw_list
         draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
                             ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)));
+        draw_card_foil(window, rect, draw_list);
       }
     }
   }
@@ -720,6 +872,7 @@ void draw_window_overlay_tree(HWND window, ImDrawList *draw_list)
         draw_list->AddImage(reinterpret_cast<ImTextureID>(texture),
                             ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top)),
                             ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)));
+        draw_card_foil(window, rect, draw_list);
       }
     }
   }
