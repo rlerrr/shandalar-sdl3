@@ -1,6 +1,10 @@
 # Shandalar SDL3
 A port of the 1997 video game [Magic: the Gathering](https://en.wikipedia.org/wiki/Magic:_The_Gathering_(1997_video_game)) by MicroProse (Version 1.3, English). It aims to be as accurate as possible, starting from a (somewhat) byte-matched decompilation of the original binaries.
 
+Play in your browser [here](https://shandalar.dev/)
+
+Play on Linux via the AppImage releases [here](https://github.com/rlerrr/shandalar-sdl3-appimage/releases)
+
 This repository does **not** contain any game assets. An existing copy of the game is required.  Since it aims to match the original as much as possible, modded assets will probably **not** work.
 
 A lot has been decompiled with AI assistance.  The entire GDI32/Win32 to SDL shim layer is also written almost entirely by AI, as well as the asset streaming code for the Emscripten build.
