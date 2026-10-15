@@ -263,6 +263,8 @@ static void SetInitialFaceOutputPath(void)
 #ifdef __EMSCRIPTEN__
   snprintf(g_face_output_path, sizeof(g_face_output_path), "%s/face.pic",
            shandalar_user_data_root());
+#elif defined(SHANDALAR_EMBEDDED_FACEMAKER)
+  strcpy(g_face_output_path, "face.pic");
 #else
   snprintf(g_face_output_path, sizeof(g_face_output_path), "%s\\PlayFace\\*.pic",
            global_base_directory);
@@ -831,6 +833,10 @@ int AcceptFaceSelection(FaceControl *control)
   }
   if (g_use_desktop_palette == 0)
   {
+#ifdef SHANDALAR_EMBEDDED_FACEMAKER
+    /* A manual export can change the path. The host always reloads face.pic. */
+    SetInitialFaceOutputPath();
+#endif
     ExportEncodedImage(2, 0, 0, 0x114, 0xaa, 0, g_face_output_path);
   }
 

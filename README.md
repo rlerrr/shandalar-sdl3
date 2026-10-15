@@ -5,6 +5,8 @@ Play in your browser [here](https://shandalar.dev/)
 
 Play on Linux via the AppImage releases [here](https://github.com/rlerrr/shandalar-sdl3-appimage/releases)
 
+Play on Windows via the releases [here](https://github.com/rlerrr/shandalar-sdl3-win32/releases)
+
 This repository does **not** contain any game assets. An existing copy of the game is required.  Since it aims to match the original as much as possible, modded assets will probably **not** work.
 
 A lot has been decompiled with AI assistance.  The entire GDI32/Win32 to SDL shim layer is also written almost entirely by AI, as well as the asset streaming code for the Emscripten build.
