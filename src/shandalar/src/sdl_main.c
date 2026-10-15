@@ -70,6 +70,21 @@ static int g_facemaker_host_active;
 static int g_deckbuilder_host_active;
 static int g_duel_host_active;
 
+static void handle_window_close(const SDL_Event *event)
+{
+#ifndef __EMSCRIPTEN__
+  if (event->type == SDL_EVENT_QUIT ||
+      event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+  {
+    /* Legacy input loops can ignore the pump's return value indefinitely.
+     * Match x64-port: close the native process directly from every host UI. */
+    exit(0);
+  }
+#else
+  (void)event;
+#endif
+}
+
 static int legacy_key(SDL_Keycode key)
 {
   switch (key)
@@ -266,6 +281,7 @@ static BOOL pump_facemaker_ui(BOOL wait)
   SDL_Event event;
   while (SDL_PollEvent(&event))
   {
+    handle_window_close(&event);
     shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
     if (event.type == SDL_EVENT_QUIT)
     {
@@ -301,6 +317,7 @@ static BOOL pump_deckbuilder_ui(BOOL wait)
   SDL_Event event;
   while (SDL_PollEvent(&event))
   {
+    handle_window_close(&event);
     shandalar_win32_imgui_process_event(g_renderer, &event);
     if (event.type == SDL_EVENT_QUIT)
     {
@@ -338,6 +355,7 @@ static BOOL pump_duel_ui(BOOL wait)
   SDL_Event event;
   while (SDL_PollEvent(&event))
   {
+    handle_window_close(&event);
     shandalar_win32_imgui_process_event(g_renderer, &event);
     shandalar_win32_sdl_compositor_process_event(g_renderer, &event);
     if (event.type == SDL_EVENT_QUIT)
@@ -541,6 +559,7 @@ void shandalar_host_pump(void)
   static int s_right_held = 0;
   while (SDL_PollEvent(&event))
   {
+    handle_window_close(&event);
     switch (event.type)
     {
     case SDL_EVENT_QUIT:
@@ -697,11 +716,12 @@ static BOOL pump_shandalar_win32_ui(BOOL wait)
 int main(int argc, char **argv)
 {
   char cmd_line[1] = "";
-  const char *asset_root = argc > 1 ? argv[1] : "C:/Magic/Program";
-  int result;
 #ifdef __EMSCRIPTEN__
-  asset_root = argc > 1 ? argv[1] : "/assets";
+  const char *asset_root = argc > 1 ? argv[1] : "/assets";
+#else
+  const char *asset_root = argc > 1 ? argv[1] : SHANDALAR_DEFAULT_ASSET_DIR;
 #endif
+  int result;
   if (!SDL_Init(SDL_INIT_VIDEO))
     return 1;
   if (!shandalar_runtime_init(asset_root))

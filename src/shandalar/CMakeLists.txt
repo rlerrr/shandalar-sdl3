@@ -49,6 +49,12 @@ add_executable(shandalar
   ../magic/src/carddata.c
 )
 if(WIN32 AND NOT EMSCRIPTEN)
+  if(MSVC)
+    # Keep a console for debugging, but do not create one for release builds.
+    set_property(TARGET shandalar PROPERTY WIN32_EXECUTABLE "$<NOT:$<CONFIG:Debug>>")
+    # Enter through main() so SDL is initialized before the legacy WinMain().
+    target_link_options(shandalar PRIVATE "$<$<NOT:$<CONFIG:Debug>>:/ENTRY:mainCRTStartup>")
+  endif()
   set(shandalar_icon_resource "${CMAKE_CURRENT_BINARY_DIR}/shandalar_icon.rc")
   file(GENERATE OUTPUT "${shandalar_icon_resource}"
     CONTENT "1 ICON \"${CMAKE_CURRENT_SOURCE_DIR}/shandalar.ico\"\n"
@@ -71,6 +77,11 @@ target_compile_definitions(shandalar PRIVATE
   SHANDALAR
   LoadPcxIntoPageNoPalette=ShandalarLoadPcxIntoPageNoPalette
 )
+if(NOT EMSCRIPTEN)
+  target_compile_definitions(shandalar PRIVATE
+    SHANDALAR_DEFAULT_ASSET_DIR="${SHANDALAR_DEFAULT_ASSET_DIR}"
+  )
+endif()
 if(EMSCRIPTEN)
   target_compile_options(shandalar PRIVATE
     -include platform/legacy_io.h
