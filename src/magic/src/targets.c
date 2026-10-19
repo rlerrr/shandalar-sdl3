@@ -584,34 +584,29 @@ int C_real_select_target(int who_chooses,
     {
       g_ai_recorded_action_type = 3;
       replay_ai_action_selection();
-      if (g_ai_recorded_choice == 99 || g_ai_recorded_action == -1 ||
-          (g_ai_recorded_action & 0x4000) == 0)
+      current_card = valid_count;
+      if (g_ai_recorded_choice != 99 && g_ai_recorded_action != -1 &&
+          (g_ai_recorded_action & 0x4000) != 0)
       {
-        g_spell_fizzled = 1;
-        return 0;
-      }
-
-      // Replay the target itself: the candidate list can differ from the trial.
-      selected_target.player = (g_ai_recorded_action >> 8) & 1;
-      selected_target.card = g_ai_recorded_action & 0xff;
-      if (selected_target.card == 0xff)
-      {
-        selected_target.card = -1;
-      }
-      for (current_card = 0; current_card < valid_count; ++current_card)
-      {
-        if (valid_players[current_card] == selected_target.player &&
-            valid_cards[current_card] == selected_target.card)
+        // Replay the target itself: the candidate list can differ from the trial.
+        selected_target.player = (g_ai_recorded_action >> 8) & 1;
+        selected_target.card = g_ai_recorded_action & 0xff;
+        if (selected_target.card == 0xff)
         {
-          break;
+          selected_target.card = -1;
+        }
+        for (current_card = 0; current_card < valid_count; ++current_card)
+        {
+          if (valid_players[current_card] == selected_target.player &&
+              valid_cards[current_card] == selected_target.card)
+          {
+            break;
+          }
         }
       }
-      if (current_card == valid_count)
-      {
-        g_spell_fizzled = 1;
-        return 0;
-      }
-      g_ai_recorded_choice = current_card;
+
+      // Automatic choices may have no searched plan. Keep the original legal fallback.
+      g_ai_recorded_choice = current_card < valid_count ? current_card : internal_rand(valid_count);
     }
 
     g_target_player_choice = valid_players[g_ai_recorded_choice];

@@ -879,10 +879,17 @@ int activate(int who_activates, int player, int card)
     if (g_spell_fizzled != 0)
     {
       g_spell_fizzled = 0;
+      if (player == g_other_player && (g_duel_network_flags & 2) == 0)
+      {
+        /* A failed automatic untap payment leaves the permanent tapped and
+         * completes this attempt instead of reopening it indefinitely. */
+        goto untap_cleanup;
+      }
       obliterate_top_card_of_stack();
       return 0;
     }
 
+  untap_cleanup:
     instance->upkeep_flags &= ~UPKEEP_UNTAP_TRIGGER;
     instance->upkeep_flags |= UPKEEP_UNTAP_DONE;
     refresh_stack_proxy_card(1);
