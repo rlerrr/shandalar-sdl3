@@ -1666,6 +1666,22 @@ int select_card_for_action(int player,
   return selected_target.card;
 }
 
+/* Match select_target_creature_and_store(), including the AI search's option
+ * to consider either controller. Human/network targeting still uses ANYBODY. */
+int creature_aura_target_available(int player, int card, int preferred_controller)
+{
+  if ((g_ai_search_flags & 1) != 0)
+  {
+    preferred_controller = ANYBODY;
+  }
+  return real_target_available(NULL, TARGET_SCAN_DIRECT, player, ANYBODY,
+                               preferred_controller, TARGET_ZONE_IN_PLAY,
+                               TYPE_CREATURE, TYPE_NONE, 0,
+                               get_protections_from(player, card),
+                               COLOR_TEST_0, COLOR_TEST_0,
+                               -1, ~SUB_WALL, -1, -1, 0, 0, 0);
+}
+
 // FUNCTION: MAGIC 0x00551638
 // FUNCTION: SHANDALAR 0x0049f87b
 int select_target_creature_and_store(int player, unsigned int preferred_controller, int card)

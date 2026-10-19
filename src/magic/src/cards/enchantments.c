@@ -88,10 +88,7 @@ int card_artifact_ward(int player, int card, event_t event)
 {
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0, TARGET_SCAN_DIRECT, player, 2, 2,
-                                 TARGET_ZONE_IN_PLAY, TYPE_CREATURE, TYPE_NONE, 0,
-                                 get_protections_from(player, card), COLOR_TEST_0, COLOR_TEST_0,
-                                 -1, -1, -1, -1, 0, 0, 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)

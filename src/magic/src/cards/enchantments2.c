@@ -3742,25 +3742,7 @@ int card_aspect_of_wolf(int player, int card, event_t event)
 {
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (((event == EVENT_CAST_SPELL) && (g_affected_card == card)) && (g_affected_card_controller == player))
@@ -3841,25 +3823,7 @@ int card_lure(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 TYPE_CREATURE,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -4079,25 +4043,7 @@ int card_creature_bond(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, 1 - player);
   }
 
   if (((event == EVENT_CAST_SPELL) && (card == g_affected_card)) && (player == g_affected_card_controller))
@@ -4274,10 +4220,7 @@ int card_backfire(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0, TARGET_SCAN_DIRECT, player, 2, 2,
-                                 TARGET_ZONE_IN_PLAY, TYPE_CREATURE, TYPE_NONE, 0,
-                                 get_protections_from(player, card), COLOR_TEST_0, COLOR_TEST_0,
-                                 -1, -1, -1, -1, 0, 0, 0);
+    return creature_aura_target_available(player, card, 1 - player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -4387,30 +4330,11 @@ int card_holy_armor(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (((event == EVENT_CAST_SPELL) && (card == g_affected_card)) && (player == g_affected_card_controller))
   {
-    g_ai_modifier += 0x18;
     PLAYER_CARD_INSTANCE(player, card).eot_toughness = 0;
     PLAYER_CARD_INSTANCE(player, card).info_slot = PLAYER_CARD_INSTANCE(player, card).eot_toughness;
     if (g_duel_ai_mode_state != 1)
@@ -4419,6 +4343,7 @@ int card_holy_armor(int player, int card, event_t event)
     }
     if (select_target_creature_and_store(player, player, card) != 0)
     {
+      g_ai_modifier += 0x18;
       if ((player == g_other_player) && ((g_duel_network_flags & 2) == 0))
       {
         if (is_selected_target_already_attached(player,
@@ -4638,25 +4563,7 @@ int card_blessing(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -4880,25 +4787,7 @@ int card_firebreathing(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -5122,25 +5011,7 @@ int card_fear(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 COLOR_TEST_0,
-                                 COLOR_TEST_0,
-                                 -1,
-                                 -1,
-                                 0xffffffff,
-                                 0xffffffff,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if ((event == EVENT_CAST_SPELL) && (card == g_affected_card) && (player == g_affected_card_controller))
@@ -5211,25 +5082,7 @@ int card_seeker(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 COLOR_TEST_0,
-                                 COLOR_TEST_0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -5288,25 +5141,7 @@ int card_web(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (((event == EVENT_CAST_SPELL) && (g_affected_card == card)) && (g_affected_card_controller == player))
@@ -6088,25 +5923,7 @@ int card_instill_energy(int player, int card, event_t event)
 {
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 0xffffffff,
-                                 0xffffffff,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -6570,25 +6387,7 @@ int generic_creature_ability_aura(int player, int card, int event, unsigned int 
 {
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 COLOR_TEST_0,
-                                 COLOR_TEST_0,
-                                 -1,
-                                 -1,
-                                 0xffffffff,
-                                 0xffffffff,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if ((event == EVENT_CAST_SPELL) && (card == g_affected_card) && (player == g_affected_card_controller))
@@ -6722,72 +6521,7 @@ int generic_creature_stat_aura(int player, int card, event_t event, int power_mo
 
   if (event == EVENT_CAN_CAST)
   {
-    if ((player == g_active_player) || ((g_duel_network_flags & 2) != 0))
-    {
-      return real_target_available((int *)0,
-                                   TARGET_SCAN_DIRECT,
-                                   player,
-                                   2,
-                                   2,
-                                   0x200,
-                                   2,
-                                   0,
-                                   0,
-                                   get_protections_from(player, card),
-                                   0,
-                                   0,
-                                   -1,
-                                   -1,
-                                   -1,
-                                   -1,
-                                   0,
-                                   0,
-                                   0);
-    }
-    else if (toughness_modifier + power_modifier >= 0)
-    {
-      return real_target_available((int *)0,
-                                   TARGET_SCAN_DIRECT,
-                                   player,
-                                   2,
-                                   2,
-                                   0x200,
-                                   2,
-                                   0,
-                                   0,
-                                   get_protections_from(player, card),
-                                   0,
-                                   0,
-                                   -1,
-                                   -1,
-                                   -1,
-                                   -1,
-                                   0,
-                                   0,
-                                   0);
-    }
-    else
-    {
-      return real_target_available((int *)0,
-                                   TARGET_SCAN_DIRECT,
-                                   player,
-                                   2,
-                                   2,
-                                   0x200,
-                                   2,
-                                   0,
-                                   0,
-                                   get_protections_from(player, card),
-                                   0,
-                                   0,
-                                   -1,
-                                   -1,
-                                   -1,
-                                   -1,
-                                   0,
-                                   0,
-                                   0);
-    }
+    return creature_aura_target_available(player, card, power_modifier + toughness_modifier >= 0 ? player : 1 - player);
   }
 
   if (((event == EVENT_CAST_SPELL) && (card == g_affected_card)) && (player == g_affected_card_controller))
@@ -6937,25 +6671,7 @@ int helper_ward(int player, int card, event_t event, int color)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 0xffffffff,
-                                 0xffffffff,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
   else
   {
@@ -7077,25 +6793,7 @@ int card_unstable_mutation(int player, int card, event_t event)
 {
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 COLOR_TEST_0,
-                                 COLOR_TEST_0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -7938,25 +7636,7 @@ int card_regeneration(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 0xffffffff,
-                                 0xffffffff,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && card == g_affected_card && player == g_affected_card_controller)
@@ -8088,25 +7768,7 @@ int card_eternal_warrior(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 COLOR_TEST_0,
-                                 COLOR_TEST_0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -8193,26 +7855,7 @@ int card_the_brute(int player, int card, event_t event)
 
   if (event == EVENT_CAN_CAST)
   {
-    load_recorded_action_target(0);
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 TARGET_ZONE_IN_PLAY,
-                                 TYPE_CREATURE,
-                                 TYPE_NONE,
-                                 0,
-                                 get_protections_from(player, card),
-                                 COLOR_TEST_0,
-                                 COLOR_TEST_0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (event == EVENT_CAST_SPELL && g_affected_card == card && g_affected_card_controller == player)
@@ -8837,26 +8480,7 @@ int card_flight(int player, int card, event_t event)
 {
   if (event == EVENT_CAN_CAST)
   {
-    load_recorded_action_target(0);
-    return real_target_available((int *)0,
-                                 TARGET_SCAN_DIRECT,
-                                 player,
-                                 2,
-                                 2,
-                                 0x200,
-                                 2,
-                                 0,
-                                 0,
-                                 get_protections_from(player, card),
-                                 0,
-                                 0,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 0,
-                                 0,
-                                 0);
+    return creature_aura_target_available(player, card, player);
   }
 
   if (((event == EVENT_CAST_SPELL) && (card == g_affected_card)) && (player == g_affected_card_controller))

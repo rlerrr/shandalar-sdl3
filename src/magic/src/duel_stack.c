@@ -836,6 +836,12 @@ int activate(int who_activates, int player, int card)
     if (g_spell_fizzled != 0)
     {
       g_spell_fizzled = 0;
+      if (who_pays == g_other_player && (g_duel_network_flags & 2) == 0)
+      {
+        /* A failed automatic payment must finish as an unpaid upkeep. Leaving
+         * it pending lets the AI choose the same failing payment indefinitely. */
+        goto upkeep_cleanup;
+      }
       obliterate_top_card_of_stack();
       return 0;
     }
@@ -3781,7 +3787,9 @@ unsigned int choose_response_card(int player)
       }
     }
 
-    g_ai_recorded_action = ((PLAYER_CARD_INSTANCE(player, (int)candidates[g_ai_recorded_choice]).state & STATE_IN_PLAY) ? 0x2000 : 0x1000) | candidates[g_ai_recorded_choice] | ((player != 0) ? 0x100 : 0);
+    g_ai_recorded_action = candidates[g_ai_recorded_choice] == 0xffffffffU ? -1 :
+        (((PLAYER_CARD_INSTANCE(player, (int)candidates[g_ai_recorded_choice]).state & STATE_IN_PLAY) ? 0x2000 : 0x1000) |
+         candidates[g_ai_recorded_choice] | ((player != 0) ? 0x100 : 0));
 
     g_ai_recorded_action_type = 4;
     record_ai_action_selection();
@@ -3791,10 +3799,7 @@ unsigned int choose_response_card(int player)
     g_ai_recorded_action_type = 4;
     replay_ai_action_selection();
 
-    if (num_candidates <= g_ai_recorded_choice)
-    {
-      g_ai_recorded_choice = num_candidates - 1;
-    }
+    g_ai_recorded_choice = ai_replayed_card_choice(player, candidates, num_candidates);
   }
 
   if (candidates[g_ai_recorded_choice] != 0xffffffffU)
